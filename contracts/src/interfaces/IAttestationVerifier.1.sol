@@ -62,13 +62,16 @@ interface IAttestationVerifierV1 {
     /// @notice An external caller invoked a function reserved for self-staticcall trampolining.
     error OnlySelfCall();
 
-    /// @notice A deposit's pubkey field has an unexpected byte length
-    /// @param index The deposit index in the batch
+    /// @notice An entry's pubkey field has an unexpected byte length
+    /// @param index Index into the sub-array currently being validated
+    ///              (either `batch.deposits` or `batch.topUps`); the loop that raised
+    ///              the revert determines which.
     /// @param length The observed length
     error InvalidPubkeyLength(uint256 index, uint256 length);
 
     /// @notice A deposit's BLS signature field has an unexpected byte length
-    /// @param index The deposit index in the batch
+    /// @dev Only raised while iterating `batch.deposits` — top-ups have no signature field.
+    /// @param index Index into `batch.deposits`
     /// @param length The observed length
     error InvalidSignatureLength(uint256 index, uint256 length);
 
@@ -125,6 +128,23 @@ interface IAttestationVerifierV1 {
     /// @notice The supplied `depositDataBufferId` has already been executed. Each batch must be processed at most once.
     /// @param depositDataBufferId The offending batch identifier
     error DepositDataBufferIdAlreadyProcessed(bytes32 depositDataBufferId);
+
+    /// @notice A top-up referenced a pubkey that has never been initial-deposited by River.
+    ///         Without this check, a malicious committee could mark an attacker pubkey as a
+    ///         top-up and bypass BLS verification.
+    /// @param pubkey The offending 48-byte BLS pubkey
+    error TopUpPubkeyNotFunded(bytes pubkey);
+
+    /// @notice recordNewlyFundedPubkeys was passed a pubkey already in the initial-deposit set.
+    /// @param pubkey The offending 48-byte BLS pubkey
+    error PubkeyAlreadyFunded(bytes pubkey);
+
+    /// @notice The same pubkey appeared more than once in `batch.topUps` within a single batch.
+    /// @dev Distinct from `PubkeyAlreadyFunded` (which fires from the initial-deposit branch
+    ///      against the global lookup); this fires from the top-up branch against the in-batch
+    ///      set being assembled during `validate()`.
+    /// @param pubkey The offending 48-byte BLS pubkey
+    error DuplicateTopUpPubkey(bytes pubkey);
 
     // -----------------------------------------------------------------------
     // Initialization

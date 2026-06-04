@@ -1001,21 +1001,18 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         topUps[0] = _makeTopUpDeposit(0, 300);
         topUps[1] = _makeTopUpDeposit(0, 300); // same seed → same pubkey, both top-ups
 
-        // Seed the pubkey so the membership check passes for both entries.
+        // Seed the pubkey so the membership check passes for the first entry; the dedupe
+        // scan must still trip on the second entry.
         _seedFundedPubkey(topUps[0].pubkey);
 
         (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareTopUps(topUps);
 
-        uint256 depositCountBefore = depositContract.deposit_count();
         vm.prank(keeper);
+        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.DuplicateTopUpPubkey.selector, topUps[1].pubkey));
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
-
-        assertEq(
-            depositContract.deposit_count(), depositCountBefore + 2, "both top-ups for the same pubkey should execute"
-        );
     }
 
-    /// @dev Documented trade-off post-removal of operator-bind: `PectraValidatorPubkeyLookup`
+    /// @dev Documented trade-off post-removal of operator-bind: `ValidatorPubkeyLookup`
     ///      records membership only (no operator association), so a top-up whose
     ///      `operatorIdx` differs from the original initial-deposit operator is credited
     ///      to whoever is mentioned in the deposit data buffer.
@@ -1537,6 +1534,529 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         bytes[] memory sigs = new bytes[](2);
         sigs[0] = _signAttestation(rootAttesterPk1, bufferId, rootHash);
         sigs[1] = _signAttestation(rootAttesterPk2, bufferId, rootHash);
+
+        vm.prank(keeper);
+        vm.expectRevert(IAttestationVerifierV1.NoDeposits.selector);
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+    }
+
+    // -----------------------------------------------------------------------
+    // View functions
+    // -----------------------------------------------------------------------
+
+    /// @dev Test every external view on the verifier returns the value configured at init.
+    function testViews_returnConfiguredValues() public {
+        assertEq(validator.getRiver(), address(dm));
+        assertEq(validator.getDepositDataBuffer(), address(buffer));
+        assertEq(validator.getDepositCommitteeAttesterCount(), 3);
+        assertEq(validator.getDepositCommitteeAttestationQuorum(), 2);
+        assertTrue(validator.isDepositCommitteeAttester(depositCommitteeAttester1));
+        assertTrue(validator.isDepositCommitteeAttester(depositCommitteeAttester2));
+        assertTrue(validator.isDepositCommitteeAttester(depositCommitteeAttester3));
+        assertFalse(validator.isDepositCommitteeAttester(address(0xDEAD)));
+        // Cross-check the domain separator against an independently-recomputed value rather
+        // than just !=0, so a future drift in NAME_HASH / VERSION_HASH / TYPEHASH wording
+        // breaks the test instead of silently agreeing with the contract.
+        bytes32 expectedDomainSeparator =
+            keccak256(abi.encode(EIP712_DOMAIN_TYPEHASH, NAME_HASH, VERSION_HASH, block.chainid, address(dm)));
+        assertEq(validator.getDomainSeparator(), expectedDomainSeparator, "domain separator drift");
+        // DEPOSIT_DOMAIN was set at init from a zero genesis fork version; just check it was set.
+        assertTrue(validator.DEPOSIT_DOMAIN() != bytes32(0));
+    }
+
+    // -----------------------------------------------------------------------
+    // validate() length / empty-batch reverts
+    // -----------------------------------------------------------------------
+
+    /// @dev A deposit with a mis-sized pubkey must revert in validate() before the BLS path.
+    function testRevert_validate_invalidPubkeyLength() public {
+        IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](1);
+        deposits[0] = _makeDeposit(0, 700);
+        deposits[0].pubkey = new bytes(47); // off by one
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits);
+        vm.prank(keeper);
+        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InvalidPubkeyLength.selector, 0, 47));
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+    }
+
+    /// @dev A deposit with a mis-sized signature must revert in validate() before the BLS path.
+    function testRevert_validate_invalidSignatureLength() public {
+        IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](1);
+        deposits[0] = _makeDeposit(0, 701);
+        deposits[0].signature = new bytes(95); // off by one
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits);
+        vm.prank(keeper);
+        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InvalidSignatureLength.selector, 0, 95));
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+    }
+
+    /// @dev An empty deposit batch must revert with NoDeposits before any further processing.
+    function testRevert_validate_noDeposits() public {
+        IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](0);
+        bytes32 bufferId = keccak256(abi.encode(_batchOf(deposits)));
+        buffer.submitDepositData(bufferId, _batchOf(deposits));
+        bytes32 rootHash = depositContract.get_deposit_root();
+        bytes[] memory sigs = new bytes[](2);
+        sigs[0] = _signAttestation(depositCommitteeAttesterPk1, bufferId, rootHash);
+        sigs[1] = _signAttestation(depositCommitteeAttesterPk2, bufferId, rootHash);
+        vm.prank(keeper);
+        vm.expectRevert(IAttestationVerifierV1.NoDeposits.selector);
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+    }
+
+    /// @dev A top-up with a mis-sized pubkey must revert in validate()'s top-up loop with
+    ///      InvalidPubkeyLength. Mirrors the initial-deposit pubkey-length check, exercising
+    ///      the separate top-up validation path.
+    function testRevert_validate_topUp_invalidPubkeyLength() public {
+        IDepositDataBuffer.TopUp[] memory topUps = new IDepositDataBuffer.TopUp[](1);
+        topUps[0] = _makeTopUpDeposit(0, 710);
+        topUps[0].pubkey = new bytes(47); // off by one
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareTopUps(topUps);
+        vm.prank(keeper);
+        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InvalidPubkeyLength.selector, 0, 47));
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+    }
+
+    /// @dev A top-up amount outside the [1 ether, 2048 ether] gwei-aligned range must revert in
+    ///      validate()'s top-up loop with InvalidDepositAmount. The amount bound is checked
+    ///      before the funded-membership check, so no pubkey seeding is required.
+    function testRevert_validate_topUp_invalidDepositAmount() public {
+        // Below minimum (0 wei).
+        IDepositDataBuffer.TopUp[] memory topUps = new IDepositDataBuffer.TopUp[](1);
+        topUps[0] = _makeTopUpDeposit(0, 711);
+        topUps[0].amount = 0;
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareTopUps(topUps);
+        vm.prank(keeper);
+        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InvalidDepositAmount.selector, 0, 0));
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+
+        // Not gwei-aligned (32 ether + 1 wei).
+        topUps[0] = _makeTopUpDeposit(0, 712);
+        topUps[0].amount = 32 ether + 1;
+        (bufferId, rootHash, sigs) = _prepareTopUps(topUps);
+        vm.prank(keeper);
+        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InvalidDepositAmount.selector, 0, 32 ether + 1));
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+    }
+
+    // -----------------------------------------------------------------------
+    // LibFundingDeltas.build operator-index bound (reached via the deposit flow)
+    // -----------------------------------------------------------------------
+
+    /// @dev An initial deposit whose operatorIdx is >= the registered operator count must revert
+    ///      with LibFundingDeltas.InvalidOperatorIndex once aggregation runs in
+    ///      _updateFundedETHFromBuffer. Shrinks the harness operator count to force the bound.
+    function testRevert_build_invalidOperatorIndex_deposit() public {
+        dm.sudoSetOperatorCount(1); // only operator 0 is in range
+
+        IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](1);
+        deposits[0] = _makeDeposit(5, 720); // operatorIdx 5 is out of range
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits);
+
+        vm.prank(keeper);
+        vm.expectRevert(abi.encodeWithSelector(LibFundingDeltas.InvalidOperatorIndex.selector, 5, 1));
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+    }
+
+    /// @dev A top-up whose operatorIdx is >= the registered operator count must revert with
+    ///      LibFundingDeltas.InvalidOperatorIndex via the top-up bucketing pass. Exercises the
+    ///      second (top-up) index-bound branch in LibFundingDeltas.build.
+    function testRevert_build_invalidOperatorIndex_topUp() public {
+        dm.sudoSetOperatorCount(1); // only operator 0 is in range
+
+        IDepositDataBuffer.TopUp[] memory topUps = new IDepositDataBuffer.TopUp[](1);
+        topUps[0] = _makeTopUpDeposit(5, 721); // operatorIdx 5 is out of range
+        _seedFundedPubkey(topUps[0].pubkey); // pass the funded-membership check first
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareTopUps(topUps);
+
+        vm.prank(keeper);
+        vm.expectRevert(abi.encodeWithSelector(LibFundingDeltas.InvalidOperatorIndex.selector, 5, 1));
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+    }
+
+    // -----------------------------------------------------------------------
+    // Admin setters — happy paths + onlyRiverAdmin gate
+    // -----------------------------------------------------------------------
+
+    /// @dev Admin can register a new attester; count increments; the attester becomes recognised.
+    function testSetDepositCommitteeAttester_addAndRemove() public {
+        address newAttester = address(0xFEED);
+        assertFalse(validator.isDepositCommitteeAttester(newAttester));
+
+        vm.prank(admin);
+        validator.setDepositCommitteeAttester(newAttester, true);
+        assertTrue(validator.isDepositCommitteeAttester(newAttester));
+        assertEq(validator.getDepositCommitteeAttesterCount(), 4);
+
+        // Removing brings us back to 3.
+        vm.prank(admin);
+        validator.setDepositCommitteeAttester(newAttester, false);
+        assertFalse(validator.isDepositCommitteeAttester(newAttester));
+        assertEq(validator.getDepositCommitteeAttesterCount(), 3);
+    }
+
+    /// @dev Non-admin caller must be rejected by onlyRiverAdmin.
+    function testRevert_setDepositCommitteeAttester_unauthorized() public {
+        address stranger = address(0xC0FFEE);
+        vm.prank(stranger);
+        vm.expectRevert(abi.encodeWithSelector(LibErrors.Unauthorized.selector, stranger));
+        validator.setDepositCommitteeAttester(address(0xFEED), true);
+    }
+
+    /// @dev Cannot remove an attester if doing so would leave fewer attesters than the configured quorum.
+    function testRevert_setDepositCommitteeAttester_wouldUnderQuorum() public {
+        // quorum=2, 3 attesters; remove one → 2 (still ok), remove another → 1 < 2 (rejects).
+        vm.prank(admin);
+        validator.setDepositCommitteeAttester(depositCommitteeAttester3, false);
+        vm.prank(admin);
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.QuorumExceedsDepositCommitteeAttesterCount.selector, 2, 1)
+        );
+        validator.setDepositCommitteeAttester(depositCommitteeAttester2, false);
+    }
+
+    /// @dev setDepositCommitteeAttestationQuorum happy path: drop quorum to 1, then back to 2.
+    function testSetDepositCommitteeAttestationQuorum_happyPath() public {
+        vm.prank(admin);
+        validator.setDepositCommitteeAttestationQuorum(1);
+        assertEq(validator.getDepositCommitteeAttestationQuorum(), 1);
+
+        vm.prank(admin);
+        validator.setDepositCommitteeAttestationQuorum(2);
+        assertEq(validator.getDepositCommitteeAttestationQuorum(), 2);
+    }
+
+    function testRevert_setDepositCommitteeAttestationQuorum_zero() public {
+        vm.prank(admin);
+        vm.expectRevert(IAttestationVerifierV1.ZeroQuorum.selector);
+        validator.setDepositCommitteeAttestationQuorum(0);
+    }
+
+    function testRevert_setDepositCommitteeAttestationQuorum_exceedsAttesterCount() public {
+        // 3 attesters; quorum > 3 is rejected.
+        vm.prank(admin);
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.QuorumExceedsDepositCommitteeAttesterCount.selector, 4, 3)
+        );
+        validator.setDepositCommitteeAttestationQuorum(4);
+    }
+
+    function testRevert_setDepositCommitteeAttestationQuorum_unauthorized() public {
+        address stranger = address(0xC0FFEE);
+        vm.prank(stranger);
+        vm.expectRevert(abi.encodeWithSelector(LibErrors.Unauthorized.selector, stranger));
+        validator.setDepositCommitteeAttestationQuorum(1);
+    }
+
+    /// @dev Admin can rotate the DepositDataBuffer address.
+    function testSetDepositDataBuffer_happyPath() public {
+        address newBuffer = address(0xBABE);
+        vm.prank(admin);
+        validator.setDepositDataBuffer(newBuffer);
+        assertEq(validator.getDepositDataBuffer(), newBuffer);
+    }
+
+    function testRevert_setDepositDataBuffer_unauthorized() public {
+        address stranger = address(0xC0FFEE);
+        vm.prank(stranger);
+        vm.expectRevert(abi.encodeWithSelector(LibErrors.Unauthorized.selector, stranger));
+        validator.setDepositDataBuffer(address(0xBABE));
+    }
+
+    // -----------------------------------------------------------------------
+    // CLDM view functions
+    // -----------------------------------------------------------------------
+
+    /// @dev Test every CLDM external view returns the value configured during setUp.
+    function testCLDM_viewFunctions() public {
+        assertEq(dm.getCommittedBalance(), 128 ether);
+        assertEq(dm.getBalanceToDeposit(), 0);
+        assertEq(dm.getWithdrawalCredentials(), withdrawalCredentials);
+        assertEq(dm.getTotalDepositedETH(), 0);
+        assertEq(dm.getKeeper(), keeper);
+        assertEq(dm.getAttestationVerifier(), address(validator));
+    }
+
+    // -----------------------------------------------------------------------
+    // initAttestationVerifierV1 — input validation
+    // -----------------------------------------------------------------------
+
+    /// @dev Cannot init with an empty attester array.
+    function testRevert_init_emptyAttesterArray() public {
+        AttestationVerifierV1 freshValidator = new AttestationVerifierV1();
+        LibImplementationUnbricker.unbrick(vm, address(freshValidator));
+        address[] memory empty = new address[](0);
+        vm.expectRevert(LibErrors.InvalidArgument.selector);
+        freshValidator.initAttestationVerifierV1(address(dm), address(buffer), empty, 1, bytes4(0));
+    }
+
+    /// @dev Cannot init with a quorum strictly greater than the attester count.
+    function testRevert_init_quorumExceedsAttesterCount() public {
+        AttestationVerifierV1 freshValidator = new AttestationVerifierV1();
+        LibImplementationUnbricker.unbrick(vm, address(freshValidator));
+        address[] memory attesters = new address[](2);
+        attesters[0] = depositCommitteeAttester1;
+        attesters[1] = depositCommitteeAttester2;
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.QuorumExceedsDepositCommitteeAttesterCount.selector, 3, 2)
+        );
+        freshValidator.initAttestationVerifierV1(address(dm), address(buffer), attesters, 3, bytes4(0));
+    }
+
+    /// @dev Cannot add an attester that would push the total past MAX_DEPOSIT_COMMITTEE_ATTESTERS.
+    ///      Fills the registry to the cap (32), then tries to add one more.
+    function testRevert_setDepositCommitteeAttester_exceedsMax() public {
+        uint256 max = validator.MAX_DEPOSIT_COMMITTEE_ATTESTERS();
+        // setUp already registered 3 attesters; add up to the cap.
+        for (uint256 i = 3; i < max; ++i) {
+            vm.prank(admin);
+            validator.setDepositCommitteeAttester(address(uint160(0x1000 + i)), true);
+        }
+        assertEq(validator.getDepositCommitteeAttesterCount(), max);
+        vm.prank(admin);
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.TooManyDepositCommitteeAttesters.selector, max + 1, max)
+        );
+        validator.setDepositCommitteeAttester(address(uint160(0x9999)), true);
+    }
+
+    // -----------------------------------------------------------------------
+    // G-1: TooManySignatures bound
+    // -----------------------------------------------------------------------
+
+    /// @dev `validate()` rejects a signature array longer than MAX_SIGNATURES (20) before any
+    ///      recovery work runs — bounds the O(n^2) dedup loop. Sig content doesn't matter
+    ///      since the length check fires first.
+    function testRevert_validate_tooManySignatures() public {
+        IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](1);
+        deposits[0] = _makeDeposit(0, 800);
+        (bytes32 bufferId, bytes32 rootHash,) = _prepareDeposit(deposits);
+
+        uint256 max = validator.MAX_SIGNATURES();
+        bytes[] memory tooMany = new bytes[](max + 1);
+        for (uint256 i = 0; i < max + 1; i++) {
+            tooMany[i] = new bytes(65); // any 65-byte blob; length check fires before recovery
+        }
+        vm.prank(keeper);
+        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.TooManySignatures.selector, max + 1, max));
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, tooMany);
+    }
+
+    // -----------------------------------------------------------------------
+    // G-2: QuorumExceedsMaxSignatures — both code paths
+    // -----------------------------------------------------------------------
+
+    /// @dev Cannot init with a quorum > MAX_SIGNATURES, even when the attester count would
+    ///      allow it. The MAX_SIGNATURES check at init fires before the attester-count check.
+    function testRevert_init_quorumExceedsMaxSignatures() public {
+        AttestationVerifierV1 fresh = new AttestationVerifierV1();
+        LibImplementationUnbricker.unbrick(vm, address(fresh));
+        // Need attesterCount > MAX_SIGNATURES so the attester-count check doesn't fire first.
+        uint256 max = validator.MAX_SIGNATURES();
+        address[] memory atts = new address[](max + 5);
+        for (uint256 i = 0; i < max + 5; i++) atts[i] = address(uint160(0x9000 + i));
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.QuorumExceedsMaxSignatures.selector, max + 1, max)
+        );
+        fresh.initAttestationVerifierV1(address(dm), address(buffer), atts, max + 1, bytes4(0));
+    }
+
+    /// @dev Admin cannot set quorum > MAX_SIGNATURES via the post-init setter. Distinct code
+    ///      path from the init-time check above.
+    function testRevert_setDepositCommitteeAttestationQuorum_exceedsMaxSignatures() public {
+        // Grow attester count past MAX_SIGNATURES so the attester-count check doesn't fire first.
+        uint256 max = validator.MAX_SIGNATURES();
+        for (uint256 i = 3; i <= max; i++) {
+            vm.prank(admin);
+            validator.setDepositCommitteeAttester(address(uint160(0xA000 + i)), true);
+        }
+        vm.prank(admin);
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.QuorumExceedsMaxSignatures.selector, max + 1, max)
+        );
+        validator.setDepositCommitteeAttestationQuorum(max + 1);
+    }
+
+    // -----------------------------------------------------------------------
+    // G-3: _recover negative branches
+    // -----------------------------------------------------------------------
+
+    /// @dev A short signature (length != 65) and an out-of-range `v` after normalization must
+    ///      be silently skipped by `_recover` (return address(0) → the dedup loop continues)
+    ///      AND must not contribute to `validCount`. We raise quorum to 3 so that the 2 valid
+    ///      sigs alone are insufficient — if the 2 bad sigs were ever miscounted as valid
+    ///      (validCount=4), the call would succeed; with them properly skipped (validCount=2)
+    ///      it must revert with `InsufficientAttestations(2, 3)`.
+    function testRecover_silentlySkipsBadSigs() public {
+        // Raise quorum above the number of valid sigs we'll provide so the assertion is tight.
+        vm.prank(admin);
+        validator.setDepositCommitteeAttestationQuorum(3);
+
+        IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](1);
+        deposits[0] = _makeDeposit(0, 850);
+        bytes32 bufferId = keccak256(abi.encode(_batchOf(deposits)));
+        buffer.submitDepositData(bufferId, _batchOf(deposits));
+        bytes32 rootHash = depositContract.get_deposit_root();
+
+        bytes[] memory sigs = new bytes[](4);
+        // sigs[0]: length != 65 → silent skip via the length check
+        sigs[0] = bytes("short");
+        // sigs[1]: 65 bytes with v=2 → normalised to 29, outside {27,28} → silent skip
+        bytes memory badV = new bytes(65);
+        badV[64] = bytes1(uint8(2));
+        sigs[1] = badV;
+        // sigs[2] / sigs[3]: two valid signatures — only 2 of 4 will count toward quorum
+        sigs[2] = _signAttestation(depositCommitteeAttesterPk1, bufferId, rootHash);
+        sigs[3] = _signAttestation(depositCommitteeAttesterPk2, bufferId, rootHash);
+
+        vm.prank(keeper);
+        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InsufficientAttestations.selector, 2, 3));
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+    }
+
+    /// @dev The `v < 27 ? v += 27` normalization branch must accept legacy v=0/1 encodings
+    ///      from EIP-2098-style tooling. Sign normally then rewrite v to (v-27), submit, and
+    ///      assert the deposit succeeds (i.e. signer was correctly recovered).
+    function testRecover_normalizesLegacyVZero() public {
+        IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](1);
+        deposits[0] = _makeDeposit(0, 851);
+        bytes32 bufferId = keccak256(abi.encode(_batchOf(deposits)));
+        buffer.submitDepositData(bufferId, _batchOf(deposits));
+        bytes32 rootHash = depositContract.get_deposit_root();
+
+        bytes[] memory sigs = new bytes[](2);
+        sigs[0] = _signAttestation_legacyV(depositCommitteeAttesterPk1, bufferId, rootHash);
+        sigs[1] = _signAttestation_legacyV(depositCommitteeAttesterPk2, bufferId, rootHash);
+
+        vm.prank(keeper);
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+        assertEq(depositContract.deposit_count(), 1, "legacy v=0/1 signatures were normalised + accepted");
+    }
+
+    /// @dev Helper that mirrors `_signAttestation` but encodes `v` as `v - 27` (i.e. 0 or 1),
+    ///      exercising the `if (v < 27) v += 27;` branch in `_recover`.
+    function _signAttestation_legacyV(uint256 pk, bytes32 bufferId, bytes32 rootHash)
+        internal
+        view
+        returns (bytes memory)
+    {
+        bytes32 structHash = keccak256(abi.encode(ATTEST_TYPEHASH, bufferId, rootHash));
+        bytes32 domainSep =
+            keccak256(abi.encode(EIP712_DOMAIN_TYPEHASH, NAME_HASH, VERSION_HASH, block.chainid, address(dm)));
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSep, structHash));
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(pk, digest);
+        return abi.encodePacked(r, s, uint8(v - 27));
+    }
+
+    // -----------------------------------------------------------------------
+    // G-4: init idempotency
+    // -----------------------------------------------------------------------
+
+    /// @dev `initAttestationVerifierV1` is `init(0)`-gated; a second call must revert via the
+    ///      Initializable modifier (current stored version is 1, modifier expects 0).
+    function testRevert_init_cannotBeCalledTwice() public {
+        address[] memory atts = new address[](2);
+        atts[0] = makeAddr("a");
+        atts[1] = makeAddr("b");
+        vm.expectRevert(abi.encodeWithSelector(Initializable.InvalidInitialization.selector, 0, 1));
+        validator.initAttestationVerifierV1(address(dm), address(buffer), atts, 1, bytes4(0));
+    }
+
+    // -----------------------------------------------------------------------
+    // DepositObject refactor — new invariants introduced by splitting Deposit / TopUp
+    // -----------------------------------------------------------------------
+
+    /// @dev Top-ups carry no signature in the buffer; ConsensusLayerDepositManager hardcodes a
+    ///      96-byte zero buffer when forwarding the call to the official deposit contract.
+    ///      Asserted by inspecting the `DepositEvent` log emitted by the deposit contract mock.
+    function testTopUp_passesZeroSignatureToDepositContract() public {
+        bytes memory pk = _fakePubkey(900);
+        _seedFundedPubkey(pk);
+
+        IDepositDataBuffer.TopUp[] memory topUps = new IDepositDataBuffer.TopUp[](1);
+        topUps[0] = IDepositDataBuffer.TopUp({pubkey: pk, amount: 32 ether, operatorIdx: 0});
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareTopUps(topUps);
+
+        vm.recordLogs();
+        vm.prank(keeper);
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        bytes32 depositEventTopic = keccak256("DepositEvent(bytes,bytes,bytes,bytes,bytes)");
+        bool depositEventFound = false;
+        for (uint256 i = 0; i < logs.length; i++) {
+            if (logs[i].emitter == address(depositContract) && logs[i].topics[0] == depositEventTopic) {
+                (,, , bytes memory recordedSignature,) =
+                    abi.decode(logs[i].data, (bytes, bytes, bytes, bytes, bytes));
+                assertEq(recordedSignature.length, 96, "signature length");
+                assertEq(recordedSignature, new bytes(96), "top-up signature must be 96 zero bytes");
+                depositEventFound = true;
+                break;
+            }
+        }
+        assertTrue(depositEventFound, "DepositEvent must be emitted by the deposit contract");
+    }
+
+    /// @dev The `recordNewlyFundedPubkeys` callback must contain only initial-deposit pubkeys.
+    ///      Including a top-up pubkey would pollute `ValidatorPubkeyLookup` with already-funded
+    ///      keys (harmless but a state-purity regression).
+    function testRecordNewlyFundedPubkeys_excludesTopUps() public {
+        bytes memory topUpPk = _fakePubkey(910);
+        _seedFundedPubkey(topUpPk);
+
+        IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](2);
+        deposits[0] = _makeDeposit(0, 911);
+        deposits[1] = _makeDeposit(1, 912);
+        IDepositDataBuffer.TopUp[] memory topUps = new IDepositDataBuffer.TopUp[](1);
+        topUps[0] = IDepositDataBuffer.TopUp({pubkey: topUpPk, amount: 32 ether, operatorIdx: 0});
+
+        bytes[] memory expectedPubkeys = new bytes[](2);
+        expectedPubkeys[0] = deposits[0].pubkey;
+        expectedPubkeys[1] = deposits[1].pubkey;
+        vm.expectCall(
+            address(validator),
+            abi.encodeCall(IAttestationVerifierV1.recordNewlyFundedPubkeys, (expectedPubkeys))
+        );
+
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits, topUps);
+        vm.prank(keeper);
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+    }
+
+    /// @dev `LibFundingDeltas.build` aggregates fundedETH across BOTH the deposits[] and
+    ///      topUps[] sub-arrays. A regression that iterates only one would lose ETH from the
+    ///      per-operator delta. This test exercises a single operator receiving both initials
+    ///      and a top-up in the same batch and asserts the harness's recorded delta matches
+    ///      the full sum.
+    function testFundingDelta_aggregatesAcrossDepositsAndTopUps() public {
+        bytes memory topUpPk = _fakePubkey(920);
+        _seedFundedPubkey(topUpPk);
+
+        IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](2);
+        deposits[0] = _makeDeposit(0, 921);
+        deposits[1] = _makeDeposit(0, 922);
+        IDepositDataBuffer.TopUp[] memory topUps = new IDepositDataBuffer.TopUp[](1);
+        topUps[0] = IDepositDataBuffer.TopUp({pubkey: topUpPk, amount: 8 ether, operatorIdx: 0});
+
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits, topUps);
+        vm.prank(keeper);
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+
+        assertEq(dm.lastFundedETH(0), 32 ether + 32 ether + 8 ether, "delta must include top-up amount");
+    }
+
+    /// @dev A container with both sub-arrays empty must revert NoDeposits. The check
+    ///      `depositCount == 0 && topUpCount == 0` is now a logical AND across two array
+    ///      lengths; a regression that drops either conjunct would accept a half-empty batch.
+    function testRevert_emptyContainer_revertsNoDeposits() public {
+        IDepositDataBuffer.DepositObject memory batch;
+        bytes32 bufferId = keccak256(abi.encode(batch));
+        buffer.submitDepositData(bufferId, batch);
+        bytes32 rootHash = depositContract.get_deposit_root();
+
+        bytes[] memory sigs = new bytes[](2);
+        sigs[0] = _signAttestation(depositCommitteeAttesterPk1, bufferId, rootHash);
+        sigs[1] = _signAttestation(depositCommitteeAttesterPk2, bufferId, rootHash);
 
         vm.prank(keeper);
         vm.expectRevert(IAttestationVerifierV1.NoDeposits.selector);

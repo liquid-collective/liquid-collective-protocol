@@ -419,8 +419,9 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     /// @notice Verify a single BLS deposit message against the cached deposit domain.
     /// @dev External only as a self-staticcall trampoline from validate: the call
     ///      promotes the deposit's memory bytes into calldata so BLS12_381 can consume them
-    ///      without a memory copy. Not intended for direct external use — reverts on bad
-    ///      input but performs no authorization.
+    ///      without a memory copy. Direct external callers revert with `OnlySelfCall` —
+    ///      the function is restricted to `address(this)` and not part of the contract's
+    ///      public API.
     /// @param pubkey The BLS public key (48 bytes)
     /// @param signature The BLS signature (96 bytes)
     /// @param amount The deposit amount in wei (must be gwei-aligned; verified inside BLS12_381.verifyDepositMessage)
