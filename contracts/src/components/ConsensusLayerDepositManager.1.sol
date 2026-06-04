@@ -154,10 +154,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
             depositDataBufferId, depositRootHash, signatures, depositContract, withdrawalCredentials, committedBalance
         );
 
-        // 5. Mark the batch ID processed BEFORE any external interactions (CEI). If the
-        //    deposit contract were ever misconfigured to a reentrant address, a re-entry
-        //    into this function with the same bufferId would now fail validateDeposits()'s
-        //    processed-ID check. The mark unwinds atomically with the tx on any later revert.
+        // 5. Mark the batch ID processed BEFORE any external interactions.
         verifier.markDepositDataBufferIdProcessed(depositDataBufferId);
 
         // 6. Update operator funded validator accounting
