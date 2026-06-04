@@ -68,10 +68,10 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
         for (uint256 i = 0; i < amounts.length; i++) {
             opIndices[i] = opIdx;
         }
-        IDepositDataBuffer.DepositObject[] memory deposits = _makeDepositObjects(opIndices, amounts);
+        IDepositDataBuffer.DepositObject memory batch = _makeDepositObjects(opIndices, amounts);
 
-        bytes32 bufferId = keccak256(abi.encode(deposits));
-        depositBuffer.submitDepositData(bufferId, deposits);
+        bytes32 bufferId = keccak256(abi.encode(batch));
+        depositBuffer.submitDepositData(bufferId, batch);
         bytes32 rootHash = depositContract.get_deposit_root();
 
         bytes[] memory sigs = new bytes[](2);

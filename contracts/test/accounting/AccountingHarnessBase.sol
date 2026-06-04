@@ -33,19 +33,23 @@ import "../../src/state/operatorsRegistry/Operators.3.sol";
 // -----------------------------------------------------------------------
 
 contract AccountingMockDepositDataBuffer is IDepositDataBuffer {
-    mapping(bytes32 => DepositObject[]) internal _batches;
+    mapping(bytes32 => DepositObject) internal _batches;
     mapping(bytes32 => bool) internal _exists;
 
-    function submitDepositData(bytes32 depositDataBufferId, DepositObject[] calldata deposits) external {
+    function submitDepositData(bytes32 depositDataBufferId, DepositObject calldata batch) external {
         if (_exists[depositDataBufferId]) revert DepositDataBufferIdAlreadyExists(depositDataBufferId);
         _exists[depositDataBufferId] = true;
-        for (uint256 i = 0; i < deposits.length; i++) {
-            _batches[depositDataBufferId].push(deposits[i]);
+        DepositObject storage stored = _batches[depositDataBufferId];
+        for (uint256 i = 0; i < batch.deposits.length; i++) {
+            stored.deposits.push(batch.deposits[i]);
         }
-        emit DepositDataSubmitted(depositDataBufferId, deposits.length);
+        for (uint256 i = 0; i < batch.topUps.length; i++) {
+            stored.topUps.push(batch.topUps[i]);
+        }
+        emit DepositDataSubmitted(depositDataBufferId, batch.deposits.length, batch.topUps.length);
     }
 
-    function getDepositData(bytes32 depositDataBufferId) external view returns (DepositObject[] memory) {
+    function getDepositData(bytes32 depositDataBufferId) external view returns (DepositObject memory) {
         if (!_exists[depositDataBufferId]) revert DepositDataBufferIdNotFound(depositDataBufferId);
         return _batches[depositDataBufferId];
     }
@@ -328,13 +332,14 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
     ///      `PubkeyAlreadyFunded` guard).
     function _makeDepositObjects(uint256[] memory opIndices, uint256[] memory amounts)
         internal
-        returns (IDepositDataBuffer.DepositObject[] memory deposits)
+        returns (IDepositDataBuffer.DepositObject memory batch)
     {
         require(opIndices.length == amounts.length, "length mismatch");
         uint256 nonce = ++_depositBatchNonce;
-        deposits = new IDepositDataBuffer.DepositObject[](opIndices.length);
+        batch.deposits = new IDepositDataBuffer.Deposit[](opIndices.length);
+        // batch.topUps left as default empty array.
         for (uint256 i = 0; i < opIndices.length; i++) {
-            deposits[i] = IDepositDataBuffer.DepositObject({
+            batch.deposits[i] = IDepositDataBuffer.Deposit({
                 pubkey: abi.encodePacked(sha256(abi.encode("pubkey", i, opIndices[i], nonce)), bytes16(0)),
                 signature: abi.encodePacked(
                     sha256(abi.encode("sig-a", i, opIndices[i], nonce)),
@@ -342,7 +347,6 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
                     bytes32(0)
                 ),
                 amount: amounts[i],
-                depositDataRoot: bytes32(0),
                 operatorIdx: opIndices[i],
                 depositY: _nonZeroDepositY(nonce * 1000 + i)
             });

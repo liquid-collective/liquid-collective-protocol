@@ -322,11 +322,15 @@ contract RiverV1 is
     /// @notice Overridden handler to update operator funded ETH accounting for attestation-based deposits.
     ///         Delegates bucketing/aggregation to LibFundingDeltas so the production path and the
     ///         attestation test harness share the same code, then forwards to _incrementFundedETH.
-    /// @param deposits Array of deposit objects from the DepositDataBuffer
-    function _updateFundedETHFromBuffer(IDepositDataBuffer.DepositObject[] memory deposits) internal override {
-        if (deposits.length == 0) return;
+    /// @param deposits Initial deposits from the buffer
+    /// @param topUps Top-ups from the buffer
+    function _updateFundedETHFromBuffer(
+        IDepositDataBuffer.Deposit[] memory deposits,
+        IDepositDataBuffer.TopUp[] memory topUps
+    ) internal override {
+        if (deposits.length == 0 && topUps.length == 0) return;
         uint256 operatorCount = IOperatorsRegistryV1(OperatorsRegistryAddress.get()).getOperatorCount();
-        _incrementFundedETH(LibFundingDeltas.build(deposits, operatorCount));
+        _incrementFundedETH(LibFundingDeltas.build(deposits, topUps, operatorCount));
     }
 
     /// @notice Overridden handler called whenever a token transfer is triggered

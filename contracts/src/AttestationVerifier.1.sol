@@ -222,60 +222,82 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         address depositContract,
         bytes32 withdrawalCredentials,
         uint256 committedBalance
-    ) external view returns (IDepositDataBuffer.DepositObject[] memory deposits, uint256 totalAmount) {
+    ) external view returns (IDepositDataBuffer.DepositObject memory batch, uint256 totalAmount) {
         // 1. Verify attestation quorum
         _verifyAttestationQuorum(depositDataBufferId, depositRootHash, signatures, depositContract);
 
-        // 2. Get deposit data from buffer
-        deposits = IDepositDataBuffer(DepositDataBufferAddress.get()).getDepositData(depositDataBufferId);
-        uint256 depositCount = deposits.length;
-        if (depositCount == 0) revert NoDeposits();
+        // 2. Get deposit batch from buffer
+        batch = IDepositDataBuffer(DepositDataBufferAddress.get()).getDepositData(depositDataBufferId);
+        uint256 depositCount = batch.deposits.length;
+        uint256 topUpCount = batch.topUps.length;
+        if (depositCount == 0 && topUpCount == 0) revert NoDeposits();
 
         // 3. Re-compute and check the bufferId binding so the buffer cannot tamper post-attestation
-        bytes32 computedId = keccak256(abi.encode(deposits));
+        bytes32 computedId = keccak256(abi.encode(batch));
         if (computedId != depositDataBufferId) revert BufferIdMismatch(depositDataBufferId, computedId);
 
-        // 4. Validate every entry: pubkey/signature length, amount bounds, top-up vs
-        //    initial-deposit classification, and intra-batch pubkey dedup before BLS verification.
+        // 4. Validate initial deposits: field lengths, amount bounds, pubkey-not-already-funded
+        //    and no in-batch duplicates. The cross-array "pubkey in both deposits and topUps"
+        //    case is implicitly forbidden: an initial deposit reverts PubkeyAlreadyFunded if
+        //    the pubkey is in the lookup, and a top-up reverts TopUpPubkeyNotFunded if it
+        //    isn't — so no pubkey can pass both branches in one batch.
         bytes32[] memory pubkeyHashes = new bytes32[](depositCount);
         for (uint256 i = 0; i < depositCount; i++) {
-            if (deposits[i].pubkey.length != DEPOSIT_PUBKEY_LENGTH) {
-                revert InvalidPubkeyLength(i, deposits[i].pubkey.length);
+            IDepositDataBuffer.Deposit memory d = batch.deposits[i];
+            if (d.pubkey.length != DEPOSIT_PUBKEY_LENGTH) {
+                revert InvalidPubkeyLength(i, d.pubkey.length);
             }
-            if (deposits[i].signature.length != DEPOSIT_SIGNATURE_LENGTH) {
-                revert InvalidSignatureLength(i, deposits[i].signature.length);
+            if (d.signature.length != DEPOSIT_SIGNATURE_LENGTH) {
+                revert InvalidSignatureLength(i, d.signature.length);
             }
             // Mirrors the bound check inside `_depositValidator` so we fail early
-            uint256 amount = deposits[i].amount;
-            if (amount < 1 ether || amount > 2048 ether || amount % 1 gwei != 0) {
-                revert InvalidDepositAmount(i, amount);
+            if (d.amount < 1 ether || d.amount > 2048 ether || d.amount % 1 gwei != 0) {
+                revert InvalidDepositAmount(i, d.amount);
             }
-            totalAmount += amount;
+            totalAmount += d.amount;
 
-            bytes memory pubkey = deposits[i].pubkey;
-            bytes32 pkHash = keccak256(pubkey);
+            bytes32 pkHash = keccak256(d.pubkey);
             pubkeyHashes[i] = pkHash;
 
-            if (BLS12_381.isZero(deposits[i].depositY)) {
-                if (!ValidatorPubkeyLookup.isPubkeyFunded(pubkey)) {
-                    revert TopUpPubkeyNotFunded(pubkey);
-                }
-            } else {
-                if (ValidatorPubkeyLookup.isPubkeyFunded(pubkey)) {
-                    revert PubkeyAlreadyFunded(pubkey);
-                }
-                for (uint256 j = 0; j < i; j++) {
-                    if (pubkeyHashes[j] == pkHash) {
-                        revert PubkeyAlreadyFunded(pubkey);
-                    }
+            if (ValidatorPubkeyLookup.isPubkeyFunded(d.pubkey)) {
+                revert PubkeyAlreadyFunded(d.pubkey);
+            }
+            for (uint256 j = 0; j < i; j++) {
+                if (pubkeyHashes[j] == pkHash) {
+                    revert PubkeyAlreadyFunded(d.pubkey);
                 }
             }
         }
+
+        // 5. Validate top-ups: field length on pubkey, amount bounds, pubkey-must-be-funded,
+        //    and no in-batch duplicates (mirrors the dedupe in the initial-deposit loop).
+        bytes32[] memory topUpHashes = new bytes32[](topUpCount);
+        for (uint256 i = 0; i < topUpCount; i++) {
+            IDepositDataBuffer.TopUp memory t = batch.topUps[i];
+            if (t.pubkey.length != DEPOSIT_PUBKEY_LENGTH) {
+                revert InvalidPubkeyLength(i, t.pubkey.length);
+            }
+            if (t.amount < 1 ether || t.amount > 2048 ether || t.amount % 1 gwei != 0) {
+                revert InvalidDepositAmount(i, t.amount);
+            }
+            totalAmount += t.amount;
+
+            if (!ValidatorPubkeyLookup.isPubkeyFunded(t.pubkey)) {
+                revert TopUpPubkeyNotFunded(t.pubkey);
+            }
+
+            bytes32 pkHash = keccak256(t.pubkey);
+            for (uint256 j = 0; j < i; j++) {
+                if (topUpHashes[j] == pkHash) {
+                    revert DuplicateTopUpPubkey(t.pubkey);
+                }
+            }
+            topUpHashes[i] = pkHash;
+        }
         if (totalAmount > committedBalance) revert NotEnoughFunds();
 
-        // 5. Verify BLS signatures against canonical River WC.
-        //    Top-ups were already cleared above and are skipped here.
-        _verifyBLSSignatures(deposits, withdrawalCredentials);
+        // 6. Verify BLS signatures against canonical River WC (initials only).
+        _verifyBLSSignatures(batch.deposits, withdrawalCredentials);
     }
 
     // -----------------------------------------------------------------------
@@ -355,17 +377,17 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         if (validCount < quorum) revert InsufficientAttestations(validCount, quorum);
     }
 
-    /// @notice Verify the BLS signatures against the canonical River withdrawal credentials.
-    /// @dev Top-ups (entries with an all-zero `depositY`) are cleared upstream in
-    ///      `validate()` via the membership check on `ValidatorPubkeyLookup`.
-    /// @param deposits The deposits.
+    /// @notice Verify the BLS signatures of all initial deposits against the canonical River
+    ///         withdrawal credentials. Top-ups are handled by the caller and never reach this
+    ///         function — they're cleared upstream in `validate()` via the membership check
+    ///         on `ValidatorPubkeyLookup`.
+    /// @param deposits The initial deposits.
     /// @param withdrawalCredentials The canonical River withdrawal credentials.
-    function _verifyBLSSignatures(IDepositDataBuffer.DepositObject[] memory deposits, bytes32 withdrawalCredentials)
+    function _verifyBLSSignatures(IDepositDataBuffer.Deposit[] memory deposits, bytes32 withdrawalCredentials)
         internal
         view
     {
         for (uint256 i = 0; i < deposits.length; i++) {
-            if (BLS12_381.isZero(deposits[i].depositY)) continue;
             (bool ok, bytes memory revertData) = address(this)
                 .staticcall(
                     abi.encodeCall(
@@ -390,8 +412,9 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     /// @notice Verify a single BLS deposit message against the cached deposit domain.
     /// @dev External only as a self-staticcall trampoline from validate: the call
     ///      promotes the deposit's memory bytes into calldata so BLS12_381 can consume them
-    ///      without a memory copy. Not intended for direct external use — reverts on bad
-    ///      input but performs no authorization.
+    ///      without a memory copy. Direct external callers revert with `OnlySelfCall` —
+    ///      the function is restricted to `address(this)` and not part of the contract's
+    ///      public API.
     /// @param pubkey The BLS public key (48 bytes)
     /// @param signature The BLS signature (96 bytes)
     /// @param amount The deposit amount in wei (must be gwei-aligned; verified inside BLS12_381.verifyDepositMessage)
@@ -404,6 +427,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         BLS12_381.DepositY calldata depositY,
         bytes32 withdrawalCredentials
     ) external view {
+        if (msg.sender != address(this)) revert OnlySelfCall();
         bytes32 depositDomain = DepositDomainValue.get();
         if (depositDomain == bytes32(0)) revert ZeroDepositDomain();
         BLS12_381.verifyDepositMessage(pubkey, signature, amount, depositY, withdrawalCredentials, depositDomain);
