@@ -882,6 +882,92 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         assertEq(depositContract.deposit_count(), depositCountBefore, "no deposit should reach the beacon contract on replay");
     }
 
+    /// @dev Re-using a processed `depositDataBufferId` from an initial-deposit-only batch
+    ///      must revert with `DepositDataBufferIdAlreadyProcessed`.
+    function testRevert_replay_processedBufferId_initialDeposit() public {
+        IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](1);
+        deposits[0] = _makeDeposit(0, 1);
+
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits);
+
+        vm.prank(keeper);
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+        assertTrue(validator.isDepositDataBufferIdProcessed(bufferId), "id should be marked processed");
+
+        uint256 depositCountBefore = depositContract.deposit_count();
+        vm.prank(keeper);
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.DepositDataBufferIdAlreadyProcessed.selector, bufferId)
+        );
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+        assertEq(
+            depositContract.deposit_count(),
+            depositCountBefore,
+            "no deposit should reach the beacon contract on replay"
+        );
+    }
+
+    /// @dev Re-using a processed `depositDataBufferId` from a mixed batch (one initial deposit
+    ///      and one top-up against an unrelated funded pubkey) must revert with
+    ///      `DepositDataBufferIdAlreadyProcessed`.
+    function testRevert_replay_processedBufferId_mixedBatch() public {
+        IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](1);
+        deposits[0] = _makeDeposit(0, 1);
+        IDepositDataBuffer.TopUp[] memory topUps = new IDepositDataBuffer.TopUp[](1);
+        topUps[0] = _makeTopUpDeposit(0, 2);
+        _seedFundedPubkey(topUps[0].pubkey);
+
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits, topUps);
+
+        vm.prank(keeper);
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+        assertTrue(validator.isDepositDataBufferIdProcessed(bufferId), "id should be marked processed");
+
+        uint256 depositCountBefore = depositContract.deposit_count();
+        vm.prank(keeper);
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.DepositDataBufferIdAlreadyProcessed.selector, bufferId)
+        );
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+        assertEq(
+            depositContract.deposit_count(),
+            depositCountBefore,
+            "no deposit should reach the beacon contract on replay"
+        );
+    }
+
+    /// @dev The step-0 processed-ID check has precedence over the attestation/rootHash check:
+    ///      an attacker holding a quorum cannot bypass replay by re-signing the same bufferId
+    ///      against a different rootHash. The replay must revert with
+    ///      `DepositDataBufferIdAlreadyProcessed`, not `DepositRootMismatch` or a quorum error.
+    function testRevert_replay_processedBufferId_differentRootHashAndSigs() public {
+        IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](1);
+        deposits[0] = _makeDeposit(0, 1);
+
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits);
+
+        vm.prank(keeper);
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+        assertTrue(validator.isDepositDataBufferIdProcessed(bufferId), "id should be marked processed");
+
+        bytes32 attackerRootHash = keccak256("attacker-chosen-root");
+        bytes[] memory attackerSigs = new bytes[](2);
+        attackerSigs[0] = _signAttestation(rootAttesterPk1, bufferId, attackerRootHash);
+        attackerSigs[1] = _signAttestation(rootAttesterPk2, bufferId, attackerRootHash);
+
+        uint256 depositCountBefore = depositContract.deposit_count();
+        vm.prank(keeper);
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.DepositDataBufferIdAlreadyProcessed.selector, bufferId)
+        );
+        dm.depositToConsensusLayerWithAttestation(bufferId, attackerRootHash, attackerSigs);
+        assertEq(
+            depositContract.deposit_count(),
+            depositCountBefore,
+            "no deposit should reach the beacon contract on replay"
+        );
+    }
+
     /// @dev `markDepositDataBufferIdProcessed` is gated by `onlyRiver`.
     function testRevert_markDepositDataBufferIdProcessed_notRiver() public {
         bytes32 bufferId = keccak256("some-id");
