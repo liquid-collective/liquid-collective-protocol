@@ -5,12 +5,15 @@ import "../libraries/BLS12_381.sol";
 
 /// @title IDepositDataBuffer
 /// @notice Interface for the DepositDataBuffer contract that stores pre-committed validator deposit batches.
+/// @dev `depositDataBufferId` MUST be unique per submission — implementations should salt with an
+///      ever-incrementing counter (e.g. `lastQueueIdx++`). The AttestationVerifier marks every
+///      processed ID, so any reuse permanently bricks the colliding batch.
 interface IDepositDataBuffer {
     /// @notice An initial validator deposit. BLS signature is verified by the verifier and
     ///         passed to the official deposit contract; pubkey must NOT already be in
-    ///         `ValidatorPubkeyLookup`.
+    ///         `PectraValidatorPubkeyLookup`.
     /// @dev Withdrawal credentials are NOT stored per-entry. The canonical River WC is
-    ///      passed into `validate()` at deposit time and used both for BLS signature
+    ///      passed into `validateDeposits()` at deposit time and used both for BLS signature
     ///      verification and for the official deposit contract call, removing any need
     ///      to trust the buffer producer on this field.
     struct Deposit {
@@ -28,7 +31,7 @@ interface IDepositDataBuffer {
     }
 
     /// @notice A top-up to an already-funded validator. BLS verification is skipped; pubkey
-    ///         must already be in `ValidatorPubkeyLookup`.
+    ///         must already be in `PectraValidatorPubkeyLookup`.
     /// @dev No `signature` field: the beacon chain ignores BLS signatures on subsequent
     ///      deposits to an existing validator, so the consumer hardcodes 96 zero bytes
     ///      when forwarding the call to the official deposit contract.
@@ -45,7 +48,7 @@ interface IDepositDataBuffer {
     }
 
     /// @notice A deposit batch — initial deposits and top-ups for a single attested submission.
-    /// @dev The deposit committee signs over `keccak256(abi.encode(batch))`, so the
+    /// @dev The root signs over `keccak256(abi.encode(batch))`, so the
     ///      classification of each entry (initial vs top-up) is attested as part of the
     ///      buffer hash.
     struct DepositObject {
