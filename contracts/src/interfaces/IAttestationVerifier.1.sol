@@ -312,8 +312,8 @@ interface IAttestationVerifierV1 {
     function recordNewlyFundedPubkeys(bytes[] calldata pubkeys) external;
 
     /// @notice Validate consolidation-committee attestations over a `ConsolidationObject` passed
-    ///         in by the caller and mark the request as processed for replay protection.
-    /// @dev    The caller supplies the full struct (including signatures) in calldata. The
+    ///         in by the caller (River) and mark the request as processed for replay protection.
+    /// @dev    The caller(River) supplies the full struct (including signatures) in calldata. The
     ///         verifier constructs the EIP-712 typed-data digest directly from the four
     ///         request fields and the cached consolidation domain separator, then recovers
     ///         each signature against that digest. The `signatures` field of the struct is

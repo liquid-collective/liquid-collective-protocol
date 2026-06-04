@@ -190,12 +190,12 @@ contract RiverV1 is
         external
         onlyKeeper
     {
-        address recipient = IExternalConsolidationRecipientMappingV1(ExternalConsolidationRecipientMappingAddress.get())
-            .getRecipient(consolidation.withdrawalAddress);
-
         // we check the allowlist first to fail fast if the withdrawalAddress/recipient is denied
         IAllowlistV1 allowlist = IAllowlistV1(AllowlistAddress.get());
         allowlist.onlyAllowed(consolidation.withdrawalAddress, LibAllowlistMasks.CONSOLIDATE_MASK);
+
+        address recipient = IExternalConsolidationRecipientMappingV1(ExternalConsolidationRecipientMappingAddress.get())
+            .getRecipient(consolidation.withdrawalAddress);
 
         // if the recipient is not set, we use the withdrawalAddress
         if (recipient == address(0)) {
