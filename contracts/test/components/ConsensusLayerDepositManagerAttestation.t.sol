@@ -299,7 +299,11 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
     /// @dev Build a TopUp. BLS verification path skipped; pubkey must already be in
     ///      `ValidatorPubkeyLookup`. No signature field — consumer hardcodes 96 zero bytes.
-    function _makeTopUpDeposit(uint256 opIdx, uint256 seed) internal pure returns (IDepositDataBuffer.TopUp memory) {
+    function _makeTopUpDeposit(uint256 opIdx, uint256 seed)
+        internal
+        pure
+        returns (IDepositDataBuffer.TopUp memory)
+    {
         return IDepositDataBuffer.TopUp({pubkey: _fakePubkey(seed), amount: 32 ether, operatorIdx: opIdx});
     }
 
@@ -323,11 +327,10 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     }
 
     /// @dev Convenience: build a DepositObject from both arrays.
-    function _batchOf(IDepositDataBuffer.Deposit[] memory deposits, IDepositDataBuffer.TopUp[] memory topUps)
-        internal
-        pure
-        returns (IDepositDataBuffer.DepositObject memory batch)
-    {
+    function _batchOf(
+        IDepositDataBuffer.Deposit[] memory deposits,
+        IDepositDataBuffer.TopUp[] memory topUps
+    ) internal pure returns (IDepositDataBuffer.DepositObject memory batch) {
         batch.deposits = deposits;
         batch.topUps = topUps;
     }
@@ -367,10 +370,10 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     }
 
     /// @dev Submit a mixed batch (initials + top-ups).
-    function _prepareDeposit(IDepositDataBuffer.Deposit[] memory deposits, IDepositDataBuffer.TopUp[] memory topUps)
-        internal
-        returns (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs)
-    {
+    function _prepareDeposit(
+        IDepositDataBuffer.Deposit[] memory deposits,
+        IDepositDataBuffer.TopUp[] memory topUps
+    ) internal returns (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) {
         return _prepareDeposit(_batchOf(deposits, topUps));
     }
 
@@ -808,7 +811,9 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareTopUps(topUps);
 
         vm.prank(keeper);
-        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.TopUpPubkeyNotFunded.selector, topUps[0].pubkey));
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.TopUpPubkeyNotFunded.selector, topUps[0].pubkey)
+        );
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
     }
 
@@ -874,7 +879,9 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits, topUps);
 
         vm.prank(keeper);
-        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.TopUpPubkeyNotFunded.selector, topUps[0].pubkey));
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.TopUpPubkeyNotFunded.selector, topUps[0].pubkey)
+        );
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
     }
 
@@ -962,26 +969,24 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
     }
 
-    /// @dev Two top-ups for the same pubkey within one batch are Pectra-legal under 0x02
-    ///      compounding withdrawal credentials. Both entries must succeed because the
-    ///      in-batch duplicate scan only applies to initial deposits — top-ups are exempt.
-    function testTopUp_sameBatch_twoTopUpsForSamePubkey_succeeds() public {
+    /// @dev Two top-ups for the same pubkey within one batch are rejected by the in-batch
+    ///      duplicate scan in `AttestationVerifier.validate()` — mirrors the dedupe applied
+    ///      to initial deposits. Off-chain producers must coalesce multiple top-ups for the
+    ///      same pubkey into a single buffered entry before submitting.
+    function testRevert_topUp_sameBatch_twoTopUpsForSamePubkey() public {
         IDepositDataBuffer.TopUp[] memory topUps = new IDepositDataBuffer.TopUp[](2);
         topUps[0] = _makeTopUpDeposit(0, 300);
         topUps[1] = _makeTopUpDeposit(0, 300); // same seed → same pubkey, both top-ups
 
-        // Seed the pubkey so the membership check passes for both entries.
+        // Seed the pubkey so the membership check passes for the first entry; the dedupe
+        // scan must still trip on the second entry.
         _seedFundedPubkey(topUps[0].pubkey);
 
         (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareTopUps(topUps);
 
-        uint256 depositCountBefore = depositContract.deposit_count();
         vm.prank(keeper);
+        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.DuplicateTopUpPubkey.selector, topUps[1].pubkey));
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
-
-        assertEq(
-            depositContract.deposit_count(), depositCountBefore + 2, "both top-ups for the same pubkey should execute"
-        );
     }
 
     /// @dev Documented trade-off post-removal of operator-bind: `ValidatorPubkeyLookup`
@@ -1120,6 +1125,76 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         sigs[1] = _signAttestation(depositCommitteeAttesterPk2, bufferId, rootHash);
         vm.prank(keeper);
         vm.expectRevert(IAttestationVerifierV1.NoDeposits.selector);
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+    }
+
+    /// @dev A top-up with a mis-sized pubkey must revert in validate()'s top-up loop with
+    ///      InvalidPubkeyLength. Mirrors the initial-deposit pubkey-length check, exercising
+    ///      the separate top-up validation path.
+    function testRevert_validate_topUp_invalidPubkeyLength() public {
+        IDepositDataBuffer.TopUp[] memory topUps = new IDepositDataBuffer.TopUp[](1);
+        topUps[0] = _makeTopUpDeposit(0, 710);
+        topUps[0].pubkey = new bytes(47); // off by one
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareTopUps(topUps);
+        vm.prank(keeper);
+        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InvalidPubkeyLength.selector, 0, 47));
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+    }
+
+    /// @dev A top-up amount outside the [1 ether, 2048 ether] gwei-aligned range must revert in
+    ///      validate()'s top-up loop with InvalidDepositAmount. The amount bound is checked
+    ///      before the funded-membership check, so no pubkey seeding is required.
+    function testRevert_validate_topUp_invalidDepositAmount() public {
+        // Below minimum (0 wei).
+        IDepositDataBuffer.TopUp[] memory topUps = new IDepositDataBuffer.TopUp[](1);
+        topUps[0] = _makeTopUpDeposit(0, 711);
+        topUps[0].amount = 0;
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareTopUps(topUps);
+        vm.prank(keeper);
+        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InvalidDepositAmount.selector, 0, 0));
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+
+        // Not gwei-aligned (32 ether + 1 wei).
+        topUps[0] = _makeTopUpDeposit(0, 712);
+        topUps[0].amount = 32 ether + 1;
+        (bufferId, rootHash, sigs) = _prepareTopUps(topUps);
+        vm.prank(keeper);
+        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InvalidDepositAmount.selector, 0, 32 ether + 1));
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+    }
+
+    // -----------------------------------------------------------------------
+    // LibFundingDeltas.build operator-index bound (reached via the deposit flow)
+    // -----------------------------------------------------------------------
+
+    /// @dev An initial deposit whose operatorIdx is >= the registered operator count must revert
+    ///      with LibFundingDeltas.InvalidOperatorIndex once aggregation runs in
+    ///      _updateFundedETHFromBuffer. Shrinks the harness operator count to force the bound.
+    function testRevert_build_invalidOperatorIndex_deposit() public {
+        dm.sudoSetOperatorCount(1); // only operator 0 is in range
+
+        IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](1);
+        deposits[0] = _makeDeposit(5, 720); // operatorIdx 5 is out of range
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits);
+
+        vm.prank(keeper);
+        vm.expectRevert(abi.encodeWithSelector(LibFundingDeltas.InvalidOperatorIndex.selector, 5, 1));
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+    }
+
+    /// @dev A top-up whose operatorIdx is >= the registered operator count must revert with
+    ///      LibFundingDeltas.InvalidOperatorIndex via the top-up bucketing pass. Exercises the
+    ///      second (top-up) index-bound branch in LibFundingDeltas.build.
+    function testRevert_build_invalidOperatorIndex_topUp() public {
+        dm.sudoSetOperatorCount(1); // only operator 0 is in range
+
+        IDepositDataBuffer.TopUp[] memory topUps = new IDepositDataBuffer.TopUp[](1);
+        topUps[0] = _makeTopUpDeposit(5, 721); // operatorIdx 5 is out of range
+        _seedFundedPubkey(topUps[0].pubkey); // pass the funded-membership check first
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareTopUps(topUps);
+
+        vm.prank(keeper);
+        vm.expectRevert(abi.encodeWithSelector(LibFundingDeltas.InvalidOperatorIndex.selector, 5, 1));
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
     }
 
@@ -1437,7 +1512,8 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         bool depositEventFound = false;
         for (uint256 i = 0; i < logs.length; i++) {
             if (logs[i].emitter == address(depositContract) && logs[i].topics[0] == depositEventTopic) {
-                (,,, bytes memory recordedSignature,) = abi.decode(logs[i].data, (bytes, bytes, bytes, bytes, bytes));
+                (,, , bytes memory recordedSignature,) =
+                    abi.decode(logs[i].data, (bytes, bytes, bytes, bytes, bytes));
                 assertEq(recordedSignature.length, 96, "signature length");
                 assertEq(recordedSignature, new bytes(96), "top-up signature must be 96 zero bytes");
                 depositEventFound = true;
@@ -1464,7 +1540,8 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         expectedPubkeys[0] = deposits[0].pubkey;
         expectedPubkeys[1] = deposits[1].pubkey;
         vm.expectCall(
-            address(validator), abi.encodeCall(IAttestationVerifierV1.recordNewlyFundedPubkeys, (expectedPubkeys))
+            address(validator),
+            abi.encodeCall(IAttestationVerifierV1.recordNewlyFundedPubkeys, (expectedPubkeys))
         );
 
         (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits, topUps);

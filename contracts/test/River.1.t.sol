@@ -20,6 +20,7 @@ import "../src/state/river/LastConsensusLayerReport.sol";
 import "../src/interfaces/components/IOracleManager.1.sol";
 import "../src/interfaces/IRiver.1.sol";
 import "../src/interfaces/IDepositContract.sol";
+import "../src/interfaces/components/IConsensusLayerDepositManager.1.sol";
 import "../src/interfaces/IDepositDataBuffer.sol";
 import "../src/Withdraw.1.sol";
 import "../src/interfaces/IWithdraw.1.sol";
@@ -2691,7 +2692,8 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
             extraBalanceToDeposit,
             LibUint256.min(river.totalUnderlyingSupply(), (maxCommittedBalanceDailyIncrease * period) / 1 days)
         );
-        maxCommittedBalanceIncrease = maxCommittedBalanceIncrease / 32 ether * 32 ether;
+
+        maxCommittedBalanceIncrease = (maxCommittedBalanceIncrease / 1 gwei) * 1 gwei;
 
         return initialCommittedAmount + maxCommittedBalanceIncrease;
     }
@@ -2725,7 +2727,6 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         _fillReport(clr);
         river.setConsensusLayerData(clr);
 
-        assertEq(river.getCommittedBalance() % 32 ether, 0);
         assertEq(
             river.getCommittedBalance(),
             _computeCommittedAmount(0, clr.epoch, committedAmount, depositAmount, maxIncrease)
@@ -2761,7 +2762,6 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         _fillReport(clr);
         river.setConsensusLayerData(clr);
 
-        assertEq(river.getCommittedBalance() % 32 ether, 0);
         assertEq(
             river.getCommittedBalance(),
             _computeCommittedAmount(0, clr.epoch, committedAmount, depositAmount, maxIncrease)
@@ -2802,7 +2802,6 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         _fillReport(clr);
         river.setConsensusLayerData(clr);
 
-        assertEq(river.getCommittedBalance() % 32 ether, 0);
         assertEq(
             river.getCommittedBalance(),
             _computeCommittedAmount(0, clr.epoch, committedAmount, depositAmount, maxIncrease)
@@ -2846,7 +2845,6 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         _fillReport(clr);
         river.setConsensusLayerData(clr);
 
-        assertEq(river.getCommittedBalance() % 32 ether, 0);
         assertEq(
             river.getCommittedBalance(),
             _computeCommittedAmount(0, clr.epoch, committedAmount, depositAmount, maxIncrease)
@@ -3120,7 +3118,7 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         vm.store(address(consolidationCoverageFund), BALANCE_FOR_CONSOLIDATION_COVERAGE_SLOT, bytes32(buffer));
         vm.deal(address(consolidationCoverageFund), buffer);
 
-        uint256 balanceToDepositBefore = river.getBalanceToDeposit();
+        uint256 committedBalanceBefore = river.getCommittedBalance();
 
         uint256 epoch = epochsPerFrame;
         vm.warp((epoch + epochsUntilFinal) * slotsPerEpoch * secondsPerSlot);
@@ -3140,7 +3138,7 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         river.setConsensusLayerData(clr);
 
         assertEq(uint256(vm.load(address(river), CONSOLIDATION_BUFFER_SLOT)), 0);
-        assertEq(river.getBalanceToDeposit(), balanceToDepositBefore + buffer);
+        assertEq(river.getCommittedBalance(), committedBalanceBefore + buffer);
         assertEq(address(consolidationCoverageFund).balance, 0);
     }
 
@@ -3156,7 +3154,7 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         vm.store(address(consolidationCoverageFund), BALANCE_FOR_CONSOLIDATION_COVERAGE_SLOT, bytes32(available));
         vm.deal(address(consolidationCoverageFund), available);
 
-        uint256 balanceToDepositBefore = river.getBalanceToDeposit();
+        uint256 committedBalanceBefore = river.getCommittedBalance();
 
         uint256 epoch = epochsPerFrame;
         vm.warp((epoch + epochsUntilFinal) * slotsPerEpoch * secondsPerSlot);
@@ -3176,7 +3174,7 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         river.setConsensusLayerData(clr);
 
         assertEq(uint256(vm.load(address(river), CONSOLIDATION_BUFFER_SLOT)), buffer - available);
-        assertEq(river.getBalanceToDeposit(), balanceToDepositBefore + available);
+        assertEq(river.getCommittedBalance(), committedBalanceBefore + available);
     }
 
     function _initRiverAndV1_2() internal {
@@ -3413,5 +3411,97 @@ contract RiverV1PectraTests is RiverV1TestBase {
         vm.prank(keeper);
         vm.expectRevert(abi.encodeWithSelector(IWithdrawV1.FeeTooHigh.selector, actualFee, maxFee));
         river.consolidate{value: actualFee}(requests, maxFee);
+    }
+}
+
+contract RiverV1ConsolidationMintTests is RiverV1TestBase {
+    RedeemManagerV1 redeemManager;
+
+    function setUp() public override {
+        super.setUp();
+        bytes32 withdrawalCredentials = withdraw.getCredentials();
+        redeemManager = new RedeemManagerV1();
+        LibImplementationUnbricker.unbrick(vm, address(redeemManager));
+        redeemManager.initializeRedeemManagerV1(address(river));
+        vm.expectEmit(true, true, true, true);
+        emit SetOperatorsRegistry(address(operatorsRegistry));
+        river.initRiverV1(
+            address(deposit),
+            address(elFeeRecipient),
+            withdrawalCredentials,
+            address(oracle),
+            admin,
+            address(allowlist),
+            address(operatorsRegistry),
+            collector,
+            500
+        );
+        river.initRiverV1_1(
+            address(redeemManager),
+            epochsPerFrame,
+            slotsPerEpoch,
+            secondsPerSlot,
+            0,
+            epochsUntilFinal,
+            1000,
+            500,
+            maxDailyNetCommittableAmount,
+            maxDailyRelativeCommittableAmount
+        );
+        river.initRiverV1_2();
+        withdraw.initializeWithdrawV1(address(river));
+        oracle.initOracleV1(address(river), admin, 225, 32, 12, 0, 1000, 500);
+
+        vm.startPrank(admin);
+        oracle.addMember(oracleMember, 1);
+        river.setCoverageFund(address(coverageFund));
+        river.setKeeper(admin);
+        vm.stopPrank();
+    }
+
+    function testOnlyKeeperCanMintForConsolidation() public {
+        address notKeeper = makeAddr("notKeeper");
+        vm.prank(notKeeper);
+        vm.expectRevert(abi.encodeWithSelector(IConsensusLayerDepositManagerV1.OnlyKeeper.selector));
+        river.mintLsETHForConsolidation(1 ether, bob);
+    }
+
+    function testMintLsETHForConsolidationZeroAmountReverts() public {
+        vm.prank(admin);
+        vm.expectRevert(abi.encodeWithSignature("InvalidArgument()"));
+        river.mintLsETHForConsolidation(0, bob);
+    }
+
+    function testMintLsETHForConsolidationZeroRecipientReverts() public {
+        vm.prank(admin);
+        vm.expectRevert(abi.encodeWithSignature("InvalidZeroAddress()"));
+        river.mintLsETHForConsolidation(1 ether, address(0));
+    }
+
+    function testMintLsETHForConsolidationHappyPath() public {
+        uint256 amount = 10 ether;
+        assertEq(river.getBalanceToConsolidate(), 0);
+        assertEq(river.balanceOf(bob), 0);
+
+        vm.expectEmit(true, true, true, true);
+        emit IRiverV1.LsETHMintedForConsolidation(bob, amount, amount);
+        vm.prank(admin);
+        river.mintLsETHForConsolidation(amount, bob);
+
+        assertEq(river.getBalanceToConsolidate(), amount);
+        assertEq(river.balanceOf(bob), amount);
+    }
+
+    function testMintLsETHForConsolidationCumulativeBalanceAndShares() public {
+        vm.prank(admin);
+        river.mintLsETHForConsolidation(5 ether, bob);
+        assertEq(river.getBalanceToConsolidate(), 5 ether);
+        assertEq(river.balanceOf(bob), 5 ether);
+
+        vm.prank(admin);
+        river.mintLsETHForConsolidation(3 ether, joe);
+        assertEq(river.getBalanceToConsolidate(), 8 ether);
+        assertEq(river.balanceOf(bob), 5 ether);
+        assertEq(river.balanceOf(joe), 3 ether);
     }
 }

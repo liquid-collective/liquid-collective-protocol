@@ -18,9 +18,10 @@ rule riverBalanceIsSumOf_ToDeposit_Commmitted_ToRedeem_for_setConsensusLayerData
 {
     mathint assets_before = totalUnderlyingSupply();
     uint256 toDeposit_before = getBalanceToDeposit();
+    uint256 toConsolidate_before = getBalanceToConsolidate();
     uint256 committed_before = getCommittedBalance();
     uint256 toRedeem_before = getBalanceToRedeem();
-    require assets_before == toDeposit_before + committed_before + toRedeem_before;
+    require assets_before == toDeposit_before + toConsolidate_before + committed_before + toRedeem_before;
     // require assets_before == 0;
     // require toDeposit_before == 0;
     // require committed_before == 0;
@@ -32,10 +33,11 @@ rule riverBalanceIsSumOf_ToDeposit_Commmitted_ToRedeem_for_setConsensusLayerData
 
     mathint assets_after = totalUnderlyingSupply();
     uint256 toDeposit_after = getBalanceToDeposit();
+    uint256 toConsolidate_after = getBalanceToConsolidate();
     uint256 committed_after = getCommittedBalance();
     uint256 toRedeem_after = getBalanceToRedeem();
 
-    assert assets_after == toDeposit_after + committed_after + toRedeem_after;
+    assert assets_after == toDeposit_after + toConsolidate_after + committed_after + toRedeem_after;
 }
 
 rule depositAdditivityNoGiftsToEachDeposit(env e1, env e2, env eSum) {

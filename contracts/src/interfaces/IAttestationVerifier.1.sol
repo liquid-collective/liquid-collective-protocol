@@ -108,21 +108,26 @@ interface IAttestationVerifierV1 {
     /// @notice An external caller invoked a function reserved for self-staticcall trampolining.
     error OnlySelfCall();
 
-    /// @notice A deposit's pubkey field has an unexpected byte length
-    /// @param index The deposit index in the batch
+    /// @notice An entry's pubkey field has an unexpected byte length
+    /// @param index Index into the sub-array currently being validated
+    ///              (either `batch.deposits` or `batch.topUps`); the loop that raised
+    ///              the revert determines which.
     /// @param length The observed length
     error InvalidPubkeyLength(uint256 index, uint256 length);
 
     /// @notice A deposit's BLS signature field has an unexpected byte length
-    /// @param index The deposit index in the batch
+    /// @dev Only raised while iterating `batch.deposits` — top-ups have no signature field.
+    /// @param index Index into `batch.deposits`
     /// @param length The observed length
     error InvalidSignatureLength(uint256 index, uint256 length);
 
-    /// @notice A deposit's `amount` is outside the protocol-accepted range
+    /// @notice An entry's `amount` is outside the protocol-accepted range
     ///         [1 ether, 2048 ether] or is not gwei-aligned. Enforced here in
     ///         `validate()` so producer bugs fail before the heavy BLS path runs;
     ///         downstream `_depositValidator` trusts this check.
-    /// @param index The deposit index in the batch
+    /// @param index Index into the sub-array currently being validated
+    ///              (either `batch.deposits` or `batch.topUps`); the loop that raised
+    ///              the revert determines which.
     /// @param amount The offending amount in wei
     error InvalidDepositAmount(uint256 index, uint256 amount);
 
@@ -215,6 +220,13 @@ interface IAttestationVerifierV1 {
     /// @notice recordNewlyFundedPubkeys was passed a pubkey already in the initial-deposit set.
     /// @param pubkey The offending 48-byte BLS pubkey
     error PubkeyAlreadyFunded(bytes pubkey);
+
+    /// @notice The same pubkey appeared more than once in `batch.topUps` within a single batch.
+    /// @dev Distinct from `PubkeyAlreadyFunded` (which fires from the initial-deposit branch
+    ///      against the global lookup); this fires from the top-up branch against the in-batch
+    ///      set being assembled during `validate()`.
+    /// @param pubkey The offending 48-byte BLS pubkey
+    error DuplicateTopUpPubkey(bytes pubkey);
 
     // -----------------------------------------------------------------------
     // Initialization
