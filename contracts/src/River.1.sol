@@ -715,6 +715,7 @@ contract RiverV1 is
         // When slashing containment mode is active, skip new validator funding to prevent compounding
         // losses. The deposit buffer remains available for redeem rebalancing but nothing is committed.
         if (_slashingContainmentModeEnabled) {
+            emit SkippedCommitToDepositDueToSlashingContainment();
             return;
         }
 
