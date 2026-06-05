@@ -15,16 +15,14 @@ library ProcessedDepositDataBufferIds {
     /// @param depositDataBufferId The batch identifier.
     /// @return True if the ID has been processed.
     function isProcessed(bytes32 depositDataBufferId) internal view returns (bool) {
-        bytes32 slot =
-            keccak256(abi.encode(PROCESSED_DEPOSIT_DATA_BUFFER_IDS_MAPPING_BASE_SLOT, depositDataBufferId));
+        bytes32 slot = keccak256(abi.encode(PROCESSED_DEPOSIT_DATA_BUFFER_IDS_MAPPING_BASE_SLOT, depositDataBufferId));
         return LibUnstructuredStorage.getStorageBool(slot);
     }
 
     /// @notice Mark a deposit data buffer ID as processed.
     /// @param depositDataBufferId The batch identifier.
     function markProcessed(bytes32 depositDataBufferId) internal {
-        bytes32 slot =
-            keccak256(abi.encode(PROCESSED_DEPOSIT_DATA_BUFFER_IDS_MAPPING_BASE_SLOT, depositDataBufferId));
+        bytes32 slot = keccak256(abi.encode(PROCESSED_DEPOSIT_DATA_BUFFER_IDS_MAPPING_BASE_SLOT, depositDataBufferId));
         LibUnstructuredStorage.setStorageBool(slot, true);
     }
 }

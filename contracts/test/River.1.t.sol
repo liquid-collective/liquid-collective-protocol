@@ -29,6 +29,7 @@ import "../src/ELFeeRecipient.1.sol";
 import "../src/OperatorsRegistry.1.sol";
 import "../src/CoverageFund.1.sol";
 import "../src/ConsolidationCoverageFund.1.sol";
+import "../src/ExternalConsolidationRecipientMapping.sol";
 import "../src/RedeemManager.1.sol";
 
 contract MockDepositDataBuffer is IDepositDataBuffer {
@@ -111,12 +112,17 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
     ELFeeRecipientV1 internal elFeeRecipient;
     CoverageFundV1 internal coverageFund;
     ConsolidationCoverageFundV1 internal consolidationCoverageFund;
+    ExternalConsolidationRecipientMappingV1 internal externalConsolidationRecipientMapping;
     AllowlistV1 internal allowlist;
     OperatorsRegistryWithOverridesV1 internal operatorsRegistry;
 
     MockDepositDataBuffer internal depositBuffer;
     AttestationVerifierV1 internal attestationVerifier;
 
+    uint256 internal consolidationCommitteeAttesterPk1 = 0xC1;
+    uint256 internal consolidationCommitteeAttesterPk2 = 0xC2;
+    address internal consolidationCommitteeAttester1;
+    address internal consolidationCommitteeAttester2;
     uint256 internal rootAttesterPk1 = 0xA1;
     uint256 internal rootAttesterPk2 = 0xA2;
     uint256 internal rootAttesterPk3 = 0xA3;
@@ -131,6 +137,10 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
     bytes32 internal constant VERSION_HASH = keccak256("1");
     bytes32 internal constant ATTEST_TYPEHASH =
         keccak256("Attest(bytes32 depositDataBufferId,bytes32 depositRootHash)");
+    bytes32 internal constant CONSOLIDATION_NAME_HASH = keccak256("ConsolidationValidation");
+    bytes32 internal constant ATTEST_CONSOLIDATION_TYPEHASH = keccak256(
+        "AttestConsolidation(address withdrawalAddress,bytes[] sourcePubkeys,bytes[] targetPubkeys,uint256 totalAmount)"
+    );
 
     address internal admin;
     address internal newAdmin;
@@ -205,6 +215,8 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
         bob = makeAddr("bob");
         joe = makeAddr("joe");
         keeper = makeAddr("keeper");
+        consolidationCommitteeAttester1 = vm.addr(consolidationCommitteeAttesterPk1);
+        consolidationCommitteeAttester2 = vm.addr(consolidationCommitteeAttesterPk2);
         rootAttester1 = vm.addr(rootAttesterPk1);
         rootAttester2 = vm.addr(rootAttesterPk2);
         rootAttester3 = vm.addr(rootAttesterPk3);
@@ -217,6 +229,8 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
         LibImplementationUnbricker.unbrick(vm, address(coverageFund));
         consolidationCoverageFund = new ConsolidationCoverageFundV1();
         LibImplementationUnbricker.unbrick(vm, address(consolidationCoverageFund));
+        externalConsolidationRecipientMapping = new ExternalConsolidationRecipientMappingV1();
+        LibImplementationUnbricker.unbrick(vm, address(externalConsolidationRecipientMapping));
         oracle = new OracleV1();
         LibImplementationUnbricker.unbrick(vm, address(oracle));
         allowlist = new AllowlistV1();
@@ -237,6 +251,7 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
         elFeeRecipient.initELFeeRecipientV1(address(river));
         coverageFund.initCoverageFundV1(address(river));
         consolidationCoverageFund.initConsolidationCoverageFundV1(address(river));
+        externalConsolidationRecipientMapping.initExternalConsolidationRecipientMappingV1(address(river));
     }
 
     // -----------------------------------------------------------------------
@@ -261,6 +276,84 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
     /// @dev Generate a deterministic 96-byte signature.
     function _fakeSignature(uint256 seed) internal pure returns (bytes memory) {
         return abi.encodePacked(sha256(abi.encode("sig", seed)), sha256(abi.encode("sig2", seed)), bytes32(0));
+    }
+
+    function _hashBytesArray(bytes[] memory arr) internal pure returns (bytes32) {
+        bytes32[] memory hashes = new bytes32[](arr.length);
+        for (uint256 i = 0; i < arr.length; i++) {
+            hashes[i] = keccak256(arr[i]);
+        }
+        return keccak256(abi.encodePacked(hashes));
+    }
+
+    function _consolidationDigest(
+        address withdrawalAddress,
+        bytes[] memory sources,
+        bytes[] memory targets,
+        uint256 totalAmount
+    ) internal view returns (bytes32) {
+        bytes32 domainSep = keccak256(
+            abi.encode(EIP712_DOMAIN_TYPEHASH, CONSOLIDATION_NAME_HASH, VERSION_HASH, block.chainid, address(river))
+        );
+        bytes32 structHash = keccak256(
+            abi.encode(
+                ATTEST_CONSOLIDATION_TYPEHASH,
+                withdrawalAddress,
+                _hashBytesArray(sources),
+                _hashBytesArray(targets),
+                totalAmount
+            )
+        );
+        return keccak256(abi.encodePacked("\x19\x01", domainSep, structHash));
+    }
+
+    function _signConsolidation(uint256 pk, bytes32 digest) internal view returns (bytes memory) {
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(pk, digest);
+        return abi.encodePacked(r, s, v);
+    }
+
+    function _buildConsolidation(address withdrawalAddress, uint256 totalAmount, uint256 seed)
+        internal
+        view
+        returns (IAttestationVerifierV1.ConsolidationObject memory consolidation)
+    {
+        bytes[] memory sources = new bytes[](1);
+        sources[0] = _fakePubkey(seed);
+        bytes[] memory targets = new bytes[](1);
+        targets[0] = _fakePubkey(seed + 1000);
+        bytes32 digest = _consolidationDigest(withdrawalAddress, sources, targets, totalAmount);
+
+        bytes[] memory sigs = new bytes[](2);
+        sigs[0] = _signConsolidation(consolidationCommitteeAttesterPk1, digest);
+        sigs[1] = _signConsolidation(consolidationCommitteeAttesterPk2, digest);
+
+        consolidation = IAttestationVerifierV1.ConsolidationObject({
+            withdrawalAddress: withdrawalAddress,
+            sourcePubkeys: sources,
+            targetPubkeys: targets,
+            totalAmount: totalAmount,
+            signatures: sigs
+        });
+    }
+
+    function _allowConsolidation(address _who) internal {
+        address[] memory allowees = new address[](1);
+        allowees[0] = _who;
+        uint256[] memory permissions = new uint256[](1);
+        permissions[0] = LibAllowlistMasks.CONSOLIDATE_MASK;
+
+        vm.prank(allower);
+        allowlist.setAllowPermissions(allowees, permissions);
+    }
+
+    function _denyAccount(address _who) internal {
+        address[] memory toBeDenied = new address[](1);
+        toBeDenied[0] = _who;
+        uint256[] memory permissions = new uint256[](1);
+        permissions[0] = LibAllowlistMasks.DENY_MASK;
+
+        vm.prank(denier);
+        allowlist.setDenyPermissions(toBeDenied, permissions);
     }
 
     /// @dev Replacement for the old depositToConsensusLayerWithDepositRoot.
@@ -412,12 +505,19 @@ contract RiverV1Tests is RiverV1TestBase {
         _initRootAttesters[0] = rootAttester1;
         _initRootAttesters[1] = rootAttester2;
         _initRootAttesters[2] = rootAttester3;
+        address[] memory _initConsolidationCommitteeAttesters = new address[](1);
+        _initConsolidationCommitteeAttesters[0] = makeAddr("consolidationCommitteeAttesterStub");
         attestationVerifier = new AttestationVerifierV1();
         LibImplementationUnbricker.unbrick(vm, address(attestationVerifier));
         attestationVerifier.initAttestationVerifierV1(
-            address(river), address(depositBuffer), _initRootAttesters, 2, bytes4(0)
+            address(river),
+            address(depositBuffer),
+            _initRootAttesters,
+            2,
+            bytes4(0),
+            _initConsolidationCommitteeAttesters,
+            1
         );
-
         // Wire validator address into River's storage (these tests skip initRiverV1_3
         // because they don't require the V1_3 accounting migration).
         vm.store(
@@ -1443,10 +1543,18 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         _initRootAttesters2[0] = rootAttester1;
         _initRootAttesters2[1] = rootAttester2;
         _initRootAttesters2[2] = rootAttester3;
+        address[] memory _initConsolidationCommitteeAttesters = new address[](1);
+        _initConsolidationCommitteeAttesters[0] = makeAddr("consolidationCommitteeAttesterStub");
         attestationVerifier = new AttestationVerifierV1();
         LibImplementationUnbricker.unbrick(vm, address(attestationVerifier));
         attestationVerifier.initAttestationVerifierV1(
-            address(river), address(depositBuffer), _initRootAttesters2, 2, bytes4(0)
+            address(river),
+            address(depositBuffer),
+            _initRootAttesters2,
+            2,
+            bytes4(0),
+            _initConsolidationCommitteeAttesters,
+            1
         );
         vm.store(
             address(river),
@@ -2856,6 +2964,8 @@ contract RiverV1CoverageTests is RiverV1TestBase {
     bytes32 constant CONSOLIDATION_BUFFER_SLOT = bytes32(uint256(keccak256("river.state.consolidationBuffer")) - 1);
     bytes32 constant BALANCE_FOR_CONSOLIDATION_COVERAGE_SLOT =
         bytes32(uint256(keccak256("river.state.balanceForConsolidationCoverage")) - 1);
+    bytes32 constant EXTERNAL_CONSOLIDATION_RECIPIENT_MAPPING_ADDRESS_SLOT =
+        bytes32(uint256(keccak256("river.state.externalConsolidationRecipientMappingAddress")) - 1);
 
     event PulledConsolidationCoverageFunds(uint256 amount);
     event SetConsolidationBuffer(uint256 oldAmount, uint256 newAmount);
@@ -2865,9 +2975,13 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         address[] memory _rootAttesters_ = new address[](2);
         _rootAttesters_[0] = makeAddr("rootAttester1");
         _rootAttesters_[1] = makeAddr("rootAttester2");
+        address[] memory _consolidationCommitteeAttesters_ = new address[](1);
+        _consolidationCommitteeAttesters_[0] = makeAddr("consolidationCommitteeAttesterStub");
         v = new AttestationVerifierV1();
         LibImplementationUnbricker.unbrick(vm, address(v));
-        v.initAttestationVerifierV1(_river, makeAddr("depositBuffer"), _rootAttesters_, 1, bytes4(0));
+        v.initAttestationVerifierV1(
+            _river, makeAddr("depositBuffer"), _rootAttesters_, 1, bytes4(0), _consolidationCommitteeAttesters_, 1
+        );
     }
 
     /// Asserts that initRiverV1_3 sets in-flight deposit when reported validator count is less than deposited count.
@@ -2879,9 +2993,15 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         AttestationVerifierV1 v = _deployValidatorFor(address(river));
         bytes32 wc = withdraw.getCredentials();
         vm.prank(admin);
-        river.initRiverV1_3(wc, address(consolidationCoverageFund), address(v));
+        river.initRiverV1_3(
+            wc, address(consolidationCoverageFund), address(v), address(externalConsolidationRecipientMapping)
+        );
         assertEq(river.getTotalDepositedETH(), 10 * 32 ether);
         assertEq(uint256(vm.load(address(river), IN_FLIGHT_DEPOSIT_SLOT)), 3 * 32 ether);
+        assertEq(
+            address(uint160(uint256(vm.load(address(river), EXTERNAL_CONSOLIDATION_RECIPIENT_MAPPING_ADDRESS_SLOT)))),
+            address(externalConsolidationRecipientMapping)
+        );
     }
 
     /// Asserts that initRiverV1_3 leaves in-flight deposit zero when reported count equals deposited count.
@@ -2892,9 +3012,15 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         AttestationVerifierV1 v = _deployValidatorFor(address(river));
         bytes32 wc = withdraw.getCredentials();
         vm.prank(admin);
-        river.initRiverV1_3(wc, address(consolidationCoverageFund), address(v));
+        river.initRiverV1_3(
+            wc, address(consolidationCoverageFund), address(v), address(externalConsolidationRecipientMapping)
+        );
         assertEq(river.getTotalDepositedETH(), 5 * 32 ether);
         assertEq(uint256(vm.load(address(river), IN_FLIGHT_DEPOSIT_SLOT)), 0);
+        assertEq(
+            address(uint160(uint256(vm.load(address(river), EXTERNAL_CONSOLIDATION_RECIPIENT_MAPPING_ADDRESS_SLOT)))),
+            address(externalConsolidationRecipientMapping)
+        );
     }
 
     /// Asserts that initRiverV1_3 reverts when the attestation verifier address is zero.
@@ -2903,7 +3029,9 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         bytes32 wc = withdraw.getCredentials();
         vm.prank(admin);
         vm.expectRevert(abi.encodeWithSignature("InvalidAttestationVerifier()"));
-        river.initRiverV1_3(wc, address(consolidationCoverageFund), address(0));
+        river.initRiverV1_3(
+            wc, address(consolidationCoverageFund), address(0), address(externalConsolidationRecipientMapping)
+        );
     }
 
     /// Asserts that initRiverV1_3 reverts when the attestation verifier address is an EOA (no code).
@@ -2915,7 +3043,7 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         assertEq(eoa.code.length, 0);
         vm.prank(admin);
         vm.expectRevert(abi.encodeWithSignature("InvalidAttestationVerifier()"));
-        river.initRiverV1_3(wc, address(consolidationCoverageFund), eoa);
+        river.initRiverV1_3(wc, address(consolidationCoverageFund), eoa, address(externalConsolidationRecipientMapping));
     }
 
     /// Asserts that initRiverV1_3 reverts when the verifier is bound to a different River.
@@ -2925,18 +3053,38 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         bytes32 wc = withdraw.getCredentials();
         vm.prank(admin);
         vm.expectRevert(abi.encodeWithSignature("InvalidAttestationVerifier()"));
-        river.initRiverV1_3(wc, address(consolidationCoverageFund), address(v));
+        river.initRiverV1_3(
+            wc, address(consolidationCoverageFund), address(v), address(externalConsolidationRecipientMapping)
+        );
+    }
+
+    /// Asserts that initRiverV1_3 reverts when the external consolidation recipient mapping address is zero.
+    function testInitRiverV1_3RevertsOnZeroExternalConsolidationRecipientMapping() public {
+        _initRiverAndV1_2();
+        AttestationVerifierV1 v = _deployValidatorFor(address(river));
+        bytes32 wc = withdraw.getCredentials();
+        vm.prank(admin);
+        vm.expectRevert(abi.encodeWithSignature("InvalidZeroAddress()"));
+        river.initRiverV1_3(wc, address(consolidationCoverageFund), address(v), address(0));
     }
 
     /// Asserts that AttestationVerifier init reverts on an empty root attester array.
     function testInitAttestationVerifierRevertsOnEmptyRootAttesters() public {
         _initRiverAndV1_2();
+        address[] memory _consolidationCommitteeAttesters_ = new address[](1);
+        _consolidationCommitteeAttesters_[0] = makeAddr("consolidationCommitteeAttesterStub");
         address[] memory _rootAttesters_ = new address[](0);
         AttestationVerifierV1 v = new AttestationVerifierV1();
         LibImplementationUnbricker.unbrick(vm, address(v));
         vm.expectRevert(abi.encodeWithSignature("InvalidArgument()"));
         v.initAttestationVerifierV1(
-            address(river), makeAddr("depositBuffer"), _rootAttesters_, 1, bytes4(0)
+            address(river),
+            makeAddr("depositBuffer"),
+            _rootAttesters_,
+            1,
+            bytes4(0),
+            _consolidationCommitteeAttesters_,
+            1
         );
     }
 
@@ -2950,9 +3098,17 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         for (uint256 i = 0; i < tooMany; i++) {
             _rootAttesters_[i] = address(uint160(i + 1));
         }
+        address[] memory _consolidationCommitteeAttesters_ = new address[](1);
+        _consolidationCommitteeAttesters_[0] = makeAddr("consolidationCommitteeAttesterStub");
         vm.expectRevert(abi.encodeWithSignature("InvalidArgument()"));
         v.initAttestationVerifierV1(
-            address(river), makeAddr("depositBuffer"), _rootAttesters_, 1, bytes4(0)
+            address(river),
+            makeAddr("depositBuffer"),
+            _rootAttesters_,
+            1,
+            bytes4(0),
+            _consolidationCommitteeAttesters_,
+            1
         );
     }
 
@@ -3407,6 +3563,31 @@ contract RiverV1ConsolidationMintTests is RiverV1TestBase {
             maxDailyRelativeCommittableAmount
         );
         river.initRiverV1_2();
+        address[] memory _initDepositCommitteeAttesters = new address[](3);
+        _initDepositCommitteeAttesters[0] = rootAttester1;
+        _initDepositCommitteeAttesters[1] = rootAttester2;
+        _initDepositCommitteeAttesters[2] = rootAttester3;
+        address[] memory _initConsolidationCommitteeAttesters = new address[](2);
+        _initConsolidationCommitteeAttesters[0] = consolidationCommitteeAttester1;
+        _initConsolidationCommitteeAttesters[1] = consolidationCommitteeAttester2;
+        attestationVerifier = new AttestationVerifierV1();
+        LibImplementationUnbricker.unbrick(vm, address(attestationVerifier));
+        attestationVerifier.initAttestationVerifierV1(
+            address(river),
+            address(depositBuffer),
+            _initDepositCommitteeAttesters,
+            2,
+            bytes4(0),
+            _initConsolidationCommitteeAttesters,
+            2
+        );
+        vm.prank(admin);
+        river.initRiverV1_3(
+            withdrawalCredentials,
+            address(consolidationCoverageFund),
+            address(attestationVerifier),
+            address(externalConsolidationRecipientMapping)
+        );
         withdraw.initializeWithdrawV1(address(river));
         oracle.initOracleV1(address(river), admin, 225, 32, 12, 0, 1000, 500);
 
@@ -3419,45 +3600,103 @@ contract RiverV1ConsolidationMintTests is RiverV1TestBase {
 
     function testOnlyKeeperCanMintForConsolidation() public {
         address notKeeper = makeAddr("notKeeper");
+        IAttestationVerifierV1.ConsolidationObject memory consolidation = _buildConsolidation(bob, 1 ether, 1);
         vm.prank(notKeeper);
         vm.expectRevert(abi.encodeWithSelector(IConsensusLayerDepositManagerV1.OnlyKeeper.selector));
-        river.mintLsETHForConsolidation(1 ether, bob);
+        river.mintLsETHForConsolidation(consolidation);
     }
 
     function testMintLsETHForConsolidationZeroAmountReverts() public {
+        _allowConsolidation(bob);
+        IAttestationVerifierV1.ConsolidationObject memory consolidation = _buildConsolidation(bob, 0, 2);
         vm.prank(admin);
-        vm.expectRevert(abi.encodeWithSignature("InvalidArgument()"));
-        river.mintLsETHForConsolidation(0, bob);
+        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.ZeroConsolidationTotalAmount.selector));
+        river.mintLsETHForConsolidation(consolidation);
+    }
+
+    function testMintLsETHForConsolidationZeroUserRevertsAtAllowlist() public {
+        IAttestationVerifierV1.ConsolidationObject memory consolidation = _buildConsolidation(address(0), 1 ether, 3);
+        vm.prank(admin);
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(0)));
+        river.mintLsETHForConsolidation(consolidation);
+    }
+
+    function testMintLsETHForConsolidationUnallowedUserRevertsAtAllowlist() public {
+        address notKeeper = makeAddr("notKeeper");
+        IAttestationVerifierV1.ConsolidationObject memory consolidation = _buildConsolidation(bob, 1 ether, 4);
+        vm.prank(admin);
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", bob));
+        river.mintLsETHForConsolidation(consolidation);
+        vm.prank(notKeeper);
+        vm.expectRevert(abi.encodeWithSelector(IConsensusLayerDepositManagerV1.OnlyKeeper.selector));
+        river.mintLsETHForConsolidation(consolidation);
     }
 
     function testMintLsETHForConsolidationZeroRecipientReverts() public {
+        IAttestationVerifierV1.ConsolidationObject memory consolidation = _buildConsolidation(address(0), 1 ether, 4);
         vm.prank(admin);
-        vm.expectRevert(abi.encodeWithSignature("InvalidZeroAddress()"));
-        river.mintLsETHForConsolidation(1 ether, address(0));
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(0)));
+        river.mintLsETHForConsolidation(consolidation);
     }
 
     function testMintLsETHForConsolidationHappyPath() public {
         uint256 amount = 10 ether;
+        _allowConsolidation(bob);
+        IAttestationVerifierV1.ConsolidationObject memory consolidation = _buildConsolidation(bob, amount, 5);
         assertEq(river.getBalanceToConsolidate(), 0);
         assertEq(river.balanceOf(bob), 0);
 
         vm.expectEmit(true, true, true, true);
         emit IRiverV1.LsETHMintedForConsolidation(bob, amount, amount);
         vm.prank(admin);
-        river.mintLsETHForConsolidation(amount, bob);
+        river.mintLsETHForConsolidation(consolidation);
 
         assertEq(river.getBalanceToConsolidate(), amount);
         assertEq(river.balanceOf(bob), amount);
     }
 
-    function testMintLsETHForConsolidationCumulativeBalanceAndShares() public {
+    function testMintLsETHForConsolidationUsesMappedRecipient() public {
+        uint256 amount = 7 ether;
+        _allowConsolidation(bob);
+        vm.prank(bob);
+        externalConsolidationRecipientMapping.setRecipient(joe);
+        IAttestationVerifierV1.ConsolidationObject memory consolidation = _buildConsolidation(bob, amount, 6);
+
+        vm.expectEmit(true, true, true, true);
+        emit IRiverV1.LsETHMintedForConsolidation(joe, amount, amount);
         vm.prank(admin);
-        river.mintLsETHForConsolidation(5 ether, bob);
+        river.mintLsETHForConsolidation(consolidation);
+
+        assertEq(river.getBalanceToConsolidate(), amount);
+        assertEq(river.balanceOf(bob), 0);
+        assertEq(river.balanceOf(joe), amount);
+    }
+
+    function testMintLsETHForConsolidationMappedDeniedRecipientReverts() public {
+        _allowConsolidation(bob);
+        vm.prank(bob);
+        externalConsolidationRecipientMapping.setRecipient(joe);
+        _denyAccount(joe);
+        IAttestationVerifierV1.ConsolidationObject memory consolidation = _buildConsolidation(bob, 4 ether, 7);
+
+        vm.prank(admin);
+        vm.expectRevert(abi.encodeWithSignature("Denied(address)", joe));
+        river.mintLsETHForConsolidation(consolidation);
+    }
+
+    function testMintLsETHForConsolidationCumulativeBalanceAndShares() public {
+        _allowConsolidation(bob);
+        _allowConsolidation(joe);
+        IAttestationVerifierV1.ConsolidationObject memory bobConsolidation = _buildConsolidation(bob, 5 ether, 8);
+        IAttestationVerifierV1.ConsolidationObject memory joeConsolidation = _buildConsolidation(joe, 3 ether, 9);
+
+        vm.prank(admin);
+        river.mintLsETHForConsolidation(bobConsolidation);
         assertEq(river.getBalanceToConsolidate(), 5 ether);
         assertEq(river.balanceOf(bob), 5 ether);
 
         vm.prank(admin);
-        river.mintLsETHForConsolidation(3 ether, joe);
+        river.mintLsETHForConsolidation(joeConsolidation);
         assertEq(river.getBalanceToConsolidate(), 8 ether);
         assertEq(river.balanceOf(bob), 5 ether);
         assertEq(river.balanceOf(joe), 3 ether);

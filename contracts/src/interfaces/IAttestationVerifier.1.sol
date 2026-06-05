@@ -6,10 +6,42 @@ import "../libraries/BLS12_381.sol";
 
 /// @title Attestation Verifier Interface (v1)
 /// @author Alluvial Finance Inc.
-/// @notice External surface of the AttestationVerifier sibling contract that
-///         River delegates to for attestation-quorum + BLS deposit-message verification
-///         and for per-deposit withdrawal-credentials and committed-balance checks.
+/// @notice External surface of the AttestationVerifier sibling contract that River delegates
+///         to for two independent attestation flows:
+///         1. Deposit flow (`validateDeposits`) — attestation-quorum + BLS deposit-message
+///            verification, plus per-deposit withdrawal-credentials and committed-balance
+///            checks against a batch fetched from the `DepositDataBuffer`. View-only.
+///         2. Consolidation flow (`validateConsolidation`) — attestation-quorum verification
+///            over an EIP-7251 `ConsolidationObject` passed in by the caller (no on-chain
+///            buffer), with replay protection on the EIP-712 structHash. State-mutating.
 interface IAttestationVerifierV1 {
+    // -----------------------------------------------------------------------
+    // Types
+    // -----------------------------------------------------------------------
+
+    /// @notice A single EIP-7251 consolidation request, passed directly into
+    ///         `validateConsolidation` by the caller (no on-chain buffer indirection).
+    /// @dev    `sourcePubkeys[i]` is consolidated INTO `targetPubkeys[i]` — same-index pairing.
+    ///         `signatures` are the consolidation-committee attestor EIP-712 ECDSA signatures
+    ///         over the typed-data struct
+    ///             AttestConsolidation(address withdrawalAddress, bytes[] sourcePubkeys, bytes[] targetPubkeys, uint256 totalAmount)
+    ///         The `signatures` field itself is NOT part of the typed data — only the four
+    ///         request fields are. This is what lets attestors produce signatures over the
+    ///         request without a circular dependency.
+    struct ConsolidationObject {
+        /// @dev Address of the withdrawal credential that initiated the consolidation request; eventual recipient of LsETH unless the mapping is set to a different address
+        address withdrawalAddress;
+        /// @dev Source validator BLS pubkeys (48 bytes each). Paired by index with targetPubkeys.
+        bytes[] sourcePubkeys;
+        /// @dev Target validator BLS pubkeys (48 bytes each). Paired by index with sourcePubkeys.
+        bytes[] targetPubkeys;
+        /// @dev Total ETH being consolidated, in wei.
+        uint256 totalAmount;
+        /// @dev Consolidation-committee attestor EIP-712 ECDSA signatures (65 bytes each).
+        ///      Not part of the EIP-712 typed data the committee signs.
+        bytes[] signatures;
+    }
+
     // -----------------------------------------------------------------------
     // Events
     // -----------------------------------------------------------------------
@@ -31,6 +63,20 @@ interface IAttestationVerifierV1 {
 
     /// @notice Emitted when the River address is set on this verifier
     event SetRiver(address indexed river);
+
+    /// @notice Emitted when a consolidation-committee attester is added or removed
+    event SetConsolidationCommitteeAttester(address indexed consolidationCommitteeAttester, bool value);
+
+    /// @notice Emitted when the consolidation-committee attestation quorum is updated
+    event SetConsolidationCommitteeAttestationQuorum(uint256 quorum);
+
+    /// @notice Emitted when the EIP-712 consolidation domain separator is (re)cached
+    event SetConsolidationDomainSeparator(bytes32 consolidationDomainSeparator);
+
+    /// @notice Emitted when a consolidation request is successfully validated and
+    ///         marked as processed for replay protection.
+    /// @param consolidationHash The EIP-712 structHash of the consolidation request
+    event ConsolidationProcessed(bytes32 indexed consolidationHash);
 
     // -----------------------------------------------------------------------
     // Errors
@@ -117,6 +163,54 @@ interface IAttestationVerifierV1 {
     /// @param value The requested status (matches current status)
     error RootAttesterStatusUnchanged(address rootAttester, bool value);
 
+    // -- Consolidation-side errors --
+
+    /// @notice The number of valid, unique consolidation-committee attester signatures is below the configured quorum
+    /// @param valid The count of valid, unique consolidation-committee attester signatures recovered
+    /// @param quorum The required quorum
+    error InsufficientConsolidationAttestations(uint256 valid, uint256 quorum);
+
+    /// @notice The consolidation request has zero source pubkeys
+    error NoConsolidations();
+
+    /// @notice The source and target pubkey arrays have different lengths
+    /// @param sourceLength The length of the source pubkey array
+    /// @param targetLength The length of the target pubkey array
+    error ConsolidationArrayLengthMismatch(uint256 sourceLength, uint256 targetLength);
+
+    /// @notice A pubkey field has an unexpected byte length
+    /// @param index The pair index
+    /// @param length The observed length
+    /// @param isSource True if the offending pubkey is the source pubkey, false if it is the target pubkey
+    error InvalidConsolidationPubkeyLength(uint256 index, uint256 length, bool isSource);
+
+    /// @notice The EIP-712 consolidation domain separator has not been initialized
+    error ZeroConsolidationDomainSeparator();
+
+    /// @notice The consolidation's totalAmount is zero
+    error ZeroConsolidationTotalAmount();
+
+    /// @notice The consolidation's withdrawal address is the zero address
+    error ZeroConsolidationWithdrawalAddress();
+
+    /// @notice The supplied quorum is greater than the current consolidation-committee attester count
+    /// @param quorum The supplied quorum
+    /// @param consolidationCommitteeAttesterCount The current consolidation-committee attester count
+    error QuorumExceedsConsolidationCommitteeAttesterCount(uint256 quorum, uint256 consolidationCommitteeAttesterCount);
+
+    /// @notice Adding a consolidation-committee attester would exceed MAX_CONSOLIDATION_COMMITTEE_ATTESTERS
+    /// @param count The would-be consolidation-committee attester count
+    /// @param max The MAX_CONSOLIDATION_COMMITTEE_ATTESTERS bound
+    error TooManyConsolidationCommitteeAttesters(uint256 count, uint256 max);
+
+    /// @notice setConsolidationCommitteeAttester was called with the attester already in the requested state
+    /// @param consolidationCommitteeAttester The consolidation-committee attester address
+    /// @param value The requested status (matches current status)
+    error ConsolidationCommitteeAttesterStatusUnchanged(address consolidationCommitteeAttester, bool value);
+
+    /// @notice The supplied consolidation has already been validated; replay rejected.
+    /// @param consolidationHash The EIP-712 structHash of the consolidation request
+    error ConsolidationAlreadyProcessed(bytes32 consolidationHash);
     /// @notice A top-up referenced a pubkey that has never been initial-deposited by River.
     ///         Without this check, malicious root attesters could mark an attacker pubkey as a
     ///         top-up and bypass BLS verification.
@@ -143,18 +237,29 @@ interface IAttestationVerifierV1 {
     // -----------------------------------------------------------------------
 
     /// @notice One-shot initializer for v1 of the AttestationVerifier.
+    /// @dev    Configures both the deposit and consolidation attestation flows in a single call.
+    ///         Each flow has its own committee, quorum, and EIP-712 domain separator (distinct
+    ///         NAME_HASH per flow); they share only the River anchor and the admin lookup.
+    ///         Quorum and committee constraints are validated independently per flow. The deposit
+    ///         flow uses a pre-commit `DepositDataBuffer` contract; the consolidation flow has no
+    ///         on-chain buffer — callers pass `ConsolidationObject` directly into `validateConsolidation`.
     /// @param _river                The River proxy address; used for the EIP-712 verifyingContract
     ///                              binding and for the cross-contract admin lookup.
     /// @param _depositDataBuffer    The pre-commit buffer the keeper writes to.
     /// @param _rootAttesters Initial set of root attester EOAs.
     /// @param _quorum               Initial attestation quorum (1 ≤ quorum ≤ rootAttesters.length).
     /// @param _genesisForkVersion   Genesis fork version used to derive the BLS deposit domain.
+    /// @param _consolidationCommitteeAttesters  Initial set of consolidation-committee attester EOAs.
+    /// @param _consolidationQuorum              Initial consolidation-attestation quorum
+    ///                                          (1 ≤ q ≤ consolidationCommitteeAttesters.length, ≤ MAX_SIGNATURES).
     function initAttestationVerifierV1(
         address _river,
         address _depositDataBuffer,
         address[] calldata _rootAttesters,
         uint256 _quorum,
-        bytes4 _genesisForkVersion
+        bytes4 _genesisForkVersion,
+        address[] calldata _consolidationCommitteeAttesters,
+        uint256 _consolidationQuorum
     ) external;
 
     // -----------------------------------------------------------------------
@@ -206,6 +311,33 @@ interface IAttestationVerifierV1 {
     /// @param pubkeys The 48-byte BLS pubkeys to record
     function recordNewlyFundedPubkeys(bytes[] calldata pubkeys) external;
 
+    /// @notice Validate consolidation-committee attestations over a `ConsolidationObject` passed
+    ///         in by the caller (River) and mark the request as processed for replay protection.
+    /// @dev    The caller(River) supplies the full struct (including signatures) in calldata. The
+    ///         verifier constructs the EIP-712 typed-data digest directly from the four
+    ///         request fields and the cached consolidation domain separator, then recovers
+    ///         each signature against that digest. The `signatures` field of the struct is
+    ///         NOT part of the typed data.
+    ///
+    ///         Replay protection: the EIP-712 structHash is recorded in storage on success.
+    ///         Subsequent calls with a struct that hashes to the same value revert with
+    ///         `ConsolidationAlreadyProcessed`. Note that this makes the function
+    ///         state-mutating (not `view`).
+    ///
+    ///         The function reverts on any validation failure and returns `true` on success.
+    ///         The boolean is a positive signal for off-chain `eth_call` style invocations.
+    ///
+    ///         Trust boundary: this function only validates structural shape and the attestation
+    ///         quorum. The following are intentionally NOT checked here and are delegated to the
+    ///         caller (off-chain pipeline / consolidation committee) or to the eventual River
+    ///         integration:
+    ///           - Source/target pubkey uniqueness (EIP-7251 single-use source rule)
+    ///           - `totalAmount` gwei alignment, upper bound, or correlation with pair count
+    ///           - Financial caps (e.g. against committed/in-flight balances)
+    /// @param consolidation The consolidation request to validate (withdrawal address,
+    ///                      source/target pubkeys, totalAmount, signatures).
+    /// @return Always `true` if the call returns; reverts otherwise.
+    function validateConsolidation(ConsolidationObject calldata consolidation) external returns (bool);
     /// @notice Mark a `depositDataBufferId` as processed. Only callable by River.
     /// @dev Called by River after the deposit-execution loop; consulted by `validateDeposits()` to reject replays.
     /// @param depositDataBufferId The batch identifier to mark processed.
@@ -227,6 +359,15 @@ interface IAttestationVerifierV1 {
     /// @notice Update the DepositDataBuffer address. Only callable by River's admin.
     /// @param _depositDataBuffer The new buffer address
     function setDepositDataBuffer(address _depositDataBuffer) external;
+
+    /// @notice Add or remove a consolidation-committee attester. Only callable by River's admin.
+    /// @param consolidationCommitteeAttester The consolidation-committee attester address to update
+    /// @param value True to register, false to deregister
+    function setConsolidationCommitteeAttester(address consolidationCommitteeAttester, bool value) external;
+
+    /// @notice Update the consolidation-committee attestation quorum. Only callable by River's admin.
+    /// @param newQuorum The new quorum (1 ≤ newQuorum ≤ consolidationCommitteeAttesterCount, ≤ MAX_SIGNATURES)
+    function setConsolidationCommitteeAttestationQuorum(uint256 newQuorum) external;
 
     // -----------------------------------------------------------------------
     // Views
@@ -263,6 +404,24 @@ interface IAttestationVerifierV1 {
     /// @return The River address
     function getRiver() external view returns (address);
 
+    // -- Consolidation-side views --
+
+    /// @notice Check whether an address is a registered consolidation-committee attester
+    /// @param account The address to check
+    /// @return True if account is a registered consolidation-committee attester
+    function isConsolidationCommitteeAttester(address account) external view returns (bool);
+
+    /// @notice Retrieve the current number of registered consolidation-committee attesters
+    /// @return The consolidation-committee attester count
+    function getConsolidationCommitteeAttesterCount() external view returns (uint256);
+
+    /// @notice Retrieve the current consolidation-committee attestation quorum
+    /// @return The required number of valid, unique consolidation-committee attester signatures
+    function getConsolidationCommitteeAttestationQuorum() external view returns (uint256);
+
+    /// @notice Retrieve the cached EIP-712 consolidation domain separator
+    /// @return The EIP-712 consolidation domain separator
+    function getConsolidationDomainSeparator() external view returns (bytes32);
     /// @notice Check whether a pubkey has been initial-deposited by River.
     /// @dev Off-chain producers should subscribe to ConsensusLayerDepositManager's `PubkeyFunded`
     ///      events and use this view to confirm a pubkey is eligible for top-up submissions.

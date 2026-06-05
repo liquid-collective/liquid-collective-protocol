@@ -9,6 +9,7 @@ import "./interfaces/IWithdraw.1.sol";
 import "./interfaces/IELFeeRecipient.1.sol";
 import "./interfaces/ICoverageFund.1.sol";
 import "./interfaces/IProtocolVersion.sol";
+import "./interfaces/IExternalConsolidationRecipientMapping.1.sol";
 
 import "./components/ConsensusLayerDepositManager.1.sol";
 import "./components/UserDepositManager.1.sol";
@@ -35,6 +36,7 @@ import "./state/river/MetadataURI.sol";
 import "./state/river/LastConsensusLayerReport.sol";
 import "./state/river/TotalDepositedETH.sol";
 import "./state/river/DepositedValidatorCount.sol";
+import "./state/river/ExternalConsolidationRecipientMappingAddress.sol";
 import "./state/shared/OperatorsRegistryAddress.sol";
 
 /// @title River (v1)
@@ -54,7 +56,8 @@ contract RiverV1 is
     function initRiverV1_3(
         bytes32 _withdrawalCredentials,
         address _consolidationCoverageFund,
-        address _attestationVerifier
+        address _attestationVerifier,
+        address _externalConsolidationRecipientMapping
     ) external init(3) onlyAdmin {
         if (_withdrawalCredentials == bytes32(0)) {
             revert InvalidWithdrawalCredentials();
@@ -77,6 +80,9 @@ contract RiverV1 is
 
         AttestationVerifierAddress.set(_attestationVerifier);
         emit SetAttestationVerifier(_attestationVerifier);
+
+        ExternalConsolidationRecipientMappingAddress.set(_externalConsolidationRecipientMapping);
+        emit SetExternalConsolidationRecipientMapping(_externalConsolidationRecipientMapping);
 
         // accounting changes to move from 0x01 to 0x02 accounting
 
@@ -180,18 +186,35 @@ contract RiverV1 is
     }
 
     /// @inheritdoc IRiverV1
-    function mintLsETHForConsolidation(uint256 _amount, address _recipient) external {
-        if (msg.sender != KeeperAddress.get()) {
-            revert IConsensusLayerDepositManagerV1.OnlyKeeper();
+    function mintLsETHForConsolidation(IAttestationVerifierV1.ConsolidationObject calldata consolidation)
+        external
+        onlyKeeper
+    {
+        // we check the allowlist first to fail fast if the withdrawalAddress/recipient is denied
+        IAllowlistV1 allowlist = IAllowlistV1(AllowlistAddress.get());
+        allowlist.onlyAllowed(consolidation.withdrawalAddress, LibAllowlistMasks.CONSOLIDATE_MASK);
+
+        address recipient = IExternalConsolidationRecipientMappingV1(ExternalConsolidationRecipientMappingAddress.get())
+            .getRecipient(consolidation.withdrawalAddress);
+
+        // if the recipient is not set, we use the withdrawalAddress
+        if (recipient == address(0)) {
+            recipient = consolidation.withdrawalAddress;
+        } else {
+            if (allowlist.isDenied(recipient)) {
+                revert Denied(recipient);
+            }
         }
-        if (_amount == 0) {
-            revert LibErrors.InvalidArgument();
-        }
-        LibSanitize._notZeroAddress(_recipient);
+
+        IAttestationVerifierV1 verifier = IAttestationVerifierV1(AttestationVerifierAddress.get());
+        // Since the verifier validates the consolidation object, we do not validate it here
+        // this reverts if the consolidation is invalid
+        verifier.validateConsolidation(consolidation);
+
         uint256 oldConsolidationBuffer = ConsolidationBuffer.get();
-        _setConsolidationBuffer(oldConsolidationBuffer, oldConsolidationBuffer + _amount);
-        uint256 sharesMinted = _mintShares(_recipient, _amount);
-        emit LsETHMintedForConsolidation(_recipient, _amount, sharesMinted);
+        _setConsolidationBuffer(oldConsolidationBuffer, oldConsolidationBuffer + consolidation.totalAmount);
+        uint256 sharesMinted = _mintShares(recipient, consolidation.totalAmount);
+        emit LsETHMintedForConsolidation(recipient, consolidation.totalAmount, sharesMinted);
     }
 
     /// @inheritdoc IRiverV1
@@ -692,6 +715,7 @@ contract RiverV1 is
         // When slashing containment mode is active, skip new validator funding to prevent compounding
         // losses. The deposit buffer remains available for redeem rebalancing but nothing is committed.
         if (_slashingContainmentModeEnabled) {
+            emit SkippedCommitToDepositDueToSlashingContainment();
             return;
         }
 
