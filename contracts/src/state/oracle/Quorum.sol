@@ -18,6 +18,6 @@ library Quorum {
     /// @notice Sets the Quorum
     /// @param _newValue New Quorum
     function set(uint256 _newValue) internal {
-        return LibUnstructuredStorage.setStorageUint256(QUORUM_SLOT, _newValue);
+        LibUnstructuredStorage.setStorageUint256(QUORUM_SLOT, _newValue);
     }
 }
