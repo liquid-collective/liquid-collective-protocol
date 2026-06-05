@@ -14,7 +14,7 @@ contract AttesterSetHandler is Test {
     AttestationVerifierV1 internal immutable verifier;
     address internal immutable admin;
 
-    /// @dev Deterministic candidate pool. Sized > MAX_DEPOSIT_COMMITTEE_ATTESTERS so the
+    /// @dev Deterministic candidate pool. Sized > MAX_ROOT_ATTESTERS so the
     ///      fuzzer can drive the cap branch. Includes the initial attesters so removals can
     ///      hit a currently-registered address.
     address[] internal candidates;
@@ -25,7 +25,7 @@ contract AttesterSetHandler is Test {
         for (uint256 i = 0; i < _initialAttesters.length; i++) {
             candidates.push(_initialAttesters[i]);
         }
-        uint256 cap = _verifier.MAX_DEPOSIT_COMMITTEE_ATTESTERS();
+        uint256 cap = _verifier.MAX_ROOT_ATTESTERS();
         uint256 paddingCount = cap + 10 - _initialAttesters.length;
         for (uint256 i = 0; i < paddingCount; i++) {
             candidates.push(address(uint160(0x1000 + i)));
@@ -37,7 +37,7 @@ contract AttesterSetHandler is Test {
         address target = candidates[seed % candidates.length];
         vm.prank(admin);
         // solhint-disable-next-line no-empty-blocks
-        try verifier.setDepositCommitteeAttester(target, true) {} catch {}
+        try verifier.setRootAttester(target, true) {} catch {}
     }
 
     /// @dev Deregister an attester. Same candidate pool — most picks hit registered addresses.
@@ -45,7 +45,7 @@ contract AttesterSetHandler is Test {
         address target = candidates[seed % candidates.length];
         vm.prank(admin);
         // solhint-disable-next-line no-empty-blocks
-        try verifier.setDepositCommitteeAttester(target, false) {} catch {}
+        try verifier.setRootAttester(target, false) {} catch {}
     }
 
     /// @dev Set quorum. Bound the input so we cover zero, in-range, over-MAX-SIGS, and
@@ -54,7 +54,7 @@ contract AttesterSetHandler is Test {
         uint256 bounded = bound(q, 0, verifier.MAX_SIGNATURES() + 5);
         vm.prank(admin);
         // solhint-disable-next-line no-empty-blocks
-        try verifier.setDepositCommitteeAttestationQuorum(bounded) {} catch {}
+        try verifier.setRootAttestationQuorum(bounded) {} catch {}
     }
 
     /// @dev Length of the candidate pool. The pool is the universe of addresses that could
@@ -65,7 +65,7 @@ contract AttesterSetHandler is Test {
 
     /// @dev Read a candidate by index. Paired with `getCandidatesLength()` so the invariant
     ///      test can iterate the full pool and audit per-address consistency between the
-    ///      verifier's `count` field and its `isDepositCommitteeAttester` mapping.
+    ///      verifier's `count` field and its `isRootAttester` mapping.
     function getCandidate(uint256 i) external view returns (address) {
         return candidates[i];
     }

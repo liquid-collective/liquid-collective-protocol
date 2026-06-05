@@ -119,7 +119,7 @@ contract AccountingHandler is StdUtils {
 
     /// @notice Fuzzer entry point: completes a fuzzed ETH amount of queued exits for a
     ///         pseudo-randomly selected operator, with a random penalty up to 2 ETH.
-    ///         Skips silently if no ETH is queued for exit (handles both partial and full exits).
+    ///         Skips silently if no ETH is queued for exit (handles both EL and CL exits).
     /// @param opSeed      Seed used to select the target operator.
     /// @param amountSeed  Seed used to derive the ETH amount to complete, bounded to [1 ETH, queued ETH].
     /// @param penaltySeed Seed used to derive the exit penalty, bounded to [0, 2 ETH].
