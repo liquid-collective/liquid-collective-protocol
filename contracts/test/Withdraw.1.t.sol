@@ -9,6 +9,7 @@ import "./utils/LibImplementationUnbricker.sol";
 import "../src/interfaces/IWithdraw.1.sol";
 import "../src/Withdraw.1.sol";
 import "../src/OperatorsRegistry.1.sol";
+import "../src/libraries/LibErrors.sol";
 
 contract RiverMock {
     event DebugReceivedCLFunds(uint256 amount);
@@ -971,5 +972,41 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         vm.prank(address(river));
         vm.expectRevert(abi.encodeWithSelector(IWithdrawV1.InvalidPubkeyLength.selector, uint256(2)));
         withdraw.consolidate{value: 1 gwei}(requests, 1 gwei, excessFeeRecipient);
+    }
+
+    /// @notice Tests that withdraw reverts when excessFeeRecipient is the zero address,
+    ///         preventing silent burn of excess refunds (issue #534).
+    function testWithdrawRevertsIfExcessFeeRecipientIsZeroAddress() public {
+        bytes[] memory pubkeys = new bytes[](1);
+        pubkeys[0] = VALID_PUBKEY_48;
+        uint64[] memory amounts = new uint64[](1);
+        amounts[0] = 1 gwei;
+
+        uint256 maxFeePerWithdrawal = 1 gwei;
+        mockWithdrawal.setFee(maxFeePerWithdrawal);
+        uint256 valueSent = 5 gwei; // ensures excess exists
+        vm.deal(address(operatorsRegistry), valueSent);
+
+        vm.prank(address(operatorsRegistry));
+        vm.expectRevert(LibErrors.InvalidZeroAddress.selector);
+        withdraw.withdraw{value: valueSent}(pubkeys, amounts, maxFeePerWithdrawal, address(0));
+    }
+
+    /// @notice Tests that consolidate reverts when excessFeeRecipient is the zero address,
+    ///         preventing silent burn of excess refunds (issue #534).
+    function testConsolidateRevertsIfExcessFeeRecipientIsZeroAddress() public {
+        bytes[] memory srcPubkeys = new bytes[](1);
+        srcPubkeys[0] = VALID_PUBKEY_48;
+        IWithdrawV1.ConsolidationRequest[] memory requests = new IWithdrawV1.ConsolidationRequest[](1);
+        requests[0] = IWithdrawV1.ConsolidationRequest({srcPubkeys: srcPubkeys, targetPubkey: VALID_PUBKEY_48});
+
+        uint256 maxFeePerConsolidation = 1 gwei;
+        mockConsolidation.setFee(maxFeePerConsolidation);
+        uint256 valueSent = 5 gwei; // ensures excess exists
+        vm.deal(address(river), valueSent);
+
+        vm.prank(address(river));
+        vm.expectRevert(LibErrors.InvalidZeroAddress.selector);
+        withdraw.consolidate{value: valueSent}(requests, maxFeePerConsolidation, address(0));
     }
 }
