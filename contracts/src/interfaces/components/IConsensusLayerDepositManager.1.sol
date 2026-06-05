@@ -43,8 +43,9 @@ interface IConsensusLayerDepositManagerV1 {
     event PubkeyFunded(bytes32 indexed depositDataBufferId, uint256 indexed operatorIdx, bytes pubkey, uint256 amount);
 
     /// @notice Emitted once per top-up entry as it is executed against the deposit contract.
-    ///         Symmetric to `PubkeyFunded` but for top-ups (entries with all-zero `depositY`,
-    ///         whose pubkey must already be present in `PectraValidatorPubkeyLookup`).
+    ///         Symmetric to `PubkeyFunded` but for top-ups (entries in `batch.topUps`, which
+    ///         skip BLS verification and whose pubkey must already be present in
+    ///         `PectraValidatorPubkeyLookup`).
     /// @dev    `PectraValidatorPubkeyLookup` is membership-only — there is no on-chain binding between
     ///         a pubkey and the operator that performed its initial deposit. The `operatorIdx`
     ///         on a top-up is whatever the root-attested buffer specifies, and the
