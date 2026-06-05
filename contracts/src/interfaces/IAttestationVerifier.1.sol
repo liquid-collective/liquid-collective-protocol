@@ -84,6 +84,10 @@ interface IAttestationVerifierV1 {
     /// @param stopIndex The exclusive stop key index
     event MigratedPrePectraValidatorPubkeys(uint256 indexed operatorIndex, uint256 startIndex, uint256 stopIndex);
 
+    /// @notice Emitted when a chunk of pre-Pectra validator pubkeys is removed from verifier state.
+    /// @param pubkeys The 48-byte BLS pubkeys that were removed
+    event RemovedPrePectraValidatorPubkeys(bytes[] pubkeys);
+
     // -----------------------------------------------------------------------
     // Errors
     // -----------------------------------------------------------------------
@@ -339,6 +343,11 @@ interface IAttestationVerifierV1 {
     /// @param startIndex The first legacy key index to migrate
     /// @param stopIndex The exclusive stop legacy key index
     function migratePrePectraValidatorPubkeys(uint256 operatorIndex, uint256 startIndex, uint256 stopIndex) external;
+
+    /// @notice Remove a chunk of pre-Pectra funded validator pubkeys from the verifier lookup.
+    /// @dev Only callable by River admin.
+    /// @param pubkeys The 48-byte BLS pubkeys to remove
+    function removePrePectraValidatorPubkey(bytes[] calldata pubkeys) external;
 
     /// @notice Validate consolidation-committee attestations over a `ConsolidationObject` passed
     ///         in by the caller and mark the request as processed for replay protection.

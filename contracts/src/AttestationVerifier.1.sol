@@ -497,6 +497,12 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     }
 
     /// @inheritdoc IAttestationVerifierV1
+    function removePrePectraValidatorPubkey(bytes[] calldata pubkeys) external onlyRiverAdmin {
+        PrePectraValidatorPubkeyLookup.remove(pubkeys);
+        emit RemovedPrePectraValidatorPubkeys(pubkeys);
+    }
+
+    /// @inheritdoc IAttestationVerifierV1
     function markDepositDataBufferIdProcessed(bytes32 depositDataBufferId) external onlyRiver {
         ProcessedDepositDataBufferIds.markProcessed(depositDataBufferId);
     }
