@@ -19,7 +19,9 @@ on:
 
 jobs:
   compare_gas_reports:
-    runs-on: ubuntu-24.04
+    runs-on:
+      group: eth-protocol-runners
+      labels: ubuntu-24.04-8core
     steps:
       - uses: actions/checkout@v6
         with:
