@@ -115,16 +115,16 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
     function sim_advanceEpoch(uint256 rewardsPerValidator) internal {
         for (uint256 i = 0; i < _simValidators.length; i++) {
             if (_simValidators[i].state == ValidatorState.Active) {
-                // Models 0x01 (BLS) withdrawal credentials: rewards are swept (skimmed)
-                // from the CL to EL each epoch. The validator's CL balance remains at the
-                // principal after the sweep. See sim_autocompound for 0x02 (Pectra) behavior.
+                // Models the skimmed-reward path: rewards are swept from the CL to the EL
+                // each epoch, so the validator's CL balance remains at principal after
+                // the sweep. See sim_autocompound for the compounding behavior.
                 _simCumulativeSkimmed += rewardsPerValidator;
             }
         }
     }
 
-    /// @dev Models 0x02 (Pectra) autocompounding: rewards increase the validator's CL balance
-    ///      instead of being skimmed. This means exits can return more than the original deposit.
+    /// @dev Models autocompounding behavior: rewards increase the validator's CL balance
+    ///      instead of being skimmed, so exits can return more than the original deposit.
     function sim_autocompound(uint256 rewardsPerValidator) internal {
         for (uint256 i = 0; i < _simValidators.length; i++) {
             if (_simValidators[i].state == ValidatorState.Active) {
