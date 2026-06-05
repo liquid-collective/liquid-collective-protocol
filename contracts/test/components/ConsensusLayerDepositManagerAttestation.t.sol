@@ -116,14 +116,14 @@ contract AttestationDepositHarness is ConsensusLayerDepositManagerV1 {
             LibFundingDeltas.build(deposits, topUps, harnessOperatorCount);
         _incrementFundedETH(deltas);
         for (uint256 i = 0; i < deltas.length; i++) {
-            if (deltas[i].newPublicKeys.length > 0) {
+            if (deltas[i].newPubkeys.length > 0) {
                 emit IOperatorsRegistryV1.FundedValidatorKeys(
-                    deltas[i].operatorIndex, deltas[i].newPublicKeys, deltas[i].depositAmounts
+                    deltas[i].operatorIndex, deltas[i].newPubkeys, deltas[i].depositAmounts
                 );
             }
-            if (deltas[i].topUpPublicKeys.length > 0) {
+            if (deltas[i].topUpPubkeys.length > 0) {
                 emit IOperatorsRegistryV1.TopUps(
-                    deltas[i].operatorIndex, deltas[i].topUpPublicKeys, deltas[i].topUpAmounts
+                    deltas[i].operatorIndex, deltas[i].topUpPubkeys, deltas[i].topUpAmounts
                 );
             }
         }
@@ -203,8 +203,8 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     bytes32 internal constant PECTRA_VALIDATOR_PUBKEY_LOOKUP_MAPPING_BASE_SLOT =
         bytes32(uint256(keccak256("attestationVerifier.state.pectraValidatorPubkeyLookup.mapping")) - 1);
 
-    event FundedValidatorKeys(uint256 indexed operatorIndex, bytes[] publicKeys, uint256[] amounts);
-    event TopUps(uint256 indexed operatorIndex, bytes[] publicKeys, uint256[] amounts);
+    event FundedValidatorKeys(uint256 indexed operatorIndex, bytes[] pubkeys, uint256[] amounts);
+    event TopUps(uint256 indexed operatorIndex, bytes[] pubkeys, uint256[] amounts);
     event SetInFlightETH(uint256 oldInFlightETH, uint256 newInFlightETH);
     event SetTotalDepositedETH(uint256 oldTotalDepositedETH, uint256 newTotalDepositedETH);
     event PubkeyFunded(bytes32 indexed depositDataBufferId, uint256 indexed operatorIdx, bytes pubkey, uint256 amount);

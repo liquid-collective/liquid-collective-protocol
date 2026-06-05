@@ -42,20 +42,20 @@ interface IOperatorsRegistryV1 {
     /// @notice Structure representing a per-operator funded ETH update
     /// @param operatorIndex The index of the operator receiving the funded ETH
     /// @param fundedETH The amount of ETH(wei) being added to the operator's funded total
-    /// @param newPublicKeys The validator public keys funded with an initial deposit for this
+    /// @param newPubkeys The validator public keys funded with an initial deposit for this
     ///                      operator in this batch. Top-up pubkeys are NOT included here so
     ///                      indexers can treat each entry as a brand-new validator key.
     /// @param depositAmounts The per-initial-deposit amount in ETH(wei), aligned 1:1 with
-    ///                       newPublicKeys.
-    /// @param topUpPublicKeys The validator public keys that received a top-up for this operator
+    ///                       newPubkeys.
+    /// @param topUpPubkeys The validator public keys that received a top-up for this operator
     ///                        in this batch (pre-existing keys — not new validators).
-    /// @param topUpAmounts The per-top-up amount in ETH(wei), aligned 1:1 with topUpPublicKeys.
+    /// @param topUpAmounts The per-top-up amount in ETH(wei), aligned 1:1 with topUpPubkeys.
     struct OperatorFundingDelta {
         uint256 operatorIndex;
         uint256 fundedETH;
-        bytes[] newPublicKeys;
+        bytes[] newPubkeys;
         uint256[] depositAmounts;
-        bytes[] topUpPublicKeys;
+        bytes[] topUpPubkeys;
         uint256[] topUpAmounts;
     }
 
@@ -129,14 +129,14 @@ interface IOperatorsRegistryV1 {
     /// @notice One or more validator keys received an initial deposit in this batch.
     /// @dev Post-Pectra: this event covers initial-deposit pubkeys only. Top-up pubkeys are
     ///      not new validators and are emitted via the dedicated `TopUps` event instead, so
-    ///      indexers that treat each `publicKeys[]` entry as a new validator key do not
+    ///      indexers that treat each `pubkeys[]` entry as a new validator key do not
     ///      over-count. The legacy `deferred` flag has been dropped — the
     ///      `forceFundedValidatorKeysEventEmission` migration that produced replayed events
     ///      completed on mainnet and was removed, so no synthetic emissions remain.
     /// @param index The operator index
-    /// @param publicKeys BLS public keys that received an initial deposit
-    /// @param amounts The per-key initial-deposit amount in ETH(wei), aligned 1:1 with publicKeys
-    event FundedValidatorKeys(uint256 indexed index, bytes[] publicKeys, uint256[] amounts);
+    /// @param pubkeys BLS public keys that received an initial deposit
+    /// @param amounts The per-key initial-deposit amount in ETH(wei), aligned 1:1 with pubkeys
+    event FundedValidatorKeys(uint256 indexed index, bytes[] pubkeys, uint256[] amounts);
 
     /// @notice One or more existing validator keys received a top-up deposit in this batch.
     /// @dev Additive event introduced post-Pectra. Top-ups credit additional ETH to an existing
@@ -145,9 +145,9 @@ interface IOperatorsRegistryV1 {
     ///      because under Pectra the deposit size is variable and consumers cannot derive it
     ///      from the event alone.
     /// @param index The operator index
-    /// @param publicKeys BLS public keys that received a top-up
-    /// @param amounts The per-key top-up amount in ETH(wei), aligned 1:1 with publicKeys
-    event TopUps(uint256 indexed index, bytes[] publicKeys, uint256[] amounts);
+    /// @param pubkeys BLS public keys that received a top-up
+    /// @param amounts The per-key top-up amount in ETH(wei), aligned 1:1 with pubkeys
+    event TopUps(uint256 indexed index, bytes[] pubkeys, uint256[] amounts);
 
     /// @notice The calling operator is inactive
     /// @param index The operator index

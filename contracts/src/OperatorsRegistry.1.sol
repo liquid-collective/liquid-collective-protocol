@@ -195,14 +195,14 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             // Defense-in-depth: enforce the per-class pubkey/amount alignment that
             // `LibFundingDeltas.build` already guarantees, so the registry never emits an event
             // whose pubkeys and amounts disagree on length (which would silently break indexers).
-            if (delta.newPublicKeys.length != delta.depositAmounts.length) {
+            if (delta.newPubkeys.length != delta.depositAmounts.length) {
                 revert MisalignedDeltaArrays(
-                    operatorIndex, delta.newPublicKeys.length, delta.depositAmounts.length
+                    operatorIndex, delta.newPubkeys.length, delta.depositAmounts.length
                 );
             }
-            if (delta.topUpPublicKeys.length != delta.topUpAmounts.length) {
+            if (delta.topUpPubkeys.length != delta.topUpAmounts.length) {
                 revert MisalignedDeltaArrays(
-                    operatorIndex, delta.topUpPublicKeys.length, delta.topUpAmounts.length
+                    operatorIndex, delta.topUpPubkeys.length, delta.topUpAmounts.length
                 );
             }
 
@@ -211,11 +211,11 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             // indexers do not conflate a top-up (existing key, additional ETH) with a brand-new
             // validator key. Both events carry per-key amounts under Pectra's variable deposit
             // sizes (1–2048 ETH).
-            if (delta.newPublicKeys.length > 0) {
-                emit FundedValidatorKeys(operatorIndex, delta.newPublicKeys, delta.depositAmounts);
+            if (delta.newPubkeys.length > 0) {
+                emit FundedValidatorKeys(operatorIndex, delta.newPubkeys, delta.depositAmounts);
             }
-            if (delta.topUpPublicKeys.length > 0) {
-                emit TopUps(operatorIndex, delta.topUpPublicKeys, delta.topUpAmounts);
+            if (delta.topUpPubkeys.length > 0) {
+                emit TopUps(operatorIndex, delta.topUpPubkeys, delta.topUpAmounts);
             }
         }
     }

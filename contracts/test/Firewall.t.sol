@@ -490,8 +490,8 @@ contract FirewallTests is BytesGenerator, OperatorAllocationTestBase {
         deltas = new IOperatorsRegistryV1.OperatorFundingDelta[](1);
         deltas[0].operatorIndex = operatorIndex;
         deltas[0].fundedETH = amount;
-        deltas[0].newPublicKeys = new bytes[](1);
-        deltas[0].newPublicKeys[0] = new bytes(48);
+        deltas[0].newPubkeys = new bytes[](1);
+        deltas[0].newPubkeys[0] = new bytes(48);
         deltas[0].depositAmounts = new uint256[](1);
         deltas[0].depositAmounts[0] = amount;
     }
