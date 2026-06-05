@@ -131,7 +131,7 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
 
     /// @notice Emitted when balance commitment to deposit is skipped because slashing containment mode is active
     event SkippedCommitToDepositDueToSlashingContainment();
-    
+
     /// @notice Emitted when River forwards a Pectra consolidation request to the Withdraw contract
     /// @param requests Consolidation requests
     /// @param maxFeePerConsolidation Maximum fee per consolidation
