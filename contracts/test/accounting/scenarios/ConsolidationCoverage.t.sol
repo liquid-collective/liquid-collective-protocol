@@ -2,6 +2,7 @@
 pragma solidity 0.8.34;
 
 import "../AccountingInvariants.sol";
+import "../../utils/LibImplementationUnbricker.sol";
 import "../../../src/ConsolidationCoverageFund.1.sol";
 import "../../../src/interfaces/components/IOracleManager.1.sol";
 

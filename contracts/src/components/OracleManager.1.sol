@@ -258,7 +258,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         uint256 skimmedAmountIncrease;
         uint256 inFlightDepositedETH;
         uint256 totalDepositedActivatedETHIncrease;
-        uint256 oldConsolidationBuffer;
+        uint256 lastConsolidationBuffer;
         uint256 totalExternalConsolidationsAmountReportedIncrease;
         uint256 timeElapsedSinceLastReport;
         uint256 availableAmountToUpperBound;
@@ -345,8 +345,8 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
                 // the total consolidation amount reported has increased so we need to reduce the buffer
                 uint256 increaseInConsolidation = _report.totalExternalConsolidationsAmountReported
                     - lastStoredReport.totalExternalConsolidationsAmountReported;
-                vars.oldConsolidationBuffer = ConsolidationBuffer.get();
-                if (increaseInConsolidation > vars.oldConsolidationBuffer) {
+                vars.lastConsolidationBuffer = ConsolidationBuffer.get();
+                if (increaseInConsolidation > vars.lastConsolidationBuffer) {
                     revert InvalidTotalConsolidationsAmountReportedIncrease(
                         lastStoredReport.totalExternalConsolidationsAmountReported,
                         _report.totalExternalConsolidationsAmountReported
@@ -373,8 +373,8 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         // if we have new external consolidation funds that were reported, we reduce the consolidation buffer
         if (vars.totalExternalConsolidationsAmountReportedIncrease > 0) {
             _setConsolidationBuffer(
-                vars.oldConsolidationBuffer,
-                vars.oldConsolidationBuffer - vars.totalExternalConsolidationsAmountReportedIncrease
+                vars.lastConsolidationBuffer,
+                vars.lastConsolidationBuffer - vars.totalExternalConsolidationsAmountReportedIncrease
             );
         }
 
