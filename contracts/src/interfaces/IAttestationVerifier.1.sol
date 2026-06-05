@@ -8,7 +8,7 @@ import "../libraries/BLS12_381.sol";
 /// @author Alluvial Finance Inc.
 /// @notice External surface of the AttestationVerifier sibling contract that River delegates
 ///         to for two independent attestation flows:
-///         1. Deposit flow (`fetchAndValidateDepositObject`) — attestation-quorum + BLS deposit-message
+///         1. Deposit flow (`fetchAndValidateDeposits`) — attestation-quorum + BLS deposit-message
 ///            verification, plus per-deposit withdrawal-credentials and committed-balance
 ///            checks against a batch fetched from the `DepositDataBuffer`. View-only.
 ///         2. Consolidation flow (`validateConsolidation`) — attestation-quorum verification
@@ -123,7 +123,7 @@ interface IAttestationVerifierV1 {
 
     /// @notice An entry's `amount` is outside the protocol-accepted range
     ///         [1 ether, 2048 ether] or is not gwei-aligned. Enforced here in
-    ///         `fetchAndValidateDepositObject()` so producer bugs fail before the heavy BLS path runs;
+    ///         `fetchAndValidateDeposits()` so producer bugs fail before the heavy BLS path runs;
     ///         downstream `_depositValidator` trusts this check.
     /// @param index Index into the sub-array currently being validated
     ///              (either `batch.deposits` or `batch.topUps`); the loop that raised
@@ -228,7 +228,7 @@ interface IAttestationVerifierV1 {
     /// @notice The same pubkey appeared more than once in `batch.topUps` within a single batch.
     /// @dev Distinct from `PubkeyAlreadyFunded` (which fires from the initial-deposit branch
     ///      against the global lookup); this fires from the top-up branch against the in-batch
-    ///      set being assembled during `fetchAndValidateDepositObject()`.
+    ///      set being assembled during `fetchAndValidateDeposits()`.
     /// @param pubkey The offending 48-byte BLS pubkey
     error DuplicateTopUpPubkey(bytes pubkey);
 
@@ -288,7 +288,7 @@ interface IAttestationVerifierV1 {
     /// @param committedBalance     Total amount summed over deposits must not exceed this
     /// @return batch               Validated deposit batch (caller executes)
     /// @return totalAmount         Sum of deposit + top-up amounts in the batch
-    function fetchAndValidateDepositObject(
+    function fetchAndValidateDeposits(
         bytes32 depositDataBufferId,
         bytes32 depositRootHash,
         bytes[] calldata signatures,
@@ -303,9 +303,9 @@ interface IAttestationVerifierV1 {
 
     /// @notice Record one or more pubkeys as initial-deposited. Only callable by River.
     /// @dev Called by River after the deposit-execution loop. The recorded set is consulted
-    ///      by the top-up branch of `fetchAndValidateDepositObject()` to require that top-ups reference a pubkey
+    ///      by the top-up branch of `fetchAndValidateDeposits()` to require that top-ups reference a pubkey
     ///      River has previously initial-deposited. Assumes `pubkeys` is already deduplicated
-    ///      against the lookup and against itself; `fetchAndValidateDepositObject()` enforces both invariants
+    ///      against the lookup and against itself; `fetchAndValidateDeposits()` enforces both invariants
     ///      earlier in the same transaction. Per-pubkey logging is emitted on the caller
     ///      (ConsensusLayerDepositManager's `PubkeyFunded` event), not here.
     /// @param pubkeys The 48-byte BLS pubkeys to record
@@ -339,7 +339,7 @@ interface IAttestationVerifierV1 {
     /// @return Always `true` if the call returns; reverts otherwise.
     function validateConsolidation(ConsolidationObject calldata consolidation) external returns (bool);
     /// @notice Mark a `depositDataBufferId` as processed. Only callable by River.
-    /// @dev Called by River after the deposit-execution loop; consulted by `fetchAndValidateDepositObject()` to reject replays.
+    /// @dev Called by River after the deposit-execution loop; consulted by `fetchAndValidateDeposits()` to reject replays.
     /// @param depositDataBufferId The batch identifier to mark processed.
     function markDepositDataBufferIdProcessed(bytes32 depositDataBufferId) external;
 

@@ -13,7 +13,7 @@ interface IDepositDataBuffer {
     ///         passed to the official deposit contract; pubkey must NOT already be in
     ///         `PectraValidatorPubkeyLookup`.
     /// @dev Withdrawal credentials are NOT stored per-entry. The canonical River WC is
-    ///      passed into `fetchAndValidateDepositObject()` at deposit time and used both for BLS signature
+    ///      passed into `fetchAndValidateDeposits()` at deposit time and used both for BLS signature
     ///      verification and for the official deposit contract call, removing any need
     ///      to trust the buffer producer on this field.
     struct Deposit {

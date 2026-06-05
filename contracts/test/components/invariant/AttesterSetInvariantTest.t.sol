@@ -11,7 +11,7 @@ import "./AttesterSetHandler.sol";
 ///      via `IAdministrable(RiverAddress.get()).getAdmin()`. The runtime cast only needs the
 ///      selector to resolve, so we expose `getAdmin()` without implementing the full interface
 ///      (which has 4 methods we'd never exercise here). The invariant test never calls
-///      `fetchAndValidateDepositObject()`, `recordNewlyFundedPubkeys`, or anything else that would exercise
+///      `fetchAndValidateDeposits()`, `recordNewlyFundedPubkeys`, or anything else that would exercise
 ///      River-shaped behavior, so this is all the wiring the verifier needs.
 contract AdminStub {
     address internal immutable _admin;
@@ -66,7 +66,7 @@ contract AttesterSetInvariantTest is Test {
     }
 
     /// @dev Quorum is never higher than the number of registered attesters. A violation here
-    ///      would mean `fetchAndValidateDepositObject()` could not reach quorum from any valid input — soft-brick.
+    ///      would mean `fetchAndValidateDeposits()` could not reach quorum from any valid input — soft-brick.
     function invariant_quorumLeAttesterCount() public {
         assertLe(verifier.getRootAttestationQuorum(), verifier.getRootAttesterCount());
     }
