@@ -225,13 +225,6 @@ interface IAttestationVerifierV1 {
     /// @param depositDataBufferId The offending batch identifier
     error DepositDataBufferIdAlreadyProcessed(bytes32 depositDataBufferId);
 
-    /// @notice The same pubkey appeared more than once in `batch.topUps` within a single batch.
-    /// @dev Distinct from `PubkeyAlreadyFunded` (which fires from the initial-deposit branch
-    ///      against the global lookup); this fires from the top-up branch against the in-batch
-    ///      set being assembled during `fetchAndValidateDeposits()`.
-    /// @param pubkey The offending 48-byte BLS pubkey
-    error DuplicateTopUpPubkey(bytes pubkey);
-
     // -----------------------------------------------------------------------
     // Initialization
     // -----------------------------------------------------------------------
