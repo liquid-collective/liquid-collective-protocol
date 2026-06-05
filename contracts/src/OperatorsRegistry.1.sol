@@ -195,9 +195,9 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             // Defense-in-depth: enforce the per-class pubkey/amount alignment that
             // `LibFundingDeltas.build` already guarantees, so the registry never emits an event
             // whose pubkeys and amounts disagree on length (which would silently break indexers).
-            if (delta.newPubkeys.length != delta.depositAmounts.length) {
+            if (delta.depositPubkeys.length != delta.depositAmounts.length) {
                 revert MisalignedDeltaArrays(
-                    operatorIndex, delta.newPubkeys.length, delta.depositAmounts.length
+                    operatorIndex, delta.depositPubkeys.length, delta.depositAmounts.length
                 );
             }
             if (delta.topUpPubkeys.length != delta.topUpAmounts.length) {
@@ -211,8 +211,8 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             // indexers do not conflate a top-up (existing key, additional ETH) with a brand-new
             // validator key. Both events carry per-key amounts under Pectra's variable deposit
             // sizes (1–2048 ETH).
-            if (delta.newPubkeys.length > 0) {
-                emit FundedValidatorKeys(operatorIndex, delta.newPubkeys, delta.depositAmounts);
+            if (delta.depositPubkeys.length > 0) {
+                emit Deposits(operatorIndex, delta.depositPubkeys, delta.depositAmounts);
             }
             if (delta.topUpPubkeys.length > 0) {
                 emit TopUps(operatorIndex, delta.topUpPubkeys, delta.topUpAmounts);

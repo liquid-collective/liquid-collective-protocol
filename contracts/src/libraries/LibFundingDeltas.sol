@@ -22,7 +22,7 @@ library LibFundingDeltas {
     /// @dev    Pure aggregation only. Operator-status invariants (`active`, `requestedExits`
     ///         vs `exitedETH`) are NOT checked here; they are enforced by
     ///         `OperatorsRegistryV1.incrementFundedETH`.
-    /// @dev    Initial-deposit pubkeys are placed in `newPubkeys[]` with their amounts aligned
+    /// @dev    Initial-deposit pubkeys are placed in `depositPubkeys[]` with their amounts aligned
     ///         1:1 in `depositAmounts[]`; top-up pubkeys are placed in `topUpPubkeys[]` with
     ///         their amounts aligned 1:1 in `topUpAmounts[]`. The registry emits the two classes
     ///         via distinct events so indexers do not conflate top-ups with newly funded
@@ -111,7 +111,7 @@ library LibFundingDeltas {
             if (dc + tc > 0) {
                 deltas[di].operatorIndex = j;
                 deltas[di].fundedETH = amountPerOp[j];
-                deltas[di].newPubkeys = new bytes[](dc);
+                deltas[di].depositPubkeys = new bytes[](dc);
                 deltas[di].depositAmounts = new uint256[](dc);
                 deltas[di].topUpPubkeys = new bytes[](tc);
                 deltas[di].topUpAmounts = new uint256[](tc);
@@ -134,7 +134,7 @@ library LibFundingDeltas {
             uint256 opIdx = deposits[i].operatorIdx;
             uint256 d = deltaIdxByOp[opIdx];
             uint256 c = cursors[opIdx]++;
-            deltas[d].newPubkeys[c] = deposits[i].pubkey;
+            deltas[d].depositPubkeys[c] = deposits[i].pubkey;
             deltas[d].depositAmounts[c] = deposits[i].amount;
         }
     }

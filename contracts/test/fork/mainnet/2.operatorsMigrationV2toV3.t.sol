@@ -160,8 +160,8 @@ contract OperatorsMigrationV2ToV3 is Test {
         IOperatorsRegistryV1.OperatorFundingDelta[] memory deltas = new IOperatorsRegistryV1.OperatorFundingDelta[](1);
         deltas[0].operatorIndex = activeOpIdx;
         deltas[0].fundedETH = 32 ether;
-        deltas[0].newPubkeys = new bytes[](1);
-        deltas[0].newPubkeys[0] = new bytes(48);
+        deltas[0].depositPubkeys = new bytes[](1);
+        deltas[0].depositPubkeys[0] = new bytes(48);
         deltas[0].depositAmounts = new uint256[](1);
         deltas[0].depositAmounts[0] = 32 ether;
         vm.prank(river);
