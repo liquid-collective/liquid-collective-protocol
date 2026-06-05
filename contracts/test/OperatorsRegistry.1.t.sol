@@ -174,6 +174,33 @@ contract OperatorsRegistryV1PrePectraBridgeTests is Test {
         vm.expectRevert(abi.encodeWithSelector(OperatorsV2.OperatorNotFound.selector, 0));
         reg.getPrePectraValidatorPubkeys(0, 0, 1);
     }
+
+    function testGetPrePectraValidatorPubkeysRevertsWhenStopIndexExceedsFunded() public {
+        _pushV2Operator(2, 3);
+
+        // Only funded legacy validators are eligible for migration; keys above the
+        // funded count may exist in ValidatorKeys but must not be treated as funded.
+        vm.expectRevert(abi.encodeWithSelector(IOperatorsRegistryV1.PrePectraRangeExceedsFunded.selector, 0, 3));
+        reg.getPrePectraValidatorPubkeys(0, 0, 3);
+    }
+
+    function testGetPrePectraValidatorPubkeysRevertsWhenRangeIsEmpty() public {
+        _pushV2Operator(3, 3);
+
+        // Empty ranges should be rejected before reaching ValidatorKeys; otherwise an
+        // admin migration could silently emit success while migrating no legacy pubkeys.
+        vm.expectRevert(abi.encodeWithSelector(IOperatorsRegistryV1.InvalidPrePectraRange.selector, 0, 1, 1));
+        reg.getPrePectraValidatorPubkeys(0, 1, 1);
+    }
+
+    function testGetPrePectraValidatorPubkeysRevertsWhenRangeIsReversed() public {
+        _pushV2Operator(3, 3);
+
+        // A reversed range would underflow `stopIndex - startIndex` if it slipped past
+        // validation, so assert the explicit protocol error instead of a generic panic.
+        vm.expectRevert(abi.encodeWithSelector(IOperatorsRegistryV1.InvalidPrePectraRange.selector, 0, 2, 1));
+        reg.getPrePectraValidatorPubkeys(0, 2, 1);
+    }
 }
 
 contract RiverMock {

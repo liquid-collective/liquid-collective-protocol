@@ -233,6 +233,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         bytes32(uint256(keccak256("attestationVerifier.state.pectraValidatorPubkeyLookup.mapping")) - 1);
 
     event MigratedPrePectraValidatorPubkeys(uint256 indexed operatorIndex, uint256 startIndex, uint256 stopIndex);
+    event RemovedPrePectraValidatorPubkeys(bytes[] pubkeys);
     event FundedValidatorKeys(uint256 indexed operatorIndex, bytes[] publicKeys, bool deferred);
     event SetInFlightETH(uint256 oldInFlightETH, uint256 newInFlightETH);
     event SetTotalDepositedETH(uint256 oldTotalDepositedETH, uint256 newTotalDepositedETH);
@@ -980,6 +981,49 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
             )
         );
         validator.migratePrePectraValidatorPubkeys(operatorIdx, 0, 1);
+    }
+
+    function testRemovePrePectraValidatorPubkey_adminRemovesSubsetAndEmits() public {
+        uint256 operatorIdx = 5;
+        prePectraRegistry.setPrePectraFundedValidatorCount(operatorIdx, 3);
+        bytes memory pk0 = _seedPrePectraValidator(operatorIdx, 0, 630);
+        bytes memory pk1 = _seedPrePectraValidator(operatorIdx, 1, 631);
+        bytes memory pk2 = _seedPrePectraValidator(operatorIdx, 2, 632);
+
+        vm.prank(admin);
+        validator.migratePrePectraValidatorPubkeys(operatorIdx, 0, 3);
+
+        assertTrue(validator.isPrePectraValidatorPubkeyFunded(pk0), "precondition key 0");
+        assertTrue(validator.isPrePectraValidatorPubkeyFunded(pk1), "precondition key 1");
+        assertTrue(validator.isPrePectraValidatorPubkeyFunded(pk2), "precondition key 2");
+
+        bytes[] memory pubkeys = new bytes[](2);
+        pubkeys[0] = pk0;
+        pubkeys[1] = pk2;
+
+        // Governance may need to roll back a partial migration. Removing a subset must
+        // clear only the named pubkeys and leave unrelated migrated keys available.
+        vm.expectEmit(false, false, false, true);
+        emit RemovedPrePectraValidatorPubkeys(pubkeys);
+
+        vm.prank(admin);
+        validator.removePrePectraValidatorPubkey(pubkeys);
+
+        assertFalse(validator.isPrePectraValidatorPubkeyFunded(pk0), "removed key 0");
+        assertTrue(validator.isPrePectraValidatorPubkeyFunded(pk1), "unremoved key 1");
+        assertFalse(validator.isPrePectraValidatorPubkeyFunded(pk2), "removed key 2");
+    }
+
+    function testRemovePrePectraValidatorPubkey_revertsWhenUnauthorized() public {
+        address stranger = makeAddr("prePectraRemovalStranger");
+        bytes[] memory pubkeys = new bytes[](1);
+        pubkeys[0] = _fakePubkey(640);
+
+        // The removal hook has the same governance blast radius as migration, so it must
+        // use the River admin check instead of allowing arbitrary callers to clear keys.
+        vm.prank(stranger);
+        vm.expectRevert(abi.encodeWithSelector(LibErrors.Unauthorized.selector, stranger));
+        validator.removePrePectraValidatorPubkey(pubkeys);
     }
 
     function testTopUp_migratedPrePectraPubkeyStillRevertsInValidate() public {
