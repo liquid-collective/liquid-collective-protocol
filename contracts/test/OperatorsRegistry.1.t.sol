@@ -181,7 +181,7 @@ contract OperatorsRegistryV1StrictRiverTests is
 
         vm.prank(random);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", random));
-        operatorsRegistry.reportExitedETH(exitedETH, 0);
+        operatorsRegistry.reportExitedETH(exitedETH);
     }
 }
 
@@ -621,7 +621,7 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, OperatorAlloca
         }
 
         vm.prank(river);
-        operatorsRegistry.reportExitedETH(exitedETH, uint256(totalCount) * 32 ether);
+        operatorsRegistry.reportExitedETH(exitedETH);
 
         uint256[] memory rawExitedETH = operatorsRegistry.getExitedETHPerOperator();
         assertEq(rawExitedETH.length, exitedETH.length - 1);
@@ -635,14 +635,14 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, OperatorAlloca
         uint256[] memory exitedETH = new uint256[](0);
         vm.prank(river);
         vm.expectRevert(abi.encodeWithSignature("InvalidEmptyArray()"));
-        operatorsRegistry.reportExitedETH(exitedETH, 0);
+        operatorsRegistry.reportExitedETH(exitedETH);
     }
 
     function testReportExitedETHCountTooHigh() public {
         uint256[] memory exitedETH = new uint256[](2);
         vm.prank(river);
         vm.expectRevert(abi.encodeWithSignature("ExitedETHArrayLengthExceedsOperatorCount()"));
-        operatorsRegistry.reportExitedETH(exitedETH, 0);
+        operatorsRegistry.reportExitedETH(exitedETH);
     }
 
     function testReportExitedETHInvalidSum(uint8 totalCount, uint8 len) public {
@@ -675,7 +675,7 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, OperatorAlloca
 
         vm.prank(river);
         vm.expectRevert(abi.encodeWithSignature("ExitedETHSumMismatch()"));
-        operatorsRegistry.reportExitedETH(exitedETH, uint256(totalCount) * 32 ether);
+        operatorsRegistry.reportExitedETH(exitedETH);
     }
 }
 
@@ -1737,13 +1737,33 @@ contract OperatorsRegistryV1CoverageTests is OperatorsRegistryV1TestBase, Operat
         first[1] = 32 ether;
         first[2] = 32 ether;
         vm.prank(river);
-        reg.reportExitedETH(first, 10 * 32 ether);
+        reg.reportExitedETH(first);
         uint256[] memory shorter = new uint256[](2);
         shorter[0] = 2 * 32 ether;
         shorter[1] = 32 ether;
         vm.prank(river);
         vm.expectRevert(abi.encodeWithSignature("ExitedETHArrayShrinking()"));
-        reg.reportExitedETH(shorter, 10 * 32 ether);
+        reg.reportExitedETH(shorter);
+    }
+
+    /// Regression test for #490: reportExitedETH must succeed and update per-operator state even when the
+    /// total exited ETH exceeds what was deposited (which legitimately happens with auto-compounding and
+    /// consolidations). This locks in the removal of the former ExitedETHExceedsDepositedETH check.
+    function testReportExitedETHSucceedsWhenExceedsDeposited() public {
+        reg.initOperatorsRegistryV1(admin, river);
+        vm.prank(admin);
+        reg.addOperator("Op0", makeAddr("op0"));
+        reg.sudoSetFundedV3(0, 5 * 32 ether);
+        reg.sudoSetActiveCLETH(0, 5 * 32 ether);
+        reg.sudoSetRawExitedETH(new uint256[](2));
+        uint256[] memory exited = new uint256[](2);
+        exited[0] = 3 * 32 ether;
+        exited[1] = 3 * 32 ether;
+        vm.prank(river);
+        reg.reportExitedETH(exited);
+        uint256[] memory raw = reg.getExitedETHPerOperator();
+        assertEq(raw.length, 1);
+        assertEq(raw[0], 3 * 32 ether);
     }
 
     // ─── reportCLETH tests ────────────────────────────────────────────────────

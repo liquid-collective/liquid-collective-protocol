@@ -214,7 +214,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @inheritdoc IOperatorsRegistryV1
-    function reportExitedETH(uint256[] calldata _exitedETH, uint256 _totalDepositedETH) external onlyRiver {
+    function reportExitedETH(uint256[] calldata _exitedETH) external onlyRiver {
         _setExitedETH(_exitedETH);
     }
 
