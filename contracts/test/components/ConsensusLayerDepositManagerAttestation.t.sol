@@ -190,6 +190,8 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         bytes32(uint256(keccak256("attestationVerifier.state.domainSeparator")) - 1);
     bytes32 internal constant VALIDATOR_DEPOSIT_DOMAIN_SLOT =
         bytes32(uint256(keccak256("attestationVerifier.state.depositDomain")) - 1);
+    bytes32 internal constant VALIDATOR_ROOT_ATTESTATION_QUORUM_SLOT =
+        bytes32(uint256(keccak256("attestationVerifier.state.rootAttestationQuorum")) - 1);
     bytes32 internal constant PECTRA_VALIDATOR_PUBKEY_LOOKUP_MAPPING_BASE_SLOT =
         bytes32(uint256(keccak256("attestationVerifier.state.pectraValidatorPubkeyLookup.mapping")) - 1);
 
@@ -640,6 +642,27 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
     }
 
+    /// @dev The setter rejects a zero root quorum, but validateDeposits() also defends
+    ///      against corrupted/uninitialized quorum storage. With a zero quorum, a batch
+    ///      could otherwise pass with no meaningful root-attester approval.
+    function testRevert_validate_zeroRootQuorumStorage() public {
+        vm.store(address(validator), VALIDATOR_ROOT_ATTESTATION_QUORUM_SLOT, bytes32(0));
+
+        IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](1);
+        deposits[0] = _makeDeposit(0, 901);
+        bytes32 bufferId = keccak256(abi.encode(_batchOf(deposits)));
+        buffer.submitDepositData(bufferId, _batchOf(deposits));
+        bytes32 rootHash = depositContract.get_deposit_root();
+
+        bytes[] memory sigs = new bytes[](2);
+        sigs[0] = _signAttestation(rootAttesterPk1, bufferId, rootHash);
+        sigs[1] = _signAttestation(rootAttesterPk2, bufferId, rootHash);
+
+        vm.prank(keeper);
+        vm.expectRevert(IAttestationVerifierV1.ZeroQuorum.selector);
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+    }
+
     // verifyBLSDeposit is only callable via the internal self-staticcall trampoline in
     // _verifyBLSSignatures. Any external caller must hit the OnlySelfCall guard so future
     // additions of state or events to this function cannot become world-callable. The
@@ -655,6 +678,26 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
         vm.expectRevert(IAttestationVerifierV1.OnlySelfCall.selector);
         validator.verifyBLSDeposit(pk, sig, 32 ether, dy, withdrawalCredentials);
+    }
+
+    /// @dev Once the cheap checks and root-attester quorum pass, initial deposits must enter
+    ///      the real BLS verifier. This clears the BLS success mock and supplies a 48-byte
+    ///      pubkey with invalid compression flags, proving the verifier call is reached and
+    ///      its revert is bubbled back through validateDeposits().
+    function testRevert_initialBLSVerifierRejectsInvalidCompressedPubkey() public {
+        vm.clearMockedCalls();
+
+        IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](1);
+        deposits[0] = _makeDeposit(0, 902);
+        deposits[0].pubkey[0] = bytes1(uint8(0)); // invalid compressed BLS component header
+
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits);
+
+        vm.prank(keeper);
+        vm.expectRevert(
+            abi.encodeWithSelector(BLS12_381.InvalidCompressedComponent.selector, BLS12_381.Component.PubKey)
+        );
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
     }
 
     // -----------------------------------------------------------------------
@@ -1342,6 +1385,41 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         freshValidator.initAttestationVerifierV1(address(dm), address(buffer), empty, 1, bytes4(0), empty, 1);
     }
 
+    /// @dev Cannot init with a root quorum of zero. This is distinct from an empty
+    ///      attester set: a populated committee with quorum=0 would make signatures optional.
+    function testRevert_init_zeroRootQuorum() public {
+        AttestationVerifierV1 freshValidator = new AttestationVerifierV1();
+        LibImplementationUnbricker.unbrick(vm, address(freshValidator));
+        address[] memory rootAttesters = new address[](1);
+        rootAttesters[0] = rootAttester1;
+        address[] memory consolidationAttesters = new address[](1);
+        consolidationAttesters[0] = makeAddr("consolidation-attester");
+
+        vm.expectRevert(IAttestationVerifierV1.ZeroQuorum.selector);
+        freshValidator.initAttestationVerifierV1(
+            address(dm), address(buffer), rootAttesters, 0, bytes4(0), consolidationAttesters, 1
+        );
+    }
+
+    /// @dev Cannot init with more root attesters than the defensive cap. The empty-array
+    ///      case exercises the same top-level InvalidArgument revert but a different
+    ///      production risk: unbounded storage growth and a larger quorum-dedup surface.
+    function testRevert_init_tooManyRootAttesters() public {
+        AttestationVerifierV1 freshValidator = new AttestationVerifierV1();
+        LibImplementationUnbricker.unbrick(vm, address(freshValidator));
+        address[] memory tooManyRootAttesters = new address[](validator.MAX_ROOT_ATTESTERS() + 1);
+        for (uint256 i = 0; i < tooManyRootAttesters.length; i++) {
+            tooManyRootAttesters[i] = address(uint160(0xB000 + i));
+        }
+        address[] memory consolidationAttesters = new address[](1);
+        consolidationAttesters[0] = makeAddr("consolidation-attester");
+
+        vm.expectRevert(LibErrors.InvalidArgument.selector);
+        freshValidator.initAttestationVerifierV1(
+            address(dm), address(buffer), tooManyRootAttesters, 1, bytes4(0), consolidationAttesters, 1
+        );
+    }
+
     /// @dev Cannot init with a quorum strictly greater than the attester count.
     function testRevert_init_quorumExceedsAttesterCount() public {
         AttestationVerifierV1 freshValidator = new AttestationVerifierV1();
@@ -1458,6 +1536,32 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         // sigs[2] / sigs[3]: two valid signatures — only 2 of 4 will count toward quorum
         sigs[2] = _signAttestation(rootAttesterPk1, bufferId, rootHash);
         sigs[3] = _signAttestation(rootAttesterPk2, bufferId, rootHash);
+
+        vm.prank(keeper);
+        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InsufficientAttestations.selector, 2, 3));
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+    }
+
+    /// @dev A signature can be exactly 65 bytes and have a normalized v, yet still fail
+    ///      inside ECDSA.tryRecover (here r=s=0). The verifier must treat that as
+    ///      address(0), skip it, and continue counting only valid unique root attesters.
+    function testRecover_skipsTryRecoverErrors() public {
+        vm.prank(admin);
+        validator.setRootAttestationQuorum(3);
+
+        IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](1);
+        deposits[0] = _makeDeposit(0, 852);
+        bytes32 bufferId = keccak256(abi.encode(_batchOf(deposits)));
+        buffer.submitDepositData(bufferId, _batchOf(deposits));
+        bytes32 rootHash = depositContract.get_deposit_root();
+
+        bytes memory invalidButWellSized = new bytes(65);
+        invalidButWellSized[64] = bytes1(uint8(27));
+
+        bytes[] memory sigs = new bytes[](3);
+        sigs[0] = invalidButWellSized;
+        sigs[1] = _signAttestation(rootAttesterPk1, bufferId, rootHash);
+        sigs[2] = _signAttestation(rootAttesterPk2, bufferId, rootHash);
 
         vm.prank(keeper);
         vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InsufficientAttestations.selector, 2, 3));
