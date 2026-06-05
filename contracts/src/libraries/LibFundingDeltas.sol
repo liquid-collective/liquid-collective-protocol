@@ -22,10 +22,11 @@ library LibFundingDeltas {
     /// @dev    Pure aggregation only. Operator-status invariants (`active`, `requestedExits`
     ///         vs `exitedETH`) are NOT checked here; they are enforced by
     ///         `OperatorsRegistryV1.incrementFundedETH`.
-    /// @dev    Initial-deposit pubkeys are placed in `newPublicKeys[]`; top-up pubkeys are placed
-    ///         in `topUpPublicKeys[]` with their amounts aligned 1:1 in `topUpAmounts[]`. The
-    ///         registry emits the two classes via distinct events so indexers do not conflate
-    ///         top-ups with newly funded validator keys.
+    /// @dev    Initial-deposit pubkeys are placed in `newPublicKeys[]` with their amounts aligned
+    ///         1:1 in `depositAmounts[]`; top-up pubkeys are placed in `topUpPublicKeys[]` with
+    ///         their amounts aligned 1:1 in `topUpAmounts[]`. The registry emits the two classes
+    ///         via distinct events so indexers do not conflate top-ups with newly funded
+    ///         validator keys.
     /// @param deposits The initial deposits to aggregate
     /// @param topUps The top-ups to aggregate
     /// @param operatorCount The current number of registered operators (upper bound exclusive)
@@ -79,6 +80,7 @@ library LibFundingDeltas {
                 deltas[di].operatorIndex = j;
                 deltas[di].fundedETH = amountPerOp[j];
                 deltas[di].newPublicKeys = new bytes[](depositCountPerOp[j]);
+                deltas[di].depositAmounts = new uint256[](depositCountPerOp[j]);
                 deltas[di].topUpPublicKeys = new bytes[](topUpCountPerOp[j]);
                 deltas[di].topUpAmounts = new uint256[](topUpCountPerOp[j]);
                 deltaIdxByOp[j] = di;
@@ -86,11 +88,14 @@ library LibFundingDeltas {
             }
         }
 
-        // Pass 3: fill per-operator pubkeys per class, preserving input order within each class.
+        // Pass 3: fill per-operator pubkeys + amounts per class, preserving input order within
+        // each class.
         for (uint256 i = 0; i < depositCount; i++) {
             uint256 opIdx = deposits[i].operatorIdx;
             uint256 d = deltaIdxByOp[opIdx];
-            deltas[d].newPublicKeys[depositCursors[opIdx]++] = deposits[i].pubkey;
+            uint256 c = depositCursors[opIdx]++;
+            deltas[d].newPublicKeys[c] = deposits[i].pubkey;
+            deltas[d].depositAmounts[c] = deposits[i].amount;
         }
         for (uint256 i = 0; i < topUpCount; i++) {
             uint256 opIdx = topUps[i].operatorIdx;

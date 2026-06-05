@@ -195,10 +195,10 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             operator.funded += delta.fundedETH;
             // Emit initial-deposit pubkeys and top-up pubkeys on separate events so off-chain
             // indexers do not conflate a top-up (existing key, additional ETH) with a brand-new
-            // validator key. `TopUps` is additive — `FundedValidatorKeys` keeps its signature for
-            // backwards compatibility with existing indexers.
+            // validator key. Both events carry per-key amounts under Pectra's variable deposit
+            // sizes (1–2048 ETH).
             if (delta.newPublicKeys.length > 0) {
-                emit FundedValidatorKeys(operatorIndex, delta.newPublicKeys, false);
+                emit FundedValidatorKeys(operatorIndex, delta.newPublicKeys, delta.depositAmounts);
             }
             if (delta.topUpPublicKeys.length > 0) {
                 emit TopUps(operatorIndex, delta.topUpPublicKeys, delta.topUpAmounts);

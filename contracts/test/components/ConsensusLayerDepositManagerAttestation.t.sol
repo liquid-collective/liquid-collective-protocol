@@ -117,7 +117,9 @@ contract AttestationDepositHarness is ConsensusLayerDepositManagerV1 {
         _incrementFundedETH(deltas);
         for (uint256 i = 0; i < deltas.length; i++) {
             if (deltas[i].newPublicKeys.length > 0) {
-                emit IOperatorsRegistryV1.FundedValidatorKeys(deltas[i].operatorIndex, deltas[i].newPublicKeys, false);
+                emit IOperatorsRegistryV1.FundedValidatorKeys(
+                    deltas[i].operatorIndex, deltas[i].newPublicKeys, deltas[i].depositAmounts
+                );
             }
             if (deltas[i].topUpPublicKeys.length > 0) {
                 emit IOperatorsRegistryV1.TopUps(
@@ -201,7 +203,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     bytes32 internal constant PECTRA_VALIDATOR_PUBKEY_LOOKUP_MAPPING_BASE_SLOT =
         bytes32(uint256(keccak256("attestationVerifier.state.pectraValidatorPubkeyLookup.mapping")) - 1);
 
-    event FundedValidatorKeys(uint256 indexed operatorIndex, bytes[] publicKeys, bool deferred);
+    event FundedValidatorKeys(uint256 indexed operatorIndex, bytes[] publicKeys, uint256[] amounts);
     event TopUps(uint256 indexed operatorIndex, bytes[] publicKeys, uint256[] amounts);
     event SetInFlightETH(uint256 oldInFlightETH, uint256 newInFlightETH);
     event SetTotalDepositedETH(uint256 oldTotalDepositedETH, uint256 newTotalDepositedETH);
@@ -403,18 +405,23 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
         (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits);
 
-        // Expect: FundedValidatorKeys for operator 0 with 2 keys
+        // Expect: FundedValidatorKeys for operator 0 with 2 keys, each 32 ETH
         bytes[] memory op0Keys = new bytes[](2);
         op0Keys[0] = deposits[0].pubkey;
         op0Keys[1] = deposits[1].pubkey;
+        uint256[] memory op0Amounts = new uint256[](2);
+        op0Amounts[0] = deposits[0].amount;
+        op0Amounts[1] = deposits[1].amount;
         vm.expectEmit(true, false, false, true);
-        emit FundedValidatorKeys(0, op0Keys, false);
+        emit FundedValidatorKeys(0, op0Keys, op0Amounts);
 
         // Expect: FundedValidatorKeys for operator 1 with 1 key
         bytes[] memory op1Keys = new bytes[](1);
         op1Keys[0] = deposits[2].pubkey;
+        uint256[] memory op1Amounts = new uint256[](1);
+        op1Amounts[0] = deposits[2].amount;
         vm.expectEmit(true, false, false, true);
-        emit FundedValidatorKeys(1, op1Keys, false);
+        emit FundedValidatorKeys(1, op1Keys, op1Amounts);
 
         // Expect: balance events
         vm.expectEmit(true, true, false, true);
@@ -448,8 +455,10 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         // Expect: FundedValidatorKeys for operator 5
         bytes[] memory opKeys = new bytes[](1);
         opKeys[0] = deposits[0].pubkey;
+        uint256[] memory opAmounts = new uint256[](1);
+        opAmounts[0] = deposits[0].amount;
         vm.expectEmit(true, false, false, true);
-        emit FundedValidatorKeys(5, opKeys, false);
+        emit FundedValidatorKeys(5, opKeys, opAmounts);
 
         vm.prank(keeper);
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
@@ -790,11 +799,13 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
         (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits, topUps);
 
-        // FundedValidatorKeys carries only the initial-deposit pubkey.
+        // FundedValidatorKeys carries only the initial-deposit pubkey, with its amount.
         bytes[] memory initialKeys = new bytes[](1);
         initialKeys[0] = deposits[0].pubkey;
+        uint256[] memory initialAmounts = new uint256[](1);
+        initialAmounts[0] = deposits[0].amount;
         vm.expectEmit(true, false, false, true);
-        emit FundedValidatorKeys(0, initialKeys, false);
+        emit FundedValidatorKeys(0, initialKeys, initialAmounts);
 
         // TopUps carries the top-up pubkey alongside its amount.
         bytes[] memory topUpKeys = new bytes[](1);
@@ -837,7 +848,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
 
         Vm.Log[] memory logs = vm.getRecordedLogs();
-        bytes32 fvkTopic = keccak256("FundedValidatorKeys(uint256,bytes[],bool)");
+        bytes32 fvkTopic = keccak256("FundedValidatorKeys(uint256,bytes[],uint256[])");
         bytes32 topUpsTopic = keccak256("TopUps(uint256,bytes[],uint256[])");
         uint256 fvkSeen = 0;
         uint256 topUpsSeen = 0;
@@ -878,7 +889,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
 
         Vm.Log[] memory logs = vm.getRecordedLogs();
-        bytes32 fvkTopic = keccak256("FundedValidatorKeys(uint256,bytes[],bool)");
+        bytes32 fvkTopic = keccak256("FundedValidatorKeys(uint256,bytes[],uint256[])");
         bytes32 topUpsTopic = keccak256("TopUps(uint256,bytes[],uint256[])");
         uint256 fvkSeen = 0;
         uint256 topUpsSeen = 0;
