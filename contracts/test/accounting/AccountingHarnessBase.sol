@@ -110,7 +110,7 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
     /// @dev Monotonic counter mixed into pubkey/signature generation in `_makeDepositObjects`.
     ///      Without it, two batches built in the same block with the same `(i, opIdx)` produce
     ///      identical pubkeys, which collides with the on-chain `PubkeyAlreadyFunded` guard
-    ///      enforced inside `AttestationVerifier.validateDeposits()` (initial-deposit branch).
+    ///      enforced inside `AttestationVerifier.fetchAndValidateDepositObject()` (initial-deposit branch).
     uint256 internal _depositBatchNonce;
 
     // ─── attestation ──────────────────────────────────────────────────────────

@@ -31,7 +31,7 @@ import "./state/shared/RiverAddress.sol";
 ///         for two independent flows, each with its own committee, quorum, and EIP-712
 ///         domain separator anchored to River:
 ///
-///         1. Deposit flow (`validateDeposits`):
+///         1. Deposit flow (`fetchAndValidateDepositObject`):
 ///            Validates attestation-quorum + BLS deposit messages over a batch fetched
 ///            from the `DepositDataBuffer`, enforces withdrawal-credentials and
 ///            committed-balance bounds, and returns the validated batch + total
@@ -356,7 +356,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     // -----------------------------------------------------------------------
 
     /// @inheritdoc IAttestationVerifierV1
-    function validateDeposits(
+    function fetchAndValidateDepositObject(
         bytes32 depositDataBufferId,
         bytes32 depositRootHash,
         bytes[] calldata signatures,
@@ -443,9 +443,9 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
 
     /// @inheritdoc IAttestationVerifierV1
     /// @dev Assumes `pubkeys` is already deduplicated against the lookup and against itself —
-    ///      `validateDeposits()` enforces both invariants (initial-deposit branch at the top of
-    ///      `validateDeposits()`) and runs in the same transaction. Re-checking here would only fire
-    ///      on a `validateDeposits()` regression and would cost a cold SLOAD per pubkey for a
+    ///      `fetchAndValidateDepositObject()` enforces both invariants (initial-deposit branch at the top of
+    ///      `fetchAndValidateDepositObject()`) and runs in the same transaction. Re-checking here would only fire
+    ///      on a `fetchAndValidateDepositObject()` regression and would cost a cold SLOAD per pubkey for a
     ///      condition that cannot occur in production.
     function recordNewlyFundedPubkeys(bytes[] calldata pubkeys) external onlyRiver {
         uint256 len = pubkeys.length;
@@ -648,7 +648,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
 
     /// @notice Verify the BLS signatures of all initial deposits against the canonical River
     ///         withdrawal credentials. Top-ups are handled by the caller and never reach this
-    ///         function — they're cleared upstream in `validateDeposits()` via the membership check
+    ///         function — they're cleared upstream in `fetchAndValidateDepositObject()` via the membership check
     ///         on `PectraValidatorPubkeyLookup`.
     /// @param deposits The initial deposits.
     /// @param withdrawalCredentials The canonical River withdrawal credentials.
@@ -679,7 +679,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     }
 
     /// @notice Verify a single BLS deposit message against the cached deposit domain.
-    /// @dev External only as a self-staticcall trampoline from validateDeposits: the call
+    /// @dev External only as a self-staticcall trampoline from fetchAndValidateDepositObject: the call
     ///      promotes the deposit's memory bytes into calldata so BLS12_381 can consume them
     ///      without a memory copy. Direct external callers revert with `OnlySelfCall` —
     ///      the function is restricted to `address(this)` and not part of the contract's
