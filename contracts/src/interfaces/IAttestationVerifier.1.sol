@@ -78,9 +78,9 @@ interface IAttestationVerifierV1 {
     /// @param consolidationHash The EIP-712 structHash of the consolidation request
     event ConsolidationProcessed(bytes32 indexed consolidationHash);
 
-    /// @notice Emitted when a validator pubkey is removed from the funded-pubkey lookup.
-    /// @param pubkey The 48-byte BLS pubkey removed from the lookup
-    event ExitedValidatorPubkeyRemoved(bytes pubkey);
+    /// @notice Emitted when validator pubkeys are removed from the funded-pubkey lookup.
+    /// @param pubkeys The 48-byte BLS pubkeys removed from the lookup
+    event RemovedPectraValidatorPubkeys(bytes[] pubkeys);
 
     // -----------------------------------------------------------------------
     // Errors
@@ -235,6 +235,10 @@ interface IAttestationVerifierV1 {
     ///      set being assembled during `validateDeposits()`.
     /// @param pubkey The offending 48-byte BLS pubkey
     error DuplicateTopUpPubkey(bytes pubkey);
+
+    /// @notice A pubkey was requested for removal but is not in the funded-pubkey lookup.
+    /// @param pubkey The offending 48-byte BLS pubkey
+    error PectraValidatorPubkeyNotFunded(bytes pubkey);
 
     // -----------------------------------------------------------------------
     // Initialization

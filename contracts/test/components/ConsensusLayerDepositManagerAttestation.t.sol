@@ -1052,9 +1052,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         _seedFundedPubkey(untouchedPubkey);
 
         vm.expectEmit(false, false, false, true, address(validator));
-        emit IAttestationVerifierV1.ExitedValidatorPubkeyRemoved(pubkeys[0]);
-        vm.expectEmit(false, false, false, true, address(validator));
-        emit IAttestationVerifierV1.ExitedValidatorPubkeyRemoved(pubkeys[1]);
+        emit IAttestationVerifierV1.RemovedPectraValidatorPubkeys(pubkeys);
 
         vm.prank(keeper);
         dm.removeExitedValidatorPubkeys(pubkeys);
@@ -1064,17 +1062,33 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         assertTrue(validator.isPubkeyFunded(untouchedPubkey), "unlisted pubkey should remain funded");
     }
 
-    function testRemoveExitedValidatorPubkeys_absentPubkeyIsNoOp() public {
+    function testRevert_removeExitedValidatorPubkeys_absentPubkey() public {
         bytes[] memory pubkeys = new bytes[](1);
         pubkeys[0] = _fakePubkey(0xE004);
 
-        vm.recordLogs();
         vm.prank(keeper);
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.PectraValidatorPubkeyNotFunded.selector, pubkeys[0])
+        );
         dm.removeExitedValidatorPubkeys(pubkeys);
 
-        Vm.Log[] memory logs = vm.getRecordedLogs();
-        assertEq(logs.length, 0, "absent pubkey should not emit a removal event");
         assertFalse(validator.isPubkeyFunded(pubkeys[0]), "absent pubkey should remain absent");
+    }
+
+    function testRevert_removeExitedValidatorPubkeys_missingPubkeyRollsBackBatch() public {
+        bytes[] memory pubkeys = new bytes[](2);
+        pubkeys[0] = _fakePubkey(0xE007);
+        pubkeys[1] = _fakePubkey(0xE008);
+        _seedFundedPubkey(pubkeys[0]);
+
+        vm.prank(keeper);
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.PectraValidatorPubkeyNotFunded.selector, pubkeys[1])
+        );
+        dm.removeExitedValidatorPubkeys(pubkeys);
+
+        assertTrue(validator.isPubkeyFunded(pubkeys[0]), "revert should roll back earlier removal");
+        assertFalse(validator.isPubkeyFunded(pubkeys[1]), "missing pubkey should remain absent");
     }
 
     function testRemoveExitedValidatorPubkeys_removedPubkeyCannotTopUp() public {

@@ -462,9 +462,12 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
             if (pubkey.length != DEPOSIT_PUBKEY_LENGTH) {
                 revert InvalidPubkeyLength(i, pubkey.length);
             }
-            if (PectraValidatorPubkeyLookup.remove(pubkey)) {
-                emit ExitedValidatorPubkeyRemoved(pubkey);
+            if (!PectraValidatorPubkeyLookup.remove(pubkey)) {
+                revert PectraValidatorPubkeyNotFunded(pubkey);
             }
+        }
+        if (len > 0) {
+            emit RemovedPectraValidatorPubkeys(pubkeys);
         }
     }
 
