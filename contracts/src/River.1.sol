@@ -57,7 +57,7 @@ contract RiverV1 is
     /// @notice Modifier to check if the caller is the consolidator
     modifier onlyConsolidator() {
         if (msg.sender != ConsolidatorAddress.get()) {
-            revert LibErrors.Unauthorized(msg.sender);
+            revert OnlyConsolidator();
         }
         _;
     }

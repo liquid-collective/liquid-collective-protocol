@@ -3563,7 +3563,7 @@ contract RiverV1PectraTests is RiverV1TestBase {
         vm.deal(bob, 1 gwei);
 
         vm.prank(bob);
-        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", bob));
+        vm.expectRevert(abi.encodeWithSignature("OnlyConsolidator()"));
         river.consolidate{value: 1 gwei}(requests, 1 gwei);
     }
 
@@ -3575,7 +3575,7 @@ contract RiverV1PectraTests is RiverV1TestBase {
         vm.deal(keeper, 1 gwei);
 
         vm.prank(keeper);
-        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", keeper));
+        vm.expectRevert(abi.encodeWithSignature("OnlyConsolidator()"));
         river.consolidate{value: 1 gwei}(requests, 1 gwei);
     }
 
@@ -3708,14 +3708,14 @@ contract RiverV1ConsolidationMintTests is RiverV1TestBase {
         address notConsolidator = makeAddr("notConsolidator");
         IAttestationVerifierV1.ConsolidationObject memory consolidation = _buildConsolidation(bob, 1 ether, 1);
         vm.prank(notConsolidator);
-        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", notConsolidator));
+        vm.expectRevert(abi.encodeWithSignature("OnlyConsolidator()"));
         river.mintLsETHForConsolidation(consolidation);
     }
 
     function testMintLsETHForConsolidationKeeperIsNotConsolidator() public {
         IAttestationVerifierV1.ConsolidationObject memory consolidation = _buildConsolidation(bob, 1 ether, 2);
         vm.prank(keeper);
-        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", keeper));
+        vm.expectRevert(abi.encodeWithSignature("OnlyConsolidator()"));
         river.mintLsETHForConsolidation(consolidation);
     }
 

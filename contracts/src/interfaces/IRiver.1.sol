@@ -160,6 +160,9 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @notice Thrown when the attestation verifier supplied to initRiverV1_3 is not bound to this River
     error InvalidAttestationVerifier();
 
+    /// @notice Thrown when the consolidator address is not authorized
+    error OnlyConsolidator();
+
     /// @notice Initializes version 1.3 of the River System. Performs the Pectra accounting migration,
     ///         updates the withdrawal credentials, and wires the AttestationVerifier sibling contract
     ///         that River delegates attestation-quorum + BLS verification to. The verifier must be
@@ -168,7 +171,7 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @param _consolidationCoverageFund The address of the consolidation coverage fund
     /// @param _attestationVerifier The pre-initialized AttestationVerifier contract address
     /// @param _externalConsolidationRecipientMapping The pre-initialized External Consolidation Recipient Mapping contract address
-    /// @param _consolidator The pre-initialized Consolidator contract address
+    /// @param _consolidator The address authorized to perform consolidator-only operations (EOA or contract)
     function initRiverV1_3(
         bytes32 _withdrawalCredentials,
         address _consolidationCoverageFund,
