@@ -144,9 +144,6 @@ interface IOperatorsRegistryV1 {
     /// @notice Thrown when the sum of exited ETH is invalid
     error ExitedETHSumMismatch();
 
-    /// @notice Thrown when the amount of exited ETH is too high compared to the total deposited ETH
-    error ExitedETHExceedsDepositedETH();
-
     /// @notice Thrown when the number of exited ETH is too high compared to operator count
     error ExitedETHArrayLengthExceedsOperatorCount();
 
@@ -311,8 +308,7 @@ interface IOperatorsRegistryV1 {
     /// @notice Allows river to override the exited ETH array
     /// @notice This actions happens during the Oracle report processing
     /// @param _exitedETH The new exited ETH(wei) array per operator
-    /// @param _totalDepositedETH The total deposited ETH(wei)
-    function reportExitedETH(uint256[] calldata _exitedETH, uint256 _totalDepositedETH) external;
+    function reportExitedETH(uint256[] calldata _exitedETH) external;
 
     /// @notice Adds an operator to the registry
     /// @dev Only callable by the administrator
