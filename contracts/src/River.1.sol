@@ -642,7 +642,7 @@ contract RiverV1 is
         bool _depositToRedeemRebalancingAllowed,
         bool _slashingContainmentModeEnabled
     ) internal override {
-        IOperatorsRegistryV1(OperatorsRegistryAddress.get()).reportExitedETH(_exitedETH, TotalDepositedETH.get());
+        IOperatorsRegistryV1(OperatorsRegistryAddress.get()).reportExitedETH(_exitedETH);
 
         // When slashing containment mode is active, skip exit demand logic to avoid forcing additional
         // validator exits during a slashing event. The reward-pull pipeline is unaffected by this check.
