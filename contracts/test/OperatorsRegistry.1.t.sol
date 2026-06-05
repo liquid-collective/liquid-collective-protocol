@@ -9,8 +9,10 @@ import "../src/libraries/LibBytes.sol";
 import "./utils/UserFactory.sol";
 import "./utils/BytesGenerator.sol";
 import "./utils/LibImplementationUnbricker.sol";
+import {MockELWithdrawal} from "./Withdraw.1.t.sol";
 
 import "../src/OperatorsRegistry.1.sol";
+import "../src/Withdraw.1.sol";
 import "../src/state/operatorsRegistry/CurrentValidatorExitsDemand.sol";
 import "../src/state/operatorsRegistry/TotalValidatorExitsRequested.sol";
 
@@ -1899,6 +1901,12 @@ contract MockWithdrawForELExits {
     }
 }
 
+contract RejectingRefundRecipient {
+    receive() external payable {
+        revert("refund rejected");
+    }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Partial-exit unit tests for requestETHExits (H-05)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1906,6 +1914,8 @@ contract MockWithdrawForELExits {
 contract OperatorsRegistryV1ELExitTests is Test {
     OperatorsRegistryWithMigrationHelpers internal reg;
     MockWithdrawForELExits internal mockWithdraw;
+    WithdrawV1 internal realWithdraw;
+    address internal pectraWithdrawal;
     address internal admin;
     address internal keeper;
     address internal river;
@@ -1915,6 +1925,8 @@ contract OperatorsRegistryV1ELExitTests is Test {
     // 48-byte placeholder pubkey
     bytes internal constant PUBKEY_48 =
         hex"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+
+    event RequestedELETHExits(uint256 indexed index, bytes[] pubkeys, uint64[] amounts);
 
     function setUp() public {
         admin = makeAddr("admin");
@@ -1927,6 +1939,27 @@ contract OperatorsRegistryV1ELExitTests is Test {
 
         mockWithdraw = new MockWithdrawForELExits();
         reg.sudoSetWithdrawAddress(address(mockWithdraw));
+    }
+
+    function _setupSingleOperator(uint256 fundedETH, uint256 activeCLETH, uint256 exitDemand) internal {
+        vm.prank(admin);
+        reg.addOperator("Op0", makeAddr("op0addr"));
+        reg.sudoSetFundedV3(0, fundedETH);
+        reg.sudoSetActiveCLETH(0, activeCLETH);
+        vm.prank(river);
+        reg.demandETHExits(exitDemand, activeCLETH);
+    }
+
+    function _useRealWithdraw(uint256 fee) internal {
+        MockELWithdrawal mockELWithdrawal = new MockELWithdrawal();
+        mockELWithdrawal.setFee(fee);
+        pectraWithdrawal = address(mockELWithdrawal);
+
+        realWithdraw = new WithdrawV1();
+        LibImplementationUnbricker.unbrick(vm, address(realWithdraw));
+        realWithdraw.initializeWithdrawV1(river);
+        realWithdraw.initWithdrawV1_1(pectraWithdrawal, makeAddr("pectraConsolidation"), address(reg));
+        reg.sudoSetWithdrawAddress(address(realWithdraw));
     }
 
     function _makeELAlloc(uint256 opIndex, uint64 gweiAmount)
@@ -2050,14 +2083,10 @@ contract OperatorsRegistryV1ELExitTests is Test {
         reg.requestETHExits(empty, allocs, 0);
     }
 
-    /// Empty amounts array per allocation is a no-op: demand unchanged, requestedExits stays 0.
-    function testELExitEmptyAmountsIsNoOp() public {
-        vm.prank(admin);
-        reg.addOperator("Op0", makeAddr("op0addr"));
-        reg.sudoSetFundedV3(0, 32 ether);
-        reg.sudoSetActiveCLETH(0, 32 ether);
-        vm.prank(river);
-        reg.demandETHExits(8 ether, 32 ether);
+    /// Empty amounts are production-invalid: the real withdrawal contract rejects empty pubkeys.
+    function testELExitWithRealWithdrawRevertsOnEmptyAmounts() public {
+        _useRealWithdraw(0);
+        _setupSingleOperator(32 ether, 32 ether, 8 ether);
 
         IOperatorsRegistryV1.ExitETHAllocation[] memory emptyFull = new IOperatorsRegistryV1.ExitETHAllocation[](0);
         IOperatorsRegistryV1.ELExitETHAllocation[] memory allocs = new IOperatorsRegistryV1.ELExitETHAllocation[](1);
@@ -2067,10 +2096,8 @@ contract OperatorsRegistryV1ELExitTests is Test {
         });
 
         vm.prank(keeper);
+        vm.expectRevert(IWithdrawV1.InvalidEmptyArray.selector);
         reg.requestETHExits(emptyFull, allocs, 0);
-
-        assertEq(reg.getOperator(0).requestedExits, 0, "requestedExits should remain 0");
-        assertEq(reg.getCurrentETHExitsDemand(), 8 ether, "demand should be unchanged");
     }
 
     // ── Tests for the per-pubkey EL exit amounts (each amount is converted from gwei to wei and summed) ──
@@ -2305,6 +2332,82 @@ contract OperatorsRegistryV1ELExitTests is Test {
         vm.expectRevert(
             abi.encodeWithSelector(IOperatorsRegistryV1.ExitsGreaterThanExitDemand.selector, 8 ether, 4 ether)
         );
+        reg.requestETHExits(empty, allocs, 0);
+    }
+
+    function testELExitWithRealWithdrawForwardsFeesAndRefundsExcess() public {
+        uint256 actualFee = 1 gwei;
+        uint256 maxFee = 5 gwei;
+        uint256 valueSent = 7 gwei;
+        _useRealWithdraw(actualFee);
+        _setupSingleOperator(32 ether, 32 ether, 8 ether);
+
+        IOperatorsRegistryV1.ExitETHAllocation[] memory empty = new IOperatorsRegistryV1.ExitETHAllocation[](0);
+        IOperatorsRegistryV1.ELExitETHAllocation[] memory allocs = _makeELAlloc(0, EIGHT_ETH_IN_GWEI);
+
+        vm.deal(keeper, valueSent);
+        uint256 keeperBalanceBefore = keeper.balance;
+
+        vm.prank(keeper);
+        reg.requestETHExits{value: valueSent}(empty, allocs, maxFee);
+
+        assertEq(pectraWithdrawal.balance, actualFee, "only the actual withdrawal fee should be paid");
+        assertEq(address(realWithdraw).balance, 0, "withdraw should not retain the max-fee excess");
+        assertEq(address(reg).balance, 0, "registry should not retain caller excess");
+        assertEq(
+            keeper.balance,
+            keeperBalanceBefore - actualFee,
+            "keeper should only spend the actual fee after both refunds"
+        );
+        assertEq(reg.getOperator(0).requestedExits, 8 ether, "requestedExits should reserve the EL amount");
+    }
+
+    function testELExitRevertsWhenRegistryExcessRefundFails() public {
+        uint256 maxFee = 1 gwei;
+        uint256 valueSent = 2 gwei;
+        RejectingRefundRecipient rejectingKeeper = new RejectingRefundRecipient();
+        keeper = address(rejectingKeeper);
+        RiverMock(river).setKeeper(keeper);
+        _useRealWithdraw(maxFee);
+        _setupSingleOperator(32 ether, 32 ether, 8 ether);
+
+        IOperatorsRegistryV1.ExitETHAllocation[] memory empty = new IOperatorsRegistryV1.ExitETHAllocation[](0);
+        IOperatorsRegistryV1.ELExitETHAllocation[] memory allocs = _makeELAlloc(0, EIGHT_ETH_IN_GWEI);
+
+        vm.deal(keeper, valueSent);
+        vm.prank(keeper);
+        vm.expectRevert(abi.encodeWithSelector(IOperatorsRegistryV1.UnsentRefund.selector, keeper, valueSent - maxFee));
+        reg.requestETHExits{value: valueSent}(empty, allocs, maxFee);
+    }
+
+    function testELExitSupportsMixedCLAndELForSameOperator() public {
+        _setupSingleOperator(64 ether, 64 ether, 40 ether);
+
+        IOperatorsRegistryV1.ExitETHAllocation[] memory fullExitAllocs =
+            new IOperatorsRegistryV1.ExitETHAllocation[](1);
+        fullExitAllocs[0] = IOperatorsRegistryV1.ExitETHAllocation({operatorIndex: 0, ethAmount: 32 ether});
+        IOperatorsRegistryV1.ELExitETHAllocation[] memory elAllocs = _makeELAlloc(0, EIGHT_ETH_IN_GWEI);
+
+        vm.prank(keeper);
+        reg.requestETHExits(fullExitAllocs, elAllocs, 0);
+
+        assertEq(reg.getOperator(0).requestedExits, 40 ether, "same operator should reserve CL and EL exits");
+        assertEq(reg.getCurrentETHExitsDemand(), 0, "mixed request should satisfy demand");
+        assertEq(reg.getTotalETHExitsRequested(), 40 ether, "total requested exits should include both paths");
+        assertEq(mockWithdraw.withdrawCallCount(), 1, "EL withdrawal should be forwarded once");
+        assertEq(mockWithdraw.lastAmounts(0), EIGHT_ETH_IN_GWEI, "partial amount should be forwarded unchanged");
+    }
+
+    function testELExitEmitsRequestedELETHExits() public {
+        _setupSingleOperator(32 ether, 32 ether, 8 ether);
+
+        IOperatorsRegistryV1.ExitETHAllocation[] memory empty = new IOperatorsRegistryV1.ExitETHAllocation[](0);
+        IOperatorsRegistryV1.ELExitETHAllocation[] memory allocs = _makeELAlloc(0, EIGHT_ETH_IN_GWEI);
+
+        vm.expectEmit(true, false, false, true, address(reg));
+        emit RequestedELETHExits(0, allocs[0].pubkeys, allocs[0].amounts);
+
+        vm.prank(keeper);
         reg.requestETHExits(empty, allocs, 0);
     }
 }
