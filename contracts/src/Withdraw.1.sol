@@ -17,7 +17,8 @@ import "./state/withdraw/PectraConsolidationContractAddress.sol";
 
 /// @title Withdraw (v1)
 /// @author Alluvial Finance Inc.
-/// @notice This contract is in charge of holding the exit and skimming funds and allow river to pull these funds
+/// @notice This contract is in charge of holding the exited and skimmed funds and allows river to pull these funds. 
+/// Furthermore, it enables consolidation of LC validators. 0x02 LC validators can be EL-exited using partial or full EL withdrawals via the withdraw function.
 contract WithdrawV1 is IWithdrawV1, Initializable, ReentrancyGuard, IProtocolVersion {
     modifier onlyRiver() {
         if (msg.sender != RiverAddress.get()) {
