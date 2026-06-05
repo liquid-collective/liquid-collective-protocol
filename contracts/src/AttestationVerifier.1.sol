@@ -12,6 +12,10 @@ import "./interfaces/IDepositDataBuffer.sol";
 import "./libraries/BLS12_381.sol";
 import "./libraries/LibErrors.sol";
 
+import "./state/attestationVerifier/ConsolidationCommitteeAttestationQuorum.sol";
+import "./state/attestationVerifier/ConsolidationCommitteeAttesters.sol";
+import "./state/attestationVerifier/ConsolidationDomainSeparator.sol";
+import "./state/attestationVerifier/ProcessedConsolidations.sol";
 import "./state/attestationVerifier/RootAttestationQuorum.sol";
 import "./state/attestationVerifier/RootAttesters.sol";
 import "./state/attestationVerifier/DepositDataBufferAddress.sol";
@@ -23,12 +27,26 @@ import "./state/shared/RiverAddress.sol";
 
 /// @title AttestationVerifier (v1)
 /// @author Alluvial Finance Inc.
-/// @notice Sibling contract that validates attestation-quorum + BLS deposit messages
-///         on behalf of River. Extracted from RiverV1 to keep River's deployed
-///         bytecode under EIP-170. River delegates to this contract for steps 3 and 4
-///         of the attestation deposit flow (quorum/BLS verify, WC + total-amount check)
-///         while retaining keeper authorization, slashing-containment gating, ETH
-///         execution, operator funding accounting, and balance bookkeeping.
+/// @notice Sibling contract that validates committee attestations on behalf of River
+///         for two independent flows, each with its own committee, quorum, and EIP-712
+///         domain separator anchored to River:
+///
+///         1. Deposit flow (`validateDeposits`):
+///            Validates attestation-quorum + BLS deposit messages over a batch fetched
+///            from the `DepositDataBuffer`, enforces withdrawal-credentials and
+///            committed-balance bounds, and returns the validated batch + total
+///            amount for River to execute. River retains keeper authorization,
+///            slashing-containment gating, ETH execution, operator funding accounting,
+///            and balance bookkeeping. View-only.
+///
+///         2. Consolidation flow (`validateConsolidation`):
+///            Validates EIP-7251 consolidation requests passed in directly as a
+///            `ConsolidationObject` struct (no on-chain buffer). Verifies the
+///            consolidation-committee attestation quorum over a typed-data digest
+///            built from the request fields, and marks the request as processed
+///            for replay protection. State-mutating.
+///
+///         Extracted from RiverV1 to keep River's deployed bytecode under EIP-170.
 contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     // -----------------------------------------------------------------------
     // EIP-712
@@ -42,15 +60,36 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     bytes32 internal constant ATTEST_TYPEHASH =
         keccak256("Attest(bytes32 depositDataBufferId,bytes32 depositRootHash)");
 
+    /// @notice EIP-712 name used by the consolidation-attestation domain separator.
+    /// @dev    Distinct from `NAME_HASH` so attestor signatures cannot be replayed
+    ///         across the deposit and consolidation flows even if the rest of the
+    ///         domain (chainId, verifyingContract, version) were identical.
+    bytes32 internal constant CONSOLIDATION_NAME_HASH = keccak256("ConsolidationValidation");
+
+    /// @dev EIP-712 typehash for a consolidation attestation. The four request fields are
+    ///      hashed directly into the EIP-712 struct (rather than first being squashed into a
+    ///      single `bytes32` id). `bytes[]` fields follow EIP-712 dynamic-array rules:
+    ///      each element is replaced by `keccak256(element)`, then the resulting `bytes32`
+    ///      array is concatenated and hashed (`_hashBytesArray`).
+    bytes32 internal constant ATTEST_CONSOLIDATION_TYPEHASH = keccak256(
+        "AttestConsolidation(address withdrawalAddress,bytes[] sourcePubkeys,bytes[] targetPubkeys,uint256 totalAmount)"
+    );
+
     /// @notice Maximum number of signatures accepted. Bounds the O(n^2) duplicate-detection loop.
     uint256 public constant MAX_SIGNATURES = 20;
 
     /// @notice Maximum number of registered root attesters. Defensive cap to bound storage growth.
     uint256 public constant MAX_ROOT_ATTESTERS = 32;
 
+    /// @notice Maximum number of registered consolidation-committee attesters. Defensive cap to bound storage growth.
+    uint256 public constant MAX_CONSOLIDATION_COMMITTEE_ATTESTERS = 32;
+
     /// @dev Expected lengths for fixed BLS-related fields in a DepositObject.
     uint256 internal constant DEPOSIT_PUBKEY_LENGTH = 48;
     uint256 internal constant DEPOSIT_SIGNATURE_LENGTH = 96;
+
+    /// @dev Expected length for BLS pubkeys in a ConsolidationObject (source or target).
+    uint256 internal constant CONSOLIDATION_PUBKEY_LENGTH = 48;
 
     // -----------------------------------------------------------------------
     // Modifiers
@@ -85,17 +124,30 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         address _depositDataBuffer,
         address[] calldata _rootAttesters,
         uint256 _quorum,
-        bytes4 _genesisForkVersion
+        bytes4 _genesisForkVersion,
+        address[] calldata _consolidationCommitteeAttesters,
+        uint256 _consolidationQuorum
     ) external init(0) {
-        if (
-            _rootAttesters.length == 0
-                || _rootAttesters.length > MAX_ROOT_ATTESTERS
-        ) {
+        // ---- Validate deposit-side parameters ----
+        if (_rootAttesters.length == 0 || _rootAttesters.length > MAX_ROOT_ATTESTERS) {
             revert LibErrors.InvalidArgument();
         }
         if (_quorum == 0) revert ZeroQuorum();
         if (_quorum > MAX_SIGNATURES) revert QuorumExceedsMaxSignatures(_quorum, MAX_SIGNATURES);
 
+        // ---- Validate consolidation-side parameters ----
+        if (
+            _consolidationCommitteeAttesters.length == 0
+                || _consolidationCommitteeAttesters.length > MAX_CONSOLIDATION_COMMITTEE_ATTESTERS
+        ) {
+            revert LibErrors.InvalidArgument();
+        }
+        if (_consolidationQuorum == 0) revert ZeroQuorum();
+        if (_consolidationQuorum > MAX_SIGNATURES) {
+            revert QuorumExceedsMaxSignatures(_consolidationQuorum, MAX_SIGNATURES);
+        }
+
+        // ---- River + buffers + BLS deposit domain ----
         RiverAddress.set(_river);
         emit SetRiver(_river);
 
@@ -113,20 +165,51 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
                 emit SetRootAttester(_rootAttesters[i], true);
             }
         }
-        uint256 rootAttesterCount = RootAttesters.getCount();
-        if (_quorum > rootAttesterCount) {
-            revert QuorumExceedsRootAttesterCount(_quorum, rootAttesterCount);
+        {
+            uint256 rootAttesterCount = RootAttesters.getCount();
+            if (_quorum > rootAttesterCount) {
+                revert QuorumExceedsRootAttesterCount(_quorum, rootAttesterCount);
+            }
+            RootAttestationQuorum.set(_quorum);
+            emit SetRootAttestationQuorum(_quorum);
         }
-        RootAttestationQuorum.set(_quorum);
-        emit SetRootAttestationQuorum(_quorum);
 
-        // EIP-712 domain separator binds verifyingContract to River's address, not this
-        // verifier's own address. This preserves root attester signing tooling that
-        // signs against River's identity even if the verifier is later redeployed.
-        bytes32 domainSeparator =
-            keccak256(abi.encode(EIP712_DOMAIN_TYPEHASH, NAME_HASH, VERSION_HASH, block.chainid, _river));
-        DomainSeparator.set(domainSeparator);
-        emit SetDomainSeparator(domainSeparator);
+        // ---- Consolidation committee + quorum ----
+        for (uint256 i = 0; i < _consolidationCommitteeAttesters.length; i++) {
+            if (!ConsolidationCommitteeAttesters.isConsolidationCommitteeAttester(_consolidationCommitteeAttesters[i]))
+            {
+                ConsolidationCommitteeAttesters.setConsolidationCommitteeAttester(
+                    _consolidationCommitteeAttesters[i], true
+                );
+                ConsolidationCommitteeAttesters.setCount(ConsolidationCommitteeAttesters.getCount() + 1);
+                emit SetConsolidationCommitteeAttester(_consolidationCommitteeAttesters[i], true);
+            }
+        }
+        {
+            uint256 consolidationAttesterCount = ConsolidationCommitteeAttesters.getCount();
+            if (_consolidationQuorum > consolidationAttesterCount) {
+                revert QuorumExceedsConsolidationCommitteeAttesterCount(
+                    _consolidationQuorum, consolidationAttesterCount
+                );
+            }
+            ConsolidationCommitteeAttestationQuorum.set(_consolidationQuorum);
+            emit SetConsolidationCommitteeAttestationQuorum(_consolidationQuorum);
+        }
+        {
+            // EIP-712 domain separator binds verifyingContract to River's address, not this
+            // verifier's own address. This preserves root attester signing tooling that
+            // signs against River's identity even if the verifier is later redeployed.
+            bytes32 domainSeparator =
+                keccak256(abi.encode(EIP712_DOMAIN_TYPEHASH, NAME_HASH, VERSION_HASH, block.chainid, _river));
+            DomainSeparator.set(domainSeparator);
+            emit SetDomainSeparator(domainSeparator);
+
+            domainSeparator = keccak256(
+                abi.encode(EIP712_DOMAIN_TYPEHASH, CONSOLIDATION_NAME_HASH, VERSION_HASH, block.chainid, _river)
+            );
+            ConsolidationDomainSeparator.set(domainSeparator);
+            emit SetConsolidationDomainSeparator(domainSeparator);
+        }
     }
 
     // -----------------------------------------------------------------------
@@ -171,6 +254,43 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         emit SetRootAttestationQuorum(newQuorum);
     }
 
+    /// @inheritdoc IAttestationVerifierV1
+    function setConsolidationCommitteeAttester(address consolidationCommitteeAttester, bool value)
+        external
+        onlyRiverAdmin
+    {
+        bool current = ConsolidationCommitteeAttesters.isConsolidationCommitteeAttester(consolidationCommitteeAttester);
+        if (current == value) {
+            revert ConsolidationCommitteeAttesterStatusUnchanged(consolidationCommitteeAttester, value);
+        }
+
+        uint256 count = ConsolidationCommitteeAttesters.getCount();
+        uint256 newCount = value ? count + 1 : count - 1;
+        if (value && newCount > MAX_CONSOLIDATION_COMMITTEE_ATTESTERS) {
+            revert TooManyConsolidationCommitteeAttesters(newCount, MAX_CONSOLIDATION_COMMITTEE_ATTESTERS);
+        }
+        uint256 currentQuorum = ConsolidationCommitteeAttestationQuorum.get();
+        if (!value && currentQuorum > newCount) {
+            revert QuorumExceedsConsolidationCommitteeAttesterCount(currentQuorum, newCount);
+        }
+
+        ConsolidationCommitteeAttesters.setCount(newCount);
+        ConsolidationCommitteeAttesters.setConsolidationCommitteeAttester(consolidationCommitteeAttester, value);
+        emit SetConsolidationCommitteeAttester(consolidationCommitteeAttester, value);
+    }
+
+    /// @inheritdoc IAttestationVerifierV1
+    function setConsolidationCommitteeAttestationQuorum(uint256 newQuorum) external onlyRiverAdmin {
+        if (newQuorum == 0) revert ZeroQuorum();
+        uint256 attesterCount = ConsolidationCommitteeAttesters.getCount();
+        if (newQuorum > attesterCount) {
+            revert QuorumExceedsConsolidationCommitteeAttesterCount(newQuorum, attesterCount);
+        }
+        if (newQuorum > MAX_SIGNATURES) revert QuorumExceedsMaxSignatures(newQuorum, MAX_SIGNATURES);
+        ConsolidationCommitteeAttestationQuorum.set(newQuorum);
+        emit SetConsolidationCommitteeAttestationQuorum(newQuorum);
+    }
+
     // -----------------------------------------------------------------------
     // Views
     // -----------------------------------------------------------------------
@@ -211,8 +331,28 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         return RiverAddress.get();
     }
 
+    /// @inheritdoc IAttestationVerifierV1
+    function isConsolidationCommitteeAttester(address account) external view returns (bool) {
+        return ConsolidationCommitteeAttesters.isConsolidationCommitteeAttester(account);
+    }
+
+    /// @inheritdoc IAttestationVerifierV1
+    function getConsolidationCommitteeAttesterCount() external view returns (uint256) {
+        return ConsolidationCommitteeAttesters.getCount();
+    }
+
+    /// @inheritdoc IAttestationVerifierV1
+    function getConsolidationCommitteeAttestationQuorum() external view returns (uint256) {
+        return ConsolidationCommitteeAttestationQuorum.get();
+    }
+
+    /// @inheritdoc IAttestationVerifierV1
+    function getConsolidationDomainSeparator() external view returns (bytes32) {
+        return ConsolidationDomainSeparator.get();
+    }
+
     // -----------------------------------------------------------------------
-    // Validate-and-prepare — pure validation, no state changes
+    // Validate-and-prepare entry points
     // -----------------------------------------------------------------------
 
     /// @inheritdoc IAttestationVerifierV1
@@ -329,6 +469,79 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         return ProcessedDepositDataBufferIds.isProcessed(depositDataBufferId);
     }
 
+    /// @inheritdoc IAttestationVerifierV1
+    /// @dev Trust boundary: this function only validates structural shape (array shapes
+    ///      and pubkey byte lengths) and the attestation quorum (ECDSA signature recovery
+    ///      against the consolidation committee). It does NOT check:
+    ///        - Source/target pubkey uniqueness within the request (EIP-7251 single-use
+    ///          source rule). A source pubkey appearing twice, or a pubkey appearing in
+    ///          both source and target arrays, is not rejected here.
+    ///        - `totalAmount` gwei alignment, upper bound, or correlation with the number
+    ///          of (source, target) pairs.
+    ///        - Whether the source validators actually exist on the consensus layer or
+    ///          carry the protocol's withdrawal credentials.
+    ///      These are the responsibility of the caller (off-chain pipeline) and the
+    ///      consolidation committee that signs the request. The eventual
+    ///      `mintLsETHForConsolidation` River integration is the place to enforce any
+    ///      additional financial caps on `totalAmount`.
+    function validateConsolidation(IAttestationVerifierV1.ConsolidationObject calldata consolidation)
+        external
+        onlyRiver
+        returns (bool)
+    {
+        // 1. Structural checks (cheapest first — fail fast)
+        uint256 sourceLen = consolidation.sourcePubkeys.length;
+        uint256 targetLen = consolidation.targetPubkeys.length;
+        if (sourceLen == 0) revert NoConsolidations();
+        if (sourceLen != targetLen) revert ConsolidationArrayLengthMismatch(sourceLen, targetLen);
+        if (consolidation.totalAmount == 0) revert ZeroConsolidationTotalAmount();
+        if (consolidation.withdrawalAddress == address(0)) revert ZeroConsolidationWithdrawalAddress();
+
+        // 2. Per-pair pubkey length checks
+        for (uint256 i = 0; i < sourceLen; i++) {
+            if (consolidation.sourcePubkeys[i].length != CONSOLIDATION_PUBKEY_LENGTH) {
+                revert InvalidConsolidationPubkeyLength(i, consolidation.sourcePubkeys[i].length, true);
+            }
+            if (consolidation.targetPubkeys[i].length != CONSOLIDATION_PUBKEY_LENGTH) {
+                revert InvalidConsolidationPubkeyLength(i, consolidation.targetPubkeys[i].length, false);
+            }
+        }
+
+        // 3. Compute the EIP-712 digest the committee signed.
+        //    The struct's `signatures` field is NOT part of the typed data — only the four
+        //    request fields are. `bytes[]` arrays follow EIP-712 array rules: each element
+        //    becomes `keccak256(element)`, then the array hashes to `keccak256` over the
+        //    concatenation of those 32-byte element hashes.
+        bytes32 domainSep = ConsolidationDomainSeparator.get();
+        if (domainSep == bytes32(0)) revert ZeroConsolidationDomainSeparator();
+        bytes32 structHash = keccak256(
+            abi.encode(
+                ATTEST_CONSOLIDATION_TYPEHASH,
+                consolidation.withdrawalAddress,
+                _hashBytesArray(consolidation.sourcePubkeys),
+                _hashBytesArray(consolidation.targetPubkeys),
+                consolidation.totalAmount
+            )
+        );
+
+        // 4. Replay protection — reject any consolidation we've already accepted.
+        //    Checked BEFORE quorum verification so a previously-accepted request fails fast
+        //    even if the supplied signatures happen to be valid again.
+        if (ProcessedConsolidations.isProcessed(structHash)) {
+            revert ConsolidationAlreadyProcessed(structHash);
+        }
+
+        // 5. Verify the consolidation attestation quorum from the supplied signatures
+        bytes32 digest = ECDSA.toTypedDataHash(domainSep, structHash);
+        _verifyConsolidationAttestationQuorum(digest, consolidation.signatures);
+
+        // 6. Mark as processed and emit
+        ProcessedConsolidations.markProcessed(structHash);
+        emit ConsolidationProcessed(structHash);
+
+        return true;
+    }
+
     // -----------------------------------------------------------------------
     // Internal — attestation quorum + BLS verification
     // -----------------------------------------------------------------------
@@ -382,6 +595,55 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         }
 
         if (validCount < quorum) revert InsufficientAttestations(validCount, quorum);
+    }
+
+    /// @notice Verify the consolidation-attestation quorum over the supplied signatures.
+    /// @dev    Pure signature-recovery loop. The caller has already constructed the EIP-712
+    ///         digest from the request fields and looked up the consolidation domain separator;
+    ///         this helper only enforces bounds, recovers signers, dedups them against the
+    ///         registered committee, and asserts the quorum.
+    /// @param digest      The EIP-712 digest the committee signed
+    /// @param signatures  Signatures supplied alongside the consolidation request
+    function _verifyConsolidationAttestationQuorum(bytes32 digest, bytes[] calldata signatures) internal view {
+        uint256 sigLen = signatures.length;
+        if (sigLen > MAX_SIGNATURES) revert TooManySignatures(sigLen, MAX_SIGNATURES);
+
+        uint256 quorum = ConsolidationCommitteeAttestationQuorum.get();
+        if (quorum == 0) revert ZeroQuorum();
+        if (sigLen < quorum) revert InsufficientConsolidationAttestations(sigLen, quorum);
+
+        uint256 validCount = 0;
+        address[] memory seen = new address[](sigLen);
+
+        for (uint256 i = 0; i < sigLen; i++) {
+            address signer = _recover(digest, signatures[i]);
+            if (signer == address(0)) continue;
+            if (!ConsolidationCommitteeAttesters.isConsolidationCommitteeAttester(signer)) continue;
+
+            bool duplicate = false;
+            for (uint256 j = 0; j < validCount; j++) {
+                if (seen[j] == signer) {
+                    duplicate = true;
+                    break;
+                }
+            }
+            if (duplicate) continue;
+
+            seen[validCount] = signer;
+            validCount++;
+        }
+
+        if (validCount < quorum) revert InsufficientConsolidationAttestations(validCount, quorum);
+    }
+
+    /// @dev EIP-712 array hash for a `bytes[]` field. Each element is replaced by its
+    ///      `keccak256`, and the resulting `bytes32[]` is concatenated and hashed.
+    function _hashBytesArray(bytes[] calldata arr) internal pure returns (bytes32) {
+        bytes32[] memory hashes = new bytes32[](arr.length);
+        for (uint256 i = 0; i < arr.length; i++) {
+            hashes[i] = keccak256(arr[i]);
+        }
+        return keccak256(abi.encodePacked(hashes));
     }
 
     /// @notice Verify the BLS signatures of all initial deposits against the canonical River
