@@ -889,21 +889,21 @@ contract ConsolidationAttestationTest is Test {
     function testIsolation_consolidationAttesterNotADepositAttester() public {
         vm.prank(admin);
         validator.setConsolidationCommitteeAttester(address(0xBABE), true);
-        assertFalse(validator.isDepositCommitteeAttester(address(0xBABE)));
+        assertFalse(validator.isRootAttester(address(0xBABE)));
         assertTrue(validator.isConsolidationCommitteeAttester(address(0xBABE)));
     }
 
     function testIsolation_quorumsAreSeparate() public {
         // setUp configured consolidation quorum=2 and deposit quorum=1 — they must read independently.
-        assertEq(validator.getDepositCommitteeAttestationQuorum(), 1);
+        assertEq(validator.getRootAttestationQuorum(), 1);
         assertEq(validator.getConsolidationCommitteeAttestationQuorum(), 2);
     }
 
     function testIsolation_changingConsolidationQuorumDoesNotAffectDeposit() public {
-        uint256 depositQuorumBefore = validator.getDepositCommitteeAttestationQuorum();
+        uint256 depositQuorumBefore = validator.getRootAttestationQuorum();
         vm.prank(admin);
         validator.setConsolidationCommitteeAttestationQuorum(3);
-        assertEq(validator.getDepositCommitteeAttestationQuorum(), depositQuorumBefore);
+        assertEq(validator.getRootAttestationQuorum(), depositQuorumBefore);
         assertEq(validator.getConsolidationCommitteeAttestationQuorum(), 3);
     }
 }

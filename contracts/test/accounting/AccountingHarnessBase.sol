@@ -114,12 +114,12 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
     uint256 internal _depositBatchNonce;
 
     // ─── attestation ──────────────────────────────────────────────────────────
-    uint256 internal constant DEPOSIT_COMMITTEE_ATTESTER_PK_1 = 0xA1;
-    uint256 internal constant DEPOSIT_COMMITTEE_ATTESTER_PK_2 = 0xA2;
-    uint256 internal constant DEPOSIT_COMMITTEE_ATTESTER_PK_3 = 0xA3;
-    address internal depositCommitteeAttester1;
-    address internal depositCommitteeAttester2;
-    address internal depositCommitteeAttester3;
+    uint256 internal constant ROOT_ATTESTER_PK_1 = 0xA1;
+    uint256 internal constant ROOT_ATTESTER_PK_2 = 0xA2;
+    uint256 internal constant ROOT_ATTESTER_PK_3 = 0xA3;
+    address internal rootAttester1;
+    address internal rootAttester2;
+    address internal rootAttester3;
 
     // EIP-712 constants (must match DepositToConsensusLayerValidation)
     bytes32 internal constant EIP712_DOMAIN_TYPEHASH =
@@ -156,9 +156,9 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
         operatorOneAddr = makeAddr("operatorOne");
         operatorTwoAddr = makeAddr("operatorTwo");
 
-        depositCommitteeAttester1 = vm.addr(DEPOSIT_COMMITTEE_ATTESTER_PK_1);
-        depositCommitteeAttester2 = vm.addr(DEPOSIT_COMMITTEE_ATTESTER_PK_2);
-        depositCommitteeAttester3 = vm.addr(DEPOSIT_COMMITTEE_ATTESTER_PK_3);
+        rootAttester1 = vm.addr(ROOT_ATTESTER_PK_1);
+        rootAttester2 = vm.addr(ROOT_ATTESTER_PK_2);
+        rootAttester3 = vm.addr(ROOT_ATTESTER_PK_3);
 
         vm.warp(1_000_000);
 
@@ -216,11 +216,11 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
         );
         river.initRiverV1_2();
 
-        // 3 deposit-committee attesters with quorum=2 (quorum must be ≤ attester count and ≤ MAX_SIGNATURES)
-        address[] memory _initDepositCommitteeAttesters = new address[](3);
-        _initDepositCommitteeAttesters[0] = depositCommitteeAttester1;
-        _initDepositCommitteeAttesters[1] = depositCommitteeAttester2;
-        _initDepositCommitteeAttesters[2] = depositCommitteeAttester3;
+        // 3 root attesters with quorum=2 (quorum must be ≤ attester count and ≤ MAX_SIGNATURES)
+        address[] memory _initRootAttesters = new address[](3);
+        _initRootAttesters[0] = rootAttester1;
+        _initRootAttesters[1] = rootAttester2;
+        _initRootAttesters[2] = rootAttester3;
 
         // Deploy and initialize the AttestationVerifier sibling contract that River
         // delegates attestation+BLS verification to. EIP-712 verifyingContract is
@@ -232,7 +232,7 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
         attestationVerifier.initAttestationVerifierV1(
             address(river),
             address(depositBuffer),
-            _initDepositCommitteeAttesters,
+            _initRootAttesters,
             2,
             bytes4(0),
             _initConsolidationCommitteeAttesters,
