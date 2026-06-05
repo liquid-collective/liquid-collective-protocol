@@ -24,13 +24,13 @@ interface IAttestationVerifierV1 {
     /// @dev    `sourcePubkeys[i]` is consolidated INTO `targetPubkeys[i]` — same-index pairing.
     ///         `signatures` are the consolidation-committee attestor EIP-712 ECDSA signatures
     ///         over the typed-data struct
-    ///             AttestConsolidation(address user, bytes[] sourcePubkeys, bytes[] targetPubkeys, uint256 totalAmount)
+    ///             AttestConsolidation(address withdrawalAddress, bytes[] sourcePubkeys, bytes[] targetPubkeys, uint256 totalAmount)
     ///         The `signatures` field itself is NOT part of the typed data — only the four
     ///         request fields are. This is what lets attestors produce signatures over the
     ///         request without a circular dependency.
     struct ConsolidationObject {
-        /// @dev Initiator of the consolidation request; eventual recipient of LsETH.
-        address user;
+        /// @dev Address of the withdrawal credential that initiated the consolidation request; eventual recipient of LsETH unless the mapping is set to a different address
+        address withdrawalAddress;
         /// @dev Source validator BLS pubkeys (48 bytes each). Paired by index with targetPubkeys.
         bytes[] sourcePubkeys;
         /// @dev Target validator BLS pubkeys (48 bytes each). Paired by index with sourcePubkeys.
@@ -49,11 +49,11 @@ interface IAttestationVerifierV1 {
     /// @notice Emitted when the DepositDataBuffer address is updated
     event SetDepositDataBuffer(address indexed depositDataBuffer);
 
-    /// @notice Emitted when a deposit-committee attester is added or removed
-    event SetDepositCommitteeAttester(address indexed depositCommitteeAttester, bool value);
+    /// @notice Emitted when a root attester is added or removed
+    event SetRootAttester(address indexed rootAttester, bool value);
 
-    /// @notice Emitted when the deposit-committee attestation quorum is updated
-    event SetDepositCommitteeAttestationQuorum(uint256 quorum);
+    /// @notice Emitted when the root attestation quorum is updated
+    event SetRootAttestationQuorum(uint256 quorum);
 
     /// @notice Emitted when the EIP-712 domain separator is (re)cached
     event SetDomainSeparator(bytes32 domainSeparator);
@@ -88,8 +88,8 @@ interface IAttestationVerifierV1 {
     // Errors
     // -----------------------------------------------------------------------
 
-    /// @notice The number of valid, unique deposit-committee attester signatures is below the configured quorum
-    /// @param valid The count of valid, unique deposit-committee attester signatures recovered
+    /// @notice The number of valid, unique root attester signatures is below the configured quorum
+    /// @param valid The count of valid, unique root attester signatures recovered
     /// @param quorum The required quorum
     error InsufficientAttestations(uint256 valid, uint256 quorum);
 
@@ -97,14 +97,18 @@ interface IAttestationVerifierV1 {
     error NoDeposits();
 
     /// @notice The co-signed deposit root does not match the deposit contract's current root
-    /// @param expected The deposit root co-signed by deposit-committee attesters
+    /// @param expected The deposit root co-signed by root attesters
     /// @param actual The current root reported by the deposit contract
     error DepositRootMismatch(bytes32 expected, bytes32 actual);
 
     /// @notice The recomputed bufferId does not match the attested bufferId — buffer tampered post-attestation
-    /// @param expected The bufferId co-signed by deposit-committee attesters
+    /// @param expected The bufferId co-signed by root attesters
     /// @param actual The bufferId recomputed from the returned deposits
     error BufferIdMismatch(bytes32 expected, bytes32 actual);
+
+    /// @notice The supplied deposit data buffer ID has already been processed.
+    /// @param depositDataBufferId The replayed deposit data buffer ID
+    error DepositDataBufferIdAlreadyProcessed(bytes32 depositDataBufferId);
 
     /// @notice The submitted signatures array exceeds MAX_SIGNATURES
     /// @param count The submitted signature count
@@ -114,21 +118,26 @@ interface IAttestationVerifierV1 {
     /// @notice An external caller invoked a function reserved for self-staticcall trampolining.
     error OnlySelfCall();
 
-    /// @notice A deposit's pubkey field has an unexpected byte length
-    /// @param index The deposit index in the batch
+    /// @notice An entry's pubkey field has an unexpected byte length
+    /// @param index Index into the sub-array currently being validated
+    ///              (either `batch.deposits` or `batch.topUps`); the loop that raised
+    ///              the revert determines which.
     /// @param length The observed length
     error InvalidPubkeyLength(uint256 index, uint256 length);
 
     /// @notice A deposit's BLS signature field has an unexpected byte length
-    /// @param index The deposit index in the batch
+    /// @dev Only raised while iterating `batch.deposits` — top-ups have no signature field.
+    /// @param index Index into `batch.deposits`
     /// @param length The observed length
     error InvalidSignatureLength(uint256 index, uint256 length);
 
-    /// @notice A deposit's `amount` is outside the protocol-accepted range
+    /// @notice An entry's `amount` is outside the protocol-accepted range
     ///         [1 ether, 2048 ether] or is not gwei-aligned. Enforced here in
-    ///         `validate()` so producer bugs fail before the heavy BLS path runs;
+    ///         `validateDeposits()` so producer bugs fail before the heavy BLS path runs;
     ///         downstream `_depositValidator` trusts this check.
-    /// @param index The deposit index in the batch
+    /// @param index Index into the sub-array currently being validated
+    ///              (either `batch.deposits` or `batch.topUps`); the loop that raised
+    ///              the revert determines which.
     /// @param amount The offending amount in wei
     error InvalidDepositAmount(uint256 index, uint256 amount);
 
@@ -144,25 +153,25 @@ interface IAttestationVerifierV1 {
     /// @notice The BLS deposit domain has not been initialized
     error ZeroDepositDomain();
 
-    /// @notice The supplied quorum is greater than the current deposit-committee attester count
+    /// @notice The supplied quorum is greater than the current root attester count
     /// @param quorum The supplied quorum
-    /// @param depositCommitteeAttesterCount The current deposit-committee attester count
-    error QuorumExceedsDepositCommitteeAttesterCount(uint256 quorum, uint256 depositCommitteeAttesterCount);
+    /// @param rootAttesterCount The current root attester count
+    error QuorumExceedsRootAttesterCount(uint256 quorum, uint256 rootAttesterCount);
 
     /// @notice The supplied quorum is greater than MAX_SIGNATURES
     /// @param quorum The supplied quorum
     /// @param max The MAX_SIGNATURES bound
     error QuorumExceedsMaxSignatures(uint256 quorum, uint256 max);
 
-    /// @notice Adding a deposit-committee attester would exceed MAX_DEPOSIT_COMMITTEE_ATTESTERS
-    /// @param count The would-be deposit-committee attester count
-    /// @param max The MAX_DEPOSIT_COMMITTEE_ATTESTERS bound
-    error TooManyDepositCommitteeAttesters(uint256 count, uint256 max);
+    /// @notice Adding a root attester would exceed MAX_ROOT_ATTESTERS
+    /// @param count The would-be root attester count
+    /// @param max The MAX_ROOT_ATTESTERS bound
+    error TooManyRootAttesters(uint256 count, uint256 max);
 
-    /// @notice setDepositCommitteeAttester was called with the attester already in the requested state
-    /// @param depositCommitteeAttester The deposit-committee attester address
+    /// @notice setRootAttester was called with the attester already in the requested state
+    /// @param rootAttester The root attester address
     /// @param value The requested status (matches current status)
-    error DepositCommitteeAttesterStatusUnchanged(address depositCommitteeAttester, bool value);
+    error RootAttesterStatusUnchanged(address rootAttester, bool value);
 
     // -- Consolidation-side errors --
 
@@ -191,8 +200,8 @@ interface IAttestationVerifierV1 {
     /// @notice The consolidation's totalAmount is zero
     error ZeroConsolidationTotalAmount();
 
-    /// @notice The consolidation's user is the zero address
-    error ZeroConsolidationUser();
+    /// @notice The consolidation's withdrawal address is the zero address
+    error ZeroConsolidationWithdrawalAddress();
 
     /// @notice The supplied quorum is greater than the current consolidation-committee attester count
     /// @param quorum The supplied quorum
@@ -239,10 +248,6 @@ interface IAttestationVerifierV1 {
     /// @param length The observed pubkey length
     error InvalidPrePectraMigrationPubkeyLength(uint256 operatorIndex, uint256 keyIndex, uint256 length);
 
-    /// @notice A target pubkey is not funded
-    /// @param pubkey The offending 48-byte BLS pubkey
-    error TargetPubkeyNotFunded(bytes pubkey);
-
     // -----------------------------------------------------------------------
     // Initialization
     // -----------------------------------------------------------------------
@@ -254,22 +259,20 @@ interface IAttestationVerifierV1 {
     ///         Quorum and committee constraints are validated independently per flow. The deposit
     ///         flow uses a pre-commit `DepositDataBuffer` contract; the consolidation flow has no
     ///         on-chain buffer — callers pass `ConsolidationObject` directly into `validateConsolidation`.
-    /// @param _river                            The River proxy address; used for both
-    ///                                          EIP-712 domain separators and for the cross-
-    ///                                          contract admin lookup.
-    /// @param _depositDataBuffer                The pre-commit deposit buffer the keeper writes to.
-    /// @param _depositCommitteeAttesters        Initial set of deposit-committee attester EOAs.
-    /// @param _depositQuorum                    Initial deposit-attestation quorum
-    ///                                          (1 ≤ q ≤ depositCommitteeAttesters.length, ≤ MAX_SIGNATURES).
-    /// @param _genesisForkVersion               Genesis fork version used to derive the BLS deposit domain.
+    /// @param _river                The River proxy address; used for the EIP-712 verifyingContract
+    ///                              binding and for the cross-contract admin lookup.
+    /// @param _depositDataBuffer    The pre-commit buffer the keeper writes to.
+    /// @param _rootAttesters Initial set of root attester EOAs.
+    /// @param _quorum               Initial attestation quorum (1 ≤ quorum ≤ rootAttesters.length).
+    /// @param _genesisForkVersion   Genesis fork version used to derive the BLS deposit domain.
     /// @param _consolidationCommitteeAttesters  Initial set of consolidation-committee attester EOAs.
     /// @param _consolidationQuorum              Initial consolidation-attestation quorum
     ///                                          (1 ≤ q ≤ consolidationCommitteeAttesters.length, ≤ MAX_SIGNATURES).
     function initAttestationVerifierV1(
         address _river,
         address _depositDataBuffer,
-        address[] calldata _depositCommitteeAttesters,
-        uint256 _depositQuorum,
+        address[] calldata _rootAttesters,
+        uint256 _quorum,
         bytes4 _genesisForkVersion,
         address[] calldata _consolidationCommitteeAttesters,
         uint256 _consolidationQuorum
@@ -286,7 +289,7 @@ interface IAttestationVerifierV1 {
     ///      reference a pubkey already in the initial-deposit lookup, and initial deposits
     ///      must not duplicate any already-recorded or in-batch pubkey. The buffer's
     ///      `operatorIdx` is NOT verified against any on-chain record (the lookup tracks
-    ///      membership only — see ValidatorPubkeyLookup natspec). A failure reverts here,
+    ///      membership only — see PectraValidatorPubkeyLookup natspec). A failure reverts here,
     ///      before River runs any `_depositValidator`.
     /// @dev `depositContract` is supplied by the caller (River) rather than read from the
     ///      verifier's own storage so we avoid an additional cold SLOAD per call. The same
@@ -294,8 +297,8 @@ interface IAttestationVerifierV1 {
     ///      and for executing `deposit{value:}()` in River, which keeps the attested root and
     ///      the executed-against contract consistent by construction.
     /// @param depositDataBufferId  Batch identifier in the DepositDataBuffer
-    /// @param depositRootHash      Current deposit contract root hash co-signed by deposit-committee attesters
-    /// @param signatures           EIP-712 deposit-committee attester signatures
+    /// @param depositRootHash      Current deposit contract root hash co-signed by root attesters
+    /// @param signatures           EIP-712 root attester signatures
     /// @param depositContract      The official ETH deposit contract; queried for the current root
     /// @param withdrawalCredentials The protocol-configured WC; every deposit's WC must match
     /// @param committedBalance     Total amount summed over deposits must not exceed this
@@ -310,15 +313,20 @@ interface IAttestationVerifierV1 {
         uint256 committedBalance
     ) external view returns (IDepositDataBuffer.DepositObject memory batch, uint256 totalAmount);
 
+     /// @notice Mark a `depositDataBufferId` as processed. Only callable by River.
+    /// @dev Called by River after the deposit-execution loop; consulted by `validateDeposits()` to reject replays.
+    /// @param depositDataBufferId The batch identifier to mark processed.
+    function markDepositDataBufferIdProcessed(bytes32 depositDataBufferId) external;
+
     // -----------------------------------------------------------------------
     // Initial-deposit recording (called by River after a successful deposit batch)
     // -----------------------------------------------------------------------
 
     /// @notice Record one or more pubkeys as initial-deposited. Only callable by River.
     /// @dev Called by River after the deposit-execution loop. The recorded set is consulted
-    ///      by the top-up branch of `validate()` to require that top-ups reference a pubkey
+    ///      by the top-up branch of `validateDeposits()` to require that top-ups reference a pubkey
     ///      River has previously initial-deposited. Assumes `pubkeys` is already deduplicated
-    ///      against the lookup and against itself; `validate()` enforces both invariants
+    ///      against the lookup and against itself; `validateDeposits()` enforces both invariants
     ///      earlier in the same transaction. Per-pubkey logging is emitted on the caller
     ///      (ConsensusLayerDepositManager's `PubkeyFunded` event), not here.
     /// @param pubkeys The 48-byte BLS pubkeys to record
@@ -343,12 +351,7 @@ interface IAttestationVerifierV1 {
     ///         Replay protection: the EIP-712 structHash is recorded in storage on success.
     ///         Subsequent calls with a struct that hashes to the same value revert with
     ///         `ConsolidationAlreadyProcessed`. Note that this makes the function
-    ///         state-mutating (not `view`). NOTE: the function is permissionless; if a
-    ///         malicious caller front-runs the legitimate consumer they can mark a request
-    ///         as processed and DoS subsequent legitimate validation. Caller-restriction is
-    ///         out of scope for this PR; it lives in the eventual River integration (which
-    ///         can either gate the verifier or atomically combine validation with its own
-    ///         downstream action).
+    ///         state-mutating (not `view`) and callable only by River.
     ///
     ///         The function reverts on any validation failure and returns `true` on success.
     ///         The boolean is a positive signal for off-chain `eth_call` style invocations.
@@ -360,8 +363,8 @@ interface IAttestationVerifierV1 {
     ///           - Source/target pubkey uniqueness (EIP-7251 single-use source rule)
     ///           - `totalAmount` gwei alignment, upper bound, or correlation with pair count
     ///           - Financial caps (e.g. against committed/in-flight balances)
-    /// @param consolidation The consolidation request to validate (user, source/target pubkeys,
-    ///                      totalAmount, signatures).
+    /// @param consolidation The consolidation request to validate (withdrawal address,
+    ///                      source/target pubkeys, totalAmount, signatures).
     /// @return Always `true` if the call returns; reverts otherwise.
     function validateConsolidation(ConsolidationObject calldata consolidation) external returns (bool);
 
@@ -369,14 +372,14 @@ interface IAttestationVerifierV1 {
     // Admin setters
     // -----------------------------------------------------------------------
 
-    /// @notice Add or remove a deposit-committee attester. Only callable by River's admin.
-    /// @param depositCommitteeAttester The deposit-committee attester address to update
-    /// @param value True to register the deposit-committee attester, false to deregister
-    function setDepositCommitteeAttester(address depositCommitteeAttester, bool value) external;
+    /// @notice Add or remove a root attester. Only callable by River's admin.
+    /// @param rootAttester The root attester address to update
+    /// @param value True to register the root attester, false to deregister
+    function setRootAttester(address rootAttester, bool value) external;
 
-    /// @notice Update the deposit-committee attestation quorum. Only callable by River's admin.
-    /// @param newQuorum The new quorum (1 ≤ newQuorum ≤ depositCommitteeAttesterCount, ≤ MAX_SIGNATURES)
-    function setDepositCommitteeAttestationQuorum(uint256 newQuorum) external;
+    /// @notice Update the root attestation quorum. Only callable by River's admin.
+    /// @param newQuorum The new quorum (1 ≤ newQuorum ≤ rootAttesterCount, ≤ MAX_SIGNATURES)
+    function setRootAttestationQuorum(uint256 newQuorum) external;
 
     /// @notice Update the DepositDataBuffer address. Only callable by River's admin.
     /// @param _depositDataBuffer The new buffer address
@@ -395,18 +398,18 @@ interface IAttestationVerifierV1 {
     // Views
     // -----------------------------------------------------------------------
 
-    /// @notice Check whether an address is a registered deposit-committee attester
+    /// @notice Check whether an address is a registered root attester
     /// @param account The address to check
-    /// @return True if account is a registered deposit-committee attester
-    function isDepositCommitteeAttester(address account) external view returns (bool);
+    /// @return True if account is a registered root attester
+    function isRootAttester(address account) external view returns (bool);
 
-    /// @notice Retrieve the current number of registered deposit-committee attesters
-    /// @return The deposit-committee attester count
-    function getDepositCommitteeAttesterCount() external view returns (uint256);
+    /// @notice Retrieve the current number of registered root attesters
+    /// @return The root attester count
+    function getRootAttesterCount() external view returns (uint256);
 
-    /// @notice Retrieve the current deposit-committee attestation quorum
-    /// @return The required number of valid, unique deposit-committee attester signatures
-    function getDepositCommitteeAttestationQuorum() external view returns (uint256);
+    /// @notice Retrieve the current root attestation quorum
+    /// @return The required number of valid, unique root attester signatures
+    function getRootAttestationQuorum() external view returns (uint256);
 
     /// @notice Retrieve the configured DepositDataBuffer address
     /// @return The DepositDataBuffer address
@@ -451,8 +454,15 @@ interface IAttestationVerifierV1 {
     /// @return True if the pubkey is currently in the lookup
     function isPubkeyFunded(bytes calldata pubkey) external view returns (bool);
 
-    /// @notice Check whether a pubkey has been migrated from the pre-Pectra validator set.
+    /// @notice Check whether a pubkey has been migrated from pre-Pectra validator storage.
+    /// @dev Intended for consolidation source validation; pre-Pectra keys are not eligible
+    ///      top-up targets through `validateDeposits()`.
     /// @param pubkey The 48-byte BLS pubkey
     /// @return True if the pubkey is currently in the pre-Pectra lookup
     function isPrePectraValidatorPubkeyFunded(bytes calldata pubkey) external view returns (bool);
+
+    /// @notice Check whether a `depositDataBufferId` has already been processed.
+    /// @param depositDataBufferId The batch identifier
+    /// @return True if the ID has already been executed
+    function isDepositDataBufferIdProcessed(bytes32 depositDataBufferId) external view returns (bool);
 }

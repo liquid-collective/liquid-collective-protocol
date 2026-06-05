@@ -5,10 +5,9 @@ import "./interfaces/IRiver.1.sol";
 import "./interfaces/IWithdraw.1.sol";
 import "./interfaces/IAllowlist.1.sol";
 import "./interfaces/ICoverageFund.1.sol";
-import "./interfaces/IProtocolVersion.sol";
 import "./interfaces/IELFeeRecipient.1.sol";
-import "./interfaces/IOperatorRegistry.1.sol";
-import "./interfaces/IAttestationVerifier.1.sol";
+import "./interfaces/IProtocolVersion.sol";
+import "./interfaces/IExternalConsolidationRecipientMapping.1.sol";
 
 import "./components/SharesManager.1.sol";
 import "./components/OracleManager.1.sol";
@@ -29,11 +28,11 @@ import "./state/river/AllowlistAddress.sol";
 import "./state/river/CollectorAddress.sol";
 import "./state/river/TotalDepositedETH.sol";
 import "./state/river/CoverageFundAddress.sol";
+import "./state/river/ConsolidationCoverageFundAddress.sol";
 import "./state/river/RedeemManagerAddress.sol";
 import "./state/river/ELFeeRecipientAddress.sol";
 import "./state/river/DepositedValidatorCount.sol";
-import "./state/river/LastConsensusLayerReport.sol";
-import "./state/river/ConsolidationCoverageFundAddress.sol";
+import "./state/river/ExternalConsolidationRecipientMappingAddress.sol";
 import "./state/shared/OperatorsRegistryAddress.sol";
 import "./state/shared/AttestationVerifierAddress.sol";
 
@@ -54,7 +53,8 @@ contract RiverV1 is
     function initRiverV1_3(
         bytes32 _withdrawalCredentials,
         address _consolidationCoverageFund,
-        address _attestationVerifier
+        address _attestationVerifier,
+        address _externalConsolidationRecipientMapping
     ) external init(3) onlyAdmin {
         if (_withdrawalCredentials == bytes32(0)) {
             revert InvalidWithdrawalCredentials();
@@ -77,6 +77,9 @@ contract RiverV1 is
 
         AttestationVerifierAddress.set(_attestationVerifier);
         emit SetAttestationVerifier(_attestationVerifier);
+
+        ExternalConsolidationRecipientMappingAddress.set(_externalConsolidationRecipientMapping);
+        emit SetExternalConsolidationRecipientMapping(_externalConsolidationRecipientMapping);
 
         // accounting changes to move from 0x01 to 0x02 accounting
 
@@ -172,6 +175,43 @@ contract RiverV1 is
     /// @inheritdoc IRiverV1
     function getBalanceToRedeem() external view returns (uint256) {
         return BalanceToRedeem.get();
+    }
+
+    /// @inheritdoc IRiverV1
+    function getBalanceToConsolidate() external view returns (uint256) {
+        return ConsolidationBuffer.get();
+    }
+
+    /// @inheritdoc IRiverV1
+    function mintLsETHForConsolidation(IAttestationVerifierV1.ConsolidationObject calldata consolidation)
+        external
+        onlyKeeper
+    {
+        // we check the allowlist first to fail fast if the withdrawalAddress/recipient is denied
+        IAllowlistV1 allowlist = IAllowlistV1(AllowlistAddress.get());
+        allowlist.onlyAllowed(consolidation.withdrawalAddress, LibAllowlistMasks.CONSOLIDATE_MASK);
+
+        address recipient = IExternalConsolidationRecipientMappingV1(ExternalConsolidationRecipientMappingAddress.get())
+            .getRecipient(consolidation.withdrawalAddress);
+
+        // if the recipient is not set, we use the withdrawalAddress
+        if (recipient == address(0)) {
+            recipient = consolidation.withdrawalAddress;
+        } else {
+            if (allowlist.isDenied(recipient)) {
+                revert Denied(recipient);
+            }
+        }
+
+        IAttestationVerifierV1 verifier = IAttestationVerifierV1(AttestationVerifierAddress.get());
+        // Since the verifier validates the consolidation object, we do not validate it here
+        // this reverts if the consolidation is invalid
+        verifier.validateConsolidation(consolidation);
+
+        uint256 oldConsolidationBuffer = ConsolidationBuffer.get();
+        _setConsolidationBuffer(oldConsolidationBuffer, oldConsolidationBuffer + consolidation.totalAmount);
+        uint256 sharesMinted = _mintShares(recipient, consolidation.totalAmount);
+        emit LsETHMintedForConsolidation(recipient, consolidation.totalAmount, sharesMinted);
     }
 
     /// @inheritdoc IRiverV1
@@ -474,7 +514,11 @@ contract RiverV1 is
         return _getSlashingContainmentMode();
     }
 
-    /// @notice Reverts if slashing containment mode is currently active
+    /// @notice Reverts if slashing containment mode is currently active.
+    /// @dev Slashing containment is designed to pause new validator funding and shareholder churn
+    /// @dev (deposits, redeems, exit requests, balance-to-deposit commitment) to limit protocol
+    /// @dev exposure during a slashing event. The reward-pull pipeline (EL fees, CL skimming,
+    /// @dev coverage funds) continues to operate normally, as those flows reduce — not increase — risk.
     modifier whenNotSlashingContainmentMode() {
         if (_getSlashingContainmentMode()) {
             revert SlashingContainmentModeEnabled();
@@ -597,6 +641,8 @@ contract RiverV1 is
     ) internal override {
         IOperatorsRegistryV1(OperatorsRegistryAddress.get()).reportExitedETH(_exitedETH, TotalDepositedETH.get());
 
+        // When slashing containment mode is active, skip exit demand logic to avoid forcing additional
+        // validator exits during a slashing event. The reward-pull pipeline is unaffected by this check.
         if (_slashingContainmentModeEnabled) {
             return;
         }
@@ -609,9 +655,9 @@ contract RiverV1 is
                 _balanceFromShares(IRedeemManagerV1(RedeemManagerAddress.get()).getRedeemDemand());
 
             // if after all rebalancings, the redeem manager demand is still higher than the balance to redeem and exiting eth, we compute
-            // the amount of validators to exit in order to cover the remaining demand
+            // the amount of ETH (wei) to exit in order to cover the remaining demand
             if (availableBalanceToRedeem + _exitingBalance < redeemManagerDemandInEth) {
-                // if reblancing is enabled and the redeem manager demand is higher than exiting eth, we add eth for deposit buffer to redeem buffer
+                // if rebalancing is enabled and the redeem manager demand is higher than exiting eth, we add eth for deposit buffer to redeem buffer
                 if (_depositToRedeemRebalancingAllowed && availableBalanceToDeposit > 0) {
                     uint256 rebalancingAmount = LibUint256.min(
                         availableBalanceToDeposit, redeemManagerDemandInEth - _exitingBalance - availableBalanceToRedeem
@@ -663,7 +709,10 @@ contract RiverV1 is
     /// @notice This two step process is required to prevent possible out of gas issues we would have from actually funding the validators at this point
     /// @param _period The period between current and last report
     function _commitBalanceToDeposit(uint256 _period, bool _slashingContainmentModeEnabled) internal override {
+        // When slashing containment mode is active, skip new validator funding to prevent compounding
+        // losses. The deposit buffer remains available for redeem rebalancing but nothing is committed.
         if (_slashingContainmentModeEnabled) {
+            emit SkippedCommitToDepositDueToSlashingContainment();
             return;
         }
 
@@ -686,8 +735,8 @@ contract RiverV1 is
         // we adapt the value for the reporting period by using the asset balance as upper bound
         uint256 currentMaxCommittableAmount =
             LibUint256.min((currentMaxDailyCommittableAmount * _period) / 1 days, currentBalanceToDeposit);
-        // we only commit multiples of 32 ETH
-        currentMaxCommittableAmount = (currentMaxCommittableAmount / DEPOSIT_SIZE) * DEPOSIT_SIZE;
+
+        currentMaxCommittableAmount = (currentMaxCommittableAmount / 1 gwei) * 1 gwei;
 
         if (currentMaxCommittableAmount > 0) {
             _setCommittedBalance(CommittedBalance.get() + currentMaxCommittableAmount);

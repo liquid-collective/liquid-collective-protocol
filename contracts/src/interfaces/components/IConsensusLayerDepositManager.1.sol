@@ -44,13 +44,13 @@ interface IConsensusLayerDepositManagerV1 {
 
     /// @notice Emitted once per top-up entry as it is executed against the deposit contract.
     ///         Symmetric to `PubkeyFunded` but for top-ups (entries with all-zero `depositY`,
-    ///         whose pubkey must already be present in `ValidatorPubkeyLookup`).
-    /// @dev    `ValidatorPubkeyLookup` is membership-only — there is no on-chain binding between
+    ///         whose pubkey must already be present in `PectraValidatorPubkeyLookup`).
+    /// @dev    `PectraValidatorPubkeyLookup` is membership-only — there is no on-chain binding between
     ///         a pubkey and the operator that performed its initial deposit. The `operatorIdx`
-    ///         on a top-up is whatever the deposit-committee-attested buffer specifies, and the
-    ///         protocol trusts the committee to attest the correct operator.
+    ///         on a top-up is whatever the root-attested buffer specifies, and the
+    ///         protocol trusts the root attestation members to attest the correct operator.
     /// @param depositDataBufferId The id of the deposit-data buffer batch
-    /// @param operatorIdx The operator the top-up is credited to (as attested by the deposit committee)
+    /// @param operatorIdx The operator the top-up is credited to (as attested by the root attestation quorum)
     /// @param pubkey The 48-byte BLS pubkey of the validator
     /// @param amount The wei amount topped up
     event TopUp(bytes32 indexed depositDataBufferId, uint256 indexed operatorIdx, bytes pubkey, uint256 amount);
@@ -83,6 +83,9 @@ interface IConsensusLayerDepositManagerV1 {
     function getWithdrawalCredentials() external view returns (bytes32);
 
     /// @notice Returns the total deposited ETH(wei)
+    /// @dev This is a cumulative, monotonically-increasing value: all ETH ever deposited to the
+    /// @dev consensus layer deposit contract, including ETH for validators that have since exited.
+    /// @dev It does NOT represent the currently-active consensus layer balance.
     /// @return The total deposited ETH(wei)
     function getTotalDepositedETH() external view returns (uint256);
 
@@ -93,14 +96,14 @@ interface IConsensusLayerDepositManagerV1 {
     /// @notice Returns the AttestationVerifier address River delegates BLS+quorum verification to
     function getAttestationVerifier() external view returns (address);
 
-    /// @notice Deposit validators using pre-committed buffer data validated by a deposit-committee attester quorum.
+    /// @notice Deposit validators using pre-committed buffer data validated by a root attestation quorum.
     /// @dev Initial deposits and top-ups are carried in separately-typed sub-arrays of
     ///      `IDepositDataBuffer.DepositObject` (`deposits[]` and `topUps[]`). Initial deposits
     ///      go through BLS verification; top-ups skip BLS and require their pubkey to already
-    ///      be in `ValidatorPubkeyLookup`.
+    ///      be in `PectraValidatorPubkeyLookup`.
     /// @param depositDataBufferId  Batch identifier in the DepositDataBuffer
-    /// @param depositRootHash      Current deposit contract root hash co-signed by deposit-committee attesters
-    /// @param signatures           EIP-712 signatures from deposit-committee attesters
+    /// @param depositRootHash      Current deposit contract root hash co-signed by root attesters
+    /// @param signatures           EIP-712 signatures from root attesters
     function depositToConsensusLayerWithAttestation(
         bytes32 depositDataBufferId,
         bytes32 depositRootHash,

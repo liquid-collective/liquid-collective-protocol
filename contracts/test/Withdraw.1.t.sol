@@ -126,8 +126,8 @@ abstract contract WithdrawV1TestBase is Test {
 
     event DebugReceivedCLFunds(uint256 amount);
 
-    bytes32 internal constant VALIDATOR_PUBKEY_LOOKUP_MAPPING_BASE_SLOT =
-        bytes32(uint256(keccak256("attestationVerifier.state.validatorPubkeyLookup.mapping")) - 1);
+    bytes32 internal constant PECTRA_VALIDATOR_PUBKEY_LOOKUP_MAPPING_BASE_SLOT =
+        bytes32(uint256(keccak256("attestationVerifier.state.pectraValidatorPubkeyLookup.mapping")) - 1);
     bytes32 internal constant PRE_PECTRA_VALIDATOR_PUBKEY_LOOKUP_MAPPING_BASE_SLOT =
         bytes32(uint256(keccak256("attestationVerifier.state.prePectraValidatorPubkeyLookup.mapping")) - 1);
 
@@ -142,7 +142,7 @@ abstract contract WithdrawV1TestBase is Test {
     }
 
     function _seedValidatorPubkey(bytes memory pubkey) internal {
-        bytes32 slot = keccak256(abi.encode(VALIDATOR_PUBKEY_LOOKUP_MAPPING_BASE_SLOT, pubkey));
+        bytes32 slot = keccak256(abi.encode(PECTRA_VALIDATOR_PUBKEY_LOOKUP_MAPPING_BASE_SLOT, pubkey));
         vm.store(address(attestationVerifier), slot, bytes32(uint256(1)));
     }
 

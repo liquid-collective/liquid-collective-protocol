@@ -18,13 +18,14 @@ import "./state/attestationVerifier/ConsolidationCommitteeAttestationQuorum.sol"
 import "./state/attestationVerifier/ConsolidationCommitteeAttesters.sol";
 import "./state/attestationVerifier/ConsolidationDomainSeparator.sol";
 import "./state/attestationVerifier/ProcessedConsolidations.sol";
-import "./state/attestationVerifier/DepositCommitteeAttestationQuorum.sol";
-import "./state/attestationVerifier/DepositCommitteeAttesters.sol";
+import "./state/attestationVerifier/RootAttestationQuorum.sol";
+import "./state/attestationVerifier/RootAttesters.sol";
 import "./state/attestationVerifier/DepositDataBufferAddress.sol";
 import "./state/attestationVerifier/DepositDomainValue.sol";
 import "./state/attestationVerifier/DomainSeparator.sol";
+import "./state/attestationVerifier/ProcessedDepositDataBufferIds.sol";
+import "./state/attestationVerifier/PectraValidatorPubkeyLookup.sol";
 import "./state/attestationVerifier/PrePectraValidatorPubkeyLookup.sol";
-import "./state/attestationVerifier/ValidatorPubkeyLookup.sol";
 import "./state/shared/RiverAddress.sol";
 
 /// @title AttestationVerifier (v1)
@@ -73,14 +74,15 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     ///      single `bytes32` id). `bytes[]` fields follow EIP-712 dynamic-array rules:
     ///      each element is replaced by `keccak256(element)`, then the resulting `bytes32`
     ///      array is concatenated and hashed (`_hashBytesArray`).
-    bytes32 internal constant ATTEST_CONSOLIDATION_TYPEHASH =
-        keccak256("AttestConsolidation(address user,bytes[] sourcePubkeys,bytes[] targetPubkeys,uint256 totalAmount)");
+    bytes32 internal constant ATTEST_CONSOLIDATION_TYPEHASH = keccak256(
+        "AttestConsolidation(address withdrawalAddress,bytes[] sourcePubkeys,bytes[] targetPubkeys,uint256 totalAmount)"
+    );
 
     /// @notice Maximum number of signatures accepted. Bounds the O(n^2) duplicate-detection loop.
     uint256 public constant MAX_SIGNATURES = 20;
 
-    /// @notice Maximum number of registered deposit-committee attesters. Defensive cap to bound storage growth.
-    uint256 public constant MAX_DEPOSIT_COMMITTEE_ATTESTERS = 32;
+    /// @notice Maximum number of registered root attesters. Defensive cap to bound storage growth.
+    uint256 public constant MAX_ROOT_ATTESTERS = 32;
 
     /// @notice Maximum number of registered consolidation-committee attesters. Defensive cap to bound storage growth.
     uint256 public constant MAX_CONSOLIDATION_COMMITTEE_ATTESTERS = 32;
@@ -123,21 +125,18 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     function initAttestationVerifierV1(
         address _river,
         address _depositDataBuffer,
-        address[] calldata _depositCommitteeAttesters,
-        uint256 _depositQuorum,
+        address[] calldata _rootAttesters,
+        uint256 _quorum,
         bytes4 _genesisForkVersion,
         address[] calldata _consolidationCommitteeAttesters,
         uint256 _consolidationQuorum
     ) external init(0) {
         // ---- Validate deposit-side parameters ----
-        if (
-            _depositCommitteeAttesters.length == 0
-                || _depositCommitteeAttesters.length > MAX_DEPOSIT_COMMITTEE_ATTESTERS
-        ) {
+        if (_rootAttesters.length == 0 || _rootAttesters.length > MAX_ROOT_ATTESTERS) {
             revert LibErrors.InvalidArgument();
         }
-        if (_depositQuorum == 0) revert ZeroQuorum();
-        if (_depositQuorum > MAX_SIGNATURES) revert QuorumExceedsMaxSignatures(_depositQuorum, MAX_SIGNATURES);
+        if (_quorum == 0) revert ZeroQuorum();
+        if (_quorum > MAX_SIGNATURES) revert QuorumExceedsMaxSignatures(_quorum, MAX_SIGNATURES);
 
         // ---- Validate consolidation-side parameters ----
         if (
@@ -161,34 +160,35 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         bytes32 depositDomain = BLS12_381.computeDepositDomain(_genesisForkVersion);
         DepositDomainValue.set(depositDomain);
         emit SetDepositDomain(depositDomain);
-        {
-            // ---- Deposit committee + quorum ----
-            for (uint256 i = 0; i < _depositCommitteeAttesters.length; i++) {
-                if (!DepositCommitteeAttesters.isDepositCommitteeAttester(_depositCommitteeAttesters[i])) {
-                    DepositCommitteeAttesters.setDepositCommitteeAttester(_depositCommitteeAttesters[i], true);
-                    DepositCommitteeAttesters.setCount(DepositCommitteeAttesters.getCount() + 1);
-                    emit SetDepositCommitteeAttester(_depositCommitteeAttesters[i], true);
-                }
-            }
-            uint256 depositCommitteeAttesterCount = DepositCommitteeAttesters.getCount();
-            if (_depositQuorum > depositCommitteeAttesterCount) {
-                revert QuorumExceedsDepositCommitteeAttesterCount(_depositQuorum, depositCommitteeAttesterCount);
-            }
-            DepositCommitteeAttestationQuorum.set(_depositQuorum);
-            emit SetDepositCommitteeAttestationQuorum(_depositQuorum);
 
-            // ---- Consolidation committee + quorum ----
-            for (uint256 i = 0; i < _consolidationCommitteeAttesters.length; i++) {
-                if (!ConsolidationCommitteeAttesters.isConsolidationCommitteeAttester(
-                        _consolidationCommitteeAttesters[i]
-                    )) {
-                    ConsolidationCommitteeAttesters.setConsolidationCommitteeAttester(
-                        _consolidationCommitteeAttesters[i], true
-                    );
-                    ConsolidationCommitteeAttesters.setCount(ConsolidationCommitteeAttesters.getCount() + 1);
-                    emit SetConsolidationCommitteeAttester(_consolidationCommitteeAttesters[i], true);
-                }
+        for (uint256 i = 0; i < _rootAttesters.length; i++) {
+            if (!RootAttesters.isRootAttester(_rootAttesters[i])) {
+                RootAttesters.setRootAttester(_rootAttesters[i], true);
+                RootAttesters.setCount(RootAttesters.getCount() + 1);
+                emit SetRootAttester(_rootAttesters[i], true);
             }
+        }
+        {
+            uint256 rootAttesterCount = RootAttesters.getCount();
+            if (_quorum > rootAttesterCount) {
+                revert QuorumExceedsRootAttesterCount(_quorum, rootAttesterCount);
+            }
+            RootAttestationQuorum.set(_quorum);
+            emit SetRootAttestationQuorum(_quorum);
+        }
+
+        // ---- Consolidation committee + quorum ----
+        for (uint256 i = 0; i < _consolidationCommitteeAttesters.length; i++) {
+            if (!ConsolidationCommitteeAttesters.isConsolidationCommitteeAttester(_consolidationCommitteeAttesters[i]))
+            {
+                ConsolidationCommitteeAttesters.setConsolidationCommitteeAttester(
+                    _consolidationCommitteeAttesters[i], true
+                );
+                ConsolidationCommitteeAttesters.setCount(ConsolidationCommitteeAttesters.getCount() + 1);
+                emit SetConsolidationCommitteeAttester(_consolidationCommitteeAttesters[i], true);
+            }
+        }
+        {
             uint256 consolidationAttesterCount = ConsolidationCommitteeAttesters.getCount();
             if (_consolidationQuorum > consolidationAttesterCount) {
                 revert QuorumExceedsConsolidationCommitteeAttesterCount(
@@ -199,7 +199,9 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
             emit SetConsolidationCommitteeAttestationQuorum(_consolidationQuorum);
         }
         {
-            // ---- EIP-712 domain separators (distinct NAME_HASH per flow, both anchored to River) ----
+            // EIP-712 domain separator binds verifyingContract to River's address, not this
+            // verifier's own address. This preserves root attester signing tooling that
+            // signs against River's identity even if the verifier is later redeployed.
             bytes32 domainSeparator =
                 keccak256(abi.encode(EIP712_DOMAIN_TYPEHASH, NAME_HASH, VERSION_HASH, block.chainid, _river));
             DomainSeparator.set(domainSeparator);
@@ -224,35 +226,35 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     }
 
     /// @inheritdoc IAttestationVerifierV1
-    function setDepositCommitteeAttester(address depositCommitteeAttester, bool value) external onlyRiverAdmin {
-        bool current = DepositCommitteeAttesters.isDepositCommitteeAttester(depositCommitteeAttester);
-        if (current == value) revert DepositCommitteeAttesterStatusUnchanged(depositCommitteeAttester, value);
+    function setRootAttester(address rootAttester, bool value) external onlyRiverAdmin {
+        bool current = RootAttesters.isRootAttester(rootAttester);
+        if (current == value) revert RootAttesterStatusUnchanged(rootAttester, value);
 
-        uint256 count = DepositCommitteeAttesters.getCount();
+        uint256 count = RootAttesters.getCount();
         uint256 newCount = value ? count + 1 : count - 1;
-        if (value && newCount > MAX_DEPOSIT_COMMITTEE_ATTESTERS) {
-            revert TooManyDepositCommitteeAttesters(newCount, MAX_DEPOSIT_COMMITTEE_ATTESTERS);
+        if (value && newCount > MAX_ROOT_ATTESTERS) {
+            revert TooManyRootAttesters(newCount, MAX_ROOT_ATTESTERS);
         }
-        uint256 currentQuorum = DepositCommitteeAttestationQuorum.get();
+        uint256 currentQuorum = RootAttestationQuorum.get();
         if (!value && currentQuorum > newCount) {
-            revert QuorumExceedsDepositCommitteeAttesterCount(currentQuorum, newCount);
+            revert QuorumExceedsRootAttesterCount(currentQuorum, newCount);
         }
 
-        DepositCommitteeAttesters.setCount(newCount);
-        DepositCommitteeAttesters.setDepositCommitteeAttester(depositCommitteeAttester, value);
-        emit SetDepositCommitteeAttester(depositCommitteeAttester, value);
+        RootAttesters.setCount(newCount);
+        RootAttesters.setRootAttester(rootAttester, value);
+        emit SetRootAttester(rootAttester, value);
     }
 
     /// @inheritdoc IAttestationVerifierV1
-    function setDepositCommitteeAttestationQuorum(uint256 newQuorum) external onlyRiverAdmin {
+    function setRootAttestationQuorum(uint256 newQuorum) external onlyRiverAdmin {
         if (newQuorum == 0) revert ZeroQuorum();
-        uint256 depositCommitteeAttesterCount = DepositCommitteeAttesters.getCount();
-        if (newQuorum > depositCommitteeAttesterCount) {
-            revert QuorumExceedsDepositCommitteeAttesterCount(newQuorum, depositCommitteeAttesterCount);
+        uint256 rootAttesterCount = RootAttesters.getCount();
+        if (newQuorum > rootAttesterCount) {
+            revert QuorumExceedsRootAttesterCount(newQuorum, rootAttesterCount);
         }
         if (newQuorum > MAX_SIGNATURES) revert QuorumExceedsMaxSignatures(newQuorum, MAX_SIGNATURES);
-        DepositCommitteeAttestationQuorum.set(newQuorum);
-        emit SetDepositCommitteeAttestationQuorum(newQuorum);
+        RootAttestationQuorum.set(newQuorum);
+        emit SetRootAttestationQuorum(newQuorum);
     }
 
     /// @inheritdoc IAttestationVerifierV1
@@ -297,18 +299,18 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     // -----------------------------------------------------------------------
 
     /// @inheritdoc IAttestationVerifierV1
-    function isDepositCommitteeAttester(address account) external view returns (bool) {
-        return DepositCommitteeAttesters.isDepositCommitteeAttester(account);
+    function isRootAttester(address account) external view returns (bool) {
+        return RootAttesters.isRootAttester(account);
     }
 
     /// @inheritdoc IAttestationVerifierV1
-    function getDepositCommitteeAttesterCount() external view returns (uint256) {
-        return DepositCommitteeAttesters.getCount();
+    function getRootAttesterCount() external view returns (uint256) {
+        return RootAttesters.getCount();
     }
 
     /// @inheritdoc IAttestationVerifierV1
-    function getDepositCommitteeAttestationQuorum() external view returns (uint256) {
-        return DepositCommitteeAttestationQuorum.get();
+    function getRootAttestationQuorum() external view returns (uint256) {
+        return RootAttestationQuorum.get();
     }
 
     /// @inheritdoc IAttestationVerifierV1
@@ -365,6 +367,11 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         bytes32 withdrawalCredentials,
         uint256 committedBalance
     ) external view returns (IDepositDataBuffer.DepositObject memory batch, uint256 totalAmount) {
+        // 0. Replay protection — reject any batch ID already processed
+        if (ProcessedDepositDataBufferIds.isProcessed(depositDataBufferId)) {
+            revert DepositDataBufferIdAlreadyProcessed(depositDataBufferId);
+        }
+
         // 1. Verify attestation quorum
         _verifyAttestationQuorum(depositDataBufferId, depositRootHash, signatures, depositContract);
 
@@ -401,7 +408,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
             bytes32 pkHash = keccak256(d.pubkey);
             pubkeyHashes[i] = pkHash;
 
-            if (_isPubkeyFunded(d.pubkey)) {
+            if (PectraValidatorPubkeyLookup.isPubkeyFunded(d.pubkey)) {
                 revert PubkeyAlreadyFunded(d.pubkey);
             }
             for (uint256 j = 0; j < i; j++) {
@@ -423,7 +430,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
             }
             totalAmount += t.amount;
 
-            if (!_isPubkeyFunded(t.pubkey)) {
+            if (!PectraValidatorPubkeyLookup.isPubkeyFunded(t.pubkey)) {
                 revert TopUpPubkeyNotFunded(t.pubkey);
             }
         }
@@ -439,20 +446,20 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
 
     /// @inheritdoc IAttestationVerifierV1
     /// @dev Assumes `pubkeys` is already deduplicated against the lookup and against itself —
-    ///      `validate()` enforces both invariants (initial-deposit branch at the top of
-    ///      `validate()`) and runs in the same transaction. Re-checking here would only fire
-    ///      on a `validate()` regression and would cost a cold SLOAD per pubkey for a
+    ///      `validateDeposits()` enforces both invariants (initial-deposit branch at the top of
+    ///      `validateDeposits()`) and runs in the same transaction. Re-checking here would only fire
+    ///      on a `validateDeposits()` regression and would cost a cold SLOAD per pubkey for a
     ///      condition that cannot occur in production.
     function recordNewlyFundedPubkeys(bytes[] calldata pubkeys) external onlyRiver {
         uint256 len = pubkeys.length;
         for (uint256 i = 0; i < len; ++i) {
-            ValidatorPubkeyLookup.add(pubkeys[i]);
+            PectraValidatorPubkeyLookup.add(pubkeys[i]);
         }
     }
 
     /// @inheritdoc IAttestationVerifierV1
     function isPubkeyFunded(bytes calldata pubkey) external view returns (bool) {
-        return _isPubkeyFunded(pubkey);
+        return PectraValidatorPubkeyLookup.isPubkeyFunded(pubkey);
     }
 
     /// @inheritdoc IAttestationVerifierV1
@@ -490,6 +497,16 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     }
 
     /// @inheritdoc IAttestationVerifierV1
+    function markDepositDataBufferIdProcessed(bytes32 depositDataBufferId) external onlyRiver {
+        ProcessedDepositDataBufferIds.markProcessed(depositDataBufferId);
+    }
+
+    /// @inheritdoc IAttestationVerifierV1
+    function isDepositDataBufferIdProcessed(bytes32 depositDataBufferId) external view returns (bool) {
+        return ProcessedDepositDataBufferIds.isProcessed(depositDataBufferId);
+    }
+
+    /// @inheritdoc IAttestationVerifierV1
     /// @dev Trust boundary: this function only validates structural shape (array shapes
     ///      and pubkey byte lengths) and the attestation quorum (ECDSA signature recovery
     ///      against the consolidation committee). It does NOT check:
@@ -506,6 +523,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     ///      additional financial caps on `totalAmount`.
     function validateConsolidation(IAttestationVerifierV1.ConsolidationObject calldata consolidation)
         external
+        onlyRiver
         returns (bool)
     {
         // 1. Structural checks (cheapest first — fail fast)
@@ -514,7 +532,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         if (sourceLen == 0) revert NoConsolidations();
         if (sourceLen != targetLen) revert ConsolidationArrayLengthMismatch(sourceLen, targetLen);
         if (consolidation.totalAmount == 0) revert ZeroConsolidationTotalAmount();
-        if (consolidation.user == address(0)) revert ZeroConsolidationUser();
+        if (consolidation.withdrawalAddress == address(0)) revert ZeroConsolidationWithdrawalAddress();
 
         // 2. Per-pair pubkey length checks
         for (uint256 i = 0; i < sourceLen; i++) {
@@ -523,10 +541,6 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
             }
             if (consolidation.targetPubkeys[i].length != CONSOLIDATION_PUBKEY_LENGTH) {
                 revert InvalidConsolidationPubkeyLength(i, consolidation.targetPubkeys[i].length, false);
-            }
-            // We only check the target pubkey as it is the one that belongs to LC
-            if (!_isPubkeyFunded(consolidation.targetPubkeys[i])) {
-                revert TargetPubkeyNotFunded(consolidation.targetPubkeys[i]);
             }
         }
 
@@ -540,7 +554,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         bytes32 structHash = keccak256(
             abi.encode(
                 ATTEST_CONSOLIDATION_TYPEHASH,
-                consolidation.user,
+                consolidation.withdrawalAddress,
                 _hashBytesArray(consolidation.sourcePubkeys),
                 _hashBytesArray(consolidation.targetPubkeys),
                 consolidation.totalAmount
@@ -569,11 +583,6 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     // Internal — attestation quorum + BLS verification
     // -----------------------------------------------------------------------
 
-    /// @notice Check both post-Pectra runtime-funded pubkeys and migrated pre-Pectra pubkeys.
-    function _isPubkeyFunded(bytes memory pubkey) internal view returns (bool) {
-        return ValidatorPubkeyLookup.isPubkeyFunded(pubkey);
-    }
-
     /// @notice Verify the attestation quorum.
     /// @param depositDataBufferId The deposit data buffer ID.
     /// @param depositRootHash The deposit root hash.
@@ -588,7 +597,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         uint256 sigLen = signatures.length;
         if (sigLen > MAX_SIGNATURES) revert TooManySignatures(sigLen, MAX_SIGNATURES);
 
-        uint256 quorum = DepositCommitteeAttestationQuorum.get();
+        uint256 quorum = RootAttestationQuorum.get();
         if (quorum == 0) revert ZeroQuorum();
         if (sigLen < quorum) revert InsufficientAttestations(sigLen, quorum);
 
@@ -607,7 +616,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         for (uint256 i = 0; i < sigLen; i++) {
             address signer = _recover(digest, signatures[i]);
             if (signer == address(0)) continue;
-            if (!DepositCommitteeAttesters.isDepositCommitteeAttester(signer)) continue;
+            if (!RootAttesters.isRootAttester(signer)) continue;
 
             bool duplicate = false;
             for (uint256 j = 0; j < validCount; j++) {
@@ -676,8 +685,8 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
 
     /// @notice Verify the BLS signatures of all initial deposits against the canonical River
     ///         withdrawal credentials. Top-ups are handled by the caller and never reach this
-    ///         function — they're cleared upstream in `validate()` via the membership check
-    ///         on `ValidatorPubkeyLookup`.
+    ///         function — they're cleared upstream in `validateDeposits()` via the membership check
+    ///         on `PectraValidatorPubkeyLookup`.
     /// @param deposits The initial deposits.
     /// @param withdrawalCredentials The canonical River withdrawal credentials.
     function _verifyBLSSignatures(IDepositDataBuffer.Deposit[] memory deposits, bytes32 withdrawalCredentials)
@@ -707,10 +716,11 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     }
 
     /// @notice Verify a single BLS deposit message against the cached deposit domain.
-    /// @dev External only as a self-staticcall trampoline from validate: the call
+    /// @dev External only as a self-staticcall trampoline from validateDeposits: the call
     ///      promotes the deposit's memory bytes into calldata so BLS12_381 can consume them
-    ///      without a memory copy. Not intended for direct external use — reverts on bad
-    ///      input but performs no authorization.
+    ///      without a memory copy. Direct external callers revert with `OnlySelfCall` —
+    ///      the function is restricted to `address(this)` and not part of the contract's
+    ///      public API.
     /// @param pubkey The BLS public key (48 bytes)
     /// @param signature The BLS signature (96 bytes)
     /// @param amount The deposit amount in wei (must be gwei-aligned; verified inside BLS12_381.verifyDepositMessage)

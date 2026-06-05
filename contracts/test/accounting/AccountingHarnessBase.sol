@@ -17,6 +17,7 @@ import "../../src/ELFeeRecipient.1.sol";
 import "../../src/CoverageFund.1.sol";
 import "../../src/RedeemManager.1.sol";
 import "../../src/Withdraw.1.sol";
+import "../../src/ExternalConsolidationRecipientMapping.sol";
 
 import "../../src/interfaces/IOperatorRegistry.1.sol";
 import "../../src/interfaces/IDepositDataBuffer.sol";
@@ -104,6 +105,7 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
     IDepositContract internal depositContract;
     AccountingMockDepositDataBuffer internal depositBuffer;
     AttestationVerifierV1 internal attestationVerifier;
+    ExternalConsolidationRecipientMappingV1 internal externalConsolidationRecipientMapping;
 
     /// @dev Monotonic counter mixed into pubkey/signature generation in `_makeDepositObjects`.
     ///      Without it, two batches built in the same block with the same `(i, opIdx)` produce
@@ -112,12 +114,12 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
     uint256 internal _depositBatchNonce;
 
     // ─── attestation ──────────────────────────────────────────────────────────
-    uint256 internal constant DEPOSIT_COMMITTEE_ATTESTER_PK_1 = 0xA1;
-    uint256 internal constant DEPOSIT_COMMITTEE_ATTESTER_PK_2 = 0xA2;
-    uint256 internal constant DEPOSIT_COMMITTEE_ATTESTER_PK_3 = 0xA3;
-    address internal depositCommitteeAttester1;
-    address internal depositCommitteeAttester2;
-    address internal depositCommitteeAttester3;
+    uint256 internal constant ROOT_ATTESTER_PK_1 = 0xA1;
+    uint256 internal constant ROOT_ATTESTER_PK_2 = 0xA2;
+    uint256 internal constant ROOT_ATTESTER_PK_3 = 0xA3;
+    address internal rootAttester1;
+    address internal rootAttester2;
+    address internal rootAttester3;
 
     // EIP-712 constants (must match DepositToConsensusLayerValidation)
     bytes32 internal constant EIP712_DOMAIN_TYPEHASH =
@@ -152,9 +154,9 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
         operatorOneAddr = makeAddr("operatorOne");
         operatorTwoAddr = makeAddr("operatorTwo");
 
-        depositCommitteeAttester1 = vm.addr(DEPOSIT_COMMITTEE_ATTESTER_PK_1);
-        depositCommitteeAttester2 = vm.addr(DEPOSIT_COMMITTEE_ATTESTER_PK_2);
-        depositCommitteeAttester3 = vm.addr(DEPOSIT_COMMITTEE_ATTESTER_PK_3);
+        rootAttester1 = vm.addr(ROOT_ATTESTER_PK_1);
+        rootAttester2 = vm.addr(ROOT_ATTESTER_PK_2);
+        rootAttester3 = vm.addr(ROOT_ATTESTER_PK_3);
 
         vm.warp(1_000_000);
 
@@ -166,6 +168,7 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
         redeemManager = new RedeemManagerV1();
         elFeeRecipient = new ELFeeRecipientV1();
         coverageFund = new CoverageFundV1();
+        externalConsolidationRecipientMapping = new ExternalConsolidationRecipientMappingV1();
         river = new AccountingRiverV1();
         operatorsRegistry = new AccountingTestOperatorsRegistry();
 
@@ -175,6 +178,7 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
         LibImplementationUnbricker.unbrick(vm, address(redeemManager));
         LibImplementationUnbricker.unbrick(vm, address(elFeeRecipient));
         LibImplementationUnbricker.unbrick(vm, address(coverageFund));
+        LibImplementationUnbricker.unbrick(vm, address(externalConsolidationRecipientMapping));
         LibImplementationUnbricker.unbrick(vm, address(river));
         LibImplementationUnbricker.unbrick(vm, address(operatorsRegistry));
 
@@ -210,11 +214,11 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
         );
         river.initRiverV1_2();
 
-        // 3 deposit-committee attesters with quorum=2 (quorum must be ≤ attester count and ≤ MAX_SIGNATURES)
-        address[] memory _initDepositCommitteeAttesters = new address[](3);
-        _initDepositCommitteeAttesters[0] = depositCommitteeAttester1;
-        _initDepositCommitteeAttesters[1] = depositCommitteeAttester2;
-        _initDepositCommitteeAttesters[2] = depositCommitteeAttester3;
+        // 3 root attesters with quorum=2 (quorum must be ≤ attester count and ≤ MAX_SIGNATURES)
+        address[] memory _initRootAttesters = new address[](3);
+        _initRootAttesters[0] = rootAttester1;
+        _initRootAttesters[1] = rootAttester2;
+        _initRootAttesters[2] = rootAttester3;
 
         // Deploy and initialize the AttestationVerifier sibling contract that River
         // delegates attestation+BLS verification to. EIP-712 verifyingContract is
@@ -226,7 +230,7 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
         attestationVerifier.initAttestationVerifierV1(
             address(river),
             address(depositBuffer),
-            _initDepositCommitteeAttesters,
+            _initRootAttesters,
             2,
             bytes4(0),
             _initConsolidationCommitteeAttesters,
@@ -235,8 +239,14 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
 
         bytes32 _initWc = withdraw.getCredentials();
         address _initConsolidationCoverageFund = makeAddr("consolidationCoverageFund");
+        externalConsolidationRecipientMapping.initExternalConsolidationRecipientMappingV1(address(river));
         vm.prank(admin);
-        river.initRiverV1_3(_initWc, _initConsolidationCoverageFund, address(attestationVerifier));
+        river.initRiverV1_3(
+            _initWc,
+            _initConsolidationCoverageFund,
+            address(attestationVerifier),
+            address(externalConsolidationRecipientMapping)
+        );
         // Mock BLS verification: EIP-2537 precompiles are unavailable in Foundry.
         vm.mockCall(
             address(attestationVerifier),
