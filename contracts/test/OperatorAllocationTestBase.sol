@@ -32,6 +32,7 @@ abstract contract OperatorAllocationTestBase is Test {
         pure
         returns (IOperatorsRegistryV1.ValidatorDeposit[] memory)
     {
+        require(opIndexes.length == counts.length, "_createAllocation: length mismatch");
         uint256 total = 0;
         for (uint256 i = 0; i < counts.length; ++i) {
             total += counts[i];
@@ -57,6 +58,7 @@ abstract contract OperatorAllocationTestBase is Test {
         pure
         returns (IOperatorsRegistryV1.ValidatorDeposit[] memory)
     {
+        require(opIndexes.length == counts.length, "_createAllocation: length mismatch");
         uint256 total = 0;
         for (uint256 i = 0; i < counts.length; ++i) {
             total += counts[i];

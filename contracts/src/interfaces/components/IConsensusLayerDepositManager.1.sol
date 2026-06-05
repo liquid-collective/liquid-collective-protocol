@@ -1,11 +1,14 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.34;
 
-import "../IOperatorRegistry.1.sol";
+import "../IDepositDataBuffer.sol";
+import "../../libraries/BLS12_381.sol";
 
-/// @title Consensys Layer Deposit Manager Interface (v1)
+/// @title Consensus Layer Deposit Manager Interface (v1)
 /// @author Alluvial Finance Inc.
-/// @notice This interface exposes methods to handle the interactions with the official deposit contract
+/// @notice This interface exposes methods to handle the interactions with the official deposit contract.
+///         Attestation-quorum + BLS validation now lives in IAttestationVerifierV1; this interface is
+///         only the River-side execution surface.
 interface IConsensusLayerDepositManagerV1 {
     /// @notice The stored deposit contract address changed
     /// @param depositContract Address of the deposit contract
@@ -29,20 +32,32 @@ interface IConsensusLayerDepositManagerV1 {
     /// @param keeper The new keeper address
     event SetKeeper(address indexed keeper);
 
-    /// @notice The allocations array must not be empty
-    error EmptyAllocations();
+    /// @notice Emitted once per initial-deposit entry as it is executed against the deposit contract.
+    ///         Carries the full raw pubkey, the operator that funded it, the amount deposited, and
+    ///         the originating buffer id so consumers can correlate per-validator events with the
+    ///         attested batch they belong to.
+    /// @param depositDataBufferId The id of the deposit-data buffer batch
+    /// @param operatorIdx The operator that funded this initial deposit
+    /// @param pubkey The 48-byte BLS pubkey of the validator
+    /// @param amount The wei amount deposited
+    event PubkeyFunded(bytes32 indexed depositDataBufferId, uint256 indexed operatorIdx, bytes pubkey, uint256 amount);
 
-    /// @notice Not enough funds to deposit one validator
-    error NotEnoughFunds();
+    /// @notice Emitted once per top-up entry as it is executed against the deposit contract.
+    ///         Symmetric to `PubkeyFunded` but for top-ups (entries in `batch.topUps`, which
+    ///         skip BLS verification and whose pubkey must already be present in
+    ///         `PectraValidatorPubkeyLookup`).
+    /// @dev    `PectraValidatorPubkeyLookup` is membership-only — there is no on-chain binding between
+    ///         a pubkey and the operator that performed its initial deposit. The `operatorIdx`
+    ///         on a top-up is whatever the root-attested buffer specifies, and the
+    ///         protocol trusts the root attestation members to attest the correct operator.
+    /// @param depositDataBufferId The id of the deposit-data buffer batch
+    /// @param operatorIdx The operator the top-up is credited to (as attested by the root attestation quorum)
+    /// @param pubkey The 48-byte BLS pubkey of the validator
+    /// @param amount The wei amount topped up
+    event TopUp(bytes32 indexed depositDataBufferId, uint256 indexed operatorIdx, bytes pubkey, uint256 amount);
 
-    /// @notice The length of the BLS Public key is invalid during deposit
-    error InconsistentPublicKey();
-
-    /// @notice The length of the BLS Signature is invalid during deposit
-    error InconsistentSignature();
-
-    /// @notice The deposit size is invalid
-    error InvalidDepositSize(uint256 depositSize);
+    /// @notice Emitted when the AttestationVerifier address is updated
+    event SetAttestationVerifier(address indexed attestationVerifier);
 
     /// @notice The withdrawal credentials value is null
     error InvalidWithdrawalCredentials();
@@ -50,14 +65,8 @@ interface IConsensusLayerDepositManagerV1 {
     /// @notice An error occured during the deposit
     error ErrorOnDeposit();
 
-    /// @notice Invalid deposit root
-    error InvalidDepositRoot();
-
-    // @notice Not keeper
+    /// @notice Not keeper
     error OnlyKeeper();
-
-    /// @notice The amount of deposits requested exceeds the committed balance
-    error ValidatorDepositsExceedCommittedBalance();
 
     /// @notice Deposits are blocked while slashing containment mode is active
     error SlashingContainmentModeEnabled();
@@ -75,6 +84,9 @@ interface IConsensusLayerDepositManagerV1 {
     function getWithdrawalCredentials() external view returns (bytes32);
 
     /// @notice Returns the total deposited ETH(wei)
+    /// @dev This is a cumulative, monotonically-increasing value: all ETH ever deposited to the
+    /// @dev consensus layer deposit contract, including ETH for validators that have since exited.
+    /// @dev It does NOT represent the currently-active consensus layer balance.
     /// @return The total deposited ETH(wei)
     function getTotalDepositedETH() external view returns (uint256);
 
@@ -82,15 +94,20 @@ interface IConsensusLayerDepositManagerV1 {
     /// @return The keeper address
     function getKeeper() external view returns (address);
 
-    /// @notice Deposits current balance to the Consensus Layer based on explicit validator deposits allocations
-    /// @dev Security: the keeper is fully trusted to supply correct validator public keys, signatures, and
-    ///      operator assignments. The contract enforces deposit amount, balance limits, operator ordering, and
-    ///      withdrawal credentials, but does not validate BLS key correctness or that keys belong to the claimed
-    ///      operator. The keeper is also trusted to make deposits of the correct sizes.
-    /// @param _allocations The allocations specifying the validator deposits to make
-    /// @param _depositRoot The root of the deposit tree
-    function depositToConsensusLayerWithDepositRoot(
-        IOperatorsRegistryV1.ValidatorDeposit[] calldata _allocations,
-        bytes32 _depositRoot
+    /// @notice Returns the AttestationVerifier address River delegates BLS+quorum verification to
+    function getAttestationVerifier() external view returns (address);
+
+    /// @notice Deposit validators using pre-committed buffer data validated by a root attestation quorum.
+    /// @dev Initial deposits and top-ups are carried in separately-typed sub-arrays of
+    ///      `IDepositDataBuffer.DepositObject` (`deposits[]` and `topUps[]`). Initial deposits
+    ///      go through BLS verification; top-ups skip BLS and require their pubkey to already
+    ///      be in `PectraValidatorPubkeyLookup`.
+    /// @param depositDataBufferId  Batch identifier in the DepositDataBuffer
+    /// @param depositRootHash      Current deposit contract root hash co-signed by root attesters
+    /// @param signatures           EIP-712 signatures from root attesters
+    function depositToConsensusLayerWithAttestation(
+        bytes32 depositDataBufferId,
+        bytes32 depositRootHash,
+        bytes[] calldata signatures
     ) external;
 }

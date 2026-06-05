@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - v2/pectra
     paths:
       - "contracts/**"
       - "lib/**"
@@ -21,7 +22,9 @@ on:
 
 jobs:
   run-coverage:
-    runs-on: ubuntu-24.04
+    runs-on:
+      group: eth-protocol-runners
+      labels: ubuntu-24.04-8core
 
     steps:
       - uses: actions/checkout@v6
