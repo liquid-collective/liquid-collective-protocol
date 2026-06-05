@@ -6,14 +6,14 @@ import "../../libraries/LibUnstructuredStorage.sol";
 /// @title PectraValidatorPubkeyLookup
 /// @notice Unstructured-storage mapping of 0x02 pubkeys that have been initial-deposited
 ///         by River. Used by AttestationVerifier as a defense-in-depth check on top-ups:
-///         a top-up entry (depositY all-zero) skips BLS verification, so the pubkey must
-///         already be in this set or the call reverts. Without that gate, malicious
-///         root attesters could mark an arbitrary attacker pubkey as a top-up and bypass BLS.
+///         entries in `batch.topUps` skip BLS verification, so the pubkey must already be
+///         in this set or the call reverts. Without that gate, malicious root attesters
+///         could classify an arbitrary attacker pubkey as a top-up and bypass BLS.
 ///
 /// @dev    This set records membership only — not the operator that performed the initial
-///         deposit. The `operatorIdx` field on a top-up's `DepositObject` is therefore
-///         NOT verified against any on-chain record: the root-attested buffer
-///         is the only attestation we have for which operator a top-up credits.
+///         deposit. The `operatorIdx` field on a `TopUp` entry is therefore NOT verified
+///         against any on-chain record: the root-attested buffer is the only attestation
+///         we have for which operator a top-up credits.
 library PectraValidatorPubkeyLookup {
     bytes32 internal constant PECTRA_VALIDATOR_PUBKEY_LOOKUP_MAPPING_BASE_SLOT =
         bytes32(uint256(keccak256("attestationVerifier.state.pectraValidatorPubkeyLookup.mapping")) - 1);
