@@ -108,12 +108,15 @@ interface IAttestationVerifierV1 {
     /// @notice An external caller invoked a function reserved for self-staticcall trampolining.
     error OnlySelfCall();
 
-    /// @notice An entry's pubkey field has an unexpected byte length
-    /// @param index Index into the sub-array currently being validated
-    ///              (either `batch.deposits` or `batch.topUps`); the loop that raised
-    ///              the revert determines which.
+    /// @notice An initial deposit's pubkey field has an unexpected byte length
+    /// @param index Index into `batch.deposits`
     /// @param length The observed length
     error InvalidPubkeyLength(uint256 index, uint256 length);
+
+    /// @notice A top-up's pubkey field has an unexpected byte length
+    /// @param index Index into `batch.topUps`
+    /// @param length The observed length
+    error InvalidTopUpPubkeyLength(uint256 index, uint256 length);
 
     /// @notice A deposit's BLS signature field has an unexpected byte length
     /// @dev Only raised while iterating `batch.deposits` — top-ups have no signature field.
@@ -121,15 +124,21 @@ interface IAttestationVerifierV1 {
     /// @param length The observed length
     error InvalidSignatureLength(uint256 index, uint256 length);
 
-    /// @notice An entry's `amount` is outside the protocol-accepted range
+    /// @notice An initial deposit's `amount` is outside the protocol-accepted range
     ///         [1 ether, 2048 ether] or is not gwei-aligned. Enforced here in
     ///         `fetchAndValidateDeposits()` so producer bugs fail before the heavy BLS path runs;
     ///         downstream `_depositValidator` trusts this check.
-    /// @param index Index into the sub-array currently being validated
-    ///              (either `batch.deposits` or `batch.topUps`); the loop that raised
-    ///              the revert determines which.
+    /// @param index Index into `batch.deposits`
     /// @param amount The offending amount in wei
     error InvalidDepositAmount(uint256 index, uint256 amount);
+
+    /// @notice A top-up's `amount` is outside the protocol-accepted range
+    ///         [1 ether, 2048 ether] or is not gwei-aligned. Enforced here in
+    ///         `fetchAndValidateDeposits()` so producer bugs fail before the heavy BLS path runs;
+    ///         downstream `_depositValidator` trusts this check.
+    /// @param index Index into `batch.topUps`
+    /// @param amount The offending amount in wei
+    error InvalidTopUpAmount(uint256 index, uint256 amount);
 
     /// @notice The summed deposit amount exceeds the committed balance passed by River
     error NotEnoughFunds();

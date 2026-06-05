@@ -420,10 +420,10 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         for (uint256 i = 0; i < topUpCount; i++) {
             IDepositDataBuffer.TopUp memory t = batch.topUps[i];
             if (t.pubkey.length != DEPOSIT_PUBKEY_LENGTH) {
-                revert InvalidPubkeyLength(i, t.pubkey.length);
+                revert InvalidTopUpPubkeyLength(i, t.pubkey.length);
             }
             if (t.amount < 1 ether || t.amount > 2048 ether || t.amount % 1 gwei != 0) {
-                revert InvalidDepositAmount(i, t.amount);
+                revert InvalidTopUpAmount(i, t.amount);
             }
             totalAmount += t.amount;
 
