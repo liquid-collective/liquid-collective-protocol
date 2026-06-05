@@ -147,18 +147,6 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
             revert QuorumExceedsMaxSignatures(_consolidationQuorum, MAX_SIGNATURES);
         }
 
-        // ---- Validate consolidation-side parameters ----
-        if (
-            _consolidationCommitteeAttesters.length == 0
-                || _consolidationCommitteeAttesters.length > MAX_CONSOLIDATION_COMMITTEE_ATTESTERS
-        ) {
-            revert LibErrors.InvalidArgument();
-        }
-        if (_consolidationQuorum == 0) revert ZeroQuorum();
-        if (_consolidationQuorum > MAX_SIGNATURES) {
-            revert QuorumExceedsMaxSignatures(_consolidationQuorum, MAX_SIGNATURES);
-        }
-
         // ---- River + buffers + BLS deposit domain ----
         RiverAddress.set(_river);
         emit SetRiver(_river);
