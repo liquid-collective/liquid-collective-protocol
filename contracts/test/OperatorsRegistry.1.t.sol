@@ -1504,6 +1504,72 @@ contract OperatorsRegistryV1FlattenAndAllocationTests is OperatorAllocationTestB
         vm.expectRevert(abi.encodeWithSelector(IOperatorsRegistryV1.OperatorIndicesUnsortedOrDuplicate.selector, 1));
         operatorsRegistry.incrementFundedETH(desc);
     }
+
+    /// @notice Issue #543 — initial-deposit pubkeys are emitted on FundedValidatorKeys; top-up
+    ///         pubkeys are emitted on the new TopUps event, with per-key amounts. A delta that
+    ///         carries only top-ups must NOT emit FundedValidatorKeys.
+    function testIncrementFunded_emitsTopUpsEventForTopUpOnlyDelta() external {
+        _setupOperators(3, 10);
+
+        IOperatorsRegistryV1.OperatorFundingDelta[] memory deltas = new IOperatorsRegistryV1.OperatorFundingDelta[](1);
+        deltas[0].operatorIndex = 1;
+        deltas[0].fundedETH = 80 ether; // 16 + 64
+        deltas[0].newPublicKeys = new bytes[](0);
+        deltas[0].topUpPublicKeys = new bytes[](2);
+        deltas[0].topUpPublicKeys[0] = bytes("op1-topup-a");
+        deltas[0].topUpPublicKeys[1] = bytes("op1-topup-b");
+        deltas[0].topUpAmounts = new uint256[](2);
+        deltas[0].topUpAmounts[0] = 16 ether;
+        deltas[0].topUpAmounts[1] = 64 ether;
+
+        // TopUps event must fire with the top-up pubkeys + amounts in the same order.
+        vm.expectEmit(true, false, false, true);
+        emit IOperatorsRegistryV1.TopUps(1, deltas[0].topUpPublicKeys, deltas[0].topUpAmounts);
+
+        // FundedValidatorKeys must NOT fire — top-ups are not new validator keys.
+        vm.recordLogs();
+        vm.prank(river);
+        operatorsRegistry.incrementFundedETH(deltas);
+
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        bytes32 fvkTopic = keccak256("FundedValidatorKeys(uint256,bytes[],bool)");
+        for (uint256 i = 0; i < logs.length; i++) {
+            if (logs[i].topics.length > 0) {
+                assertTrue(
+                    logs[i].topics[0] != fvkTopic,
+                    "FundedValidatorKeys must not fire for a top-up-only delta"
+                );
+            }
+        }
+
+        assertEq(operatorsRegistry.getOperator(1).funded, 80 ether, "op1 funded by both top-ups");
+    }
+
+    /// @notice Issue #543 — a delta carrying both classes must emit FundedValidatorKeys for the
+    ///         initial-deposit pubkeys AND TopUps for the top-up pubkeys, in that order.
+    function testIncrementFunded_emitsBothEventsForMixedDelta() external {
+        _setupOperators(3, 10);
+
+        IOperatorsRegistryV1.OperatorFundingDelta[] memory deltas = new IOperatorsRegistryV1.OperatorFundingDelta[](1);
+        deltas[0].operatorIndex = 2;
+        deltas[0].fundedETH = 48 ether; // 32 (initial) + 16 (top-up)
+        deltas[0].newPublicKeys = new bytes[](1);
+        deltas[0].newPublicKeys[0] = bytes("op2-initial");
+        deltas[0].topUpPublicKeys = new bytes[](1);
+        deltas[0].topUpPublicKeys[0] = bytes("op2-topup");
+        deltas[0].topUpAmounts = new uint256[](1);
+        deltas[0].topUpAmounts[0] = 16 ether;
+
+        vm.expectEmit(true, false, false, true);
+        emit IOperatorsRegistryV1.FundedValidatorKeys(2, deltas[0].newPublicKeys, false);
+        vm.expectEmit(true, false, false, true);
+        emit IOperatorsRegistryV1.TopUps(2, deltas[0].topUpPublicKeys, deltas[0].topUpAmounts);
+
+        vm.prank(river);
+        operatorsRegistry.incrementFundedETH(deltas);
+
+        assertEq(operatorsRegistry.getOperator(2).funded, 48 ether, "op2 funded by initial + top-up");
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

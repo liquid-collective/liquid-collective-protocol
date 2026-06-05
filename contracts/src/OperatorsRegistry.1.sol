@@ -193,7 +193,16 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             }
 
             operator.funded += delta.fundedETH;
-            emit FundedValidatorKeys(operatorIndex, delta.newPublicKeys, false);
+            // Emit initial-deposit pubkeys and top-up pubkeys on separate events so off-chain
+            // indexers do not conflate a top-up (existing key, additional ETH) with a brand-new
+            // validator key. `TopUps` is additive — `FundedValidatorKeys` keeps its signature for
+            // backwards compatibility with existing indexers.
+            if (delta.newPublicKeys.length > 0) {
+                emit FundedValidatorKeys(operatorIndex, delta.newPublicKeys, false);
+            }
+            if (delta.topUpPublicKeys.length > 0) {
+                emit TopUps(operatorIndex, delta.topUpPublicKeys, delta.topUpAmounts);
+            }
         }
     }
 
