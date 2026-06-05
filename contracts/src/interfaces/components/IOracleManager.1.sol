@@ -152,7 +152,7 @@ interface IOracleManagerV1 {
         // this value includes only the ETH that was deposited on the Execution Layer Deposit contract
         uint256 totalDepositedActivatedETH;
         // the sum of all external consolidation funds that were reported
-        // this will only include the consolidations that happend due to external validators merging into LC
+        // this will only include the consolidations that happened due to external validators merging into LC
         // this value cannot decrease over reports
         uint256 totalExternalConsolidationsAmountReported;
         // the count of activated validators
