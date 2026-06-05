@@ -217,6 +217,17 @@ interface IOperatorsRegistryV1 {
     /// @param remainingETHExitsDemand The remaining exit demand
     error ExitsGreaterThanExitDemand(uint256 elExitAmount, uint256 remainingETHExitsDemand);
 
+    /// @notice Thrown when the pre-Pectra range exceeds the funded validator count
+    /// @param operatorIndex The operator index
+    /// @param stopIndex The exclusive stop key index
+    error PrePectraRangeExceedsFunded(uint256 operatorIndex, uint256 stopIndex);
+
+    /// @notice Thrown when the pre-Pectra range is invalid
+    /// @param operatorIndex The operator index
+    /// @param startIndex The first key index
+    /// @param stopIndex The exclusive stop key index
+    error InvalidPrePectraRange(uint256 operatorIndex, uint256 startIndex, uint256 stopIndex);
+
     /// @notice Initializes the operators registry
     /// @param _admin Admin in charge of managing operators
     /// @param _river Address of River system

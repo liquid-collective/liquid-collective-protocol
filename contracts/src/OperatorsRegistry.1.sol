@@ -175,7 +175,9 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         view
         returns (bytes[] memory publicKeys)
     {
-        OperatorsV2.get(operatorIndex);
+        OperatorsV2.Operator storage op = OperatorsV2.get(operatorIndex);
+        if (stopIndex > op.funded) revert PrePectraRangeExceedsFunded(operatorIndex, stopIndex);
+        if (startIndex >= stopIndex) revert InvalidPrePectraRange(operatorIndex, startIndex, stopIndex);
         (publicKeys,) = ValidatorKeys.getKeys(operatorIndex, startIndex, stopIndex - startIndex);
     }
 
