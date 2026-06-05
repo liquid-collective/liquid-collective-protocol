@@ -97,6 +97,11 @@ interface IConsensusLayerDepositManagerV1 {
     /// @notice Returns the AttestationVerifier address River delegates BLS+quorum verification to
     function getAttestationVerifier() external view returns (address);
 
+    /// @notice Remove exited validator pubkeys from the verifier lookup. Only callable by the keeper.
+    /// @dev Once removed, these pubkeys no longer authorize top-up deposits.
+    /// @param pubkeys The 48-byte BLS pubkeys to remove
+    function removeExitedValidatorPubkeys(bytes[] calldata pubkeys) external;
+
     /// @notice Deposit validators using pre-committed buffer data validated by a root attestation quorum.
     /// @dev Initial deposits and top-ups are carried in separately-typed sub-arrays of
     ///      `IDepositDataBuffer.DepositObject` (`deposits[]` and `topUps[]`). Initial deposits

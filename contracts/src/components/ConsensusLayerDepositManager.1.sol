@@ -127,6 +127,11 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         return AttestationVerifierAddress.get();
     }
 
+    /// @inheritdoc IConsensusLayerDepositManagerV1
+    function removeExitedValidatorPubkeys(bytes[] calldata pubkeys) external onlyKeeper {
+        IAttestationVerifierV1(AttestationVerifierAddress.get()).removeExitedValidatorPubkeys(pubkeys);
+    }
+
     // -----------------------------------------------------------------------
     // Attestation-gated deposit entry point
     // -----------------------------------------------------------------------

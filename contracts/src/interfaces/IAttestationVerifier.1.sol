@@ -78,6 +78,10 @@ interface IAttestationVerifierV1 {
     /// @param consolidationHash The EIP-712 structHash of the consolidation request
     event ConsolidationProcessed(bytes32 indexed consolidationHash);
 
+    /// @notice Emitted when a validator pubkey is removed from the funded-pubkey lookup.
+    /// @param pubkey The 48-byte BLS pubkey removed from the lookup
+    event ExitedValidatorPubkeyRemoved(bytes pubkey);
+
     // -----------------------------------------------------------------------
     // Errors
     // -----------------------------------------------------------------------
@@ -310,6 +314,12 @@ interface IAttestationVerifierV1 {
     ///      (ConsensusLayerDepositManager's `PubkeyFunded` event), not here.
     /// @param pubkeys The 48-byte BLS pubkeys to record
     function recordNewlyFundedPubkeys(bytes[] calldata pubkeys) external;
+
+    /// @notice Remove exited validator pubkeys from the initial-deposit lookup. Only callable by River.
+    /// @dev Called by River after the keeper has confirmed that the validators exited. Once removed,
+    ///      the pubkeys no longer authorize top-up deposits through `validateDeposits()`.
+    /// @param pubkeys The 48-byte BLS pubkeys to remove
+    function removeExitedValidatorPubkeys(bytes[] calldata pubkeys) external;
 
     /// @notice Validate consolidation-committee attestations over a `ConsolidationObject` passed
     ///         in by the caller (River) and mark the request as processed for replay protection.

@@ -1041,6 +1041,92 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         validator.recordNewlyFundedPubkeys(pubkeys);
     }
 
+    function testRemoveExitedValidatorPubkeys_keeperClearsLookupThroughManager() public {
+        bytes[] memory pubkeys = new bytes[](2);
+        pubkeys[0] = _fakePubkey(0xE001);
+        pubkeys[1] = _fakePubkey(0xE002);
+        bytes memory untouchedPubkey = _fakePubkey(0xE003);
+
+        _seedFundedPubkey(pubkeys[0]);
+        _seedFundedPubkey(pubkeys[1]);
+        _seedFundedPubkey(untouchedPubkey);
+
+        vm.expectEmit(false, false, false, true, address(validator));
+        emit IAttestationVerifierV1.ExitedValidatorPubkeyRemoved(pubkeys[0]);
+        vm.expectEmit(false, false, false, true, address(validator));
+        emit IAttestationVerifierV1.ExitedValidatorPubkeyRemoved(pubkeys[1]);
+
+        vm.prank(keeper);
+        dm.removeExitedValidatorPubkeys(pubkeys);
+
+        assertFalse(validator.isPubkeyFunded(pubkeys[0]), "first exited pubkey should be cleared");
+        assertFalse(validator.isPubkeyFunded(pubkeys[1]), "second exited pubkey should be cleared");
+        assertTrue(validator.isPubkeyFunded(untouchedPubkey), "unlisted pubkey should remain funded");
+    }
+
+    function testRemoveExitedValidatorPubkeys_absentPubkeyIsNoOp() public {
+        bytes[] memory pubkeys = new bytes[](1);
+        pubkeys[0] = _fakePubkey(0xE004);
+
+        vm.recordLogs();
+        vm.prank(keeper);
+        dm.removeExitedValidatorPubkeys(pubkeys);
+
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        assertEq(logs.length, 0, "absent pubkey should not emit a removal event");
+        assertFalse(validator.isPubkeyFunded(pubkeys[0]), "absent pubkey should remain absent");
+    }
+
+    function testRemoveExitedValidatorPubkeys_removedPubkeyCannotTopUp() public {
+        IDepositDataBuffer.TopUp[] memory topUps = new IDepositDataBuffer.TopUp[](1);
+        topUps[0] = _makeTopUpDeposit(0, 175);
+        _seedFundedPubkey(topUps[0].pubkey);
+
+        bytes[] memory pubkeys = new bytes[](1);
+        pubkeys[0] = topUps[0].pubkey;
+
+        vm.prank(keeper);
+        dm.removeExitedValidatorPubkeys(pubkeys);
+
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareTopUps(topUps);
+
+        vm.prank(keeper);
+        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.TopUpPubkeyNotFunded.selector, topUps[0].pubkey));
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+    }
+
+    function testRevert_removeExitedValidatorPubkeys_notKeeperThroughManager() public {
+        bytes[] memory pubkeys = new bytes[](1);
+        pubkeys[0] = _fakePubkey(0xE005);
+        _seedFundedPubkey(pubkeys[0]);
+
+        address stranger = address(0xC0FFEE);
+        vm.prank(stranger);
+        vm.expectRevert(abi.encodeWithSelector(IConsensusLayerDepositManagerV1.OnlyKeeper.selector));
+        dm.removeExitedValidatorPubkeys(pubkeys);
+
+        assertTrue(validator.isPubkeyFunded(pubkeys[0]), "non-keeper should not clear the pubkey");
+    }
+
+    function testRevert_removeExitedValidatorPubkeys_notRiver() public {
+        bytes[] memory pubkeys = new bytes[](1);
+        pubkeys[0] = _fakePubkey(0xE006);
+
+        address stranger = address(0xC0FFEE);
+        vm.prank(stranger);
+        vm.expectRevert(abi.encodeWithSelector(LibErrors.Unauthorized.selector, stranger));
+        validator.removeExitedValidatorPubkeys(pubkeys);
+    }
+
+    function testRevert_removeExitedValidatorPubkeys_invalidPubkeyLength() public {
+        bytes[] memory pubkeys = new bytes[](1);
+        pubkeys[0] = new bytes(47);
+
+        vm.prank(keeper);
+        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InvalidPubkeyLength.selector, 0, 47));
+        dm.removeExitedValidatorPubkeys(pubkeys);
+    }
+
     /// @dev `validateDeposits()` must fail-fast on out-of-range or mis-aligned `amount` rather than
     ///      deferring to the per-deposit check inside `_depositValidator`. Tests all three
     ///      branches: below minimum (1 ether), above maximum (2048 ether), and non-gwei-aligned.
