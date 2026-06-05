@@ -313,7 +313,7 @@ interface IAttestationVerifierV1 {
         uint256 committedBalance
     ) external view returns (IDepositDataBuffer.DepositObject memory batch, uint256 totalAmount);
 
-     /// @notice Mark a `depositDataBufferId` as processed. Only callable by River.
+    /// @notice Mark a `depositDataBufferId` as processed. Only callable by River.
     /// @dev Called by River after the deposit-execution loop; consulted by `validateDeposits()` to reject replays.
     /// @param depositDataBufferId The batch identifier to mark processed.
     function markDepositDataBufferIdProcessed(bytes32 depositDataBufferId) external;
