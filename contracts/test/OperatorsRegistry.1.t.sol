@@ -1769,6 +1769,7 @@ contract OperatorsRegistryV1CoverageTests is OperatorsRegistryV1TestBase, Operat
         vm.prank(admin);
         reg.addOperator("Op0", makeAddr("op0"));
         uint256[] memory empty = new uint256[](0);
+        vm.prank(river);
         vm.expectRevert(abi.encodeWithSignature("InvalidEmptyArray()"));
         reg.reportCLETH(empty);
     }
@@ -1778,6 +1779,7 @@ contract OperatorsRegistryV1CoverageTests is OperatorsRegistryV1TestBase, Operat
         vm.prank(admin);
         reg.addOperator("Op0", makeAddr("op0"));
         uint256[] memory tooLong = new uint256[](2);
+        vm.prank(river);
         vm.expectRevert(abi.encodeWithSignature("InvalidActiveCLETHArrayLength()"));
         reg.reportCLETH(tooLong);
     }
@@ -1791,6 +1793,7 @@ contract OperatorsRegistryV1CoverageTests is OperatorsRegistryV1TestBase, Operat
         uint256[] memory values = new uint256[](2);
         values[0] = 100 ether;
         values[1] = 200 ether;
+        vm.prank(river);
         reg.reportCLETH(values);
         assertEq(reg.getOperator(0).activeCLETH, 100 ether);
         assertEq(reg.getOperator(1).activeCLETH, 200 ether);
@@ -1807,6 +1810,7 @@ contract OperatorsRegistryV1CoverageTests is OperatorsRegistryV1TestBase, Operat
         values[1] = 70 ether;
         vm.expectEmit(false, false, false, true, address(reg));
         emit IOperatorsRegistryV1.UpdatedActiveCLETH(values);
+        vm.prank(river);
         reg.reportCLETH(values);
     }
 
@@ -1816,6 +1820,7 @@ contract OperatorsRegistryV1CoverageTests is OperatorsRegistryV1TestBase, Operat
         reg.initOperatorsRegistryV1(admin, river);
         vm.prank(admin);
         reg.addOperator("Op0", makeAddr("op0"));
+        vm.prank(river);
         reg.demandETHExits(100 ether, 60 ether);
         assertEq(reg.getCurrentETHExitsDemand(), 60 ether);
     }
@@ -1824,8 +1829,10 @@ contract OperatorsRegistryV1CoverageTests is OperatorsRegistryV1TestBase, Operat
         reg.initOperatorsRegistryV1(admin, river);
         vm.prank(admin);
         reg.addOperator("Op0", makeAddr("op0"));
+        vm.prank(river);
         reg.demandETHExits(50 ether, 50 ether);
         assertEq(reg.getCurrentETHExitsDemand(), 50 ether);
+        vm.prank(river);
         reg.demandETHExits(10 ether, 50 ether);
         assertEq(reg.getCurrentETHExitsDemand(), 50 ether);
     }
@@ -1834,6 +1841,7 @@ contract OperatorsRegistryV1CoverageTests is OperatorsRegistryV1TestBase, Operat
         reg.initOperatorsRegistryV1(admin, river);
         vm.prank(admin);
         reg.addOperator("Op0", makeAddr("op0"));
+        vm.prank(river);
         reg.demandETHExits(100 ether, 0);
         assertEq(reg.getCurrentETHExitsDemand(), 0);
     }
