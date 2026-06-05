@@ -4,6 +4,7 @@ pragma solidity 0.8.34;
 import "./interfaces/IOperatorRegistry.1.sol";
 import "./interfaces/IRiver.1.sol";
 import "./interfaces/IProtocolVersion.sol";
+import "./interfaces/IWithdraw.1.sol";
 
 import "./libraries/LibUint256.sol";
 
@@ -16,6 +17,7 @@ import "./state/operatorsRegistry/TotalETHExitsRequested.sol";
 import "./state/operatorsRegistry/CurrentETHExitsDemand.sol";
 import "./state/operatorsRegistry/TotalValidatorExitsRequested.sol";
 import "./state/operatorsRegistry/CurrentValidatorExitsDemand.sol";
+import "./state/operatorsRegistry/WithdrawAddress.sol";
 import "./state/shared/RiverAddress.sol";
 
 /// @title Operators Registry (v1)
@@ -29,6 +31,8 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
     uint256 private constant MIN_ETH_AMOUNT = 1 ether;
 
+    uint64 private constant MAX_EL_EXIT_AMOUNT_GWEI = 2_048_000_000_000; // 2048 ETH
+
     /// @inheritdoc IOperatorsRegistryV1
     function initOperatorsRegistryV1(address _admin, address _river) external init(0) {
         _setAdmin(_admin);
@@ -37,9 +41,10 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @inheritdoc IOperatorsRegistryV1
-    function initOperatorsRegistryV1_2() external init(2) {
+    function initOperatorsRegistryV1_2(address _withdrawAddress) external init(2) {
         _migrateOperators_V2_3();
 
+        WithdrawAddress.set(_withdrawAddress);
         CurrentETHExitsDemand.set(CurrentValidatorExitsDemand.get() * DEPOSIT_SIZE);
         TotalETHExitsRequested.set(TotalValidatorExitsRequested.get() * DEPOSIT_SIZE);
     }
@@ -77,7 +82,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @notice Prevent unauthorized calls
-    modifier onlyRiver() virtual {
+    modifier onlyRiver() {
         if (msg.sender != RiverAddress.get()) {
             revert LibErrors.Unauthorized(msg.sender);
         }
@@ -134,23 +139,23 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
     /// @inheritdoc IOperatorsRegistryV1
     function getExitedETHPerOperator() external view returns (uint256[] memory) {
-        uint256[] memory rawExitedETH = OperatorsV3.getExitedETH();
-        uint256 listLength = rawExitedETH.length;
+        uint256[] memory exitedETH = OperatorsV3.getExitedETH();
+        uint256 listLength = exitedETH.length;
         if (listLength > 0) {
-            assembly {
+            assembly ("memory-safe") {
                 // no need to use free memory pointer as we reuse the same memory range
 
                 // erase previous word storing length
-                mstore(rawExitedETH, 0)
+                mstore(exitedETH, 0)
 
                 // move memory pointer up by a word
-                rawExitedETH := add(rawExitedETH, 0x20)
+                exitedETH := add(exitedETH, 0x20)
 
                 // store updated length at new memory pointer location
-                mstore(rawExitedETH, sub(listLength, 1))
+                mstore(exitedETH, sub(listLength, 1))
             }
         }
-        return rawExitedETH;
+        return exitedETH;
     }
 
     /// @inheritdoc IOperatorsRegistryV1
@@ -159,25 +164,36 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @inheritdoc IOperatorsRegistryV1
-    function incrementFundedETH(uint256[] calldata _fundedETH, bytes[][] calldata _publicKeys) external onlyRiver {
-        uint256 fundedETHLength = _fundedETH.length;
-        if (fundedETHLength == 0) {
+    function incrementFundedETH(OperatorFundingDelta[] calldata _deltas) external onlyRiver {
+        uint256 len = _deltas.length;
+        if (len == 0) {
             revert InvalidEmptyArray();
         }
-        for (uint256 idx = 0; idx < fundedETHLength; ++idx) {
-            // We have this check to avoid unnecessary storage reads for operators with no funded ETH
-            if (_fundedETH[idx] == 0) {
-                continue;
+
+        uint256 operatorCount = OperatorsV3.getCount();
+        uint256 lastIndex;
+        for (uint256 i = 0; i < len; ++i) {
+            OperatorFundingDelta calldata delta = _deltas[i];
+            uint256 operatorIndex = delta.operatorIndex;
+
+            if (operatorIndex >= operatorCount) {
+                revert InvalidOperatorIndex(operatorIndex, operatorCount);
             }
-            OperatorsV3.Operator storage operator = OperatorsV3.get(idx);
+            if (i != 0 && operatorIndex <= lastIndex) {
+                revert OperatorIndicesUnsortedOrDuplicate(operatorIndex);
+            }
+            lastIndex = operatorIndex;
+
+            OperatorsV3.Operator storage operator = OperatorsV3.get(operatorIndex);
             if (!operator.active) {
-                revert InactiveOperator(idx);
+                revert InactiveOperator(operatorIndex);
             }
-            if (operator.requestedExits > OperatorsV3.getExitedETHAtIndex(idx)) {
-                revert OperatorIgnoredExitRequests(idx);
+            if (operator.requestedExits > OperatorsV3.getExitedETH(operatorIndex)) {
+                revert OperatorIgnoredExitRequests(operatorIndex);
             }
-            operator.funded += _fundedETH[idx];
-            emit FundedValidatorKeys(idx, _publicKeys[idx], false);
+
+            operator.funded += delta.fundedETH;
+            emit FundedValidatorKeys(operatorIndex, delta.newPublicKeys, false);
         }
     }
 
@@ -242,7 +258,11 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @inheritdoc IOperatorsRegistryV1
-    function requestETHExits(ExitETHAllocation[] calldata _allocations) external {
+    function requestETHExits(
+        ExitETHAllocation[] calldata _allocations,
+        ELExitETHAllocation[] calldata _elAllocations,
+        uint256 _maxFeePerWithdrawal
+    ) external payable {
         if (msg.sender != IConsensusLayerDepositManagerV1(RiverAddress.get()).getKeeper()) {
             revert IConsensusLayerDepositManagerV1.OnlyKeeper();
         }
@@ -252,53 +272,150 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             revert NoExitRequestsToPerform();
         }
 
-        uint256 allocationsLength = _allocations.length;
-        if (allocationsLength == 0) {
+        if (_allocations.length == 0 && _elAllocations.length == 0) {
             revert InvalidEmptyArray();
         }
 
-        uint256 requestedETHAmount = 0;
+        uint256 requestedETHAmount = _requestCLETHExits(_allocations);
+        uint256 remainingETHExitsDemand =
+            requestedETHAmount >= currentETHExitsDemand ? 0 : currentETHExitsDemand - requestedETHAmount;
+        (uint256 elRequestedETHAmount, uint256 totalFeePaid) =
+            _requestELETHExits(_elAllocations, _maxFeePerWithdrawal, remainingETHExitsDemand);
+        requestedETHAmount += elRequestedETHAmount;
 
-        // Check that the exits requested do not exceed the funded ETH amount of the operator
-        for (uint256 i = 0; i < allocationsLength; ++i) {
+        // Check that the exits requested do not exceed the current ETH exits demand
+        if (requestedETHAmount > currentETHExitsDemand) {
+            revert ExitsRequestedExceedExitDemand(requestedETHAmount, currentETHExitsDemand);
+        }
+        if (totalFeePaid < msg.value) {
+            uint256 excess = msg.value - totalFeePaid;
+            (bool ok,) = msg.sender.call{value: excess}("");
+            if (!ok) {
+                revert UnsentRefund(msg.sender, excess);
+            }
+        }
+
+        uint256 totalETHExitsRequested = TotalETHExitsRequested.get();
+        _setTotalETHExitsRequested(totalETHExitsRequested, totalETHExitsRequested + requestedETHAmount);
+        _setCurrentETHExitsDemand(currentETHExitsDemand, currentETHExitsDemand - requestedETHAmount);
+    }
+
+    /// @notice Reserves full ETH exits per operator via CL and returns the total requested amount.
+    function _requestCLETHExits(ExitETHAllocation[] calldata _allocations)
+        private
+        returns (uint256 requestedETHAmount)
+    {
+        for (uint256 i = 0; i < _allocations.length; ++i) {
             uint256 operatorIndex = _allocations[i].operatorIndex;
             uint256 ethAmount = _allocations[i].ethAmount;
 
             if (ethAmount < MIN_ETH_AMOUNT) {
                 revert AllocationWithIncorrectAmount(ethAmount);
             }
-            if (i > 0 && !(operatorIndex > _allocations[i - 1].operatorIndex)) {
+            if (i > 0 && operatorIndex <= _allocations[i - 1].operatorIndex) {
                 revert UnorderedOperatorList();
             }
-
-            requestedETHAmount += ethAmount;
 
             OperatorsV3.Operator storage operator = OperatorsV3.get(operatorIndex);
             if (!operator.active) {
                 revert InactiveOperator(operatorIndex);
             }
 
-            uint256 opRequestedExits = operator.requestedExits;
-            uint256 opPendingExits = opRequestedExits - OperatorsV3.getExitedETHAtIndex(operatorIndex);
-            uint256 available = operator.activeCLETH > opPendingExits ? operator.activeCLETH - opPendingExits : 0;
-            if (ethAmount > available) {
-                // Operator has insufficient available ETH
-                revert ExitsRequestedExceedAvailableFundedAmount(operatorIndex, ethAmount, available);
+            _reserveOperatorExit(operator, operatorIndex, ethAmount, false);
+            requestedETHAmount += ethAmount;
+            emit RequestedETHExits(operatorIndex, operator.requestedExits);
+        }
+    }
+
+    /// @notice Requests partial/full ETH exits through Withdrawal Contract and returns the total requested amount.
+    function _requestELETHExits(
+        ELExitETHAllocation[] calldata _elAllocations,
+        uint256 _maxFeePerWithdrawal,
+        uint256 _remainingETHExitsDemand
+    ) private returns (uint256 requestedETHAmount, uint256 totalFeePaid) {
+        if (_elAllocations.length == 0) {
+            return (0, 0);
+        }
+
+        IWithdrawV1 withdraw = IWithdrawV1(WithdrawAddress.get());
+
+        for (uint256 i = 0; i < _elAllocations.length; ++i) {
+            uint256 operatorIndex = _elAllocations[i].operatorIndex;
+
+            if (i > 0 && operatorIndex <= _elAllocations[i - 1].operatorIndex) {
+                revert UnorderedOperatorList();
             }
 
-            opRequestedExits += ethAmount;
-            operator.requestedExits = opRequestedExits;
-            emit RequestedETHExits(operatorIndex, opRequestedExits);
-        }
+            if (
+                _elAllocations[i].pubkeys.length != _elAllocations[i].isFullExit.length
+                    || _elAllocations[i].pubkeys.length != _elAllocations[i].amounts.length
+            ) {
+                revert InvalidELExitETHAllocationLength();
+            }
 
-        // Check that the exits requested do not exceed the current ETH exits demand
-        if (requestedETHAmount > currentETHExitsDemand) {
-            revert ExitsRequestedExceedExitDemand(requestedETHAmount, currentETHExitsDemand);
-        }
+            OperatorsV3.Operator storage operator = OperatorsV3.get(operatorIndex);
+            if (!operator.active) {
+                revert InactiveOperator(operatorIndex);
+            }
 
-        uint256 totalETHExitsRequested = TotalETHExitsRequested.get();
-        _setTotalETHExitsRequested(totalETHExitsRequested, totalETHExitsRequested + requestedETHAmount);
-        _setCurrentETHExitsDemand(currentETHExitsDemand, currentETHExitsDemand - requestedETHAmount);
+            uint256 elExitAmount;
+            uint64[] memory cachedAmounts = _elAllocations[i].amounts;
+            for (uint256 j = 0; j < _elAllocations[i].amounts.length; ++j) {
+                uint64 amount = _elAllocations[i].amounts[j];
+                bool isFullExit = _elAllocations[i].isFullExit[j];
+                if (amount == 0 || amount > MAX_EL_EXIT_AMOUNT_GWEI) {
+                    revert InvalidELExitETHAllocationAmount(operatorIndex, isFullExit, amount);
+                }
+                elExitAmount += uint256(amount) * 1 gwei;
+                if (isFullExit) {
+                    cachedAmounts[j] = 0;
+                }
+            }
+
+            _reserveOperatorExit(operator, operatorIndex, elExitAmount, true);
+            requestedETHAmount += elExitAmount;
+
+            withdraw.withdraw{value: _maxFeePerWithdrawal * _elAllocations[i].pubkeys.length}(
+                _elAllocations[i].pubkeys, cachedAmounts, _maxFeePerWithdrawal, msg.sender
+            );
+            totalFeePaid += _maxFeePerWithdrawal * _elAllocations[i].pubkeys.length;
+            emit RequestedELETHExits(operatorIndex, _elAllocations[i].pubkeys, _elAllocations[i].amounts);
+        }
+        if (requestedETHAmount > _remainingETHExitsDemand) {
+            revert ExitsGreaterThanExitDemand(requestedETHAmount, _remainingETHExitsDemand);
+        }
+    }
+
+    /// @notice Internal utility to reserve an exit against an operator's available ETH.
+    /// @dev Performs the available-ETH check and updates the operator's `requestedExits`.
+    /// @dev Reverts with the EL- or full-exit specific error depending on `_isEL`.
+    /// @param _operator Storage reference to the operator whose exit is being reserved
+    /// @param _operatorIndex The operator index (used in revert data)
+    /// @param _amount The ETH(wei) amount to reserve
+    /// @param _isEL true for EL exits, false for CL exits
+    function _reserveOperatorExit(
+        OperatorsV3.Operator storage _operator,
+        uint256 _operatorIndex,
+        uint256 _amount,
+        bool _isEL
+    ) private {
+        uint256 available = _getOperatorAvailableExitETH(_operator, _operatorIndex);
+        if (_amount > available) {
+            if (_isEL) {
+                revert ELExitsRequestedExceedAvailableFundedAmount(_operatorIndex, _amount, available);
+            }
+            revert ExitsRequestedExceedAvailableFundedAmount(_operatorIndex, _amount, available);
+        }
+        _operator.requestedExits += _amount;
+    }
+
+    function _getOperatorAvailableExitETH(OperatorsV3.Operator storage _operator, uint256 _operatorIndex)
+        private
+        view
+        returns (uint256)
+    {
+        uint256 opPendingExits = _operator.requestedExits - OperatorsV3.getExitedETH(_operatorIndex);
+        return _operator.activeCLETH > opPendingExits ? _operator.activeCLETH - opPendingExits : 0;
     }
 
     /// @inheritdoc IOperatorsRegistryV1
@@ -412,7 +529,9 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         }
 
         vars.totalETHExitsRequested += unsolicitedExitsSum;
-        // we decrease the demand, considering unsolicited exits as if they were answering the demand
+        // we decrease the demand, considering unsolicited exits as if they were answering the demand.
+        // we use min as the demand can't go below 0 & unsolicitedExitsSum can be greater than the demand
+        // hence the term "unsolicited exits"
         vars.currentETHExitsDemand -= LibUint256.min(unsolicitedExitsSum, vars.currentETHExitsDemand);
 
         if (vars.totalETHExitsRequested != vars.cachedTotalETHExitsRequested) {
