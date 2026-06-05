@@ -162,6 +162,8 @@ contract OperatorsMigrationV2ToV3 is Test {
         deltas[0].fundedETH = 32 ether;
         deltas[0].newPublicKeys = new bytes[](1);
         deltas[0].newPublicKeys[0] = new bytes(48);
+        deltas[0].depositAmounts = new uint256[](1);
+        deltas[0].depositAmounts[0] = 32 ether;
         vm.prank(river);
         v3.incrementFundedETH(deltas);
         assertEq(

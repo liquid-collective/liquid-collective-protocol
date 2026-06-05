@@ -192,6 +192,20 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                 revert OperatorIgnoredExitRequests(operatorIndex);
             }
 
+            // Defense-in-depth: enforce the per-class pubkey/amount alignment that
+            // `LibFundingDeltas.build` already guarantees, so the registry never emits an event
+            // whose pubkeys and amounts disagree on length (which would silently break indexers).
+            if (delta.newPublicKeys.length != delta.depositAmounts.length) {
+                revert MisalignedDeltaArrays(
+                    operatorIndex, delta.newPublicKeys.length, delta.depositAmounts.length
+                );
+            }
+            if (delta.topUpPublicKeys.length != delta.topUpAmounts.length) {
+                revert MisalignedDeltaArrays(
+                    operatorIndex, delta.topUpPublicKeys.length, delta.topUpAmounts.length
+                );
+            }
+
             operator.funded += delta.fundedETH;
             // Emit initial-deposit pubkeys and top-up pubkeys on separate events so off-chain
             // indexers do not conflate a top-up (existing key, additional ETH) with a brand-new

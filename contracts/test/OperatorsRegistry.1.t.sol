@@ -1416,6 +1416,7 @@ contract OperatorsRegistryV1FlattenAndAllocationTests is OperatorAllocationTestB
         deltas[0].operatorIndex = 0;
         deltas[0].fundedETH = 32 ether;
         deltas[0].newPublicKeys = new bytes[](1);
+        deltas[0].depositAmounts = new uint256[](1);
         vm.prank(river);
         vm.expectRevert(abi.encodeWithSignature("OperatorIgnoredExitRequests(uint256)", 0));
         operatorsRegistry.incrementFundedETH(deltas);
@@ -1477,6 +1478,7 @@ contract OperatorsRegistryV1FlattenAndAllocationTests is OperatorAllocationTestB
         deltas[0].operatorIndex = 3; // out of range: operatorCount = 3
         deltas[0].fundedETH = 32 ether;
         deltas[0].newPublicKeys = new bytes[](1);
+        deltas[0].depositAmounts = new uint256[](1);
         vm.prank(river);
         vm.expectRevert(abi.encodeWithSelector(IOperatorsRegistryV1.InvalidOperatorIndex.selector, 3, 3));
         operatorsRegistry.incrementFundedETH(deltas);
@@ -1492,9 +1494,11 @@ contract OperatorsRegistryV1FlattenAndAllocationTests is OperatorAllocationTestB
         dup[0].operatorIndex = 2;
         dup[0].fundedETH = 32 ether;
         dup[0].newPublicKeys = new bytes[](1);
+        dup[0].depositAmounts = new uint256[](1);
         dup[1].operatorIndex = 2;
         dup[1].fundedETH = 32 ether;
         dup[1].newPublicKeys = new bytes[](1);
+        dup[1].depositAmounts = new uint256[](1);
         vm.prank(river);
         vm.expectRevert(abi.encodeWithSelector(IOperatorsRegistryV1.OperatorIndicesUnsortedOrDuplicate.selector, 2));
         operatorsRegistry.incrementFundedETH(dup);
@@ -1504,12 +1508,45 @@ contract OperatorsRegistryV1FlattenAndAllocationTests is OperatorAllocationTestB
         desc[0].operatorIndex = 3;
         desc[0].fundedETH = 32 ether;
         desc[0].newPublicKeys = new bytes[](1);
+        desc[0].depositAmounts = new uint256[](1);
         desc[1].operatorIndex = 1;
         desc[1].fundedETH = 32 ether;
         desc[1].newPublicKeys = new bytes[](1);
+        desc[1].depositAmounts = new uint256[](1);
         vm.prank(river);
         vm.expectRevert(abi.encodeWithSelector(IOperatorsRegistryV1.OperatorIndicesUnsortedOrDuplicate.selector, 1));
         operatorsRegistry.incrementFundedETH(desc);
+    }
+
+    /// @notice Issue #543 (review follow-up) — defense-in-depth check: incrementFundedETH must
+    ///         revert MisalignedDeltaArrays when newPublicKeys.length != depositAmounts.length.
+    function testIncrementFundedRevertsMisalignedDepositArrays() external {
+        _setupOperators(3, 10);
+
+        IOperatorsRegistryV1.OperatorFundingDelta[] memory deltas = new IOperatorsRegistryV1.OperatorFundingDelta[](1);
+        deltas[0].operatorIndex = 0;
+        deltas[0].fundedETH = 32 ether;
+        deltas[0].newPublicKeys = new bytes[](2);
+        deltas[0].depositAmounts = new uint256[](1); // mismatched length
+        vm.prank(river);
+        vm.expectRevert(abi.encodeWithSelector(IOperatorsRegistryV1.MisalignedDeltaArrays.selector, 0, 2, 1));
+        operatorsRegistry.incrementFundedETH(deltas);
+    }
+
+    /// @notice Issue #543 (review follow-up) — defense-in-depth check: incrementFundedETH must
+    ///         revert MisalignedDeltaArrays when topUpPublicKeys.length != topUpAmounts.length.
+    function testIncrementFundedRevertsMisalignedTopUpArrays() external {
+        _setupOperators(3, 10);
+
+        IOperatorsRegistryV1.OperatorFundingDelta[] memory deltas = new IOperatorsRegistryV1.OperatorFundingDelta[](1);
+        deltas[0].operatorIndex = 1;
+        deltas[0].fundedETH = 32 ether;
+        // deposit side is well-formed (both empty)
+        deltas[0].topUpPublicKeys = new bytes[](3);
+        deltas[0].topUpAmounts = new uint256[](2); // mismatched length
+        vm.prank(river);
+        vm.expectRevert(abi.encodeWithSelector(IOperatorsRegistryV1.MisalignedDeltaArrays.selector, 1, 3, 2));
+        operatorsRegistry.incrementFundedETH(deltas);
     }
 
     /// @notice Issue #543 — initial-deposit pubkeys are emitted on FundedValidatorKeys; top-up

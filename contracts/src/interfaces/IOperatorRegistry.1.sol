@@ -226,6 +226,15 @@ interface IOperatorsRegistryV1 {
     /// @param operatorIndex The offending operator index (equal to or below the previous index)
     error OperatorIndicesUnsortedOrDuplicate(uint256 operatorIndex);
 
+    /// @notice Thrown when a funding delta's per-class pubkey and amount arrays disagree on length.
+    ///         Aligned arrays are an invariant of `LibFundingDeltas.build`; this check makes the
+    ///         invariant explicit at the registry boundary so a malformed delta cannot cause the
+    ///         registry to emit an event whose pubkeys and amounts do not line up.
+    /// @param operatorIndex The offending operator index
+    /// @param pubkeysLength The length of the pubkeys array
+    /// @param amountsLength The length of the amounts array
+    error MisalignedDeltaArrays(uint256 operatorIndex, uint256 pubkeysLength, uint256 amountsLength);
+
     /// @notice Thrown when the excess fee is not refunded
     /// @param sender The sender of the transaction
     /// @param excess The excess fee
