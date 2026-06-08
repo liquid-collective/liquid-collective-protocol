@@ -298,7 +298,6 @@ interface IAttestationVerifierV1 {
     /// @return requests The consolidation requests
     function validateSelfConsolidation(bytes[] calldata pubkeys, uint256 maxFeePerConsolidation)
         external
-        payable
         returns (IWithdrawV1.ConsolidationRequest[] memory);
 
     // -----------------------------------------------------------------------

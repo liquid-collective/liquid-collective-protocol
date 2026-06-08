@@ -492,7 +492,6 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     /// @inheritdoc IAttestationVerifierV1
     function validateSelfConsolidation(bytes[] calldata pubkeys, uint256)
         external
-        payable
         onlyRiver
         returns (IWithdrawV1.ConsolidationRequest[] memory)
     {
