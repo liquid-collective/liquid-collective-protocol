@@ -23,10 +23,10 @@ contract PrePectraValidatorPubkeyLookupInputs {
 contract PrePectraValidatorPubkeyLookupTest is Test {
     PrePectraValidatorPubkeyLookupInputs internal inputs;
 
-    /// @dev Must match `PrePectraValidatorPubkeyLookup.PRE_PECTRA_VALIDATOR_PUBKEY_LOOKUP_MAPPING_BASE_SLOT`.
+    /// @dev Must match `PrePectraValidatorPubkeyLookup.PRE_PECTRA_VALIDATOR_PUBKEY_LOOKUP_SLOT`.
     ///      The cross-check is the slot-derivation test below.
     bytes32 internal constant EXPECTED_BASE_SLOT =
-        bytes32(uint256(keccak256("attestationVerifier.state.prePectraValidatorPubkeyLookup.mapping")) - 1);
+        bytes32(uint256(keccak256("attestationVerifier.state.prePectraValidatorPubkeyLookup")) - 1);
 
     function setUp() public {
         inputs = new PrePectraValidatorPubkeyLookupInputs();

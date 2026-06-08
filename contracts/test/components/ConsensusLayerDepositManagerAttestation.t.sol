@@ -230,8 +230,8 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         bytes32(uint256(keccak256("attestationVerifier.state.domainSeparator")) - 1);
     bytes32 internal constant VALIDATOR_DEPOSIT_DOMAIN_SLOT =
         bytes32(uint256(keccak256("attestationVerifier.state.depositDomain")) - 1);
-    bytes32 internal constant PECTRA_VALIDATOR_PUBKEY_LOOKUP_MAPPING_BASE_SLOT =
-        bytes32(uint256(keccak256("attestationVerifier.state.pectraValidatorPubkeyLookup.mapping")) - 1);
+    bytes32 internal constant PECTRA_VALIDATOR_PUBKEY_LOOKUP_SLOT =
+        bytes32(uint256(keccak256("attestationVerifier.state.pectraValidatorPubkeyLookup")) - 1);
 
     event MigratedPrePectraValidatorPubkeys(uint256 indexed operatorIndex, uint256 startIndex, uint256 stopIndex);
     event RemovedPrePectraValidatorPubkeys(bytes[] pubkeys);
@@ -265,7 +265,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     ///      full prior batch). The stored value matches the PectraValidatorPubkeyLookup library's
     ///      boolean-membership scheme.
     function _seedFundedPubkey(bytes memory pubkey) internal {
-        bytes32 slot = keccak256(abi.encode(PECTRA_VALIDATOR_PUBKEY_LOOKUP_MAPPING_BASE_SLOT, pubkey));
+        bytes32 slot = keccak256(abi.encode(PECTRA_VALIDATOR_PUBKEY_LOOKUP_SLOT, pubkey));
         vm.store(address(validator), slot, bytes32(uint256(1)));
     }
 
@@ -979,7 +979,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         pubkeys[1] = pk1;
 
         vm.prank(address(dm));
-        IWithdrawV1.ConsolidationRequest[] memory requests = validator.validateSelfConsolidation(pubkeys, 1 gwei);
+        IWithdrawV1.ConsolidationRequest[] memory requests = validator.validateSelfConsolidation(pubkeys);
 
         assertEq(requests.length, 2, "request count");
         assertEq(requests[0].srcPubkeys.length, 1, "request 0 source count");
@@ -1003,7 +1003,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
         vm.prank(admin);
         vm.expectRevert(abi.encodeWithSelector(LibErrors.Unauthorized.selector, admin));
-        validator.validateSelfConsolidation(pubkeys, 1 gwei);
+        validator.validateSelfConsolidation(pubkeys);
     }
 
     function testValidateSelfConsolidation_revertsWhenBatchEmpty() public {
@@ -1011,7 +1011,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
         vm.prank(address(dm));
         vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InvalidSelfConsolidationEmptyPubkeys.selector));
-        validator.validateSelfConsolidation(pubkeys, 1 gwei);
+        validator.validateSelfConsolidation(pubkeys);
     }
 
     function testValidateSelfConsolidation_revertsWhenPubkeyLengthInvalid() public {
@@ -1024,7 +1024,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
                 IAttestationVerifierV1.InvalidSelfConsolidationPubkeyLength.selector, uint256(0), uint256(2)
             )
         );
-        validator.validateSelfConsolidation(pubkeys, 1 gwei);
+        validator.validateSelfConsolidation(pubkeys);
     }
 
     function testValidateSelfConsolidation_revertsWhenPubkeyNotFunded() public {
@@ -1036,10 +1036,10 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(IAttestationVerifierV1.PrePectraValidatorPubkeyNotFunded.selector, pubkey)
         );
-        validator.validateSelfConsolidation(pubkeys, 1 gwei);
+        validator.validateSelfConsolidation(pubkeys);
     }
 
-    function testRemovePrePectraValidatorPubkey_adminRemovesSubsetAndEmits() public {
+    function testRemovePrePectraValidatorPubkeys_adminRemovesSubsetAndEmits() public {
         uint256 operatorIdx = 5;
         prePectraRegistry.setPrePectraFundedValidatorCount(operatorIdx, 3);
         bytes memory pk0 = _seedPrePectraValidator(operatorIdx, 0, 630);
@@ -1063,14 +1063,14 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         emit RemovedPrePectraValidatorPubkeys(pubkeys);
 
         vm.prank(admin);
-        validator.removePrePectraValidatorPubkey(pubkeys);
+        validator.removePrePectraValidatorPubkeys(pubkeys);
 
         assertFalse(validator.isPrePectraValidatorPubkeyFunded(pk0), "removed key 0");
         assertTrue(validator.isPrePectraValidatorPubkeyFunded(pk1), "unremoved key 1");
         assertFalse(validator.isPrePectraValidatorPubkeyFunded(pk2), "removed key 2");
     }
 
-    function testRemovePrePectraValidatorPubkey_revertsWhenUnauthorized() public {
+    function testRemovePrePectraValidatorPubkeys_revertsWhenUnauthorized() public {
         address stranger = makeAddr("prePectraRemovalStranger");
         bytes[] memory pubkeys = new bytes[](1);
         pubkeys[0] = _fakePubkey(640);
@@ -1079,18 +1079,18 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         // use the River admin check instead of allowing arbitrary callers to clear keys.
         vm.prank(stranger);
         vm.expectRevert(abi.encodeWithSelector(LibErrors.Unauthorized.selector, stranger));
-        validator.removePrePectraValidatorPubkey(pubkeys);
+        validator.removePrePectraValidatorPubkeys(pubkeys);
     }
 
-    function testRemovePrePectraValidatorPubkey_revertsWhenBatchEmpty() public {
+    function testRemovePrePectraValidatorPubkeys_revertsWhenBatchEmpty() public {
         bytes[] memory pubkeys = new bytes[](0);
 
         vm.prank(admin);
         vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InvalidPrePectraRemovalEmptyPubkeys.selector));
-        validator.removePrePectraValidatorPubkey(pubkeys);
+        validator.removePrePectraValidatorPubkeys(pubkeys);
     }
 
-    function testRemovePrePectraValidatorPubkey_revertsWhenPubkeyLengthInvalid() public {
+    function testRemovePrePectraValidatorPubkeys_revertsWhenPubkeyLengthInvalid() public {
         bytes[] memory pubkeys = new bytes[](1);
         pubkeys[0] = hex"1234";
 
@@ -1100,10 +1100,10 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
                 IAttestationVerifierV1.InvalidPrePectraRemovalPubkeyLength.selector, uint256(0), uint256(2)
             )
         );
-        validator.removePrePectraValidatorPubkey(pubkeys);
+        validator.removePrePectraValidatorPubkeys(pubkeys);
     }
 
-    function testRemovePrePectraValidatorPubkey_revertsWhenPubkeyNotFunded() public {
+    function testRemovePrePectraValidatorPubkeys_revertsWhenPubkeyNotFunded() public {
         bytes memory pubkey = _fakePubkey(641);
         bytes[] memory pubkeys = new bytes[](1);
         pubkeys[0] = pubkey;
@@ -1112,7 +1112,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(IAttestationVerifierV1.PrePectraValidatorPubkeyNotFunded.selector, pubkey)
         );
-        validator.removePrePectraValidatorPubkey(pubkeys);
+        validator.removePrePectraValidatorPubkeys(pubkeys);
     }
 
     function testTopUp_migratedPrePectraPubkeyStillRevertsInValidate() public {

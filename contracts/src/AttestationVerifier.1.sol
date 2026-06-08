@@ -490,7 +490,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     }
 
     /// @inheritdoc IAttestationVerifierV1
-    function validateSelfConsolidation(bytes[] calldata pubkeys, uint256)
+    function validateSelfConsolidation(bytes[] calldata pubkeys)
         external
         onlyRiver
         returns (IWithdrawV1.ConsolidationRequest[] memory)
@@ -518,7 +518,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     }
 
     /// @inheritdoc IAttestationVerifierV1
-    function removePrePectraValidatorPubkey(bytes[] calldata pubkeys) external onlyRiverAdmin {
+    function removePrePectraValidatorPubkeys(bytes[] calldata pubkeys) external onlyRiverAdmin {
         uint256 len = pubkeys.length;
         if (len == 0) {
             revert InvalidPrePectraRemovalEmptyPubkeys();

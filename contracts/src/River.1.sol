@@ -331,8 +331,8 @@ contract RiverV1 is
 
     /// @inheritdoc IRiverV1
     function selfConsolidation(bytes[] calldata pubkeys, uint256 maxFeePerConsolidation) external payable onlyKeeper {
-        IWithdrawV1.ConsolidationRequest[] memory requests = IAttestationVerifierV1(AttestationVerifierAddress.get())
-            .validateSelfConsolidation(pubkeys, maxFeePerConsolidation);
+        IWithdrawV1.ConsolidationRequest[] memory requests =
+            IAttestationVerifierV1(AttestationVerifierAddress.get()).validateSelfConsolidation(pubkeys);
         address excessFeeRecipient = msg.sender;
         IWithdrawV1(payable(WithdrawalCredentials.getAddress())).consolidate{value: msg.value}(
             requests, maxFeePerConsolidation, excessFeeRecipient

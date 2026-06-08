@@ -294,9 +294,8 @@ interface IAttestationVerifierV1 {
 
     /// @notice Validate self consolidation of pre-Pectra validator pubkeys. Only callable by River.
     /// @param pubkeys The 48-byte BLS pubkeys to consolidate
-    /// @param maxFeePerConsolidation The maximum fee per consolidation to accept
     /// @return requests The consolidation requests
-    function validateSelfConsolidation(bytes[] calldata pubkeys, uint256 maxFeePerConsolidation)
+    function validateSelfConsolidation(bytes[] calldata pubkeys)
         external
         returns (IWithdrawV1.ConsolidationRequest[] memory);
 
@@ -366,7 +365,7 @@ interface IAttestationVerifierV1 {
     /// @dev Only callable by River admin. Reverts if the batch is empty, any pubkey is not 48
     ///      bytes, or any pubkey is not currently in the pre-Pectra lookup.
     /// @param pubkeys The 48-byte BLS pubkeys to remove
-    function removePrePectraValidatorPubkey(bytes[] calldata pubkeys) external;
+    function removePrePectraValidatorPubkeys(bytes[] calldata pubkeys) external;
 
     /// @notice Validate consolidation-committee attestations over a `ConsolidationObject` passed
     ///         in by the caller and mark the request as processed for replay protection.
