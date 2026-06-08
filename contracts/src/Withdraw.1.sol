@@ -132,31 +132,26 @@ contract WithdrawV1 is IWithdrawV1, Initializable, ReentrancyGuard, IProtocolVer
 
         IAttestationVerifierV1 attestationVerifier = IAttestationVerifierV1(AttestationVerifierAddress.get());
         for (uint256 i = 0; i < requests.length; i++) {
-            _validatePubkeyLength(requests[i].targetPubkey);
-            if (!attestationVerifier.isPubkeyFunded(requests[i].targetPubkey)) {
-                bool isSelfConsolidation = requests[i].srcPubkeys.length == 1
-                    && keccak256(requests[i].srcPubkeys[0]) == keccak256(requests[i].targetPubkey);
-                if (
-                    !isSelfConsolidation
-                        || !attestationVerifier.isPrePectraValidatorPubkeyFunded(requests[i].targetPubkey)
-                ) {
-                    revert TargetPubkeyNotFunded(requests[i].targetPubkey);
-                }
+            bytes calldata targetPubkey = requests[i].targetPubkey;
+            _validatePubkeyLength(targetPubkey);
+
+            bool isTargetFunded = attestationVerifier.isPubkeyFunded(targetPubkey);
+            bool isSelfConsolidation =
+                requests[i].srcPubkeys.length == 1 && keccak256(requests[i].srcPubkeys[0]) == keccak256(targetPubkey);
+
+            if (
+                !isTargetFunded && (!isSelfConsolidation || !_isKnownValidatorPubkey(attestationVerifier, targetPubkey))
+            ) {
+                revert TargetPubkeyNotFunded(targetPubkey);
             }
 
             for (uint256 j = 0; j < requests[i].srcPubkeys.length; j++) {
-                _validatePubkeyLength(requests[i].srcPubkeys[j]);
-                if (
-                    !attestationVerifier.isPubkeyFunded(requests[i].srcPubkeys[j])
-                        && !attestationVerifier.isPrePectraValidatorPubkeyFunded(requests[i].srcPubkeys[j])
-                ) {
-                    revert SourcePubkeyNotFunded(requests[i].srcPubkeys[j]);
+                bytes calldata srcPubkey = requests[i].srcPubkeys[j];
+                _validatePubkeyLength(srcPubkey);
+                if (!_isKnownValidatorPubkey(attestationVerifier, srcPubkey)) {
+                    revert SourcePubkeyNotFunded(srcPubkey);
                 }
-            }
-        }
 
-        for (uint256 i = 0; i < requests.length; i++) {
-            for (uint256 j = 0; j < requests[i].srcPubkeys.length; j++) {
                 bytes memory callData = bytes.concat(requests[i].srcPubkeys[j], requests[i].targetPubkey);
                 (bool writeOK,) = consolidationContract.call{value: fee}(callData);
                 if (!writeOK) {
@@ -165,7 +160,6 @@ contract WithdrawV1 is IWithdrawV1, Initializable, ReentrancyGuard, IProtocolVer
                 emit ConsolidationRequested(requests[i].srcPubkeys[j], requests[i].targetPubkey, fee);
             }
         }
-
         _refundExcessFee(msg.value, totalFeeRequired, excessFeeRecipient);
     }
 
@@ -201,6 +195,16 @@ contract WithdrawV1 is IWithdrawV1, Initializable, ReentrancyGuard, IProtocolVer
         if (pubkey.length != 48) {
             revert InvalidPubkeyLength(pubkey.length);
         }
+    }
+
+    /// @notice Internal: check whether a pubkey is in either funded validator lookup
+    function _isKnownValidatorPubkey(IAttestationVerifierV1 attestationVerifier, bytes calldata pubkey)
+        internal
+        view
+        returns (bool)
+    {
+        return
+            attestationVerifier.isPubkeyFunded(pubkey) || attestationVerifier.isPrePectraValidatorPubkeyFunded(pubkey);
     }
 
     /// @notice Internal: refund excess fee to recipient; emit on send failure instead of reverting
