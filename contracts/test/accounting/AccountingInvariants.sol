@@ -128,9 +128,10 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
         assertGe(lhs, rhs, "I1: share price decreased unexpectedly");
     }
 
-    /// @notice I2: Verifies ETH conservation — `totalUnderlyingSupply` must never exceed
-    ///         total user deposits plus cumulative skimmed rewards. Both values are tracked
-    ///         independently of contract storage, making this a non-tautological check.
+    /// @notice I2: ETH conservation — totalUnderlyingSupply ≤ user deposits + CL rewards.
+    ///         NOTE: upper bound does not include EL fees, coverage fund top-ups, or direct
+    ///         donations. Will false-fail if any scenario introduces those ETH sources.
+    ///         Both values are tracked independently of contract storage (non-tautological).
     ///         Also asserts that underlying supply is non-zero whenever deposits have been made.
     function _assertI2_ETHConservation() internal {
         // totalUnderlyingSupply must never exceed total user deposits + total skimmed rewards.
