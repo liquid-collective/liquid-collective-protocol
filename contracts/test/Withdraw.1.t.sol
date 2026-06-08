@@ -536,6 +536,25 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         assertEq(address(mockConsolidation).balance, 0);
     }
 
+    function testConsolidateSelfConsolidationWithPrePectraTargetSucceeds() external {
+        bytes memory pubkey = _consolidationPubkey(20);
+        _seedPrePectraPubkey(pubkey);
+
+        bytes[] memory srcPubkeys = new bytes[](1);
+        srcPubkeys[0] = pubkey;
+        IWithdrawV1.ConsolidationRequest[] memory requests = new IWithdrawV1.ConsolidationRequest[](1);
+        requests[0] = IWithdrawV1.ConsolidationRequest({srcPubkeys: srcPubkeys, targetPubkey: pubkey});
+
+        uint256 fee = 1 gwei;
+        vm.deal(address(river), fee);
+
+        vm.expectCall(address(mockConsolidation), fee, bytes.concat(pubkey, pubkey));
+        vm.prank(address(river));
+        withdraw.consolidate{value: fee}(requests, fee, excessFeeRecipient);
+
+        assertEq(address(mockConsolidation).balance, fee);
+    }
+
     function testConsolidateSourceInNeitherLookupReverts() external {
         bytes memory sourcePubkey = _consolidationPubkey(3);
 

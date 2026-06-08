@@ -134,7 +134,14 @@ contract WithdrawV1 is IWithdrawV1, Initializable, ReentrancyGuard, IProtocolVer
         for (uint256 i = 0; i < requests.length; i++) {
             _validatePubkeyLength(requests[i].targetPubkey);
             if (!attestationVerifier.isPubkeyFunded(requests[i].targetPubkey)) {
-                revert TargetPubkeyNotFunded(requests[i].targetPubkey);
+                bool isSelfConsolidation = requests[i].srcPubkeys.length == 1
+                    && keccak256(requests[i].srcPubkeys[0]) == keccak256(requests[i].targetPubkey);
+                if (
+                    !isSelfConsolidation
+                        || !attestationVerifier.isPrePectraValidatorPubkeyFunded(requests[i].targetPubkey)
+                ) {
+                    revert TargetPubkeyNotFunded(requests[i].targetPubkey);
+                }
             }
 
             for (uint256 j = 0; j < requests[i].srcPubkeys.length; j++) {

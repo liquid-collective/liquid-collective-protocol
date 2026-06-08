@@ -2,6 +2,7 @@
 pragma solidity 0.8.34;
 
 import "./IDepositDataBuffer.sol";
+import "./IWithdraw.1.sol";
 import "../libraries/BLS12_381.sol";
 
 /// @title Attestation Verifier Interface (v1)
@@ -264,6 +265,14 @@ interface IAttestationVerifierV1 {
     /// @param pubkey The 48-byte BLS pubkey
     error PrePectraValidatorPubkeyNotFunded(bytes pubkey);
 
+    /// @notice The self consolidation batch is empty.
+    error InvalidSelfConsolidationEmptyPubkeys();
+
+    /// @notice A pubkey supplied for self consolidation is not 48 bytes.
+    /// @param index The index into the self consolidation batch
+    /// @param length The observed pubkey length
+    error InvalidSelfConsolidationPubkeyLength(uint256 index, uint256 length);
+
     // -----------------------------------------------------------------------
     // Initialization
     // -----------------------------------------------------------------------
@@ -293,6 +302,15 @@ interface IAttestationVerifierV1 {
         address[] calldata _consolidationCommitteeAttesters,
         uint256 _consolidationQuorum
     ) external;
+
+    /// @notice Validate self consolidation of pre-Pectra validator pubkeys. Only callable by River.
+    /// @param pubkeys The 48-byte BLS pubkeys to consolidate
+    /// @param maxFeePerConsolidation The maximum fee per consolidation to accept
+    /// @return requests The consolidation requests
+    function validateSelfConsolidation(bytes[] calldata pubkeys, uint256 maxFeePerConsolidation)
+        external
+        payable
+        returns (IWithdrawV1.ConsolidationRequest[] memory);
 
     // -----------------------------------------------------------------------
     // Validation entry point (called by River)

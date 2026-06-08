@@ -3510,6 +3510,36 @@ contract RiverV1PectraTests is RiverV1TestBase {
         assertEq(keeper.balance, valueSent - 1 gwei);
     }
 
+    function testRiverSelfConsolidationAsKeeperValidatesAndForwardsPrePectraPubkeys() public {
+        bytes memory pk0 = _consolidationPubkey(60);
+        bytes memory pk1 = _consolidationPubkey(61);
+        _seedPrePectraPubkey(pk0);
+        _seedPrePectraPubkey(pk1);
+
+        bytes[] memory pubkeys = new bytes[](2);
+        pubkeys[0] = pk0;
+        pubkeys[1] = pk1;
+
+        IWithdrawV1.ConsolidationRequest[] memory requests = new IWithdrawV1.ConsolidationRequest[](2);
+        requests[0] = IWithdrawV1.ConsolidationRequest({srcPubkeys: new bytes[](1), targetPubkey: pk0});
+        requests[0].srcPubkeys[0] = pk0;
+        requests[1] = IWithdrawV1.ConsolidationRequest({srcPubkeys: new bytes[](1), targetPubkey: pk1});
+        requests[1].srcPubkeys[0] = pk1;
+
+        uint256 valueSent = 5 gwei;
+        vm.deal(keeper, valueSent);
+
+        vm.expectCall(address(mockConsolidation), 1 gwei, bytes.concat(pk0, pk0));
+        vm.expectCall(address(mockConsolidation), 1 gwei, bytes.concat(pk1, pk1));
+        vm.prank(keeper);
+        vm.expectEmit(true, true, true, true);
+        emit PectraConsolidationRequested(requests, 1 gwei, keeper, valueSent);
+        river.selfConsolidation{value: valueSent}(pubkeys, 1 gwei);
+
+        assertEq(address(mockConsolidation).balance, 2 gwei);
+        assertEq(keeper.balance, valueSent - 2 gwei);
+    }
+
     function testRiverConsolidateNonAdminReverts() public {
         bytes[] memory srcPubkeys = new bytes[](1);
         srcPubkeys[0] = VALID_PUBKEY_48;
@@ -3520,6 +3550,15 @@ contract RiverV1PectraTests is RiverV1TestBase {
         vm.prank(bob);
         vm.expectRevert(abi.encodeWithSignature("OnlyKeeper()"));
         river.consolidate{value: 1 gwei}(requests, 1 gwei);
+    }
+
+    function testRiverSelfConsolidationNonKeeperReverts() public {
+        bytes[] memory pubkeys = new bytes[](1);
+        pubkeys[0] = VALID_PUBKEY_48;
+
+        vm.prank(bob);
+        vm.expectRevert(abi.encodeWithSignature("OnlyKeeper()"));
+        river.selfConsolidation(pubkeys, 1 gwei);
     }
 
     function testRiverConsolidateMultipleSrcPubkeysForwardsAll() public {

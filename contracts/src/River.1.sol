@@ -330,6 +330,17 @@ contract RiverV1 is
     }
 
     /// @inheritdoc IRiverV1
+    function selfConsolidation(bytes[] calldata pubkeys, uint256 maxFeePerConsolidation) external payable onlyKeeper {
+        IWithdrawV1.ConsolidationRequest[] memory requests = IAttestationVerifierV1(AttestationVerifierAddress.get())
+            .validateSelfConsolidation(pubkeys, maxFeePerConsolidation);
+        address excessFeeRecipient = msg.sender;
+        IWithdrawV1(payable(WithdrawalCredentials.getAddress())).consolidate{value: msg.value}(
+            requests, maxFeePerConsolidation, excessFeeRecipient
+        );
+        emit PectraConsolidationRequested(requests, maxFeePerConsolidation, excessFeeRecipient, msg.value);
+    }
+
+    /// @inheritdoc IRiverV1
     function consolidate(IWithdrawV1.ConsolidationRequest[] calldata requests, uint256 maxFeePerConsolidation)
         external
         payable

@@ -9,6 +9,7 @@ import "../../src/components/ConsensusLayerDepositManager.1.sol";
 import "../../src/interfaces/IAttestationVerifier.1.sol";
 import "../../src/interfaces/IDepositDataBuffer.sol";
 import "../../src/interfaces/IOperatorRegistry.1.sol";
+import "../../src/interfaces/IWithdraw.1.sol";
 import "../../src/libraries/LibErrors.sol";
 import "../../src/libraries/LibFundingDeltas.sol";
 import "../../src/libraries/BLS12_381.sol";
@@ -981,6 +982,80 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
             )
         );
         validator.migratePrePectraValidatorPubkeys(operatorIdx, 0, 1);
+    }
+
+    function testValidateSelfConsolidation_riverBuildsOneSelfRequestPerMigratedPubkey() public {
+        uint256 operatorIdx = 8;
+        prePectraRegistry.setPrePectraFundedValidatorCount(operatorIdx, 2);
+        bytes memory pk0 = _seedPrePectraValidator(operatorIdx, 0, 650);
+        bytes memory pk1 = _seedPrePectraValidator(operatorIdx, 1, 651);
+
+        vm.prank(admin);
+        validator.migratePrePectraValidatorPubkeys(operatorIdx, 0, 2);
+
+        bytes[] memory pubkeys = new bytes[](2);
+        pubkeys[0] = pk0;
+        pubkeys[1] = pk1;
+
+        vm.prank(address(dm));
+        IWithdrawV1.ConsolidationRequest[] memory requests = validator.validateSelfConsolidation(pubkeys, 1 gwei);
+
+        assertEq(requests.length, 2, "request count");
+        assertEq(requests[0].srcPubkeys.length, 1, "request 0 source count");
+        assertEq(requests[0].srcPubkeys[0], pk0, "request 0 source");
+        assertEq(requests[0].targetPubkey, pk0, "request 0 target");
+        assertEq(requests[1].srcPubkeys.length, 1, "request 1 source count");
+        assertEq(requests[1].srcPubkeys[0], pk1, "request 1 source");
+        assertEq(requests[1].targetPubkey, pk1, "request 1 target");
+    }
+
+    function testValidateSelfConsolidation_revertsWhenCallerNotRiver() public {
+        uint256 operatorIdx = 9;
+        prePectraRegistry.setPrePectraFundedValidatorCount(operatorIdx, 1);
+        bytes memory pubkey = _seedPrePectraValidator(operatorIdx, 0, 652);
+
+        vm.prank(admin);
+        validator.migratePrePectraValidatorPubkeys(operatorIdx, 0, 1);
+
+        bytes[] memory pubkeys = new bytes[](1);
+        pubkeys[0] = pubkey;
+
+        vm.prank(admin);
+        vm.expectRevert(abi.encodeWithSelector(LibErrors.Unauthorized.selector, admin));
+        validator.validateSelfConsolidation(pubkeys, 1 gwei);
+    }
+
+    function testValidateSelfConsolidation_revertsWhenBatchEmpty() public {
+        bytes[] memory pubkeys = new bytes[](0);
+
+        vm.prank(address(dm));
+        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InvalidSelfConsolidationEmptyPubkeys.selector));
+        validator.validateSelfConsolidation(pubkeys, 1 gwei);
+    }
+
+    function testValidateSelfConsolidation_revertsWhenPubkeyLengthInvalid() public {
+        bytes[] memory pubkeys = new bytes[](1);
+        pubkeys[0] = hex"1234";
+
+        vm.prank(address(dm));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAttestationVerifierV1.InvalidSelfConsolidationPubkeyLength.selector, uint256(0), uint256(2)
+            )
+        );
+        validator.validateSelfConsolidation(pubkeys, 1 gwei);
+    }
+
+    function testValidateSelfConsolidation_revertsWhenPubkeyNotFunded() public {
+        bytes memory pubkey = _fakePubkey(653);
+        bytes[] memory pubkeys = new bytes[](1);
+        pubkeys[0] = pubkey;
+
+        vm.prank(address(dm));
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.PrePectraValidatorPubkeyNotFunded.selector, pubkey)
+        );
+        validator.validateSelfConsolidation(pubkeys, 1 gwei);
     }
 
     function testRemovePrePectraValidatorPubkey_adminRemovesSubsetAndEmits() public {

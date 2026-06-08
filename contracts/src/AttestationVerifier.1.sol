@@ -10,6 +10,7 @@ import "./interfaces/IDepositContract.sol";
 import "./interfaces/IDepositDataBuffer.sol";
 import "./interfaces/IOperatorRegistry.1.sol";
 import "./interfaces/IRiver.1.sol";
+import "./interfaces/IWithdraw.1.sol";
 
 import "./libraries/BLS12_381.sol";
 import "./libraries/LibErrors.sol";
@@ -494,6 +495,35 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         }
 
         emit MigratedPrePectraValidatorPubkeys(operatorIndex, startIndex, stopIndex);
+    }
+
+    /// @inheritdoc IAttestationVerifierV1
+    function validateSelfConsolidation(bytes[] calldata pubkeys, uint256)
+        external
+        payable
+        onlyRiver
+        returns (IWithdrawV1.ConsolidationRequest[] memory)
+    {
+        uint256 len = pubkeys.length;
+        if (len == 0) {
+            revert InvalidSelfConsolidationEmptyPubkeys();
+        }
+
+        IWithdrawV1.ConsolidationRequest[] memory requests = new IWithdrawV1.ConsolidationRequest[](len);
+
+        for (uint256 i = 0; i < len; ++i) {
+            bytes calldata pubkey = pubkeys[i];
+            if (pubkey.length != DEPOSIT_PUBKEY_LENGTH) {
+                revert InvalidSelfConsolidationPubkeyLength(i, pubkey.length);
+            }
+            if (!PrePectraValidatorPubkeyLookup.isPubkeyFunded(pubkey)) {
+                revert PrePectraValidatorPubkeyNotFunded(pubkey);
+            }
+            requests[i] = IWithdrawV1.ConsolidationRequest({srcPubkeys: new bytes[](1), targetPubkey: pubkey});
+            requests[i].srcPubkeys[0] = pubkey;
+        }
+
+        return requests;
     }
 
     /// @inheritdoc IAttestationVerifierV1
