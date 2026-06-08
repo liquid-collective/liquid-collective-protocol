@@ -217,6 +217,7 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
         bob = makeAddr("bob");
         joe = makeAddr("joe");
         keeper = makeAddr("keeper");
+        consolidator = makeAddr("consolidator");
         consolidationCommitteeAttester1 = vm.addr(consolidationCommitteeAttesterPk1);
         consolidationCommitteeAttester2 = vm.addr(consolidationCommitteeAttesterPk2);
         rootAttester1 = vm.addr(rootAttesterPk1);
@@ -3727,19 +3728,15 @@ contract RiverV1ConsolidationMintTests is RiverV1TestBase {
     }
 
     function testMintLsETHForConsolidationUnallowedUserRevertsAtAllowlist() public {
-        address notKeeper = makeAddr("notKeeper");
         IAttestationVerifierV1.ConsolidationObject memory consolidation = _buildConsolidation(bob, 1 ether, 4);
-        vm.prank(admin);
+        vm.prank(consolidator);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", bob));
-        river.mintLsETHForConsolidation(consolidation);
-        vm.prank(notKeeper);
-        vm.expectRevert(abi.encodeWithSelector(IConsensusLayerDepositManagerV1.OnlyKeeper.selector));
         river.mintLsETHForConsolidation(consolidation);
     }
 
     function testMintLsETHForConsolidationZeroRecipientReverts() public {
         IAttestationVerifierV1.ConsolidationObject memory consolidation = _buildConsolidation(address(0), 1 ether, 4);
-        vm.prank(admin);
+        vm.prank(consolidator);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(0)));
         river.mintLsETHForConsolidation(consolidation);
     }
