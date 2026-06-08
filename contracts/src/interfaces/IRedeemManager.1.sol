@@ -3,6 +3,7 @@ pragma solidity 0.8.34;
 
 import "../state/redeemManager/RedeemQueue.2.sol";
 import "../state/redeemManager/WithdrawalStack.sol";
+import "../state/redeemManager/MaxRedeemableETHLockedStack.sol";
 
 /// @title Redeem Manager Interface (v1)
 /// @author Alluvial Finance Inc.
@@ -64,6 +65,26 @@ interface IRedeemManagerV1 {
     /// @param river The new river address
     event SetRiver(address river);
 
+    /// @notice Emitted when a MaxRedeemableETH lock event is appended to the stack
+    /// @dev Exactly one of fromFullExits / fromPartialWithdrawals / fromRebalancing is non-zero per emission
+    /// @param id The id of the new lock event
+    /// @param height The cumulative LsETH height at which the lock event starts
+    /// @param amount The LsETH-equivalent of the locked slice
+    /// @param lockedEth The new maxRedeemableEth cap for the slice (rate at lock time × amount)
+    /// @param fromFullExits The portion of `lockedEth` sourced from full validator exits (`exit_epoch`)
+    /// @param fromPartialWithdrawals The portion of `lockedEth` sourced from partial withdrawals (PendingPartialWithdrawal.withdrawable_epoch)
+    /// @param fromRebalancing The portion of `lockedEth` sourced from BalanceToDeposit → BalanceToRedeem rebalancing
+    event MaxRedeemableETHLocked(
+        uint32 indexed id,
+        uint256 height,
+        uint256 amount,
+        uint256 lockedEth,
+        uint256 fromFullExits,
+        uint256 fromPartialWithdrawals,
+        uint256 fromRebalancing
+    );
+
+
     /// @notice Thrown When a zero value is provided
     error InvalidZeroAmount();
 
@@ -112,10 +133,19 @@ interface IRedeemManagerV1 {
     /// @notice Thrown when an action is blocked because slashing containment mode is active
     error SlashingContainmentModeEnabled();
 
+    /// @notice Thrown when a lock attempt would push MaxRedeemableETHLockedDemand above RedeemDemand
+    /// @param attemptedLock The LsETH amount the caller tried to lock
+    /// @param unlockedHead The remaining LsETH in the queue that hasn't been locked yet
+    error LockExceedsRedeemDemand(uint256 attemptedLock, uint256 unlockedHead);
+
     /// @param _river The address of the River contract
     function initializeRedeemManagerV1(address _river) external;
 
     function initializeRedeemManagerV1_2() external;
+
+    /// @notice Initializes V1_3 — bootstraps NextLockHeight to the current RedeemDemand so the first
+    ///         post-upgrade MaxRedeemableETHLockedEvent sits behind all pre-upgrade requests
+    function initializeRedeemManagerV1_3() external;
 
     /// @notice Retrieve River address
     /// @return The address of River
@@ -209,4 +239,49 @@ interface IRedeemManagerV1 {
     /// @notice Pulls exceeding buffer eth
     /// @param _max The maximum amount that should be pulled
     function pullExceedingEth(uint256 _max) external;
+
+    /// @notice Appends a MaxRedeemableETHLockedEvent for an LsETH slice at a frozen ETH cap
+    /// @dev Called by River as part of an oracle report. Does not burn LsETH or transfer ETH;
+    ///      strictly updates the per-slice maxRedeemableEth cap. Reverts if the lock would push
+    ///      MaxRedeemableETHLockedDemand above RedeemDemand.
+    /// @param _lsETHToLock LsETH amount being locked (slice size)
+    /// @param _lockedEth The new maxRedeemableEth cap for this slice (ETH-denominated)
+    /// @param _fromFullExits Breakdown: portion sourced from full validator exits
+    /// @param _fromPartialWithdrawals Breakdown: portion sourced from partial withdrawals
+    /// @param _fromRebalancing Breakdown: portion sourced from BalanceToDeposit → BalanceToRedeem rebalancing
+    function lockMaxRedeemableETH(
+        uint256 _lsETHToLock,
+        uint256 _lockedEth,
+        uint256 _fromFullExits,
+        uint256 _fromPartialWithdrawals,
+        uint256 _fromRebalancing
+    ) external;
+
+    /// @notice Compute the aggregate effective cap (ETH) that bounds payout for the next `_lsETHDemand` LsETH of the queue
+    /// @dev Walks the head of MaxRedeemableETHLockedStack, summing `lockedEth` for the lock-covered portion;
+    ///      falls back to summing per-request maxRedeemableEth for any uncovered tail (pre-upgrade requests).
+    ///      Used by River at _reportWithdrawToRedeemManager to apply min(currentRate × demand, capForDemand).
+    /// @param _lsETHDemand The LsETH demand being considered
+    /// @return The aggregate ETH cap for that demand
+    function getEffectiveCapForDemand(uint256 _lsETHDemand) external view returns (uint256);
+
+    /// @notice Retrieve the global count of MaxRedeemableETH lock events
+    function getMaxRedeemableETHLockedEventCount() external view returns (uint256);
+
+    /// @notice Retrieve the details of a specific MaxRedeemableETH lock event
+    /// @param _lockEventId The id of the lock event
+    /// @return The lock event details
+    function getMaxRedeemableETHLockedEventDetails(uint32 _lockEventId)
+        external
+        view
+        returns (MaxRedeemableETHLockedStack.MaxRedeemableETHLockedEvent memory);
+
+    /// @notice Retrieve the LsETH currently covered by a lock event but not yet by a withdrawal event
+    /// @dev Computed dynamically as `NextLockHeight - max(head, firstLockHeight)` — there is no
+    ///      stored counter; the value reflects the live state of the queue head, the first lock
+    ///      event's position, and the cumulative lock heights.
+    function getMaxRedeemableETHLockedDemand() external view returns (uint256);
+
+    /// @notice Retrieve the height that will be used by the next appended lock event
+    function getNextLockHeight() external view returns (uint256);
 }

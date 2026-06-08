@@ -539,7 +539,7 @@ contract RiverV1Tests is RiverV1TestBase {
     }
 
     function testVersion() external {
-        assertEq(river.version(), "1.3.0");
+        assertEq(river.version(), "1.4.0");
     }
 
     function testOnlyAdminCanSetKeeper() public {

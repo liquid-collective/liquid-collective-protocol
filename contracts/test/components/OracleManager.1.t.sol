@@ -204,6 +204,19 @@ contract OracleManagerV1ExposeInitializer is OracleManagerV1 {
         amountToDeposit += amountToRedeem;
         amountToRedeem = 0;
     }
+
+    event Internal_LockMaxRedeemableETHForNewlyInactive(
+        uint256 newlyInactiveExitedETH, uint256 newlyInactivePartialWithdrawalPrincipal
+    );
+
+    function _lockMaxRedeemableETHForNewlyInactive(
+        uint256 newlyInactiveExitedETH,
+        uint256 newlyInactivePartialWithdrawalPrincipal
+    ) internal override {
+        emit Internal_LockMaxRedeemableETHForNewlyInactive(
+            newlyInactiveExitedETH, newlyInactivePartialWithdrawalPrincipal
+        );
+    }
 }
 
 contract OracleManagerV1Tests is Test {

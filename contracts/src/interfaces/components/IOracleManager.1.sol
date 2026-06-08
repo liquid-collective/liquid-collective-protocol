@@ -158,6 +158,15 @@ interface IOracleManagerV1 {
         // This flag is deactivated when a bottom threshold is met, this means that when we reach the upper threshold and activate the flag, we will deactivate it when we reach the bottom threshold and not before
         // when active, no more validator exits can be requested by the protocol
         bool slashingContainmentMode;
+        // ETH-denominated principal from validators that reached exit_epoch since the previous accepted report
+        // drives the inactivity portion of the MaxRedeemableETHLockedEvent emitted in this report
+        // bounded on-chain by the delta of validatorsExitedBalance vs the previous report
+        uint256 newlyInactiveExitedETH;
+        // ETH-denominated principal from partial withdrawals (EIP-7002 / Pectra 0x02 sweeps) that reached
+        // their PendingPartialWithdrawal.withdrawable_epoch since the previous accepted report — i.e. the slot
+        // when process_withdrawals decrements the validator's balance and queues the sweep
+        // bounded on-chain by the per-report partial-withdrawal principal tracker (Pectra-era field)
+        uint256 newlyInactivePartialWithdrawalPrincipal;
     }
 
     /// @notice The format of the oracle report in storage
@@ -172,6 +181,8 @@ interface IOracleManagerV1 {
         bool rebalanceDepositToRedeemMode;
         bool slashingContainmentMode;
         uint256 totalDepositedActivatedETH;
+        uint256 newlyInactiveExitedETH;
+        uint256 newlyInactivePartialWithdrawalPrincipal;
     }
 
     /// @notice Get oracle address
