@@ -236,17 +236,6 @@ interface IAttestationVerifierV1 {
     /// @param pubkey The offending 48-byte BLS pubkey
     error PubkeyAlreadyFunded(bytes pubkey);
 
-    /// @notice The pre-Pectra migration range is empty or reversed.
-    /// @param startIndex The first requested key index
-    /// @param stopIndex The exclusive stop key index
-    error InvalidPrePectraMigrationRange(uint256 startIndex, uint256 stopIndex);
-
-    /// @notice The pre-Pectra migration range exceeds the legacy funded validator count.
-    /// @param operatorIndex The operator whose keys were requested
-    /// @param stopIndex The requested exclusive stop key index
-    /// @param funded The legacy funded validator count
-    error PrePectraMigrationStopIndexExceedsFunded(uint256 operatorIndex, uint256 stopIndex, uint256 funded);
-
     /// @notice A legacy pubkey read during pre-Pectra migration is not 48 bytes.
     /// @param operatorIndex The operator whose key was read
     /// @param keyIndex The legacy key index

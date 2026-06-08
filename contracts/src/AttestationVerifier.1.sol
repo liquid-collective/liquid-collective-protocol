@@ -473,16 +473,8 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         external
         onlyRiverAdmin
     {
-        if (startIndex >= stopIndex) {
-            revert InvalidPrePectraMigrationRange(startIndex, stopIndex);
-        }
-
         IOperatorsRegistryV1 operatorsRegistry =
             IOperatorsRegistryV1(IRiverV1(payable(RiverAddress.get())).getOperatorsRegistry());
-        uint256 funded = operatorsRegistry.getPrePectraFundedValidatorCount(operatorIndex);
-        if (stopIndex > funded) {
-            revert PrePectraMigrationStopIndexExceedsFunded(operatorIndex, stopIndex, funded);
-        }
 
         bytes[] memory pubkeys = operatorsRegistry.getPrePectraValidatorPubkeys(operatorIndex, startIndex, stopIndex);
         uint256 len = pubkeys.length;

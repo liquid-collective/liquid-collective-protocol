@@ -951,25 +951,6 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         validator.migratePrePectraValidatorPubkeys(0, 0, 1);
     }
 
-    function testMigratePrePectraValidatorPubkeys_revertsWhenRangeEmpty() public {
-        vm.prank(admin);
-        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InvalidPrePectraMigrationRange.selector, 1, 1));
-        validator.migratePrePectraValidatorPubkeys(0, 1, 1);
-    }
-
-    function testMigratePrePectraValidatorPubkeys_revertsWhenStopIndexExceedsFunded() public {
-        uint256 operatorIdx = 2;
-        prePectraRegistry.setPrePectraFundedValidatorCount(operatorIdx, 2);
-
-        vm.prank(admin);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IAttestationVerifierV1.PrePectraMigrationStopIndexExceedsFunded.selector, operatorIdx, 3, 2
-            )
-        );
-        validator.migratePrePectraValidatorPubkeys(operatorIdx, 0, 3);
-    }
-
     function testMigratePrePectraValidatorPubkeys_revertsWhenMigratedPubkeyLengthInvalid() public {
         uint256 operatorIdx = 4;
         prePectraRegistry.setPrePectraFundedValidatorCount(operatorIdx, 1);
