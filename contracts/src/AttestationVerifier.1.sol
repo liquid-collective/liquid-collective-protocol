@@ -498,7 +498,21 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
 
     /// @inheritdoc IAttestationVerifierV1
     function removePrePectraValidatorPubkey(bytes[] calldata pubkeys) external onlyRiverAdmin {
-        PrePectraValidatorPubkeyLookup.remove(pubkeys);
+        uint256 len = pubkeys.length;
+        if (len == 0) {
+            revert InvalidPrePectraRemovalEmptyPubkeys();
+        }
+
+        for (uint256 i = 0; i < len; ++i) {
+            bytes calldata pubkey = pubkeys[i];
+            if (pubkey.length != DEPOSIT_PUBKEY_LENGTH) {
+                revert InvalidPrePectraRemovalPubkeyLength(i, pubkey.length);
+            }
+            if (!PrePectraValidatorPubkeyLookup.isPubkeyFunded(pubkey)) {
+                revert PrePectraValidatorPubkeyNotFunded(pubkey);
+            }
+            PrePectraValidatorPubkeyLookup.remove(pubkey);
+        }
         emit RemovedPrePectraValidatorPubkeys(pubkeys);
     }
 

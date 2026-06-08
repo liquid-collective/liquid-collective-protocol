@@ -252,6 +252,18 @@ interface IAttestationVerifierV1 {
     /// @param length The observed pubkey length
     error InvalidPrePectraMigrationPubkeyLength(uint256 operatorIndex, uint256 keyIndex, uint256 length);
 
+    /// @notice The pre-Pectra removal batch is empty.
+    error InvalidPrePectraRemovalEmptyPubkeys();
+
+    /// @notice A pubkey supplied for pre-Pectra removal is not 48 bytes.
+    /// @param index The index into the removal batch
+    /// @param length The observed pubkey length
+    error InvalidPrePectraRemovalPubkeyLength(uint256 index, uint256 length);
+
+    /// @notice A pubkey supplied for pre-Pectra removal has not been migrated.
+    /// @param pubkey The 48-byte BLS pubkey
+    error PrePectraValidatorPubkeyNotFunded(bytes pubkey);
+
     // -----------------------------------------------------------------------
     // Initialization
     // -----------------------------------------------------------------------
@@ -345,7 +357,8 @@ interface IAttestationVerifierV1 {
     function migratePrePectraValidatorPubkeys(uint256 operatorIndex, uint256 startIndex, uint256 stopIndex) external;
 
     /// @notice Remove a chunk of pre-Pectra funded validator pubkeys from the verifier lookup.
-    /// @dev Only callable by River admin.
+    /// @dev Only callable by River admin. Reverts if the batch is empty, any pubkey is not 48
+    ///      bytes, or any pubkey is not currently in the pre-Pectra lookup.
     /// @param pubkeys The 48-byte BLS pubkeys to remove
     function removePrePectraValidatorPubkey(bytes[] calldata pubkeys) external;
 

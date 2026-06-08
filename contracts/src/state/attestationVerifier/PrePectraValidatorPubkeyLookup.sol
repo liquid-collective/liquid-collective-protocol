@@ -26,12 +26,17 @@ library PrePectraValidatorPubkeyLookup {
     }
 
     /// @notice Clear the entry for a pubkey.
+    /// @param pubkey The raw 48-byte BLS pubkey.
+    function remove(bytes memory pubkey) internal {
+        bytes32 slot = keccak256(abi.encode(PRE_PECTRA_VALIDATOR_PUBKEY_LOOKUP_MAPPING_BASE_SLOT, pubkey));
+        LibUnstructuredStorage.setStorageBool(slot, false);
+    }
+
+    /// @notice Clear the entries for a batch of pubkeys.
     /// @param pubkeys The raw 48-byte BLS pubkeys.
     function remove(bytes[] memory pubkeys) internal {
         for (uint256 i = 0; i < pubkeys.length; i++) {
-            bytes memory pubkey = pubkeys[i];
-            bytes32 slot = keccak256(abi.encode(PRE_PECTRA_VALIDATOR_PUBKEY_LOOKUP_MAPPING_BASE_SLOT, pubkey));
-            LibUnstructuredStorage.setStorageBool(slot, false);
+            remove(pubkeys[i]);
         }
     }
 }

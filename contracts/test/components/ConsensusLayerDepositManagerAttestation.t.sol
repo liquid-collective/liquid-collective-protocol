@@ -1026,6 +1026,39 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         validator.removePrePectraValidatorPubkey(pubkeys);
     }
 
+    function testRemovePrePectraValidatorPubkey_revertsWhenBatchEmpty() public {
+        bytes[] memory pubkeys = new bytes[](0);
+
+        vm.prank(admin);
+        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InvalidPrePectraRemovalEmptyPubkeys.selector));
+        validator.removePrePectraValidatorPubkey(pubkeys);
+    }
+
+    function testRemovePrePectraValidatorPubkey_revertsWhenPubkeyLengthInvalid() public {
+        bytes[] memory pubkeys = new bytes[](1);
+        pubkeys[0] = hex"1234";
+
+        vm.prank(admin);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAttestationVerifierV1.InvalidPrePectraRemovalPubkeyLength.selector, uint256(0), uint256(2)
+            )
+        );
+        validator.removePrePectraValidatorPubkey(pubkeys);
+    }
+
+    function testRemovePrePectraValidatorPubkey_revertsWhenPubkeyNotFunded() public {
+        bytes memory pubkey = _fakePubkey(641);
+        bytes[] memory pubkeys = new bytes[](1);
+        pubkeys[0] = pubkey;
+
+        vm.prank(admin);
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.PrePectraValidatorPubkeyNotFunded.selector, pubkey)
+        );
+        validator.removePrePectraValidatorPubkey(pubkeys);
+    }
+
     function testTopUp_migratedPrePectraPubkeyStillRevertsInValidate() public {
         uint256 operatorIdx = 3;
         uint256 seed = 620;
