@@ -132,35 +132,44 @@ contract WithdrawV1 is IWithdrawV1, Initializable, ReentrancyGuard, IProtocolVer
 
         IAttestationVerifierV1 attestationVerifier = IAttestationVerifierV1(AttestationVerifierAddress.get());
         for (uint256 i = 0; i < requests.length; i++) {
-            bytes calldata targetPubkey = requests[i].targetPubkey;
-            _validatePubkeyLength(targetPubkey);
-
-            bool isTargetFunded = attestationVerifier.isPubkeyFunded(targetPubkey);
-            bool isSelfConsolidation =
-                requests[i].srcPubkeys.length == 1 && keccak256(requests[i].srcPubkeys[0]) == keccak256(targetPubkey);
-
-            if (
-                !isTargetFunded && (!isSelfConsolidation || !_isKnownValidatorPubkey(attestationVerifier, targetPubkey))
-            ) {
-                revert TargetPubkeyNotFunded(targetPubkey);
-            }
-
-            for (uint256 j = 0; j < requests[i].srcPubkeys.length; j++) {
-                bytes calldata srcPubkey = requests[i].srcPubkeys[j];
-                _validatePubkeyLength(srcPubkey);
-                if (!_isKnownValidatorPubkey(attestationVerifier, srcPubkey)) {
-                    revert SourcePubkeyNotFunded(srcPubkey);
-                }
-
-                bytes memory callData = bytes.concat(requests[i].srcPubkeys[j], requests[i].targetPubkey);
-                (bool writeOK,) = consolidationContract.call{value: fee}(callData);
-                if (!writeOK) {
-                    revert RequestFailed();
-                }
-                emit ConsolidationRequested(requests[i].srcPubkeys[j], requests[i].targetPubkey, fee);
-            }
+            _processConsolidationRequest(requests[i], consolidationContract, attestationVerifier, fee);
         }
         _refundExcessFee(msg.value, totalFeeRequired, excessFeeRecipient);
+    }
+
+    /// @notice Internal: validate and dispatch a single consolidation request to the EL contract
+    /// @dev Split out of `consolidate` to keep the outer frame small enough for non-viaIR builds (forge coverage).
+    function _processConsolidationRequest(
+        IWithdrawV1.ConsolidationRequest calldata request,
+        address consolidationContract,
+        IAttestationVerifierV1 attestationVerifier,
+        uint256 fee
+    ) internal {
+        bytes calldata targetPubkey = request.targetPubkey;
+        _validatePubkeyLength(targetPubkey);
+
+        bool isTargetFunded = attestationVerifier.isPubkeyFunded(targetPubkey);
+        bool isSelfConsolidation =
+            request.srcPubkeys.length == 1 && keccak256(request.srcPubkeys[0]) == keccak256(targetPubkey);
+
+        if (!isTargetFunded && (!isSelfConsolidation || !_isKnownValidatorPubkey(attestationVerifier, targetPubkey))) {
+            revert TargetPubkeyNotFunded(targetPubkey);
+        }
+
+        for (uint256 j = 0; j < request.srcPubkeys.length; j++) {
+            bytes calldata srcPubkey = request.srcPubkeys[j];
+            _validatePubkeyLength(srcPubkey);
+            if (!_isKnownValidatorPubkey(attestationVerifier, srcPubkey)) {
+                revert SourcePubkeyNotFunded(srcPubkey);
+            }
+
+            bytes memory callData = bytes.concat(srcPubkey, targetPubkey);
+            (bool writeOK,) = consolidationContract.call{value: fee}(callData);
+            if (!writeOK) {
+                revert RequestFailed();
+            }
+            emit ConsolidationRequested(srcPubkey, targetPubkey, fee);
+        }
     }
 
     /// @notice Internal utility to set the river address
