@@ -346,13 +346,14 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
                 uint256 increaseInConsolidation = _report.totalExternalConsolidationsAmountReported
                     - lastStoredReport.totalExternalConsolidationsAmountReported;
                 vars.lastConsolidationBuffer = ConsolidationBuffer.get();
+
                 if (increaseInConsolidation > vars.lastConsolidationBuffer) {
-                    revert InvalidTotalConsolidationsAmountReportedIncrease(
-                        lastStoredReport.totalExternalConsolidationsAmountReported,
-                        _report.totalExternalConsolidationsAmountReported
-                    );
+                    // this means that the buffer is completely covered and the extra amount will go to rewards
+                    // as they would have already been accounted for in the validators balance increase we don't need to account for it
+                    vars.totalExternalConsolidationsAmountReportedIncrease = vars.lastConsolidationBuffer;
+                } else {
+                    vars.totalExternalConsolidationsAmountReportedIncrease = increaseInConsolidation;
                 }
-                vars.totalExternalConsolidationsAmountReportedIncrease = increaseInConsolidation;
             }
 
             // we compute the new skimmed amount by taking the delta between reports
