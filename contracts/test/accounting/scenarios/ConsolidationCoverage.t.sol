@@ -136,25 +136,4 @@ contract ConsolidationCoverageScenarioTest is AccountingInvariants {
         assertEq(river.totalUnderlyingSupply(), underlyingBefore, "total underlying unchanged (netted out)");
         assertEq(river.totalSupply(), sharesBefore, "no fee shares minted on consolidated principal");
     }
-
-    /// @notice A reported consolidation increase larger than the available buffer reverts through the
-    ///         real River -> Oracle flow with InvalidTotalConsolidationsAmountReportedIncrease.
-    function testConsolidationIncreaseExceedingBufferReverts() public {
-        _baseline();
-
-        // Buffer smaller than the increase we are about to report.
-        uint256 buffer = 1 ether;
-        vm.store(address(river), CONSOLIDATION_BUFFER_SLOT, bytes32(buffer));
-
-        uint256 delta = 2 ether; // exceeds the 1 ether buffer
-        IOracleManagerV1.ConsensusLayerReport memory report = _buildBadReport(false, false);
-        report.totalExternalConsolidationsAmountReported = delta;
-        vm.prank(oracleMember);
-        vm.expectRevert(
-            abi.encodeWithSignature(
-                "InvalidTotalConsolidationsAmountReportedIncrease(uint256,uint256)", uint256(0), delta
-            )
-        );
-        oracle.reportConsensusLayerData(report);
-    }
 }

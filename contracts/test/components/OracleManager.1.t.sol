@@ -704,30 +704,6 @@ contract OracleManagerV1CoverageTests is OracleManagerV1Tests {
         assertEq(om.debug_getTotalUnderlyingBalance(), assetBalanceBefore);
     }
 
-    /// Asserts that setConsensusLayerData reverts with InvalidTotalConsolidationsAmountReportedIncrease when the
-    /// increase in totalExternalConsolidationsAmountReported exceeds the available ConsolidationBuffer.
-    function testSetConsensusLayerDataRevertsOnConsolidationsIncreaseExceedingBuffer() public {
-        OracleManagerV1ExposeInitializer om = OracleManagerV1ExposeInitializer(address(oracleManager));
-
-        vm.store(address(om), CONSOLIDATION_BUFFER_SLOT, bytes32(uint256(2 ether)));
-        om.supersedeTotalConsolidationsAmountReported(1 ether);
-
-        uint256 epoch = epochsPerFrame;
-        vm.warp(genesisTime + (epoch + epochsToAssumedFinality) * slotsPerEpoch * secondsPerSlot);
-        IOracleManagerV1.ConsensusLayerReport memory clr;
-        clr.epoch = epoch;
-        clr.exitedETHPerOperator = new uint256[](1);
-        clr.totalExternalConsolidationsAmountReported = 5 ether; // delta = 4 ether > 2 ether buffer
-
-        vm.prank(oracle);
-        vm.expectRevert(
-            abi.encodeWithSignature(
-                "InvalidTotalConsolidationsAmountReportedIncrease(uint256,uint256)", 1 ether, 5 ether
-            )
-        );
-        oracleManager.setConsensusLayerData(clr);
-    }
-
     /// Asserts that an unchanged totalExternalConsolidationsAmountReported neither reverts nor reduces the buffer, and that
     /// the value is persisted (confirms the decrease guard is `<`, not `<=`).
     function testSetConsensusLayerDataConsolidationsUnchangedKeepsBuffer() public {
@@ -756,8 +732,8 @@ contract OracleManagerV1CoverageTests is OracleManagerV1Tests {
         assertEq(om.debug_getTotalUnderlyingBalance(), assetBalanceBefore);
     }
 
-    /// Fuzzes the full consolidation branch: decrease revert, increase-exceeds-buffer revert, buffer reduction on
-    /// increase, and the unchanged case. Generalizes the targeted tests above.
+    /// Fuzzes the full consolidation branch: decrease revert, capped buffer reduction on increase, APR-bound
+    /// revert on unbuffered excess, and the unchanged case. Generalizes the targeted tests above.
     function testFuzzSetConsensusLayerDataConsolidations(
         uint256 lastConsolidation,
         uint256 newConsolidation,
@@ -791,31 +767,44 @@ contract OracleManagerV1CoverageTests is OracleManagerV1Tests {
                 )
             );
             oracleManager.setConsensusLayerData(clr);
-        } else if (newConsolidation - lastConsolidation > buffer) {
-            vm.prank(oracle);
-            vm.expectRevert(
-                abi.encodeWithSignature(
-                    "InvalidTotalConsolidationsAmountReportedIncrease(uint256,uint256)",
-                    lastConsolidation,
-                    newConsolidation
-                )
-            );
-            oracleManager.setConsensusLayerData(clr);
         } else if (newConsolidation > lastConsolidation) {
             uint256 delta = newConsolidation - lastConsolidation;
             // The consolidated principal lands in validatorsBalance in the same report, so the buffer reduction
-            // offsets it (mirrors the production flow) instead of registering as an out-of-bound loss.
+            // offsets as much of it as the current buffer can cover (mirrors the production flow).
             clr.validatorsBalance = delta;
             uint256 assetBalanceBefore = om.debug_getTotalUnderlyingBalance();
-            vm.expectEmit(true, true, true, true, address(om));
-            emit Internal_SetConsolidationBuffer(buffer, buffer - delta);
-            vm.prank(oracle);
-            oracleManager.setConsensusLayerData(clr);
-            assertEq(
-                oracleManager.getLastConsensusLayerReport().totalExternalConsolidationsAmountReported, newConsolidation
-            );
-            // validatorsBalance +delta and buffer -delta cancel, so the total underlying is unchanged.
-            assertEq(om.debug_getTotalUnderlyingBalance(), assetBalanceBefore);
+            uint256 bufferReduction = LibUint256.min(delta, buffer);
+            uint256 expectedPostReportBalance = assetBalanceBefore + (delta - bufferReduction);
+            uint256 timeElapsed = debug_timeBetweenEpochs(om.getCLSpec(), 0, epoch);
+            ReportBounds.ReportBoundsStruct memory rb = om.getReportBounds();
+            uint256 maxIncrease = debug_maxIncrease(rb, assetBalanceBefore, timeElapsed);
+
+            if (expectedPostReportBalance > assetBalanceBefore + maxIncrease) {
+                vm.prank(oracle);
+                vm.expectRevert(
+                    abi.encodeWithSignature(
+                        "TotalValidatorBalanceIncreaseOutOfBound(uint256,uint256,uint256,uint256)",
+                        assetBalanceBefore,
+                        expectedPostReportBalance,
+                        timeElapsed,
+                        rb.annualAprUpperBound
+                    )
+                );
+                oracleManager.setConsensusLayerData(clr);
+            } else {
+                if (bufferReduction > 0) {
+                    vm.expectEmit(true, true, true, true, address(om));
+                    emit Internal_SetConsolidationBuffer(buffer, buffer - bufferReduction);
+                }
+                vm.prank(oracle);
+                oracleManager.setConsensusLayerData(clr);
+                assertEq(
+                    oracleManager.getLastConsensusLayerReport().totalExternalConsolidationsAmountReported,
+                    newConsolidation
+                );
+                assertEq(uint256(vm.load(address(oracleManager), CONSOLIDATION_BUFFER_SLOT)), buffer - bufferReduction);
+                assertEq(om.debug_getTotalUnderlyingBalance(), expectedPostReportBalance);
+            }
         } else {
             vm.prank(oracle);
             oracleManager.setConsensusLayerData(clr);
