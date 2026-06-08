@@ -235,6 +235,8 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
     event MigratedPrePectraValidatorPubkeys(uint256 indexed operatorIndex, uint256 startIndex, uint256 stopIndex);
     event RemovedPrePectraValidatorPubkeys(bytes[] pubkeys);
+    event AddedPectraValidatorPubkeys(bytes[] pubkeys);
+    event RemovedPectraValidatorPubkeys(bytes[] pubkeys);
     event FundedValidatorKeys(uint256 indexed operatorIndex, bytes[] publicKeys, bool deferred);
     event SetInFlightETH(uint256 oldInFlightETH, uint256 newInFlightETH);
     event SetTotalDepositedETH(uint256 oldTotalDepositedETH, uint256 newTotalDepositedETH);
@@ -978,6 +980,11 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         pubkeys[0] = pk0;
         pubkeys[1] = pk1;
 
+        vm.expectEmit(false, false, false, true);
+        emit RemovedPrePectraValidatorPubkeys(pubkeys);
+        vm.expectEmit(false, false, false, true);
+        emit AddedPectraValidatorPubkeys(pubkeys);
+
         vm.prank(address(dm));
         IWithdrawV1.ConsolidationRequest[] memory requests = validator.validateSelfConsolidation(pubkeys);
 
@@ -988,6 +995,11 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         assertEq(requests[1].srcPubkeys.length, 1, "request 1 source count");
         assertEq(requests[1].srcPubkeys[0], pk1, "request 1 source");
         assertEq(requests[1].targetPubkey, pk1, "request 1 target");
+
+        assertFalse(validator.isPrePectraValidatorPubkeyFunded(pk0), "pk0 cleared from pre-Pectra");
+        assertFalse(validator.isPrePectraValidatorPubkeyFunded(pk1), "pk1 cleared from pre-Pectra");
+        assertTrue(validator.isPubkeyFunded(pk0), "pk0 added to post-Pectra");
+        assertTrue(validator.isPubkeyFunded(pk1), "pk1 added to post-Pectra");
     }
 
     function testValidateSelfConsolidation_revertsWhenCallerNotRiver() public {
@@ -1841,8 +1853,15 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         );
 
         (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits, topUps);
+
+        vm.expectEmit(false, false, false, true, address(validator));
+        emit AddedPectraValidatorPubkeys(expectedPubkeys);
+
         vm.prank(keeper);
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+
+        assertTrue(validator.isPubkeyFunded(deposits[0].pubkey), "deposit 0 pubkey recorded in post-Pectra lookup");
+        assertTrue(validator.isPubkeyFunded(deposits[1].pubkey), "deposit 1 pubkey recorded in post-Pectra lookup");
     }
 
     /// @dev `LibFundingDeltas.build` aggregates fundedETH across BOTH the deposits[] and

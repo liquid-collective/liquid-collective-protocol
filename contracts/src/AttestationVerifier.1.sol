@@ -456,6 +456,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         for (uint256 i = 0; i < len; ++i) {
             PectraValidatorPubkeyLookup.add(pubkeys[i]);
         }
+        emit AddedPectraValidatorPubkeys(pubkeys);
     }
 
     /// @inheritdoc IAttestationVerifierV1
@@ -510,9 +511,14 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
             if (!PrePectraValidatorPubkeyLookup.isPubkeyFunded(pubkey)) {
                 revert PrePectraValidatorPubkeyNotFunded(pubkey);
             }
+            PrePectraValidatorPubkeyLookup.remove(pubkey);
+            PectraValidatorPubkeyLookup.add(pubkey);
             requests[i] = IWithdrawV1.ConsolidationRequest({srcPubkeys: new bytes[](1), targetPubkey: pubkey});
             requests[i].srcPubkeys[0] = pubkey;
         }
+
+        emit RemovedPrePectraValidatorPubkeys(pubkeys);
+        emit AddedPectraValidatorPubkeys(pubkeys);
 
         return requests;
     }

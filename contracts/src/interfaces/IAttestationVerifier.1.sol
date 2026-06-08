@@ -89,6 +89,23 @@ interface IAttestationVerifierV1 {
     /// @param pubkeys The 48-byte BLS pubkeys that were removed
     event RemovedPrePectraValidatorPubkeys(bytes[] pubkeys);
 
+    /// @notice Emitted when a batch of validator pubkeys is added to the post-Pectra lookup.
+    /// @dev    Fires on every path that records membership in `PectraValidatorPubkeyLookup`:
+    ///           - `recordNewlyFundedPubkeys` (initial-deposit callback from River),
+    ///           - `validateSelfConsolidation` (self-consolidation upgrade; pubkeys are
+    ///             simultaneously cleared from the pre-Pectra lookup — see
+    ///             `RemovedPrePectraValidatorPubkeys` paired emission semantics).
+    /// @param pubkeys The 48-byte BLS pubkeys that were added
+    event AddedPectraValidatorPubkeys(bytes[] pubkeys);
+
+    /// @notice Emitted when a batch of validator pubkeys is removed from the post-Pectra lookup.
+    /// @dev    Reserved for future EL-withdrawal code that clears membership when a validator
+    ///         exits and is no longer controlled by the protocol. No on-chain path emits this
+    ///         today; the declaration is here so future callers stay consistent with the
+    ///         existing `Added` / `Removed` symmetry on the pre-Pectra side.
+    /// @param pubkeys The 48-byte BLS pubkeys that were removed
+    event RemovedPectraValidatorPubkeys(bytes[] pubkeys);
+
     // -----------------------------------------------------------------------
     // Errors
     // -----------------------------------------------------------------------
@@ -292,7 +309,15 @@ interface IAttestationVerifierV1 {
         uint256 _consolidationQuorum
     ) external;
 
-    /// @notice Validate self consolidation of pre-Pectra validator pubkeys. Only callable by River.
+    /// @notice Validate and prepare self-consolidation requests for pre-Pectra validator pubkeys.
+    ///         Only callable by River.
+    /// @dev    For each pubkey: requires membership in the pre-Pectra lookup, then promotes it to
+    ///         the post-Pectra lookup (removes the pre-Pectra entry and adds a post-Pectra entry)
+    ///         and builds a `src == target` self-consolidation request. The promotion reflects
+    ///         the on-chain 0x01→0x02 upgrade so the validator is recognised by downstream
+    ///         post-Pectra paths (e.g. top-ups, normal consolidations). The lookup mutations
+    ///         atomically revert with the rest of the transaction if the downstream
+    ///         consolidation call fails.
     /// @param pubkeys The 48-byte BLS pubkeys to consolidate
     /// @return requests The consolidation requests
     function validateSelfConsolidation(bytes[] calldata pubkeys)
