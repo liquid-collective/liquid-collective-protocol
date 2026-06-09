@@ -3131,6 +3131,21 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         );
     }
 
+    /// Asserts that initRiverV1_3 rejects zero withdrawal credentials before storing V1_3 dependencies.
+    function testInitRiverV1_3RevertsOnZeroWithdrawalCredentials() public {
+        _initRiverAndV1_2();
+        AttestationVerifierV1 v = _deployValidatorFor(address(river));
+        vm.prank(admin);
+        vm.expectRevert(abi.encodeWithSignature("InvalidWithdrawalCredentials()"));
+        river.initRiverV1_3(
+            bytes32(0),
+            address(consolidationCoverageFund),
+            address(v),
+            address(externalConsolidationRecipientMapping),
+            consolidator
+        );
+    }
+
     /// Asserts that initRiverV1_3 reverts when the external consolidation recipient mapping address is zero.
     function testInitRiverV1_3RevertsOnZeroExternalConsolidationRecipientMapping() public {
         _initRiverAndV1_2();

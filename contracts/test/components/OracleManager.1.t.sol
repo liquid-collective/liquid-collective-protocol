@@ -591,6 +591,25 @@ contract OracleManagerV1CoverageTests is OracleManagerV1Tests {
         oracleManager.setConsensusLayerData(clr);
     }
 
+    /// Asserts that setConsensusLayerData reverts when reported validator count decreases.
+    function testSetConsensusLayerDataRevertsOnValidatorCountDecrease() public {
+        // Slot 5 in StoredConsensusLayerReport is validatorsCount.
+        vm.store(address(oracleManager), bytes32(uint256(LAST_CLR_BASE_SLOT) + 5), bytes32(uint256(10)));
+
+        uint256 epoch = epochsPerFrame;
+        vm.warp(genesisTime + (epoch + epochsToAssumedFinality) * slotsPerEpoch * secondsPerSlot);
+        IOracleManagerV1.ConsensusLayerReport memory clr;
+        clr.epoch = epoch;
+        clr.validatorsBalance = 0;
+        clr.validatorsExitedBalance = 0;
+        clr.validatorsSkimmedBalance = 0;
+        clr.validatorsCount = 9;
+        clr.exitedETHPerOperator = new uint256[](1);
+        vm.prank(oracle);
+        vm.expectRevert(abi.encodeWithSignature("InvalidValidatorCountReport(uint256,uint256)", 9, 10));
+        oracleManager.setConsensusLayerData(clr);
+    }
+
     /// Asserts that with a non-zero ConsolidationBuffer, setConsensusLayerData calls _pullConsolidationCoverageFunds
     /// with the buffer amount and pulls the available amount.
     function testSetConsensusLayerDataConsolidationBufferNonZero() public {

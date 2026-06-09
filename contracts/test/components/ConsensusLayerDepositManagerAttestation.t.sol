@@ -16,6 +16,7 @@ import "../../src/libraries/BLS12_381.sol";
 import "../../src/state/shared/AttestationVerifierAddress.sol";
 import "../utils/LibImplementationUnbricker.sol";
 import "../mocks/DepositContractEnhancedMock.sol";
+import "../mocks/DepositContractInvalidMock.sol";
 
 // ---------------------------------------------------------------------------
 // Mock DepositDataBuffer — no real implementation exists; stores batches by ID
@@ -632,6 +633,25 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
         vm.prank(keeper);
         vm.expectRevert(IAttestationVerifierV1.NotEnoughFunds.selector);
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+    }
+
+    function testRevert_errorOnDepositWhenDepositContractDoesNotKeepETH() public {
+        DepositContractInvalidMock invalidDepositContract = new DepositContractInvalidMock();
+        dm.initialize(address(invalidDepositContract), withdrawalCredentials);
+
+        IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](1);
+        deposits[0] = _makeDeposit(0, 0);
+
+        bytes32 bufferId = keccak256(abi.encode(_batchOf(deposits)));
+        buffer.submitDepositData(bufferId, _batchOf(deposits));
+        bytes32 rootHash = invalidDepositContract.get_deposit_root();
+        bytes[] memory sigs = new bytes[](2);
+        sigs[0] = _signAttestation(rootAttesterPk1, bufferId, rootHash);
+        sigs[1] = _signAttestation(rootAttesterPk2, bufferId, rootHash);
+
+        vm.prank(keeper);
+        vm.expectRevert(IConsensusLayerDepositManagerV1.ErrorOnDeposit.selector);
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
     }
 
