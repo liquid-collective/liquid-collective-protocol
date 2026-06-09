@@ -953,6 +953,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         uint256 topUpsSeen = 0;
         for (uint256 i = 0; i < logs.length; i++) {
             if (logs[i].topics.length == 0) continue;
+            if (logs[i].emitter != address(dm)) continue;
             if (logs[i].topics[0] == depositsTopic) depositsSeen++;
             if (logs[i].topics[0] == topUpsTopic) {
                 topUpsSeen++;
@@ -994,6 +995,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         uint256 topUpsSeen = 0;
         for (uint256 i = 0; i < logs.length; i++) {
             if (logs[i].topics.length == 0) continue;
+            if (logs[i].emitter != address(dm)) continue;
             if (logs[i].topics[0] == depositsTopic) depositsSeen++;
             if (logs[i].topics[0] == topUpsTopic) topUpsSeen++;
         }
