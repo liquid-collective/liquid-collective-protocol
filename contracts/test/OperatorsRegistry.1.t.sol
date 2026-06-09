@@ -15,6 +15,7 @@ import "../src/OperatorsRegistry.1.sol";
 import "../src/Withdraw.1.sol";
 import "../src/state/operatorsRegistry/CurrentValidatorExitsDemand.sol";
 import "../src/state/operatorsRegistry/TotalValidatorExitsRequested.sol";
+import "../src/state/operatorsRegistry/ValidatorKeys.sol";
 
 contract OperatorsRegistryInitializableV1 is OperatorsRegistryV1 {
     function sudoSetFunded(uint256 _index, uint256 _funded) external {
@@ -26,8 +27,8 @@ contract OperatorsRegistryInitializableV1 is OperatorsRegistryV1 {
         OperatorsV3.get(_operatorIndex).requestedExits = _requestedExits;
     }
 
-    function sudoReportExitedETH(uint256[] calldata exitedETH, uint256 totalDepositedETH) external {
-        _setExitedETH(exitedETH, totalDepositedETH);
+    function sudoReportExitedETH(uint256[] calldata exitedETH) external {
+        _setExitedETH(exitedETH);
     }
 
     function sudoSetRawExitedETH(uint256[] memory value) external {
@@ -84,6 +85,13 @@ contract OperatorsRegistryWithMigrationHelpers is OperatorsRegistryV1 {
         OperatorsV2.setKeys(_index, _newKeys);
     }
 
+    /// Test helper: exposes ValidatorKeys.set() for tests.
+    function sudoSetValidatorKeyV2(uint256 _operatorIndex, uint256 _keyIndex, bytes memory _publicKeyAndSignature)
+        external
+    {
+        ValidatorKeys.set(_operatorIndex, _keyIndex, _publicKeyAndSignature);
+    }
+
     /// Test helper: exposes OperatorsV2._getStoppedValidatorCountAtIndex() for tests.
     function sudoGetStoppedValidatorCountAtIndexV2(uint256 index) external view returns (uint32) {
         return OperatorsV2._getStoppedValidatorCountAtIndex(OperatorsV2.getStoppedValidators(), index);
@@ -100,6 +108,100 @@ contract OperatorsRegistryWithMigrationHelpers is OperatorsRegistryV1 {
 
     function sudoSetRawExitedETH(uint256[] memory value) external {
         OperatorsV3.setRawExitedETH(value);
+    }
+}
+
+contract OperatorsRegistryV1PrePectraBridgeTests is Test {
+    OperatorsRegistryWithMigrationHelpers internal reg;
+
+    address internal admin = makeAddr("admin");
+    address internal river = makeAddr("river");
+    address internal operator = makeAddr("operator");
+
+    function setUp() public {
+        reg = new OperatorsRegistryWithMigrationHelpers();
+        LibImplementationUnbricker.unbrick(vm, address(reg));
+        reg.initOperatorsRegistryV1(admin, river);
+    }
+
+    function _pubkey(uint256 seed) internal pure returns (bytes memory) {
+        return abi.encodePacked(sha256(abi.encode("pre-pectra-pubkey", seed)), bytes16(0));
+    }
+
+    function _signature(uint256 seed) internal pure returns (bytes memory) {
+        return abi.encodePacked(
+            sha256(abi.encode("pre-pectra-sig-0", seed)), sha256(abi.encode("pre-pectra-sig-1", seed)), bytes32(0)
+        );
+    }
+
+    function _rawKey(uint256 seed) internal pure returns (bytes memory) {
+        return bytes.concat(_pubkey(seed), _signature(seed));
+    }
+
+    function _pushV2Operator(uint32 funded, uint32 keys) internal {
+        reg.sudoPushV2Operator(
+            OperatorsV2.Operator({
+                limit: keys,
+                funded: funded,
+                requestedExits: 0,
+                keys: keys,
+                latestKeysEditBlockNumber: uint64(block.number),
+                active: true,
+                name: "Legacy Operator",
+                operator: operator
+            })
+        );
+    }
+
+    function testGetPrePectraFundedValidatorCountReadsOperatorsV2() public {
+        _pushV2Operator(2, 3);
+
+        assertEq(reg.getPrePectraFundedValidatorCount(0), 2);
+    }
+
+    function testGetPrePectraValidatorPubkeysReadsValidatorKeysRange() public {
+        _pushV2Operator(3, 3);
+        reg.sudoSetValidatorKeyV2(0, 0, _rawKey(10));
+        reg.sudoSetValidatorKeyV2(0, 1, _rawKey(11));
+        reg.sudoSetValidatorKeyV2(0, 2, _rawKey(12));
+
+        bytes[] memory pubkeys = reg.getPrePectraValidatorPubkeys(0, 1, 3);
+
+        assertEq(pubkeys.length, 2, "range length");
+        assertEq(pubkeys[0], _pubkey(11), "key 1");
+        assertEq(pubkeys[1], _pubkey(12), "key 2");
+    }
+
+    function testGetPrePectraValidatorPubkeysInvalidOperatorReverts() public {
+        vm.expectRevert(abi.encodeWithSelector(OperatorsV2.OperatorNotFound.selector, 0));
+        reg.getPrePectraValidatorPubkeys(0, 0, 1);
+    }
+
+    function testGetPrePectraValidatorPubkeysRevertsWhenStopIndexExceedsFunded() public {
+        _pushV2Operator(2, 3);
+
+        // Only funded legacy validators are eligible for migration; keys above the
+        // funded count may exist in ValidatorKeys but must not be treated as funded.
+        vm.expectRevert(abi.encodeWithSelector(IOperatorsRegistryV1.PrePectraRangeExceedsFunded.selector, 0, 3));
+        reg.getPrePectraValidatorPubkeys(0, 0, 3);
+    }
+
+    function testGetPrePectraValidatorPubkeysRevertsWhenRangeIsEmpty() public {
+        _pushV2Operator(3, 3);
+
+        // Empty ranges should be rejected before reaching ValidatorKeys; otherwise an
+        // admin migration could silently emit success while migrating no legacy pubkeys.
+        vm.expectRevert(abi.encodeWithSelector(IOperatorsRegistryV1.InvalidPrePectraRange.selector, 0, 1, 1));
+        reg.getPrePectraValidatorPubkeys(0, 1, 1);
+    }
+
+    function testGetPrePectraValidatorPubkeysRevertsWhenRangeIsReversed() public {
+        _pushV2Operator(3, 3);
+
+        // A reversed range would underflow `stopIndex - startIndex` if it slipped past
+        // validation, so assert the explicit protocol error instead of a generic panic.
+        vm.expectRevert(abi.encodeWithSelector(IOperatorsRegistryV1.InvalidPrePectraRange.selector, 0, 2, 1));
+        reg.getPrePectraValidatorPubkeys(0, 2, 1);
     }
 }
 
@@ -183,7 +285,7 @@ contract OperatorsRegistryV1StrictRiverTests is
 
         vm.prank(random);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", random));
-        operatorsRegistry.reportExitedETH(exitedETH, 0);
+        operatorsRegistry.reportExitedETH(exitedETH);
     }
 }
 
@@ -623,7 +725,7 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, OperatorAlloca
         }
 
         vm.prank(river);
-        operatorsRegistry.reportExitedETH(exitedETH, uint256(totalCount) * 32 ether);
+        operatorsRegistry.reportExitedETH(exitedETH);
 
         uint256[] memory rawExitedETH = operatorsRegistry.getExitedETHPerOperator();
         assertEq(rawExitedETH.length, exitedETH.length - 1);
@@ -637,14 +739,14 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, OperatorAlloca
         uint256[] memory exitedETH = new uint256[](0);
         vm.prank(river);
         vm.expectRevert(abi.encodeWithSignature("InvalidEmptyArray()"));
-        operatorsRegistry.reportExitedETH(exitedETH, 0);
+        operatorsRegistry.reportExitedETH(exitedETH);
     }
 
     function testReportExitedETHCountTooHigh() public {
         uint256[] memory exitedETH = new uint256[](2);
         vm.prank(river);
         vm.expectRevert(abi.encodeWithSignature("ExitedETHArrayLengthExceedsOperatorCount()"));
-        operatorsRegistry.reportExitedETH(exitedETH, 0);
+        operatorsRegistry.reportExitedETH(exitedETH);
     }
 
     function testReportExitedETHInvalidSum(uint8 totalCount, uint8 len) public {
@@ -677,7 +779,7 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, OperatorAlloca
 
         vm.prank(river);
         vm.expectRevert(abi.encodeWithSignature("ExitedETHSumMismatch()"));
-        operatorsRegistry.reportExitedETH(exitedETH, uint256(totalCount) * 32 ether);
+        operatorsRegistry.reportExitedETH(exitedETH);
     }
 }
 
@@ -982,7 +1084,7 @@ contract OperatorsRegistryV1ExitCorrectnessTests is OperatorAllocationTestBase {
         exitedETH1[3] = 10 * 32 ether; // op2
         exitedETH1[4] = 10 * 32 ether; // op3
         exitedETH1[5] = 10 * 32 ether; // op4
-        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoReportExitedETH(exitedETH1, 250 * 32 ether);
+        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoReportExitedETH(exitedETH1);
 
         assertEq(operatorsRegistry.getCurrentETHExitsDemand(), 150 * 32 ether, "Demand reduced by 50 exited");
         assertEq(operatorsRegistry.getTotalETHExitsRequested(), 50 * 32 ether, "Exited validators count as exits");
@@ -1021,7 +1123,7 @@ contract OperatorsRegistryV1ExitCorrectnessTests is OperatorAllocationTestBase {
         exitedETH2[3] = 16 * 32 ether; // op2
         exitedETH2[4] = 16 * 32 ether; // op3
         exitedETH2[5] = 16 * 32 ether; // op4
-        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoReportExitedETH(exitedETH2, 250 * 32 ether);
+        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoReportExitedETH(exitedETH2);
 
         // Demand unchanged because exitedETH(16*32e) < requestedExits(22*32e) for all operators
         assertEq(
@@ -1223,7 +1325,7 @@ contract OperatorsRegistryV1ExitCorrectnessTests is OperatorAllocationTestBase {
         exitedETH1[3] = 2 * 32 ether; // op2 (2*32e > requestedExits 0, bumps to 2*32e)
         exitedETH1[4] = 1 * 32 ether; // op3 (1*32e > requestedExits 0, bumps to 1*32e)
         exitedETH1[5] = 0; // op4
-        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoReportExitedETH(exitedETH1, 250 * 32 ether);
+        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoReportExitedETH(exitedETH1);
 
         // After first report: op2 bumped 0->2*32e, op3 bumped 0->1*32e (unsolicited = 3*32e)
         assertEq(operatorsRegistry.getOperator(0).requestedExits, 5 * 32 ether, "Op0 unchanged after first report");
@@ -1253,7 +1355,7 @@ contract OperatorsRegistryV1ExitCorrectnessTests is OperatorAllocationTestBase {
         vm.expectEmit(true, true, true, true);
         emit UpdatedRequestedETHExitsUponStopped(2, 2 * 32 ether, 7 * 32 ether);
 
-        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoReportExitedETH(exitedETH2, 250 * 32 ether);
+        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoReportExitedETH(exitedETH2);
 
         // requestedExits bumped for op0 (5->8) and op2 (2->7); others unchanged
         assertEq(operatorsRegistry.getOperator(0).requestedExits, 8 * 32 ether, "Op0 requestedExits bumped");
@@ -1293,7 +1395,7 @@ contract OperatorsRegistryV1ExitCorrectnessTests is OperatorAllocationTestBase {
         vm.expectEmit(true, true, true, true);
         emit UpdatedRequestedETHExitsUponStopped(0, 0, 20 * 32 ether);
 
-        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoReportExitedETH(exitedETH, 250 * 32 ether);
+        OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoReportExitedETH(exitedETH);
 
         assertEq(operatorsRegistry.getOperator(0).requestedExits, 20 * 32 ether, "Op0 requestedExits bumped to 20*32e");
         assertEq(operatorsRegistry.getTotalETHExitsRequested(), 20 * 32 ether, "Total exits = unsolicited 20*32e");
@@ -1739,17 +1841,19 @@ contract OperatorsRegistryV1CoverageTests is OperatorsRegistryV1TestBase, Operat
         first[1] = 32 ether;
         first[2] = 32 ether;
         vm.prank(river);
-        reg.reportExitedETH(first, 10 * 32 ether);
+        reg.reportExitedETH(first);
         uint256[] memory shorter = new uint256[](2);
         shorter[0] = 2 * 32 ether;
         shorter[1] = 32 ether;
         vm.prank(river);
         vm.expectRevert(abi.encodeWithSignature("ExitedETHArrayShrinking()"));
-        reg.reportExitedETH(shorter, 10 * 32 ether);
+        reg.reportExitedETH(shorter);
     }
 
-    /// Asserts that reportExitedETH reverts with ExitedETHExceedsDepositedETH when sum of exited ETH exceeds totalDepositedETH.
-    function testReportExitedETHRevertsWhenExceedsDeposited() public {
+    /// Regression test for #490: reportExitedETH must succeed and update per-operator state even when the
+    /// total exited ETH exceeds what was deposited (which legitimately happens with auto-compounding and
+    /// consolidations). This locks in the removal of the former ExitedETHExceedsDepositedETH check.
+    function testReportExitedETHSucceedsWhenExceedsDeposited() public {
         reg.initOperatorsRegistryV1(admin, river);
         vm.prank(admin);
         reg.addOperator("Op0", makeAddr("op0"));
@@ -1760,8 +1864,10 @@ contract OperatorsRegistryV1CoverageTests is OperatorsRegistryV1TestBase, Operat
         exited[0] = 3 * 32 ether;
         exited[1] = 3 * 32 ether;
         vm.prank(river);
-        vm.expectRevert(abi.encodeWithSignature("ExitedETHExceedsDepositedETH()"));
-        reg.reportExitedETH(exited, 2 * 32 ether);
+        reg.reportExitedETH(exited);
+        uint256[] memory raw = reg.getExitedETHPerOperator();
+        assertEq(raw.length, 1);
+        assertEq(raw[0], 3 * 32 ether);
     }
 
     // ─── reportCLETH tests ────────────────────────────────────────────────────
