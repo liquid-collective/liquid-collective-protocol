@@ -68,17 +68,6 @@ library BLS12_381 {
         Fp2 signatureY;
     }
 
-    /// @notice Returns true if every byte of the `DepositY` struct is zero.
-    /// @dev Sentinel marking an entry as a top-up (BLS skipped). An honest BLS signer cannot
-    ///      produce Y = 0: (A) BLS operates in the prime-order subgroups of G1/G2, and
-    ///      (B) Y = 0 implies P = -P (2-torsion), which is impossible in a prime-order group.
-    ///      See https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-pairing-friendly-curves-11
-    ///      §4.2.1 for the subgroup definitions.
-    function isZero(DepositY memory dy) internal pure returns (bool) {
-        return dy.pubkeyY.a == bytes32(0) && dy.pubkeyY.b == bytes32(0) && dy.signatureY.c0_a == bytes32(0)
-            && dy.signatureY.c0_b == bytes32(0) && dy.signatureY.c1_a == bytes32(0) && dy.signatureY.c1_b == bytes32(0);
-    }
-
     /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
     /*                         CONSTANTS                          */
     /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/

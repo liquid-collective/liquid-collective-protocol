@@ -13,6 +13,7 @@ import "./Administrable.sol";
 
 import "./state/operatorsRegistry/Operators.2.sol";
 import "./state/operatorsRegistry/Operators.3.sol";
+import "./state/operatorsRegistry/ValidatorKeys.sol";
 import "./state/operatorsRegistry/TotalETHExitsRequested.sol";
 import "./state/operatorsRegistry/CurrentETHExitsDemand.sol";
 import "./state/operatorsRegistry/TotalValidatorExitsRequested.sol";
@@ -164,6 +165,23 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @inheritdoc IOperatorsRegistryV1
+    function getPrePectraFundedValidatorCount(uint256 operatorIndex) external view returns (uint256) {
+        return OperatorsV2.get(operatorIndex).funded;
+    }
+
+    /// @inheritdoc IOperatorsRegistryV1
+    function getPrePectraValidatorPubkeys(uint256 operatorIndex, uint256 startIndex, uint256 stopIndex)
+        external
+        view
+        returns (bytes[] memory publicKeys)
+    {
+        OperatorsV2.Operator storage op = OperatorsV2.get(operatorIndex);
+        if (stopIndex > op.funded) revert PrePectraRangeExceedsFunded(operatorIndex, stopIndex);
+        if (startIndex >= stopIndex) revert InvalidPrePectraRange(operatorIndex, startIndex, stopIndex);
+        (publicKeys,) = ValidatorKeys.getKeys(operatorIndex, startIndex, stopIndex - startIndex);
+    }
+
+    /// @inheritdoc IOperatorsRegistryV1
     function incrementFundedETH(OperatorFundingDelta[] calldata _deltas) external onlyRiver {
         uint256 len = _deltas.length;
         if (len == 0) {
@@ -214,8 +232,8 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @inheritdoc IOperatorsRegistryV1
-    function reportExitedETH(uint256[] calldata _exitedETH, uint256 _totalDepositedETH) external onlyRiver {
-        _setExitedETH(_exitedETH, _totalDepositedETH);
+    function reportExitedETH(uint256[] calldata _exitedETH) external onlyRiver {
+        _setExitedETH(_exitedETH);
     }
 
     /// @inheritdoc IOperatorsRegistryV1
@@ -473,8 +491,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     /// @notice Internal utility to set the exited ETH array
     /// @dev Please note that we rely on the Oracle to report the correct exitedETH array.
     /// @param _exitedETH The new exited ETH(wei) array per operator
-    /// @param _totalDepositedETH The total deposited ETH(wei)
-    function _setExitedETH(uint256[] calldata _exitedETH, uint256 _totalDepositedETH) internal {
+    function _setExitedETH(uint256[] calldata _exitedETH) internal {
         SetExitedETHInternalVars memory vars;
         // we check that the array is not empty
         vars.exitedETHLength = _exitedETH.length;
@@ -545,10 +562,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         // we check that the total is matching the sum of the individual values
         if (vars.totalExitedETH != vars.amountOfExitedETH) {
             revert ExitedETHSumMismatch();
-        }
-        // we check that the total is not higher than the current deposited ETH
-        if (vars.totalExitedETH > _totalDepositedETH) {
-            revert ExitedETHExceedsDepositedETH();
         }
 
         OperatorsV3.setRawExitedETH(_exitedETH);

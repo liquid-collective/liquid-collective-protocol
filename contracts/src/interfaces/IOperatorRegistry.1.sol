@@ -144,9 +144,6 @@ interface IOperatorsRegistryV1 {
     /// @notice Thrown when the sum of exited ETH is invalid
     error ExitedETHSumMismatch();
 
-    /// @notice Thrown when the amount of exited ETH is too high compared to the total deposited ETH
-    error ExitedETHExceedsDepositedETH();
-
     /// @notice Thrown when the number of exited ETH is too high compared to operator count
     error ExitedETHArrayLengthExceedsOperatorCount();
 
@@ -217,6 +214,17 @@ interface IOperatorsRegistryV1 {
     /// @param remainingETHExitsDemand The remaining exit demand
     error ExitsGreaterThanExitDemand(uint256 elExitAmount, uint256 remainingETHExitsDemand);
 
+    /// @notice Thrown when the pre-Pectra range exceeds the funded validator count
+    /// @param operatorIndex The operator index
+    /// @param stopIndex The exclusive stop key index
+    error PrePectraRangeExceedsFunded(uint256 operatorIndex, uint256 stopIndex);
+
+    /// @notice Thrown when the pre-Pectra range is invalid
+    /// @param operatorIndex The operator index
+    /// @param startIndex The first key index
+    /// @param stopIndex The exclusive stop key index
+    error InvalidPrePectraRange(uint256 operatorIndex, uint256 startIndex, uint256 stopIndex);
+
     /// @notice Initializes the operators registry
     /// @param _admin Admin in charge of managing operators
     /// @param _river Address of River system
@@ -265,6 +273,22 @@ interface IOperatorsRegistryV1 {
     /// @return The list of active operators and their details
     function listActiveOperators() external view returns (OperatorsV3.Operator[] memory);
 
+    /// @notice Retrieve the pre-Pectra funded validator count for an operator from legacy V2 storage.
+    /// @param operatorIndex The operator index
+    /// @return The legacy funded validator count
+    function getPrePectraFundedValidatorCount(uint256 operatorIndex) external view returns (uint256);
+
+    /// @notice Retrieve pre-Pectra validator pubkeys from legacy ValidatorKeys storage.
+    /// @dev `stopIndex` is exclusive; returns pubkeys for indexes [startIndex, stopIndex).
+    /// @param operatorIndex The operator index
+    /// @param startIndex The first key index to read
+    /// @param stopIndex The exclusive stop key index
+    /// @return publicKeys The legacy validator pubkeys in the requested range
+    function getPrePectraValidatorPubkeys(uint256 operatorIndex, uint256 startIndex, uint256 stopIndex)
+        external
+        view
+        returns (bytes[] memory publicKeys);
+
     /// @notice Updates the funded ETH for the node operators referenced in the provided deltas
     /// @dev Deltas must be sorted by operatorIndex in strictly ascending order with no duplicates
     /// @dev Reverts with InvalidEmptyArray when the deltas array is empty
@@ -284,8 +308,7 @@ interface IOperatorsRegistryV1 {
     /// @notice Allows river to override the exited ETH array
     /// @notice This actions happens during the Oracle report processing
     /// @param _exitedETH The new exited ETH(wei) array per operator
-    /// @param _totalDepositedETH The total deposited ETH(wei)
-    function reportExitedETH(uint256[] calldata _exitedETH, uint256 _totalDepositedETH) external;
+    function reportExitedETH(uint256[] calldata _exitedETH) external;
 
     /// @notice Adds an operator to the registry
     /// @dev Only callable by the administrator
