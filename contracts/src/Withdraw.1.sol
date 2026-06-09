@@ -7,17 +7,22 @@ import "./Initializable.sol";
 import "./interfaces/IRiver.1.sol";
 import "./interfaces/IWithdraw.1.sol";
 import "./interfaces/IProtocolVersion.sol";
+import "./interfaces/IAttestationVerifier.1.sol";
 import "./libraries/LibErrors.sol";
 import "./libraries/LibUint256.sol";
 
 import "./state/shared/RiverAddress.sol";
 import "./state/shared/OperatorsRegistryAddress.sol";
+import "./state/shared/AttestationVerifierAddress.sol";
 import "./state/withdraw/PectraWithdrawalContractAddress.sol";
 import "./state/withdraw/PectraConsolidationContractAddress.sol";
 
 /// @title Withdraw (v1)
 /// @author Alluvial Finance Inc.
-/// @notice This contract is in charge of holding the exit and skimming funds and allow river to pull these funds
+/// @notice This contract is the withdrawal address for all LC validators.
+/// @notice It is in charge of holding the exited and skimmed funds and allows river to pull these funds.
+/// @notice Furthermore, it enables consolidation of LC validators.
+/// @notice LC validators (0x02) can be EL-exited using partial or full EL withdrawals via the withdraw function.
 contract WithdrawV1 is IWithdrawV1, Initializable, ReentrancyGuard, IProtocolVersion {
     modifier onlyRiver() {
         if (msg.sender != RiverAddress.get()) {
@@ -35,11 +40,13 @@ contract WithdrawV1 is IWithdrawV1, Initializable, ReentrancyGuard, IProtocolVer
     function initWithdrawV1_1(
         address _pectraWithdrawalContractAddress,
         address _pectraConsolidationContractAddress,
-        address _operatorsRegistry
+        address _operatorsRegistry,
+        address _attestationVerifier
     ) external init(1) {
         PectraWithdrawalContractAddress.set(_pectraWithdrawalContractAddress);
         PectraConsolidationContractAddress.set(_pectraConsolidationContractAddress);
         OperatorsRegistryAddress.set(_operatorsRegistry);
+        AttestationVerifierAddress.set(_attestationVerifier);
     }
 
     /// @inheritdoc IWithdrawV1
@@ -123,22 +130,46 @@ contract WithdrawV1 is IWithdrawV1, Initializable, ReentrancyGuard, IProtocolVer
         uint256 totalFeeRequired = fee * totalNumOfConsolidationOperations;
         _validateSufficientValueForFee(msg.value, totalFeeRequired);
 
+        IAttestationVerifierV1 attestationVerifier = IAttestationVerifierV1(AttestationVerifierAddress.get());
         for (uint256 i = 0; i < requests.length; i++) {
-            _validatePubkeyLength(requests[i].targetPubkey);
+            _processConsolidationRequest(requests[i], consolidationContract, attestationVerifier, fee);
+        }
+        _refundExcessFee(msg.value, totalFeeRequired, excessFeeRecipient);
+    }
 
-            for (uint256 j = 0; j < requests[i].srcPubkeys.length; j++) {
-                _validatePubkeyLength(requests[i].srcPubkeys[j]);
+    /// @notice Internal: validate and dispatch a single consolidation request to the EL contract
+    /// @dev Split out of `consolidate` to keep the outer frame small enough for non-viaIR builds (forge coverage).
+    function _processConsolidationRequest(
+        IWithdrawV1.ConsolidationRequest calldata request,
+        address consolidationContract,
+        IAttestationVerifierV1 attestationVerifier,
+        uint256 fee
+    ) internal {
+        bytes calldata targetPubkey = request.targetPubkey;
+        _validatePubkeyLength(targetPubkey);
 
-                bytes memory callData = bytes.concat(requests[i].srcPubkeys[j], requests[i].targetPubkey);
-                (bool writeOK,) = consolidationContract.call{value: fee}(callData);
-                if (!writeOK) {
-                    revert RequestFailed();
-                }
-                emit ConsolidationRequested(requests[i].srcPubkeys[j], requests[i].targetPubkey, fee);
-            }
+        bool isTargetFunded = attestationVerifier.isPubkeyFunded(targetPubkey);
+        bool isSelfConsolidation =
+            request.srcPubkeys.length == 1 && keccak256(request.srcPubkeys[0]) == keccak256(targetPubkey);
+
+        if (!isTargetFunded && (!isSelfConsolidation || !_isKnownValidatorPubkey(attestationVerifier, targetPubkey))) {
+            revert TargetPubkeyNotFunded(targetPubkey);
         }
 
-        _refundExcessFee(msg.value, totalFeeRequired, excessFeeRecipient);
+        for (uint256 j = 0; j < request.srcPubkeys.length; j++) {
+            bytes calldata srcPubkey = request.srcPubkeys[j];
+            _validatePubkeyLength(srcPubkey);
+            if (!_isKnownValidatorPubkey(attestationVerifier, srcPubkey)) {
+                revert SourcePubkeyNotFunded(srcPubkey);
+            }
+
+            bytes memory callData = bytes.concat(srcPubkey, targetPubkey);
+            (bool writeOK,) = consolidationContract.call{value: fee}(callData);
+            if (!writeOK) {
+                revert RequestFailed();
+            }
+            emit ConsolidationRequested(srcPubkey, targetPubkey, fee);
+        }
     }
 
     /// @notice Internal utility to set the river address
@@ -173,6 +204,16 @@ contract WithdrawV1 is IWithdrawV1, Initializable, ReentrancyGuard, IProtocolVer
         if (pubkey.length != 48) {
             revert InvalidPubkeyLength(pubkey.length);
         }
+    }
+
+    /// @notice Internal: check whether a pubkey is in either funded validator lookup
+    function _isKnownValidatorPubkey(IAttestationVerifierV1 attestationVerifier, bytes calldata pubkey)
+        internal
+        view
+        returns (bool)
+    {
+        return
+            attestationVerifier.isPubkeyFunded(pubkey) || attestationVerifier.isPrePectraValidatorPubkeyFunded(pubkey);
     }
 
     /// @notice Internal: refund excess fee to recipient; emit on send failure instead of reverting

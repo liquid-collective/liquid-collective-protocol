@@ -41,6 +41,11 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
     /// @dev Cumulative ETH deposited on the EL deposit contract that has been activated on the CL.
     ///      Monotonically increasing — incremented in sim_activateValidators.
     uint256 internal _simTotalDepositedActivatedETH;
+    /// @dev Cumulative external-consolidation principal that has landed in validatorsBalance and been reported.
+    ///      Monotonically increasing — incremented by the consolidation report step. `_buildReport` adds it to
+    ///      validatorsBalance and reports it as totalExternalConsolidationsAmountReported, so every report
+    ///      carries the current cumulative value (normal reports keep it unchanged → on-chain delta 0).
+    uint256 internal _simConsolidatedBalance;
 
     uint256 internal _lastReportedSkimmed;
     uint256 internal _lastReportedExited;
@@ -68,23 +73,18 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
         for (uint256 i = 0; i < amounts.length; i++) {
             opIndices[i] = opIdx;
         }
-        IDepositDataBuffer.DepositObject[] memory deposits = _makeDepositObjects(opIndices, amounts);
+        IDepositDataBuffer.DepositObject memory batch = _makeDepositObjects(opIndices, amounts);
 
-        bytes32 bufferId = keccak256(abi.encode(deposits));
-        depositBuffer.submitDepositData(bufferId, deposits);
+        bytes32 bufferId = keccak256(abi.encode(batch));
+        depositBuffer.submitDepositData(bufferId, batch);
         bytes32 rootHash = depositContract.get_deposit_root();
 
         bytes[] memory sigs = new bytes[](2);
-        sigs[0] = _signAttestation(DEPOSIT_COMMITTEE_ATTESTER_PK_1, bufferId, rootHash);
-        sigs[1] = _signAttestation(DEPOSIT_COMMITTEE_ATTESTER_PK_2, bufferId, rootHash);
-
-        BLS12_381.DepositY[] memory ys = new BLS12_381.DepositY[](amounts.length);
-        for (uint256 i = 0; i < amounts.length; i++) {
-            ys[i] = _emptyDepositY();
-        }
+        sigs[0] = _signAttestation(ROOT_ATTESTER_PK_1, bufferId, rootHash);
+        sigs[1] = _signAttestation(ROOT_ATTESTER_PK_2, bufferId, rootHash);
 
         vm.prank(keeper);
-        river.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs, ys);
+        river.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
 
         for (uint256 i = 0; i < amounts.length; i++) {
             _simValidators.push(
@@ -254,11 +254,13 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
             exitedArr[0] += exitedArr[i];
         }
 
-        report.validatorsBalance = validatorsBalance;
+        // The consolidated principal has landed on the CL, so it is part of the reported validatorsBalance.
+        report.validatorsBalance = validatorsBalance + _simConsolidatedBalance;
         report.validatorsSkimmedBalance = _simCumulativeSkimmed;
         report.validatorsExitedBalance = _simCumulativeExited;
         report.validatorsExitingBalance = validatorsExiting;
         report.totalDepositedActivatedETH = _simTotalDepositedActivatedETH;
+        report.totalExternalConsolidationsAmountReported = _simConsolidatedBalance;
         report.validatorsCount = activatedCount;
         report.exitedETHPerOperator = exitedArr;
         report.activeCLETHPerOperator = activeCLETHArr;

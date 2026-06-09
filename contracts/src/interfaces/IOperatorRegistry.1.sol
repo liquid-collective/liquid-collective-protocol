@@ -27,14 +27,16 @@ interface IOperatorsRegistryV1 {
         uint256 ethAmount;
     }
 
-    /// @notice Structure representing a partial exit allocation for exits
+    /// @notice Structure representing an EL exit allocation for exits
     /// @param operatorIndex The index of the operator
-    /// @param pubkeys The pubkeys through which the partial exits were requested
-    /// @param amounts The amounts (gwei) per pubkey that was requested for partial exits
-    struct PartialExitETHAllocation {
+    /// @param pubkeys The pubkeys through which the EL exits were requested
+    /// @param amounts The amounts (gwei) per pubkey that was requested for EL exits
+    /// @param isFullExit True if the EL exit is a full exit for each pubkey
+    struct ELExitETHAllocation {
         uint256 operatorIndex;
-        bytes[] pubkeys;
-        uint64[] amounts;
+        bytes[] pubkeys; // 48 bytes
+        uint64[] amounts; // gwei, actual balance for full exits
+        bool[] isFullExit; // true if the EL exit is a full exit for each pubkey
     }
 
     /// @notice Structure representing a per-operator funded ETH update
@@ -77,11 +79,11 @@ interface IOperatorsRegistryV1 {
     /// @param amount The amount of requested exits in ETH(wei)
     event RequestedETHExits(uint256 indexed index, uint256 amount);
 
-    /// @notice The amount of ETH(wei) that has been requested to be exited per pubkey via EL
+    /// @notice The amount of ETH(gwei) that has been requested to be exited per pubkey via EL
     /// @param index The operator index
-    /// @param pubkeys The pubkeys through which the partial exits were requested
-    /// @param amount The amount per pubkey that was requested for partial exits
-    event RequestedPartialETHExits(uint256 indexed index, bytes[] pubkeys, uint64[] amount);
+    /// @param pubkeys The pubkeys through which the EL exits were requested
+    /// @param amounts The amount per pubkey that was requested for EL exits (for full exits it is the actual balance)
+    event RequestedELETHExits(uint256 indexed index, bytes[] pubkeys, uint64[] amounts);
 
     /// @notice The exit request demand has been updated
     /// @param previousETHExitsDemand The previous exit request demand in ETH(wei)
@@ -142,9 +144,6 @@ interface IOperatorsRegistryV1 {
     /// @notice Thrown when the sum of exited ETH is invalid
     error ExitedETHSumMismatch();
 
-    /// @notice Thrown when the amount of exited ETH is too high compared to the total deposited ETH
-    error ExitedETHExceedsDepositedETH();
-
     /// @notice Thrown when the number of exited ETH is too high compared to operator count
     error ExitedETHArrayLengthExceedsOperatorCount();
 
@@ -167,7 +166,7 @@ interface IOperatorsRegistryV1 {
     /// @param operatorIndex The operator index
     /// @param requested The requested ETH(wei) amount
     /// @param available The available ETH(wei) amount
-    error PartialExitsRequestedExceedAvailableFundedAmount(uint256 operatorIndex, uint256 requested, uint256 available);
+    error ELExitsRequestedExceedAvailableFundedAmount(uint256 operatorIndex, uint256 requested, uint256 available);
 
     /// @notice The provided exit requests exceed the current exit request demand
     /// @param requestedETHAmount The requested ETH(wei) amount
@@ -183,6 +182,12 @@ interface IOperatorsRegistryV1 {
     /// @notice Thrown when an allocation with an incorrect ETH amount is provided
     /// @param ethAmount The incorrect ETH(wei) amount
     error AllocationWithIncorrectAmount(uint256 ethAmount);
+
+    /// @notice Thrown when an EL exit allocation amount is invalid (e.g. zero or above the allowed cap)
+    /// @param operatorIndex The operator index
+    /// @param isFullExit True if the EL exit allocation is marked as a full exit for this pubkey
+    /// @param amount The EL exit accounting amount in gwei
+    error InvalidELExitETHAllocationAmount(uint256 operatorIndex, bool isFullExit, uint64 amount);
 
     /// @notice Thrown when the provided active CL ETH array length does not match the operator count
     error InvalidActiveCLETHArrayLength();
@@ -200,6 +205,25 @@ interface IOperatorsRegistryV1 {
     /// @param sender The sender of the transaction
     /// @param excess The excess fee
     error UnsentRefund(address sender, uint256 excess);
+
+    /// @notice Thrown when an EL exit allocation has mismatched pubkeys/amounts/isFullExit lengths
+    error InvalidELExitETHAllocationLength();
+
+    /// @notice Thrown when the total EL exit amount requested is greater than the remaining exit demand
+    /// @param elExitAmount The total EL exit amount requested (sum of all EL allocations)
+    /// @param remainingETHExitsDemand The remaining exit demand
+    error ExitsGreaterThanExitDemand(uint256 elExitAmount, uint256 remainingETHExitsDemand);
+
+    /// @notice Thrown when the pre-Pectra range exceeds the funded validator count
+    /// @param operatorIndex The operator index
+    /// @param stopIndex The exclusive stop key index
+    error PrePectraRangeExceedsFunded(uint256 operatorIndex, uint256 stopIndex);
+
+    /// @notice Thrown when the pre-Pectra range is invalid
+    /// @param operatorIndex The operator index
+    /// @param startIndex The first key index
+    /// @param stopIndex The exclusive stop key index
+    error InvalidPrePectraRange(uint256 operatorIndex, uint256 startIndex, uint256 stopIndex);
 
     /// @notice Initializes the operators registry
     /// @param _admin Admin in charge of managing operators
@@ -249,6 +273,22 @@ interface IOperatorsRegistryV1 {
     /// @return The list of active operators and their details
     function listActiveOperators() external view returns (OperatorsV3.Operator[] memory);
 
+    /// @notice Retrieve the pre-Pectra funded validator count for an operator from legacy V2 storage.
+    /// @param operatorIndex The operator index
+    /// @return The legacy funded validator count
+    function getPrePectraFundedValidatorCount(uint256 operatorIndex) external view returns (uint256);
+
+    /// @notice Retrieve pre-Pectra validator pubkeys from legacy ValidatorKeys storage.
+    /// @dev `stopIndex` is exclusive; returns pubkeys for indexes [startIndex, stopIndex).
+    /// @param operatorIndex The operator index
+    /// @param startIndex The first key index to read
+    /// @param stopIndex The exclusive stop key index
+    /// @return publicKeys The legacy validator pubkeys in the requested range
+    function getPrePectraValidatorPubkeys(uint256 operatorIndex, uint256 startIndex, uint256 stopIndex)
+        external
+        view
+        returns (bytes[] memory publicKeys);
+
     /// @notice Updates the funded ETH for the node operators referenced in the provided deltas
     /// @dev Deltas must be sorted by operatorIndex in strictly ascending order with no duplicates
     /// @dev Reverts with InvalidEmptyArray when the deltas array is empty
@@ -268,8 +308,7 @@ interface IOperatorsRegistryV1 {
     /// @notice Allows river to override the exited ETH array
     /// @notice This actions happens during the Oracle report processing
     /// @param _exitedETH The new exited ETH(wei) array per operator
-    /// @param _totalDepositedETH The total deposited ETH(wei)
-    function reportExitedETH(uint256[] calldata _exitedETH, uint256 _totalDepositedETH) external;
+    function reportExitedETH(uint256[] calldata _exitedETH) external;
 
     /// @notice Adds an operator to the registry
     /// @dev Only callable by the administrator
@@ -309,11 +348,11 @@ interface IOperatorsRegistryV1 {
     /// @dev Reverts with ExitsRequestedExceedExitDemand if total exits requested exceed the current demand
     /// @dev Reverts with NoExitRequestsToPerform if there is no pending exit demand
     /// @param _allocations The proposed per-operator exit ETH allocations, sorted by operator index
-    /// @param _partialAllocations The proposed per-operator per-pubkey partial exit ETH allocations, sorted by operator index
+    /// @param _elAllocations The proposed per-operator per-pubkey EL exit ETH allocations, sorted by operator index
     /// @param _maxFeePerWithdrawal The maximum fee for per withdrawal request
     function requestETHExits(
         ExitETHAllocation[] calldata _allocations,
-        PartialExitETHAllocation[] calldata _partialAllocations,
+        ELExitETHAllocation[] calldata _elAllocations,
         uint256 _maxFeePerWithdrawal
     ) external payable;
 
