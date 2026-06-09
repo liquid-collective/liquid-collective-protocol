@@ -3,6 +3,7 @@ pragma solidity 0.8.34;
 
 import "forge-std/Test.sol";
 import "../../../src/OperatorsRegistry.1.sol";
+import "../../../src/interfaces/IOperatorRegistry.1.sol";
 import "../../../src/state/operatorsRegistry/Operators.2.sol";
 import "../../../src/state/operatorsRegistry/Operators.3.sol";
 import "../../utils/LibImplementationUnbricker.sol";
@@ -87,7 +88,7 @@ contract MigrationTest is Test {
         // V1_1 is a no-op bridge (advances init version 1→2 so V1_2 init(2) check passes)
         registry.sudoInitV1_1();
         // V1_2 migrates V2 → V3 (scales by 32 ether)
-        registry.initOperatorsRegistryV1_2();
+        registry.initOperatorsRegistryV1_2(makeAddr("withdraw"));
 
         // Validate V3 state
         assertEq(registry.getOperatorCount(), 2, "operator count");
@@ -116,7 +117,7 @@ contract MigrationTest is Test {
     function testMigrationEmptyState() public {
         registry.sudoInitV1_1();
         // Step 2: Run the V1_2 migration (V2 → V3 scaling) and assert no operators were created.
-        registry.initOperatorsRegistryV1_2();
+        registry.initOperatorsRegistryV1_2(makeAddr("withdraw"));
         assertEq(registry.getOperatorCount(), 0, "no operators after empty migration");
     }
 
@@ -134,7 +135,7 @@ contract MigrationTest is Test {
         registry.sudoSetStoppedValidators(stopped);
 
         registry.sudoInitV1_1();
-        registry.initOperatorsRegistryV1_2();
+        registry.initOperatorsRegistryV1_2(makeAddr("withdraw"));
 
         assertEq(registry.getOperatorCount(), 1, "one operator");
         OperatorsV3.Operator memory op = registry.getOperator(0);
@@ -143,5 +144,26 @@ contract MigrationTest is Test {
         uint256[] memory exitedPerOp = registry.getExitedETHPerOperator();
         assertEq(exitedPerOp.length, 1, "one entry");
         assertEq(exitedPerOp[0], 0, "no exited ETH");
+    }
+
+    /// @notice Verifies that the V2 → V3 migration reverts with `InvalidOperatorState` when an
+    ///         operator has more requested exits than funded validators — an inconsistent state
+    ///         that would otherwise produce an underflow during downstream accounting.
+    function testMigrationRevertsOnInvalidOperatorState() public {
+        uint32 op0Funded = 2;
+        uint32 op0RequestedExits = 2;
+        uint32 op1Funded = 1;
+        uint32 op1RequestedExits = 3; // funded < requestedExits → invalid
+
+        // Op0 is valid; Op1 triggers the revert. Index 1 is reported in the error.
+        registry.sudoPushV2Operator("OpAlpha", op1Addr, op0Funded, op0RequestedExits, op0Funded, op0Funded);
+        registry.sudoPushV2Operator("OpBeta", op2Addr, op1Funded, op1RequestedExits, op1Funded, op1Funded);
+
+        registry.sudoInitV1_1();
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IOperatorsRegistryV1.InvalidOperatorState.selector, 1, op1Funded, op1RequestedExits)
+        );
+        registry.initOperatorsRegistryV1_2(makeAddr("withdraw"));
     }
 }
