@@ -219,16 +219,8 @@ interface IAttestationVerifierV1 {
     /// @notice The EIP-712 consolidation domain separator has not been initialized
     error ZeroConsolidationDomainSeparator();
 
-    /// @notice The consolidation's totalAmount is zero
-    error ZeroConsolidationTotalAmount();
-
     /// @notice The consolidation's withdrawal address is the zero address
     error ZeroConsolidationWithdrawalAddress();
-
-    /// @notice The supplied quorum is greater than the current consolidation-committee attester count
-    /// @param quorum The supplied quorum
-    /// @param consolidationCommitteeAttesterCount The current consolidation-committee attester count
-    error QuorumExceedsConsolidationCommitteeAttesterCount(uint256 quorum, uint256 consolidationCommitteeAttesterCount);
 
     /// @notice Adding a consolidation-committee attester would exceed MAX_CONSOLIDATION_COMMITTEE_ATTESTERS
     /// @param count The would-be consolidation-committee attester count
@@ -239,6 +231,16 @@ interface IAttestationVerifierV1 {
     /// @param consolidationCommitteeAttester The consolidation-committee attester address
     /// @param value The requested status (matches current status)
     error ConsolidationCommitteeAttesterStatusUnchanged(address consolidationCommitteeAttester, bool value);
+
+    // -- Consolidation-side errors --
+
+    /// @notice The consolidation's totalAmount is zero
+    error ZeroConsolidationTotalAmount();
+
+    /// @notice The supplied quorum is greater than the current consolidation-committee attester count
+    /// @param quorum The supplied quorum
+    /// @param consolidationCommitteeAttesterCount The current consolidation-committee attester count
+    error QuorumExceedsConsolidationCommitteeAttesterCount(uint256 quorum, uint256 consolidationCommitteeAttesterCount);
 
     /// @notice The supplied consolidation has already been validated; replay rejected.
     /// @param consolidationHash The EIP-712 structHash of the consolidation request
