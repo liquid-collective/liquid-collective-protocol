@@ -13,6 +13,7 @@ import "./Administrable.sol";
 
 import "./state/operatorsRegistry/Operators.2.sol";
 import "./state/operatorsRegistry/Operators.3.sol";
+import "./state/operatorsRegistry/ValidatorKeys.sol";
 import "./state/operatorsRegistry/TotalETHExitsRequested.sol";
 import "./state/operatorsRegistry/CurrentETHExitsDemand.sol";
 import "./state/operatorsRegistry/TotalValidatorExitsRequested.sol";
@@ -164,6 +165,23 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     /// @inheritdoc IOperatorsRegistryV1
     function listActiveOperators() external view returns (OperatorsV3.Operator[] memory) {
         return OperatorsV3.getAllActive();
+    }
+
+    /// @inheritdoc IOperatorsRegistryV1
+    function getPrePectraFundedValidatorCount(uint256 operatorIndex) external view returns (uint256) {
+        return OperatorsV2.get(operatorIndex).funded;
+    }
+
+    /// @inheritdoc IOperatorsRegistryV1
+    function getPrePectraValidatorPubkeys(uint256 operatorIndex, uint256 startIndex, uint256 stopIndex)
+        external
+        view
+        returns (bytes[] memory publicKeys)
+    {
+        OperatorsV2.Operator storage op = OperatorsV2.get(operatorIndex);
+        if (stopIndex > op.funded) revert PrePectraRangeExceedsFunded(operatorIndex, stopIndex);
+        if (startIndex >= stopIndex) revert InvalidPrePectraRange(operatorIndex, startIndex, stopIndex);
+        (publicKeys,) = ValidatorKeys.getKeys(operatorIndex, startIndex, stopIndex - startIndex);
     }
 
     /// @inheritdoc IOperatorsRegistryV1

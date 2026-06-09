@@ -12,6 +12,7 @@ interface IAccountingActions {
     function handler_completeExit(uint256 opIdx, uint256 ethAmount, uint256 penalty) external;
     function handler_slash(uint256 opIdx, uint256 penalty) external;
     function handler_oracleReport(bool rebalance, bool slashingContainment) external;
+    function handler_consolidationReport(uint256 deltaSeed) external;
 
     function handler_pendingCount() external view returns (uint256);
     function handler_activeAvailableETH(uint256 opIdx) external view returns (uint256);
@@ -46,6 +47,7 @@ contract AccountingHandler is StdUtils {
     uint256 public calls_completeExit;
     uint256 public calls_slash;
     uint256 public calls_oracleReport;
+    uint256 public calls_consolidationReport;
 
     constructor(IAccountingActions test_) {
         _test = test_;
@@ -175,5 +177,19 @@ contract AccountingHandler is StdUtils {
         ghost_slashOccurred = false;
         ghost_reportCount++;
         calls_oracleReport++;
+    }
+
+    /// @notice Fuzzer entry point: submits an external-consolidation report (credits the buffer, lands the
+    ///         consolidated principal in validatorsBalance, then draws the buffer back down by the same delta).
+    ///         Skips if no deposits exist yet, or while a loss is pending — this path reports in normal,
+    ///         non-containment mode, so it must not coincide with an unreported slash/penalty. This is the
+    ///         action that exercises invariant I21 (monotonic non-decreasing consolidation total).
+    /// @param deltaSeed  Seed for the consolidation delta (bounded inside the test contract).
+    function consolidationReport(uint256 deltaSeed) external {
+        // Step 1: Guard — need a deposit baseline and no pending loss (non-containment report).
+        if (ghost_depositCount == 0 || ghost_slashOccurred) return;
+        // Step 2: Delegate; the test contract itself no-ops until a baseline report has set CLValidatorCount.
+        _test.handler_consolidationReport(deltaSeed);
+        calls_consolidationReport++;
     }
 }
