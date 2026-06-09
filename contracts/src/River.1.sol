@@ -38,7 +38,6 @@ import "./state/river/RedeemManagerAddress.sol";
 import "./state/river/ELFeeRecipientAddress.sol";
 import "./state/river/DepositedValidatorCount.sol";
 import "./state/river/LastConsensusLayerReport.sol";
-import "./state/river/AttestationVerifierAddress.sol";
 import "./state/river/ConsolidationCoverageFundAddress.sol";
 import "./state/river/ExternalConsolidationRecipientMappingAddress.sol";
 import "./state/shared/OperatorsRegistryAddress.sol";
