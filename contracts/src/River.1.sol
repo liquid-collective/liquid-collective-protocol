@@ -1,43 +1,47 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.34;
 
-import "./interfaces/IAllowlist.1.sol";
-import "./interfaces/IAttestationVerifier.1.sol";
-import "./interfaces/IOperatorRegistry.1.sol";
 import "./interfaces/IRiver.1.sol";
 import "./interfaces/IWithdraw.1.sol";
-import "./interfaces/IELFeeRecipient.1.sol";
+import "./interfaces/IAllowlist.1.sol";
 import "./interfaces/ICoverageFund.1.sol";
+import "./interfaces/IELFeeRecipient.1.sol";
 import "./interfaces/IProtocolVersion.sol";
+import "./interfaces/IELFeeRecipient.1.sol";
+import "./interfaces/IOperatorRegistry.1.sol";
+import "./interfaces/IAttestationVerifier.1.sol";
 import "./interfaces/IExternalConsolidationRecipientMapping.1.sol";
 
-import "./components/ConsensusLayerDepositManager.1.sol";
-import "./components/UserDepositManager.1.sol";
 import "./components/SharesManager.1.sol";
 import "./components/OracleManager.1.sol";
+import "./components/UserDepositManager.1.sol";
+import "./components/ConsensusLayerDepositManager.1.sol";
+
 import "./Initializable.sol";
 import "./Administrable.sol";
 
-import "./libraries/LibAllowlistMasks.sol";
 import "./libraries/LibErrors.sol";
 import "./libraries/LibFundingDeltas.sol";
+import "./libraries/LibAllowlistMasks.sol";
 import "./interfaces/IDepositDataBuffer.sol";
 
-import "./state/river/AllowlistAddress.sol";
-import "./state/river/AttestationVerifierAddress.sol";
-import "./state/river/RedeemManagerAddress.sol";
-import "./state/river/CollectorAddress.sol";
-import "./state/river/ELFeeRecipientAddress.sol";
-import "./state/river/CoverageFundAddress.sol";
-import "./state/river/ConsolidationCoverageFundAddress.sol";
-import "./state/river/BalanceToRedeem.sol";
 import "./state/river/GlobalFee.sol";
 import "./state/river/MetadataURI.sol";
-import "./state/river/LastConsensusLayerReport.sol";
+import "./state/river/BalanceToRedeem.sol";
+import "./state/river/AllowlistAddress.sol";
+import "./state/river/CollectorAddress.sol";
 import "./state/river/TotalDepositedETH.sol";
+import "./state/river/ConsolidatorAddress.sol";
+import "./state/river/CoverageFundAddress.sol";
+import "./state/river/ConsolidationCoverageFundAddress.sol";
+import "./state/river/RedeemManagerAddress.sol";
+import "./state/river/ELFeeRecipientAddress.sol";
 import "./state/river/DepositedValidatorCount.sol";
+import "./state/river/LastConsensusLayerReport.sol";
+import "./state/river/ConsolidationCoverageFundAddress.sol";
 import "./state/river/ExternalConsolidationRecipientMappingAddress.sol";
 import "./state/shared/OperatorsRegistryAddress.sol";
+import "./state/shared/AttestationVerifierAddress.sol";
 
 /// @title River (v1)
 /// @author Alluvial Finance Inc.
@@ -52,12 +56,21 @@ contract RiverV1 is
     IProtocolVersion,
     IRiverV1
 {
+    /// @notice Modifier to check if the caller is the consolidator
+    modifier onlyConsolidator() {
+        if (msg.sender != ConsolidatorAddress.get()) {
+            revert OnlyConsolidator();
+        }
+        _;
+    }
+
     /// @inheritdoc IRiverV1
     function initRiverV1_3(
         bytes32 _withdrawalCredentials,
         address _consolidationCoverageFund,
         address _attestationVerifier,
-        address _externalConsolidationRecipientMapping
+        address _externalConsolidationRecipientMapping,
+        address _consolidator
     ) external init(3) onlyAdmin {
         if (_withdrawalCredentials == bytes32(0)) {
             revert InvalidWithdrawalCredentials();
@@ -89,6 +102,8 @@ contract RiverV1 is
         ConsolidationCoverageFundAddress.set(_consolidationCoverageFund);
         emit SetConsolidationCoverageFund(_consolidationCoverageFund);
 
+        _setConsolidator(_consolidator);
+
         IOracleManagerV1.StoredConsensusLayerReport storage lastReport = LastConsensusLayerReport.get();
         uint32 clValidatorCount = lastReport.validatorsCount;
         uint256 depositedValidatorCount = DepositedValidatorCount.get();
@@ -111,6 +126,8 @@ contract RiverV1 is
         storedReport.rebalanceDepositToRedeemMode = lastReport.rebalanceDepositToRedeemMode;
         storedReport.slashingContainmentMode = lastReport.slashingContainmentMode;
         storedReport.totalDepositedActivatedETH = depositedValidatorCount * DEPOSIT_SIZE - InFlightDeposit.get();
+        /// We don't set the totalExternalConsolidationsAmountReported here because consolidations were not enabled before this version.
+        /// And the default value will be 0, so we don't need to set it here.
         LastConsensusLayerReport.set(storedReport);
     }
 
@@ -147,6 +164,11 @@ contract RiverV1 is
     /// @inheritdoc IRiverV1
     function getRedeemManager() external view returns (address) {
         return RedeemManagerAddress.get();
+    }
+
+    /// @inheritdoc IRiverV1
+    function getConsolidator() external view returns (address) {
+        return ConsolidatorAddress.get();
     }
 
     /// @inheritdoc IRiverV1
@@ -188,7 +210,7 @@ contract RiverV1 is
     /// @inheritdoc IRiverV1
     function mintLsETHForConsolidation(IAttestationVerifierV1.ConsolidationObject calldata consolidation)
         external
-        onlyKeeper
+        onlyConsolidator
     {
         // we check the allowlist first to fail fast if the withdrawalAddress/recipient is denied
         IAllowlistV1 allowlist = IAllowlistV1(AllowlistAddress.get());
@@ -293,6 +315,18 @@ contract RiverV1 is
     }
 
     /// @inheritdoc IRiverV1
+    function setConsolidator(address _newConsolidator) external onlyAdmin {
+        _setConsolidator(_newConsolidator);
+    }
+
+    /// @notice Internal utility to set the consolidator address
+    /// @param _newConsolidator The new consolidator address
+    function _setConsolidator(address _newConsolidator) internal {
+        ConsolidatorAddress.set(_newConsolidator);
+        emit SetConsolidator(_newConsolidator);
+    }
+
+    /// @inheritdoc IRiverV1
     function getOperatorsRegistry() external view returns (address) {
         return OperatorsRegistryAddress.get();
     }
@@ -333,10 +367,21 @@ contract RiverV1 is
     }
 
     /// @inheritdoc IRiverV1
+    function selfConsolidation(bytes[] calldata pubkeys, uint256 maxFeePerConsolidation) external payable onlyKeeper {
+        IWithdrawV1.ConsolidationRequest[] memory requests =
+            IAttestationVerifierV1(AttestationVerifierAddress.get()).validateSelfConsolidation(pubkeys);
+        address excessFeeRecipient = msg.sender;
+        IWithdrawV1(payable(WithdrawalCredentials.getAddress())).consolidate{value: msg.value}(
+            requests, maxFeePerConsolidation, excessFeeRecipient
+        );
+        emit PectraConsolidationRequested(requests, maxFeePerConsolidation, excessFeeRecipient, msg.value);
+    }
+
+    /// @inheritdoc IRiverV1
     function consolidate(IWithdrawV1.ConsolidationRequest[] calldata requests, uint256 maxFeePerConsolidation)
         external
         payable
-        onlyKeeper
+        onlyConsolidator
     {
         address excessFeeRecipient = msg.sender;
         IWithdrawV1(payable(WithdrawalCredentials.getAddress())).consolidate{value: msg.value}(

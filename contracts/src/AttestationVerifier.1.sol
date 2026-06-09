@@ -8,6 +8,9 @@ import "./interfaces/IAdministrable.sol";
 import "./interfaces/IAttestationVerifier.1.sol";
 import "./interfaces/IDepositContract.sol";
 import "./interfaces/IDepositDataBuffer.sol";
+import "./interfaces/IOperatorRegistry.1.sol";
+import "./interfaces/IRiver.1.sol";
+import "./interfaces/IWithdraw.1.sol";
 
 import "./libraries/BLS12_381.sol";
 import "./libraries/LibErrors.sol";
@@ -23,6 +26,7 @@ import "./state/attestationVerifier/DepositDomainValue.sol";
 import "./state/attestationVerifier/DomainSeparator.sol";
 import "./state/attestationVerifier/ProcessedDepositDataBufferIds.sol";
 import "./state/attestationVerifier/PectraValidatorPubkeyLookup.sol";
+import "./state/attestationVerifier/PrePectraValidatorPubkeyLookup.sol";
 import "./state/shared/RiverAddress.sol";
 
 /// @title AttestationVerifier (v1)
@@ -452,11 +456,91 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         for (uint256 i = 0; i < len; ++i) {
             PectraValidatorPubkeyLookup.add(pubkeys[i]);
         }
+        emit AddedPectraValidatorPubkeys(pubkeys);
     }
 
     /// @inheritdoc IAttestationVerifierV1
     function isPubkeyFunded(bytes calldata pubkey) external view returns (bool) {
         return PectraValidatorPubkeyLookup.isPubkeyFunded(pubkey);
+    }
+
+    /// @inheritdoc IAttestationVerifierV1
+    function isPrePectraValidatorPubkeyFunded(bytes calldata pubkey) external view returns (bool) {
+        return PrePectraValidatorPubkeyLookup.isPubkeyFunded(pubkey);
+    }
+
+    /// @inheritdoc IAttestationVerifierV1
+    function migratePrePectraValidatorPubkeys(uint256 operatorIndex, uint256 startIndex, uint256 stopIndex)
+        external
+        onlyRiverAdmin
+    {
+        IOperatorsRegistryV1 operatorsRegistry =
+            IOperatorsRegistryV1(IRiverV1(payable(RiverAddress.get())).getOperatorsRegistry());
+
+        bytes[] memory pubkeys = operatorsRegistry.getPrePectraValidatorPubkeys(operatorIndex, startIndex, stopIndex);
+        uint256 len = pubkeys.length;
+        for (uint256 i = 0; i < len; ++i) {
+            bytes memory pubkey = pubkeys[i];
+            if (pubkey.length != DEPOSIT_PUBKEY_LENGTH) {
+                revert InvalidPrePectraMigrationPubkeyLength(operatorIndex, startIndex + i, pubkey.length);
+            }
+            PrePectraValidatorPubkeyLookup.add(pubkey);
+        }
+
+        emit MigratedPrePectraValidatorPubkeys(operatorIndex, startIndex, stopIndex);
+    }
+
+    /// @inheritdoc IAttestationVerifierV1
+    function validateSelfConsolidation(bytes[] calldata pubkeys)
+        external
+        onlyRiver
+        returns (IWithdrawV1.ConsolidationRequest[] memory)
+    {
+        uint256 len = pubkeys.length;
+        if (len == 0) {
+            revert InvalidSelfConsolidationEmptyPubkeys();
+        }
+
+        IWithdrawV1.ConsolidationRequest[] memory requests = new IWithdrawV1.ConsolidationRequest[](len);
+
+        for (uint256 i = 0; i < len; ++i) {
+            bytes calldata pubkey = pubkeys[i];
+            if (pubkey.length != DEPOSIT_PUBKEY_LENGTH) {
+                revert InvalidSelfConsolidationPubkeyLength(i, pubkey.length);
+            }
+            if (!PrePectraValidatorPubkeyLookup.isPubkeyFunded(pubkey)) {
+                revert PrePectraValidatorPubkeyNotFunded(pubkey);
+            }
+            PrePectraValidatorPubkeyLookup.remove(pubkey);
+            PectraValidatorPubkeyLookup.add(pubkey);
+            requests[i] = IWithdrawV1.ConsolidationRequest({srcPubkeys: new bytes[](1), targetPubkey: pubkey});
+            requests[i].srcPubkeys[0] = pubkey;
+        }
+
+        emit RemovedPrePectraValidatorPubkeys(pubkeys);
+        emit AddedPectraValidatorPubkeys(pubkeys);
+
+        return requests;
+    }
+
+    /// @inheritdoc IAttestationVerifierV1
+    function removePrePectraValidatorPubkeys(bytes[] calldata pubkeys) external onlyRiverAdmin {
+        uint256 len = pubkeys.length;
+        if (len == 0) {
+            revert InvalidPrePectraRemovalEmptyPubkeys();
+        }
+
+        for (uint256 i = 0; i < len; ++i) {
+            bytes calldata pubkey = pubkeys[i];
+            if (pubkey.length != DEPOSIT_PUBKEY_LENGTH) {
+                revert InvalidPrePectraRemovalPubkeyLength(i, pubkey.length);
+            }
+            if (!PrePectraValidatorPubkeyLookup.isPubkeyFunded(pubkey)) {
+                revert PrePectraValidatorPubkeyNotFunded(pubkey);
+            }
+            PrePectraValidatorPubkeyLookup.remove(pubkey);
+        }
+        emit RemovedPrePectraValidatorPubkeys(pubkeys);
     }
 
     /// @inheritdoc IAttestationVerifierV1

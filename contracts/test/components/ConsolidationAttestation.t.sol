@@ -67,6 +67,8 @@ contract ConsolidationAttestationTest is Test {
     // Storage slots (must match contracts/src/state/attestationVerifier/*)
     bytes32 internal constant CONSOLIDATION_DOMAIN_SEPARATOR_SLOT =
         bytes32(uint256(keccak256("attestationVerifier.state.consolidationDomainSeparator")) - 1);
+    bytes32 internal constant CONSOLIDATION_COMMITTEE_ATTESTATION_QUORUM_SLOT =
+        bytes32(uint256(keccak256("attestationVerifier.state.consolidationCommitteeAttestationQuorum")) - 1);
 
     function setUp() public {
         attester1 = vm.addr(pk1);
@@ -767,6 +769,18 @@ contract ConsolidationAttestationTest is Test {
         IAttestationVerifierV1.ConsolidationObject memory c = _validConsolidation(user, 1);
 
         vm.expectRevert(IAttestationVerifierV1.ZeroConsolidationDomainSeparator.selector);
+        _validateConsolidationAsRiver(c);
+    }
+
+    function testRevert_zeroConsolidationQuorumStorage() public {
+        // The quorum setter rejects zero, but validateConsolidation() still guards the
+        // internal verifier helper. If the slot were corrupted to zero, signatures must
+        // not become optional for a structurally valid consolidation request.
+        vm.store(address(validator), CONSOLIDATION_COMMITTEE_ATTESTATION_QUORUM_SLOT, bytes32(0));
+
+        IAttestationVerifierV1.ConsolidationObject memory c = _validConsolidation(address(0x11), 2);
+
+        vm.expectRevert(IAttestationVerifierV1.ZeroQuorum.selector);
         _validateConsolidationAsRiver(c);
     }
 

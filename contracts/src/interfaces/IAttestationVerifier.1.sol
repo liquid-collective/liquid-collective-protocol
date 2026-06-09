@@ -2,6 +2,7 @@
 pragma solidity 0.8.34;
 
 import "./IDepositDataBuffer.sol";
+import "./IWithdraw.1.sol";
 import "../libraries/BLS12_381.sol";
 
 /// @title Attestation Verifier Interface (v1)
@@ -78,6 +79,33 @@ interface IAttestationVerifierV1 {
     /// @param consolidationHash The EIP-712 structHash of the consolidation request
     event ConsolidationProcessed(bytes32 indexed consolidationHash);
 
+    /// @notice Emitted when a chunk of pre-Pectra validator pubkeys is migrated into verifier state.
+    /// @param operatorIndex The operator whose legacy pubkeys were migrated
+    /// @param startIndex The first migrated key index
+    /// @param stopIndex The exclusive stop key index
+    event MigratedPrePectraValidatorPubkeys(uint256 indexed operatorIndex, uint256 startIndex, uint256 stopIndex);
+
+    /// @notice Emitted when a chunk of pre-Pectra validator pubkeys is removed from verifier state.
+    /// @param pubkeys The 48-byte BLS pubkeys that were removed
+    event RemovedPrePectraValidatorPubkeys(bytes[] pubkeys);
+
+    /// @notice Emitted when a batch of validator pubkeys is added to the post-Pectra lookup.
+    /// @dev    Fires on every path that records membership in `PectraValidatorPubkeyLookup`:
+    ///           - `recordNewlyFundedPubkeys` (initial-deposit callback from River),
+    ///           - `validateSelfConsolidation` (self-consolidation upgrade; pubkeys are
+    ///             simultaneously cleared from the pre-Pectra lookup — see
+    ///             `RemovedPrePectraValidatorPubkeys` paired emission semantics).
+    /// @param pubkeys The 48-byte BLS pubkeys that were added
+    event AddedPectraValidatorPubkeys(bytes[] pubkeys);
+
+    /// @notice Emitted when a batch of validator pubkeys is removed from the post-Pectra lookup.
+    /// @dev    Reserved for future EL-withdrawal code that clears membership when a validator
+    ///         exits and is no longer controlled by the protocol. No on-chain path emits this
+    ///         today; the declaration is here so future callers stay consistent with the
+    ///         existing `Added` / `Removed` symmetry on the pre-Pectra side.
+    /// @param pubkeys The 48-byte BLS pubkeys that were removed
+    event RemovedPectraValidatorPubkeys(bytes[] pubkeys);
+
     // -----------------------------------------------------------------------
     // Errors
     // -----------------------------------------------------------------------
@@ -99,6 +127,10 @@ interface IAttestationVerifierV1 {
     /// @param expected The bufferId co-signed by root attesters
     /// @param actual The bufferId recomputed from the returned deposits
     error BufferIdMismatch(bytes32 expected, bytes32 actual);
+
+    /// @notice The supplied deposit data buffer ID has already been processed.
+    /// @param depositDataBufferId The replayed deposit data buffer ID
+    error DepositDataBufferIdAlreadyProcessed(bytes32 depositDataBufferId);
 
     /// @notice The submitted signatures array exceeds MAX_SIGNATURES
     /// @param count The submitted signature count
@@ -196,16 +228,8 @@ interface IAttestationVerifierV1 {
     /// @notice The EIP-712 consolidation domain separator has not been initialized
     error ZeroConsolidationDomainSeparator();
 
-    /// @notice The consolidation's totalAmount is zero
-    error ZeroConsolidationTotalAmount();
-
     /// @notice The consolidation's withdrawal address is the zero address
     error ZeroConsolidationWithdrawalAddress();
-
-    /// @notice The supplied quorum is greater than the current consolidation-committee attester count
-    /// @param quorum The supplied quorum
-    /// @param consolidationCommitteeAttesterCount The current consolidation-committee attester count
-    error QuorumExceedsConsolidationCommitteeAttesterCount(uint256 quorum, uint256 consolidationCommitteeAttesterCount);
 
     /// @notice Adding a consolidation-committee attester would exceed MAX_CONSOLIDATION_COMMITTEE_ATTESTERS
     /// @param count The would-be consolidation-committee attester count
@@ -217,11 +241,21 @@ interface IAttestationVerifierV1 {
     /// @param value The requested status (matches current status)
     error ConsolidationCommitteeAttesterStatusUnchanged(address consolidationCommitteeAttester, bool value);
 
+    // -- Consolidation-side errors --
+
+    /// @notice The consolidation's totalAmount is zero
+    error ZeroConsolidationTotalAmount();
+
+    /// @notice The supplied quorum is greater than the current consolidation-committee attester count
+    /// @param quorum The supplied quorum
+    /// @param consolidationCommitteeAttesterCount The current consolidation-committee attester count
+    error QuorumExceedsConsolidationCommitteeAttesterCount(uint256 quorum, uint256 consolidationCommitteeAttesterCount);
+
     /// @notice The supplied consolidation has already been validated; replay rejected.
     /// @param consolidationHash The EIP-712 structHash of the consolidation request
     error ConsolidationAlreadyProcessed(bytes32 consolidationHash);
     /// @notice A top-up referenced a pubkey that has never been initial-deposited by River.
-    ///         Without this check, malicious root attesters could mark an attacker pubkey as a
+    ///         Without this check, a malicious committee could mark an attacker pubkey as a
     ///         top-up and bypass BLS verification.
     /// @param pubkey The offending 48-byte BLS pubkey
     error TopUpPubkeyNotFunded(bytes pubkey);
@@ -230,9 +264,31 @@ interface IAttestationVerifierV1 {
     /// @param pubkey The offending 48-byte BLS pubkey
     error PubkeyAlreadyFunded(bytes pubkey);
 
-    /// @notice The supplied `depositDataBufferId` has already been executed. Each batch must be processed at most once.
-    /// @param depositDataBufferId The offending batch identifier
-    error DepositDataBufferIdAlreadyProcessed(bytes32 depositDataBufferId);
+    /// @notice A legacy pubkey read during pre-Pectra migration is not 48 bytes.
+    /// @param operatorIndex The operator whose key was read
+    /// @param keyIndex The legacy key index
+    /// @param length The observed pubkey length
+    error InvalidPrePectraMigrationPubkeyLength(uint256 operatorIndex, uint256 keyIndex, uint256 length);
+
+    /// @notice The pre-Pectra removal batch is empty.
+    error InvalidPrePectraRemovalEmptyPubkeys();
+
+    /// @notice A pubkey supplied for pre-Pectra removal is not 48 bytes.
+    /// @param index The index into the removal batch
+    /// @param length The observed pubkey length
+    error InvalidPrePectraRemovalPubkeyLength(uint256 index, uint256 length);
+
+    /// @notice A pubkey supplied for pre-Pectra removal has not been migrated.
+    /// @param pubkey The 48-byte BLS pubkey
+    error PrePectraValidatorPubkeyNotFunded(bytes pubkey);
+
+    /// @notice The self consolidation batch is empty.
+    error InvalidSelfConsolidationEmptyPubkeys();
+
+    /// @notice A pubkey supplied for self consolidation is not 48 bytes.
+    /// @param index The index into the self consolidation batch
+    /// @param length The observed pubkey length
+    error InvalidSelfConsolidationPubkeyLength(uint256 index, uint256 length);
 
     // -----------------------------------------------------------------------
     // Initialization
@@ -263,6 +319,21 @@ interface IAttestationVerifierV1 {
         address[] calldata _consolidationCommitteeAttesters,
         uint256 _consolidationQuorum
     ) external;
+
+    /// @notice Validate and prepare self-consolidation requests for pre-Pectra validator pubkeys.
+    ///         Only callable by River.
+    /// @dev    For each pubkey: requires membership in the pre-Pectra lookup, then promotes it to
+    ///         the post-Pectra lookup (removes the pre-Pectra entry and adds a post-Pectra entry)
+    ///         and builds a `src == target` self-consolidation request. The promotion reflects
+    ///         the on-chain 0x01→0x02 upgrade so the validator is recognised by downstream
+    ///         post-Pectra paths (e.g. top-ups, normal consolidations). The lookup mutations
+    ///         atomically revert with the rest of the transaction if the downstream
+    ///         consolidation call fails.
+    /// @param pubkeys The 48-byte BLS pubkeys to consolidate
+    /// @return requests The consolidation requests
+    function validateSelfConsolidation(bytes[] calldata pubkeys)
+        external
+        returns (IWithdrawV1.ConsolidationRequest[] memory);
 
     // -----------------------------------------------------------------------
     // Validation entry point (called by River)
@@ -299,6 +370,11 @@ interface IAttestationVerifierV1 {
         uint256 committedBalance
     ) external view returns (IDepositDataBuffer.DepositObject memory batch, uint256 totalAmount);
 
+    /// @notice Mark a `depositDataBufferId` as processed. Only callable by River.
+    /// @dev Called by River after the deposit-execution loop; consulted by `validateDeposits()` to reject replays.
+    /// @param depositDataBufferId The batch identifier to mark processed.
+    function markDepositDataBufferIdProcessed(bytes32 depositDataBufferId) external;
+
     // -----------------------------------------------------------------------
     // Initial-deposit recording (called by River after a successful deposit batch)
     // -----------------------------------------------------------------------
@@ -313,9 +389,23 @@ interface IAttestationVerifierV1 {
     /// @param pubkeys The 48-byte BLS pubkeys to record
     function recordNewlyFundedPubkeys(bytes[] calldata pubkeys) external;
 
+    /// @notice Migrate a chunk of pre-Pectra funded validator pubkeys into the verifier lookup.
+    /// @dev Only callable by River admin. `stopIndex` is exclusive and must be no greater than
+    ///      the operator's legacy funded validator count in OperatorsV2 storage.
+    /// @param operatorIndex The operator whose legacy keys should be migrated
+    /// @param startIndex The first legacy key index to migrate
+    /// @param stopIndex The exclusive stop legacy key index
+    function migratePrePectraValidatorPubkeys(uint256 operatorIndex, uint256 startIndex, uint256 stopIndex) external;
+
+    /// @notice Remove a chunk of pre-Pectra funded validator pubkeys from the verifier lookup.
+    /// @dev Only callable by River admin. Reverts if the batch is empty, any pubkey is not 48
+    ///      bytes, or any pubkey is not currently in the pre-Pectra lookup.
+    /// @param pubkeys The 48-byte BLS pubkeys to remove
+    function removePrePectraValidatorPubkeys(bytes[] calldata pubkeys) external;
+
     /// @notice Validate consolidation-committee attestations over a `ConsolidationObject` passed
-    ///         in by the caller (River) and mark the request as processed for replay protection.
-    /// @dev    The caller(River) supplies the full struct (including signatures) in calldata. The
+    ///         in by the caller and mark the request as processed for replay protection.
+    /// @dev    The caller supplies the full struct (including signatures) in calldata. The
     ///         verifier constructs the EIP-712 typed-data digest directly from the four
     ///         request fields and the cached consolidation domain separator, then recovers
     ///         each signature against that digest. The `signatures` field of the struct is
@@ -324,7 +414,7 @@ interface IAttestationVerifierV1 {
     ///         Replay protection: the EIP-712 structHash is recorded in storage on success.
     ///         Subsequent calls with a struct that hashes to the same value revert with
     ///         `ConsolidationAlreadyProcessed`. Note that this makes the function
-    ///         state-mutating (not `view`).
+    ///         state-mutating (not `view`) and callable only by River.
     ///
     ///         The function reverts on any validation failure and returns `true` on success.
     ///         The boolean is a positive signal for off-chain `eth_call` style invocations.
@@ -340,10 +430,6 @@ interface IAttestationVerifierV1 {
     ///                      source/target pubkeys, totalAmount, signatures).
     /// @return Always `true` if the call returns; reverts otherwise.
     function validateConsolidation(ConsolidationObject calldata consolidation) external returns (bool);
-    /// @notice Mark a `depositDataBufferId` as processed. Only callable by River.
-    /// @dev Called by River after the deposit-execution loop; consulted by `fetchAndValidateDeposits()` to reject replays.
-    /// @param depositDataBufferId The batch identifier to mark processed.
-    function markDepositDataBufferIdProcessed(bytes32 depositDataBufferId) external;
 
     // -----------------------------------------------------------------------
     // Admin setters
@@ -430,6 +516,13 @@ interface IAttestationVerifierV1 {
     /// @param pubkey The 48-byte BLS pubkey
     /// @return True if the pubkey is currently in the lookup
     function isPubkeyFunded(bytes calldata pubkey) external view returns (bool);
+
+    /// @notice Check whether a pubkey has been migrated from pre-Pectra validator storage.
+    /// @dev Intended for consolidation source validation; pre-Pectra keys are not eligible
+    ///      top-up targets through `validateDeposits()`.
+    /// @param pubkey The 48-byte BLS pubkey
+    /// @return True if the pubkey is currently in the pre-Pectra lookup
+    function isPrePectraValidatorPubkeyFunded(bytes calldata pubkey) external view returns (bool);
 
     /// @notice Check whether a `depositDataBufferId` has already been processed.
     /// @param depositDataBufferId The batch identifier
