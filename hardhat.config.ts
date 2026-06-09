@@ -10,9 +10,6 @@ import "solidity-coverage";
 import "hardhat-docgen";
 import "hardhat-contract-sizer";
 import "@primitivefi/hardhat-dodoc";
-import * as tdly from "@tenderly/hardhat-tenderly";
-import { tenderly } from "hardhat";
-tdly.setup({ automaticVerifications: false });
 
 dotenv.config();
 
@@ -187,8 +184,25 @@ const config: HardhatUserConfig = {
     cache: "./hardhat-cache",
   },
   etherscan: {
-    apiKey: process.env.ETHERSCAN_API_KEY || "",
+    apiKey: {
+      mainnet: process.env.ETHERSCAN_API_KEY || "",
+      base: process.env.ETHERSCAN_API_KEY || "",
+      linea: process.env.ETHERSCAN_API_KEY || "",
+      sepolia: process.env.ETHERSCAN_API_KEY || "",
+      baseSepolia: process.env.ETHERSCAN_API_KEY || "",
+      hoodi: process.env.ETHERSCAN_API_KEY || "",
+      devHoodi: process.env.ETHERSCAN_API_KEY || "",
+      tenderly: process.env.TENDERLY_ACCESS_KEY || "tenderly",
+    },
     customChains: [
+      {
+        network: "tenderly",
+        chainId: 999560048,
+        urls: {
+          apiURL: `${process.env.TENDERLY_RPC_URL || ""}/verify/etherscan`,
+          browserURL: "https://dashboard.tenderly.co/liquid-collective/liquid-collective-hoodi",
+        },
+      },
       {
         network: "hoodi",
         chainId: 560048,
@@ -238,11 +252,6 @@ const config: HardhatUserConfig = {
         },
       },
     ],
-  },
-  tenderly: {
-    project: process.env.TENDERLY_PROJECT_ID,
-    username: process.env.TENDERLY_USERNAME,
-    privateVerification: false,
   },
 };
 
