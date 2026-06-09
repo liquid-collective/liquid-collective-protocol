@@ -284,7 +284,7 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     function setCoverageFund(address _newCoverageFund) external;
 
     /// @notice Changes the consolidation coverage fund
-    /// @param _newConsolidationCoverageFund New address for the fund (address(0) to disable)
+    /// @param _newConsolidationCoverageFund New address for the fund
     function setConsolidationCoverageFund(address _newConsolidationCoverageFund) external;
 
     /// @notice Sets the metadata uri string value
