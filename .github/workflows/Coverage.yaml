@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - v2/pectra
     paths:
       - "contracts/**"
       - "lib/**"
@@ -21,7 +22,9 @@ on:
 
 jobs:
   run-coverage:
-    runs-on: ubuntu-24.04
+    runs-on:
+      group: eth-protocol-runners
+      labels: ubuntu-24.04-8core
 
     steps:
       - uses: actions/checkout@v6
@@ -40,7 +43,7 @@ jobs:
           MAINNET_FORK_RPC_URL: ${{ secrets.MAINNET_FORK_RPC_URL }}
 
       - name: Update lcov report
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./lcov.txt

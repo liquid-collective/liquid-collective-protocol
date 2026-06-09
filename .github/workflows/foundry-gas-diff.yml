@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - v2/pectra
     paths:
       - "contracts/**"
       - "lib/**"
@@ -18,7 +19,9 @@ on:
 
 jobs:
   compare_gas_reports:
-    runs-on: ubuntu-24.04
+    runs-on:
+      group: eth-protocol-runners
+      labels: ubuntu-24.04-8core
     steps:
       - uses: actions/checkout@v6
         with:
@@ -45,7 +48,7 @@ jobs:
           sortCriteria: avg,max # sort diff rows by criteria
           sortOrders: desc,asc # and directions
           ignore: test-foundry/**/*,test/**/* # filter out gas reports from specific paths (test/ is included by default)
-          base: main # branch to compare against (defaults to current branch)
+          base: ${{ github.base_ref || github.ref_name }} # branch to compare against (defaults to current branch)
         id: gas_diff
 
       - name: Add gas diff to sticky comment

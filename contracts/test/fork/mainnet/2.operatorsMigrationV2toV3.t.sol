@@ -35,6 +35,8 @@ contract OperatorsMigrationV2ToV3 is Test {
     address internal constant OPERATORS_REGISTRY_MAINNET_ADDRESS = 0x1235f1b60df026B2620e48E735C422425E06b725;
     address internal constant OPERATORS_REGISTRY_MAINNET_PROXY_ADMIN_ADDRESS =
         0x1d1FD2d8C87Fed864708bbab84c2Da54254F5a12;
+    address internal constant ONE_ADDRESS = address(1);
+    OperatorsRegistryV1 internal v3;
 
     function setUp() external {
         try vm.envString("MAINNET_FORK_RPC_URL") returns (string memory rpcUrl) {
@@ -43,6 +45,7 @@ contract OperatorsMigrationV2ToV3 is Test {
         } catch {
             _skip = true;
         }
+        v3 = OperatorsRegistryV1(OPERATORS_REGISTRY_MAINNET_ADDRESS);
     }
 
     modifier shouldSkip() {
@@ -73,14 +76,20 @@ contract OperatorsMigrationV2ToV3 is Test {
         vm.prank(OPERATORS_REGISTRY_MAINNET_PROXY_ADMIN_ADDRESS);
         ITransparentUpgradeableProxy(address(orProxy))
             .upgradeToAndCall(
-                address(newImplementation),
-                abi.encodeWithSelector(OperatorsRegistryV1.initOperatorsRegistryV1_2.selector)
+                address(newImplementation), abi.encodeCall(OperatorsRegistryV1.initOperatorsRegistryV1_2, ONE_ADDRESS)
             );
 
         // ── Verify V3 state matches V2 ──
-        OperatorsRegistryV1 v3 = OperatorsRegistryV1(OPERATORS_REGISTRY_MAINNET_ADDRESS);
 
         assertEq(v3.getOperatorCount(), opCount, "operator count mismatch");
+        {
+            bytes32 withdrawSlot = bytes32(uint256(keccak256("river.state.withdrawAddress")) - 1);
+            assertEq(
+                vm.load(address(orProxy), withdrawSlot),
+                bytes32(uint256(uint160(ONE_ADDRESS))),
+                "WithdrawAddress not stored correctly after migration"
+            );
+        }
 
         uint256[] memory v3ExitedETH = v3.getExitedETHPerOperator();
 
@@ -100,21 +109,18 @@ contract OperatorsMigrationV2ToV3 is Test {
         TUPProxy orProxy = TUPProxy(payable(OPERATORS_REGISTRY_MAINNET_ADDRESS));
         OperatorsRegistryV1 newImplementation = new OperatorsRegistryV1();
 
-        // First migration should succeed
         vm.prank(OPERATORS_REGISTRY_MAINNET_PROXY_ADMIN_ADDRESS);
         ITransparentUpgradeableProxy(address(orProxy))
             .upgradeToAndCall(
-                address(newImplementation),
-                abi.encodeWithSelector(OperatorsRegistryV1.initOperatorsRegistryV1_2.selector)
+                address(newImplementation), abi.encodeCall(OperatorsRegistryV1.initOperatorsRegistryV1_2, ONE_ADDRESS)
             );
 
         // Second call should revert (init version already set)
-        vm.prank(OPERATORS_REGISTRY_MAINNET_PROXY_ADMIN_ADDRESS);
+        vm.prank(v3.getAdmin());
         vm.expectRevert();
         ITransparentUpgradeableProxy(address(orProxy))
             .upgradeToAndCall(
-                address(newImplementation),
-                abi.encodeWithSelector(OperatorsRegistryV1.initOperatorsRegistryV1_2.selector)
+                address(newImplementation), abi.encodeCall(OperatorsRegistryV1.initOperatorsRegistryV1_2, ONE_ADDRESS)
             );
     }
 
@@ -144,21 +150,20 @@ contract OperatorsMigrationV2ToV3 is Test {
         vm.prank(OPERATORS_REGISTRY_MAINNET_PROXY_ADMIN_ADDRESS);
         ITransparentUpgradeableProxy(address(orProxy))
             .upgradeToAndCall(
-                address(newImpl), abi.encodeWithSelector(OperatorsRegistryV1.initOperatorsRegistryV1_2.selector)
+                address(newImpl), abi.encodeCall(OperatorsRegistryV1.initOperatorsRegistryV1_2, ONE_ADDRESS)
             );
 
-        OperatorsRegistryV1 v3 = OperatorsRegistryV1(OPERATORS_REGISTRY_MAINNET_ADDRESS);
         address river = v3.getRiver();
         address admin = v3.getAdmin();
 
         // ── incrementFundedETH works on migrated state ──
-        uint256[] memory fundedETH = new uint256[](activeOpIdx + 1);
-        bytes[][] memory keys = new bytes[][](activeOpIdx + 1);
-        keys[activeOpIdx] = new bytes[](1);
-        keys[activeOpIdx][0] = new bytes(48);
-        fundedETH[activeOpIdx] = 32 ether;
+        IOperatorsRegistryV1.OperatorFundingDelta[] memory deltas = new IOperatorsRegistryV1.OperatorFundingDelta[](1);
+        deltas[0].operatorIndex = activeOpIdx;
+        deltas[0].fundedETH = 32 ether;
+        deltas[0].newPublicKeys = new bytes[](1);
+        deltas[0].newPublicKeys[0] = new bytes(48);
         vm.prank(river);
-        v3.incrementFundedETH(fundedETH, keys);
+        v3.incrementFundedETH(deltas);
         assertEq(
             v3.getOperator(activeOpIdx).funded,
             uint256(preFunded) * 32 ether + 32 ether,
