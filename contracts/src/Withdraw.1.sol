@@ -216,10 +216,13 @@ contract WithdrawV1 is IWithdrawV1, Initializable, ReentrancyGuard, IProtocolVer
             attestationVerifier.isPubkeyFunded(pubkey) || attestationVerifier.isPrePectraValidatorPubkeyFunded(pubkey);
     }
 
-    /// @notice Internal: refund excess fee to recipient; emit on send failure instead of reverting
+    /// @notice Internal: refund excess fee to recipient
     function _refundExcessFee(uint256 _totalValueReceived, uint256 _totalFeePaid, address _excessFeeRecipient)
         internal
     {
+        if (_excessFeeRecipient == address(0)) {
+            revert LibErrors.InvalidZeroAddress();
+        }
         if (_totalValueReceived > _totalFeePaid) {
             uint256 excess = _totalValueReceived - _totalFeePaid;
             (bool success,) = payable(_excessFeeRecipient).call{value: excess}("");
