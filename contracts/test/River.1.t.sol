@@ -3131,6 +3131,21 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         );
     }
 
+    /// Asserts that initRiverV1_3 rejects zero withdrawal credentials before storing V1_3 dependencies.
+    function testInitRiverV1_3RevertsOnZeroWithdrawalCredentials() public {
+        _initRiverAndV1_2();
+        AttestationVerifierV1 v = _deployValidatorFor(address(river));
+        vm.prank(admin);
+        vm.expectRevert(abi.encodeWithSignature("InvalidWithdrawalCredentials()"));
+        river.initRiverV1_3(
+            bytes32(0),
+            address(consolidationCoverageFund),
+            address(v),
+            address(externalConsolidationRecipientMapping),
+            consolidator
+        );
+    }
+
     /// Asserts that initRiverV1_3 reverts when the external consolidation recipient mapping address is zero.
     function testInitRiverV1_3RevertsOnZeroExternalConsolidationRecipientMapping() public {
         _initRiverAndV1_2();
@@ -3199,6 +3214,39 @@ contract RiverV1CoverageTests is RiverV1TestBase {
             _consolidationCommitteeAttesters_,
             1
         );
+    }
+
+    /// Asserts that initRiverV1_3 reverts when withdrawal credentials have an invalid prefix.
+    function testInitRiverV1_3RevertsOnInvalidWithdrawalCredentialsPrefix() public {
+        _initRiverAndV1_2();
+        AttestationVerifierV1 v = _deployValidatorFor(address(river));
+        bytes32 invalidCredentials =
+            bytes32(uint256(0x0300000000000000000000000000000000000000000000000000000000000000));
+        vm.prank(admin);
+        vm.expectRevert(abi.encodeWithSignature("InvalidWithdrawalCredentialsPrefix()"));
+        river.initRiverV1_3(
+            invalidCredentials,
+            address(consolidationCoverageFund),
+            address(v),
+            address(externalConsolidationRecipientMapping),
+            consolidator
+        );
+    }
+
+    /// Asserts that initRiverV1_3 accepts 0x02-prefixed withdrawal credentials.
+    function testInitRiverV1_3AcceptsValidWithdrawalCredentials() public {
+        _initRiverAndV1_2();
+        AttestationVerifierV1 v = _deployValidatorFor(address(river));
+        bytes32 validCredentials = bytes32(uint256(0x0200000000000000000000000000000000000000000000000000000000000000));
+        vm.prank(admin);
+        river.initRiverV1_3(
+            validCredentials,
+            address(consolidationCoverageFund),
+            address(v),
+            address(externalConsolidationRecipientMapping),
+            consolidator
+        );
+        assertEq(river.getWithdrawalCredentials(), validCredentials);
     }
 
     /// Asserts that a consensus layer report succeeds when no coverage fund is configured (pull is skipped).

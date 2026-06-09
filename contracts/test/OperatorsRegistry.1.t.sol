@@ -6,6 +6,7 @@ import "forge-std/Test.sol";
 
 import "./OperatorAllocationTestBase.sol";
 import "../src/libraries/LibBytes.sol";
+import "./mocks/RejectEtherMock.sol";
 import "./utils/UserFactory.sol";
 import "./utils/BytesGenerator.sol";
 import "./utils/LibImplementationUnbricker.sol";
@@ -52,6 +53,8 @@ contract OperatorsRegistryStrictRiverV1 is OperatorsRegistryV1 {
 
 /// @dev Extension that exposes internal V1/V2 storage writers
 contract OperatorsRegistryWithMigrationHelpers is OperatorsRegistryV1 {
+    function sudoInitV1_1() external init(1) {}
+
     function sudoPushV2Operator(OperatorsV2.Operator memory op) external {
         OperatorsV2.push(op);
     }
@@ -1809,6 +1812,39 @@ contract OperatorsRegistryV1CoverageTests is OperatorsRegistryV1TestBase, Operat
         assertEq(OperatorsRegistryWithMigrationHelpers(address(reg)).sudoGetStoppedValidatorCountAtIndexV2(1), 0);
     }
 
+    /// Asserts V2->V3 migration preserves a stopped-validator array longer than operatorCount + 1.
+    function testInitOperatorsRegistryV1_2KeepsLongStoppedValidatorArray() public {
+        reg.initOperatorsRegistryV1(admin, river);
+        reg.sudoPushV2Operator(
+            OperatorsV2.Operator({
+                limit: 1,
+                funded: 1,
+                requestedExits: 0,
+                keys: 1,
+                latestKeysEditBlockNumber: 0,
+                active: true,
+                name: "Op1",
+                operator: makeAddr("op1")
+            })
+        );
+
+        uint32[] memory stopped = new uint32[](4);
+        stopped[0] = 3;
+        stopped[1] = 1;
+        stopped[2] = 1;
+        stopped[3] = 1;
+        reg.sudoSetV2StoppedValidators(stopped);
+
+        reg.sudoInitV1_1();
+        reg.initOperatorsRegistryV1_2(makeAddr("withdraw"));
+
+        uint256[] memory exited = reg.getExitedETHPerOperator();
+        assertEq(exited.length, 3, "long stopped array preserved");
+        assertEq(exited[0], 32 ether, "operator 0 exited");
+        assertEq(exited[1], 32 ether, "extra stopped slot 1");
+        assertEq(exited[2], 32 ether, "extra stopped slot 2");
+    }
+
     /// Asserts that reading a V2 operator by out-of-bounds index reverts with OperatorNotFound.
     function testOperatorsV2GetRevertsOnOutOfBounds() public {
         vm.expectRevert(abi.encodeWithSignature("OperatorNotFound(uint256)", uint256(10)));
@@ -2524,5 +2560,47 @@ contract OperatorsRegistryV1ELExitTests is Test {
             abi.encodeWithSelector(IOperatorsRegistryV1.ExitsGreaterThanExitDemand.selector, 8 ether, 4 ether)
         );
         reg.requestETHExits(empty, allocs, 0);
+    }
+
+    function testRequestETHExitsRefundsExcessMsgValue() public {
+        vm.prank(admin);
+        reg.addOperator("Op0", makeAddr("op0addr"));
+        reg.sudoSetFundedV3(0, 32 ether);
+        reg.sudoSetActiveCLETH(0, 32 ether);
+        vm.prank(river);
+        reg.demandETHExits(8 ether, 32 ether);
+
+        IOperatorsRegistryV1.ExitETHAllocation[] memory empty = new IOperatorsRegistryV1.ExitETHAllocation[](0);
+        IOperatorsRegistryV1.ELExitETHAllocation[] memory allocs = _makeELAlloc(0, EIGHT_ETH_IN_GWEI);
+
+        vm.deal(keeper, 1 ether);
+        uint256 keeperBalanceBefore = keeper.balance;
+
+        vm.prank(keeper);
+        reg.requestETHExits{value: 1 wei}(empty, allocs, 0);
+
+        assertEq(keeper.balance, keeperBalanceBefore, "excess msg.value refunded");
+        assertEq(reg.getCurrentETHExitsDemand(), 0, "demand satisfied");
+        assertEq(reg.getTotalETHExitsRequested(), 8 ether, "total exits updated");
+    }
+
+    function testRequestETHExitsRevertsWhenExcessRefundFails() public {
+        RejectEtherMock rejectKeeper = new RejectEtherMock();
+        RiverMock(river).setKeeper(address(rejectKeeper));
+
+        vm.prank(admin);
+        reg.addOperator("Op0", makeAddr("op0addr"));
+        reg.sudoSetFundedV3(0, 32 ether);
+        reg.sudoSetActiveCLETH(0, 32 ether);
+        vm.prank(river);
+        reg.demandETHExits(8 ether, 32 ether);
+
+        IOperatorsRegistryV1.ExitETHAllocation[] memory empty = new IOperatorsRegistryV1.ExitETHAllocation[](0);
+        IOperatorsRegistryV1.ELExitETHAllocation[] memory allocs = _makeELAlloc(0, EIGHT_ETH_IN_GWEI);
+
+        vm.deal(address(rejectKeeper), 1 ether);
+        vm.prank(address(rejectKeeper));
+        vm.expectRevert(abi.encodeWithSelector(IOperatorsRegistryV1.UnsentRefund.selector, address(rejectKeeper), 1));
+        reg.requestETHExits{value: 1 wei}(empty, allocs, 0);
     }
 }
