@@ -230,6 +230,8 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         bytes32(uint256(keccak256("attestationVerifier.state.domainSeparator")) - 1);
     bytes32 internal constant VALIDATOR_DEPOSIT_DOMAIN_SLOT =
         bytes32(uint256(keccak256("attestationVerifier.state.depositDomain")) - 1);
+    bytes32 internal constant VALIDATOR_ROOT_ATTESTATION_QUORUM_SLOT =
+        bytes32(uint256(keccak256("attestationVerifier.state.rootAttestationQuorum")) - 1);
     bytes32 internal constant PECTRA_VALIDATOR_PUBKEY_LOOKUP_SLOT =
         bytes32(uint256(keccak256("attestationVerifier.state.pectraValidatorPubkeyLookup")) - 1);
 
