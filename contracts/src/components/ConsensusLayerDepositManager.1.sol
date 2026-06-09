@@ -83,9 +83,8 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     {
         DepositContractAddress.set(_depositContractAddress);
         emit SetDepositContractAddress(_depositContractAddress);
-
-        bytes1 prefix = bytes1(_withdrawalCredentials);
-        if (prefix != 0x02) {
+;
+        if (bytes1(_withdrawalCredentials) != 0x02) {
             revert InvalidWithdrawalCredentialsPrefix();
         }
 
