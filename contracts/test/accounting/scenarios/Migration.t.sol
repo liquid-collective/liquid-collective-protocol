@@ -164,6 +164,6 @@ contract MigrationTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(IOperatorsRegistryV1.InvalidOperatorState.selector, 1, op1Funded, op1RequestedExits)
         );
-        registry.initOperatorsRegistryV1_2();
+        registry.initOperatorsRegistryV1_2(makeAddr("withdraw"));
     }
 }
