@@ -10,9 +10,7 @@ import "../interfaces/IOperatorRegistry.1.sol";
 import "../libraries/LibBytes.sol";
 import "../libraries/LibUint256.sol";
 import "../libraries/LibErrors.sol";
-import "../libraries/BLS12_381.sol";
 
-import "../state/river/AttestationVerifierAddress.sol";
 import "../state/river/BalanceToDeposit.sol";
 import "../state/river/CommittedBalance.sol";
 import "../state/river/DepositContractAddress.sol";
@@ -20,6 +18,7 @@ import "../state/river/InFlightDeposit.sol";
 import "../state/river/KeeperAddress.sol";
 import "../state/river/TotalDepositedETH.sol";
 import "../state/river/WithdrawalCredentials.sol";
+import "../state/shared/AttestationVerifierAddress.sol";
 
 /// @title Consensus Layer Deposit Manager (v1)
 /// @author Alluvial Finance Inc.
@@ -62,8 +61,12 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     /// @notice Handler called to change the committed balance to deposit
     function _setCommittedBalance(uint256 newCommittedBalance) internal virtual;
 
-    /// @notice Internal helper called to update operator funded ETH from buffer-based deposits
-    function _updateFundedETHFromBuffer(IDepositDataBuffer.DepositObject[] memory deposits) internal virtual;
+    /// @notice Internal helper called to update operator funded ETH from a buffer-based batch.
+    /// @dev Aggregates per-operator deltas across both initial deposits and top-ups.
+    function _updateFundedETHFromBuffer(
+        IDepositDataBuffer.Deposit[] memory deposits,
+        IDepositDataBuffer.TopUp[] memory topUps
+    ) internal virtual;
 
     /// @notice Handler to check if slashing containment mode is active
     function _getSlashingContainmentMode() internal view virtual returns (bool);
@@ -143,40 +146,30 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         bytes32 withdrawalCredentials = WithdrawalCredentials.get();
         if (withdrawalCredentials == 0) revert InvalidWithdrawalCredentials();
 
-        // 4. Validate attestation quorum + BLS signatures; get deposits
+        // 4. Validate attestation quorum + BLS signatures; get the batch
         uint256 committedBalance = CommittedBalance.get();
         address depositContract = DepositContractAddress.get();
         IAttestationVerifierV1 verifier = IAttestationVerifierV1(AttestationVerifierAddress.get());
-        (IDepositDataBuffer.DepositObject[] memory deposits, uint256 totalAmount) = verifier.validate(
+        (IDepositDataBuffer.DepositObject memory batch, uint256 totalAmount) = verifier.validateDeposits(
             depositDataBufferId, depositRootHash, signatures, depositContract, withdrawalCredentials, committedBalance
         );
 
-        // 5. Update operator funded validator accounting
-        _updateFundedETHFromBuffer(deposits);
+        // 5. Mark the batch ID processed BEFORE any external interactions.
+        verifier.markDepositDataBufferIdProcessed(depositDataBufferId);
 
-        // 6. Execute deposits and split into top-ups (all-zero depositY) vs initial deposits.
-        uint256 len = deposits.length;
-        uint256 newlyFundedPubkeysCount = 0;
-        for (uint256 i = 0; i < len; i++) {
-            if (!BLS12_381.isZero(deposits[i].depositY)) newlyFundedPubkeysCount++;
-        }
-        bytes[] memory newlyFundedPubkeys = new bytes[](newlyFundedPubkeysCount);
-        uint256 newlyFundedPubkeysCursor = 0;
+        // 6. Update operator funded validator accounting
+        _updateFundedETHFromBuffer(batch.deposits, batch.topUps);
 
-        for (uint256 i = 0; i < len; i++) {
-            _depositValidator(
-                deposits[i].pubkey, deposits[i].signature, deposits[i].amount, withdrawalCredentials, depositContract
-            );
-            if (BLS12_381.isZero(deposits[i].depositY)) {
-                emit TopUp(depositDataBufferId, deposits[i].operatorIdx, deposits[i].pubkey, deposits[i].amount);
-            } else {
-                emit PubkeyFunded(depositDataBufferId, deposits[i].operatorIdx, deposits[i].pubkey, deposits[i].amount);
-                newlyFundedPubkeys[newlyFundedPubkeysCursor] = deposits[i].pubkey;
-                newlyFundedPubkeysCursor++;
-            }
-        }
+        // 7a. Execute initial deposits — BLS signature is forwarded to the deposit contract.
+        bytes[] memory newlyFundedPubkeys =
+            _executeDeposits(depositDataBufferId, batch.deposits, withdrawalCredentials, depositContract);
 
-        // 7. Bookkeeping writes BEFORE the external `recordNewlyFundedPubkeys` callback.
+        // 7b. Execute top-ups — the beacon chain ignores BLS signatures on top-ups, so we
+        //     forward 96 zero bytes. The signature field is required by the deposit contract's
+        //     ABI but is semantically irrelevant for subsequent deposits to an existing validator.
+        _executeTopUps(depositDataBufferId, batch.topUps, withdrawalCredentials, depositContract);
+
+        // 8. Bookkeeping writes BEFORE the external `recordNewlyFundedPubkeys` callback.
         _setCommittedBalance(committedBalance - totalAmount);
 
         uint256 currentInFlightETH = InFlightDeposit.get();
@@ -187,9 +180,46 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         TotalDepositedETH.set(currentTotalDepositedETH + totalAmount);
         emit SetTotalDepositedETH(currentTotalDepositedETH, currentTotalDepositedETH + totalAmount);
 
-        // 8. Record initial-deposit pubkeys so future top-ups against them pass the membership check.
-        if (newlyFundedPubkeysCount > 0) {
+        // 9. Record initial-deposit pubkeys so future top-ups against them pass the membership check.
+        if (newlyFundedPubkeys.length > 0) {
             verifier.recordNewlyFundedPubkeys(newlyFundedPubkeys);
+        }
+    }
+
+    /// @notice Executes the initial validator deposits in a batch and emits PubkeyFunded for each.
+    /// @dev Extracted into a helper to keep the parent function below the EVM stack limit when
+    ///      compiled without the optimizer (e.g. under `forge coverage`).
+    function _executeDeposits(
+        bytes32 depositDataBufferId,
+        IDepositDataBuffer.Deposit[] memory deposits,
+        bytes32 withdrawalCredentials,
+        address depositContract
+    ) internal returns (bytes[] memory newlyFundedPubkeys) {
+        uint256 depositCount = deposits.length;
+        newlyFundedPubkeys = new bytes[](depositCount);
+        for (uint256 i = 0; i < depositCount; i++) {
+            IDepositDataBuffer.Deposit memory d = deposits[i];
+            _depositValidator(d.pubkey, d.signature, d.amount, withdrawalCredentials, depositContract);
+            emit PubkeyFunded(depositDataBufferId, d.operatorIdx, d.pubkey, d.amount);
+            newlyFundedPubkeys[i] = d.pubkey;
+        }
+    }
+
+    /// @notice Executes the top-up deposits in a batch and emits TopUp for each.
+    /// @dev See `_executeDeposits` for the rationale on extracting this loop.
+    function _executeTopUps(
+        bytes32 depositDataBufferId,
+        IDepositDataBuffer.TopUp[] memory topUps,
+        bytes32 withdrawalCredentials,
+        address depositContract
+    ) internal {
+        uint256 topUpCount = topUps.length;
+        if (topUpCount == 0) return;
+        bytes memory zeroSig = new bytes(SIGNATURE_LENGTH);
+        for (uint256 i = 0; i < topUpCount; i++) {
+            IDepositDataBuffer.TopUp memory t = topUps[i];
+            _depositValidator(t.pubkey, zeroSig, t.amount, withdrawalCredentials, depositContract);
+            emit TopUp(depositDataBufferId, t.operatorIdx, t.pubkey, t.amount);
         }
     }
 
@@ -205,7 +235,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         bytes32 _withdrawalCredentials,
         address _depositContract
     ) internal {
-        // `_depositAmount` bounds are enforced upstream in `AttestationVerifier.validate()`
+        // `_depositAmount` bounds are enforced upstream in `AttestationVerifier.validateDeposits()`
         // (revert: InvalidDepositAmount). The attestation flow is the only caller.
         uint256 depositAmount = _depositAmount / 1 gwei;
 

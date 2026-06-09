@@ -11,7 +11,7 @@ import "./AttesterSetHandler.sol";
 ///      via `IAdministrable(RiverAddress.get()).getAdmin()`. The runtime cast only needs the
 ///      selector to resolve, so we expose `getAdmin()` without implementing the full interface
 ///      (which has 4 methods we'd never exercise here). The invariant test never calls
-///      `validate()`, `recordNewlyFundedPubkeys`, or anything else that would exercise
+///      `validateDeposits()`, `recordNewlyFundedPubkeys`, or anything else that would exercise
 ///      River-shaped behavior, so this is all the wiring the verifier needs.
 contract AdminStub {
     address internal immutable _admin;
@@ -32,11 +32,11 @@ contract AdminStub {
 ///         five global invariants always hold across all reachable states.
 ///
 ///         The five invariants protect against:
-///         - storage growth past `MAX_DEPOSIT_COMMITTEE_ATTESTERS`
+///         - storage growth past `MAX_ROOT_ATTESTERS`
 ///         - soft-bricking the deposit flow by setting quorum > registered count
 ///         - soft-bricking the deposit flow by setting quorum > `MAX_SIGNATURES`
 ///         - auth bypass via quorum = 0
-///         - desync between the `count` scalar and the `isDepositCommitteeAttester` mapping
+///         - desync between the `count` scalar and the `isRootAttester` mapping
 contract AttesterSetInvariantTest is Test {
     AttestationVerifierV1 internal verifier;
     AttesterSetHandler internal handler;
@@ -54,7 +54,7 @@ contract AttesterSetInvariantTest is Test {
         initial[1] = makeAddr("att2");
         initial[2] = makeAddr("att3");
 
-        verifier.initAttestationVerifierV1(address(riverStub), address(0xBEEF), initial, 2, bytes4(0));
+        verifier.initAttestationVerifierV1(address(riverStub), address(0xBEEF), initial, 2, bytes4(0), initial, 2);
 
         handler = new AttesterSetHandler(verifier, ADMIN, initial);
         targetContract(address(handler));
@@ -62,32 +62,29 @@ contract AttesterSetInvariantTest is Test {
 
     /// @dev The registered attester set never grows beyond the storage cap.
     function invariant_attesterCountBoundedByMax() public {
-        assertLe(verifier.getDepositCommitteeAttesterCount(), verifier.MAX_DEPOSIT_COMMITTEE_ATTESTERS());
+        assertLe(verifier.getRootAttesterCount(), verifier.MAX_ROOT_ATTESTERS());
     }
 
     /// @dev Quorum is never higher than the number of registered attesters. A violation here
-    ///      would mean `validate()` could not reach quorum from any valid input — soft-brick.
+    ///      would mean `validateDeposits()` could not reach quorum from any valid input — soft-brick.
     function invariant_quorumLeAttesterCount() public {
-        assertLe(
-            verifier.getDepositCommitteeAttestationQuorum(),
-            verifier.getDepositCommitteeAttesterCount()
-        );
+        assertLe(verifier.getRootAttestationQuorum(), verifier.getRootAttesterCount());
     }
 
     /// @dev Quorum is never higher than the per-submission signature cap. Same soft-brick
     ///      failure mode as above, different mechanism (`_verifyAttestationQuorum` rejects
     ///      sig arrays larger than MAX_SIGNATURES).
     function invariant_quorumLeMaxSignatures() public {
-        assertLe(verifier.getDepositCommitteeAttestationQuorum(), verifier.MAX_SIGNATURES());
+        assertLe(verifier.getRootAttestationQuorum(), verifier.MAX_SIGNATURES());
     }
 
     /// @dev Quorum is always positive. A violation here would let the keeper submit deposits
-    ///      with zero deposit-committee signatures — full auth bypass.
+    ///      with zero root signatures — full auth bypass.
     function invariant_quorumPositive() public {
-        assertGt(verifier.getDepositCommitteeAttestationQuorum(), 0);
+        assertGt(verifier.getRootAttestationQuorum(), 0);
     }
 
-    /// @dev The verifier's `count` scalar and its `isDepositCommitteeAttester` mapping must
+    /// @dev The verifier's `count` scalar and its `isRootAttester` mapping must
     ///      stay in sync. A refactor that desyncs them (e.g. increments count without
     ///      writing the flag, or vice versa) would make the contract lie about its own state
     ///      and would not be caught by the four scalar-checking invariants above.
@@ -95,17 +92,17 @@ contract AttesterSetInvariantTest is Test {
         uint256 expected = 0;
         uint256 n = handler.getCandidatesLength();
         for (uint256 i = 0; i < n; i++) {
-            if (verifier.isDepositCommitteeAttester(handler.getCandidate(i))) {
+            if (verifier.isRootAttester(handler.getCandidate(i))) {
                 ++expected;
             }
         }
-        assertEq(verifier.getDepositCommitteeAttesterCount(), expected, "count != mapping");
+        assertEq(verifier.getRootAttesterCount(), expected, "count != mapping");
     }
 
-    /// @dev Design-time constants must satisfy `MAX_DEPOSIT_COMMITTEE_ATTESTERS >= MAX_SIGNATURES`.
+    /// @dev Design-time constants must satisfy `MAX_ROOT_ATTESTERS >= MAX_SIGNATURES`.
     ///      A violation would mean even at full attester capacity the system could not reach a
     ///      MAX_SIGNATURES-sized quorum — making invariants 2 and 3 irreconcilable in edge cases.
     function invariant_constantsCoherent() public {
-        assertGe(verifier.MAX_DEPOSIT_COMMITTEE_ATTESTERS(), verifier.MAX_SIGNATURES());
+        assertGe(verifier.MAX_ROOT_ATTESTERS(), verifier.MAX_SIGNATURES());
     }
 }

@@ -37,6 +37,7 @@ contract OperatorsMigrationV2ToV3 is Test {
         0x1d1FD2d8C87Fed864708bbab84c2Da54254F5a12;
     address internal constant ONE_ADDRESS = address(1);
     OperatorsRegistryV1 internal v3;
+
     function setUp() external {
         try vm.envString("MAINNET_FORK_RPC_URL") returns (string memory rpcUrl) {
             vm.createSelectFork(rpcUrl, 21_700_000);
@@ -80,7 +81,6 @@ contract OperatorsMigrationV2ToV3 is Test {
 
         // ── Verify V3 state matches V2 ──
 
-        
         assertEq(v3.getOperatorCount(), opCount, "operator count mismatch");
         {
             bytes32 withdrawSlot = bytes32(uint256(keccak256("river.state.withdrawAddress")) - 1);
@@ -152,7 +152,6 @@ contract OperatorsMigrationV2ToV3 is Test {
             .upgradeToAndCall(
                 address(newImpl), abi.encodeCall(OperatorsRegistryV1.initOperatorsRegistryV1_2, ONE_ADDRESS)
             );
-
 
         address river = v3.getRiver();
         address admin = v3.getAdmin();

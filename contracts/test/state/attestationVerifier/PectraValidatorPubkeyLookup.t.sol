@@ -2,34 +2,34 @@
 pragma solidity 0.8.34;
 
 import "forge-std/Test.sol";
-import "../../../src/state/attestationVerifier/ValidatorPubkeyLookup.sol";
+import "../../../src/state/attestationVerifier/PectraValidatorPubkeyLookup.sol";
 
-/// @dev Thin wrapper that exposes the ValidatorPubkeyLookup library functions as external
+/// @dev Thin wrapper that exposes the PectraValidatorPubkeyLookup library functions as external
 ///      methods so the test can exercise storage operations against a real address.
-contract ValidatorPubkeyLookupInputs {
+contract PectraValidatorPubkeyLookupInputs {
     function isPubkeyFunded(bytes calldata pubkey) external view returns (bool) {
-        return ValidatorPubkeyLookup.isPubkeyFunded(pubkey);
+        return PectraValidatorPubkeyLookup.isPubkeyFunded(pubkey);
     }
 
     function add(bytes calldata pubkey) external {
-        ValidatorPubkeyLookup.add(pubkey);
+        PectraValidatorPubkeyLookup.add(pubkey);
     }
 
     function remove(bytes calldata pubkey) external {
-        ValidatorPubkeyLookup.remove(pubkey);
+        PectraValidatorPubkeyLookup.remove(pubkey);
     }
 }
 
-contract ValidatorPubkeyLookupTest is Test {
-    ValidatorPubkeyLookupInputs internal inputs;
+contract PectraValidatorPubkeyLookupTest is Test {
+    PectraValidatorPubkeyLookupInputs internal inputs;
 
-    /// @dev Must match `ValidatorPubkeyLookup.VALIDATOR_PUBKEY_LOOKUP_MAPPING_BASE_SLOT`.
+    /// @dev Must match `PectraValidatorPubkeyLookup.PECTRA_VALIDATOR_PUBKEY_LOOKUP_SLOT`.
     ///      The cross-check is the slot-derivation test below.
     bytes32 internal constant EXPECTED_BASE_SLOT =
-        bytes32(uint256(keccak256("attestationVerifier.state.validatorPubkeyLookup.mapping")) - 1);
+        bytes32(uint256(keccak256("attestationVerifier.state.pectraValidatorPubkeyLookup")) - 1);
 
     function setUp() public {
-        inputs = new ValidatorPubkeyLookupInputs();
+        inputs = new PectraValidatorPubkeyLookupInputs();
     }
 
     /// @dev Build a deterministic 48-byte BLS-shaped pubkey from a seed.
