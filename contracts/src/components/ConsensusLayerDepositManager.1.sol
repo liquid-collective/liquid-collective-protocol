@@ -235,8 +235,8 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         bytes32 _withdrawalCredentials,
         address _depositContract
     ) internal {
-        // `_depositAmount` bounds are enforced upstream in `AttestationVerifier.fetchAndValidateDeposits()`
-        // (revert: InvalidDepositAmount). The attestation flow is the only caller.
+        // `_depositAmount` bounds are enforced upstream in `AttestationVerifier.validateDeposits()`
+        // (revert: InvalidDepositAmount / InvalidTopUpAmount). The attestation flow is the only caller.
         uint256 depositAmount = _depositAmount / 1 gwei;
 
         bytes32 pubkeyRoot = sha256(bytes.concat(_publicKey, bytes16(0)));
