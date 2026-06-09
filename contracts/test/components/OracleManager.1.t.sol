@@ -593,8 +593,7 @@ contract OracleManagerV1CoverageTests is OracleManagerV1Tests {
 
     /// Asserts that setConsensusLayerData reverts when reported validator count decreases.
     function testSetConsensusLayerDataRevertsOnValidatorCountDecrease() public {
-        // Slot 5 in StoredConsensusLayerReport is validatorsCount.
-        vm.store(address(oracleManager), bytes32(uint256(LAST_CLR_BASE_SLOT) + 5), bytes32(uint256(10)));
+        OracleManagerV1ExposeInitializer(address(oracleManager)).supersedeReportedValidatorCount(10);
 
         uint256 epoch = epochsPerFrame;
         vm.warp(genesisTime + (epoch + epochsToAssumedFinality) * slotsPerEpoch * secondsPerSlot);

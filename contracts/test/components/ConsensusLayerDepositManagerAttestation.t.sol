@@ -13,6 +13,7 @@ import "../../src/interfaces/IWithdraw.1.sol";
 import "../../src/libraries/LibErrors.sol";
 import "../../src/libraries/LibFundingDeltas.sol";
 import "../../src/libraries/BLS12_381.sol";
+import "../../src/state/river/DepositContractAddress.sol";
 import "../../src/state/shared/AttestationVerifierAddress.sol";
 import "../utils/LibImplementationUnbricker.sol";
 import "../mocks/DepositContractEnhancedMock.sol";
@@ -177,6 +178,10 @@ contract AttestationDepositHarness is ConsensusLayerDepositManagerV1 {
 
     function sudoSetCommittedBalance(uint256 v) external {
         CommittedBalance.set(v);
+    }
+
+    function sudoSetDepositContract(address v) external {
+        DepositContractAddress.set(v);
     }
 
     function sudoSetAttestationVerifier(address v) external {
@@ -638,7 +643,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
     function testRevert_errorOnDepositWhenDepositContractDoesNotKeepETH() public {
         DepositContractInvalidMock invalidDepositContract = new DepositContractInvalidMock();
-        dm.initialize(address(invalidDepositContract), withdrawalCredentials);
+        dm.sudoSetDepositContract(address(invalidDepositContract));
 
         IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](1);
         deposits[0] = _makeDeposit(0, 0);
