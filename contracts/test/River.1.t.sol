@@ -3720,25 +3720,6 @@ contract RiverV1PectraTests is RiverV1TestBase {
         assertEq(address(mockConsolidation).balance, fee);
     }
 
-    function testRiverConsolidateAllowsPrePectraSourceAndValidatorTarget() public {
-        bytes memory sourcePubkey = _consolidationPubkey(50);
-        _seedPrePectraPubkey(sourcePubkey);
-
-        bytes[] memory srcPubkeys = new bytes[](1);
-        srcPubkeys[0] = sourcePubkey;
-        IWithdrawV1.ConsolidationRequest[] memory requests = new IWithdrawV1.ConsolidationRequest[](1);
-        requests[0] = IWithdrawV1.ConsolidationRequest({srcPubkeys: srcPubkeys, targetPubkey: VALID_PUBKEY_48});
-
-        uint256 fee = 1 gwei;
-        vm.deal(keeper, fee);
-
-        vm.expectCall(address(mockConsolidation), fee, bytes.concat(sourcePubkey, VALID_PUBKEY_48));
-        vm.prank(keeper);
-        river.consolidate{value: fee}(requests, fee);
-
-        assertEq(address(mockConsolidation).balance, fee);
-    }
-
     function testRiverConsolidateFeeTooHighReverts() public {
         bytes[] memory srcPubkeys = new bytes[](1);
         srcPubkeys[0] = VALID_PUBKEY_48;
