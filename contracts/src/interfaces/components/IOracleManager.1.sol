@@ -97,6 +97,20 @@ interface IOracleManagerV1 {
     /// @param lastReportedValidatorCount The last reported validator count
     error InvalidValidatorCountReport(uint256 reportedValidatorCount, uint256 lastReportedValidatorCount);
 
+    /// @notice The total consolidation amount reported has decreased
+    /// @param lastTotalConsolidationsAmountReported The last total consolidation amount reported
+    /// @param newTotalConsolidationsAmountReported The new total consolidation amount reported
+    error InvalidTotalConsolidationsAmountReportedDecrease(
+        uint256 lastTotalConsolidationsAmountReported, uint256 newTotalConsolidationsAmountReported
+    );
+
+    /// @notice The total consolidation amount reported has increased
+    /// @param lastTotalConsolidationsAmountReported The last total consolidation amount reported
+    /// @param newTotalConsolidationsAmountReported The new total consolidation amount reported
+    error InvalidTotalConsolidationsAmountReportedIncrease(
+        uint256 lastTotalConsolidationsAmountReported, uint256 newTotalConsolidationsAmountReported
+    );
+
     /// @notice Trace structure emitted via logs during reporting
     struct ConsensusLayerDataReportingTrace {
         uint256 rewards;
@@ -137,6 +151,10 @@ interface IOracleManagerV1 {
         // this value cannot decrease over reports
         // this value includes only the ETH that was deposited on the Execution Layer Deposit contract
         uint256 totalDepositedActivatedETH;
+        // the sum of all external consolidation funds that were reported
+        // this will only include the consolidations that happened due to external validators merging into LC
+        // this value cannot decrease over reports
+        uint256 totalExternalConsolidationsAmountReported;
         // the count of activated validators
         // even validators that are exited are still accounted
         // this value cannot decrease over reports
@@ -172,6 +190,7 @@ interface IOracleManagerV1 {
         bool rebalanceDepositToRedeemMode;
         bool slashingContainmentMode;
         uint256 totalDepositedActivatedETH;
+        uint256 totalExternalConsolidationsAmountReported;
     }
 
     /// @notice Get oracle address
