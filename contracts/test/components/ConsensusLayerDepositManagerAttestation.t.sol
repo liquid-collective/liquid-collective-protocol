@@ -218,7 +218,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
     address internal admin = address(0xAD);
     address internal keeper = address(0xBEEF);
-    bytes32 internal withdrawalCredentials = bytes32(uint256(0x010000000000000000000000CAFEBABE));
+    bytes32 internal withdrawalCredentials = 0x02000000000000000000000000000000000000000000000000000000CAFEBABE;
 
     uint256 internal rootAttesterPk1 = 0xA1;
     uint256 internal rootAttesterPk2 = 0xA2;
