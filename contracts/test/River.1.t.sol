@@ -3706,10 +3706,10 @@ contract RiverV1PectraTests is RiverV1TestBase {
         requests[0] = IWithdrawV1.ConsolidationRequest({srcPubkeys: srcPubkeys, targetPubkey: VALID_PUBKEY_48});
 
         uint256 fee = 1 gwei;
-        vm.deal(keeper, fee);
+        vm.deal(consolidator, fee);
 
         vm.expectCall(address(mockConsolidation), fee, bytes.concat(sourcePubkey, VALID_PUBKEY_48));
-        vm.prank(keeper);
+        vm.prank(consolidator);
         river.consolidate{value: fee}(requests, fee);
 
         assertEq(address(mockConsolidation).balance, fee);
