@@ -9,7 +9,7 @@ import "../libraries/BLS12_381.sol";
 /// @author Alluvial Finance Inc.
 /// @notice External surface of the AttestationVerifier sibling contract that River delegates
 ///         to for two independent attestation flows:
-///         1. Deposit flow (`validateDeposits`) — attestation-quorum + BLS deposit-message
+///         1. Deposit flow (`fetchAndValidateDeposits`) — attestation-quorum + BLS deposit-message
 ///            verification, plus per-deposit withdrawal-credentials and committed-balance
 ///            checks against a batch fetched from the `DepositDataBuffer`. View-only.
 ///         2. Consolidation flow (`validateConsolidation`) — attestation-quorum verification
@@ -140,12 +140,15 @@ interface IAttestationVerifierV1 {
     /// @notice An external caller invoked a function reserved for self-staticcall trampolining.
     error OnlySelfCall();
 
-    /// @notice An entry's pubkey field has an unexpected byte length
-    /// @param index Index into the sub-array currently being validated
-    ///              (either `batch.deposits` or `batch.topUps`); the loop that raised
-    ///              the revert determines which.
+    /// @notice An initial deposit's pubkey field has an unexpected byte length
+    /// @param index Index into `batch.deposits`
     /// @param length The observed length
     error InvalidPubkeyLength(uint256 index, uint256 length);
+
+    /// @notice A top-up's pubkey field has an unexpected byte length
+    /// @param index Index into `batch.topUps`
+    /// @param length The observed length
+    error InvalidTopUpPubkeyLength(uint256 index, uint256 length);
 
     /// @notice A deposit's BLS signature field has an unexpected byte length
     /// @dev Only raised while iterating `batch.deposits` — top-ups have no signature field.
@@ -153,15 +156,21 @@ interface IAttestationVerifierV1 {
     /// @param length The observed length
     error InvalidSignatureLength(uint256 index, uint256 length);
 
-    /// @notice An entry's `amount` is outside the protocol-accepted range
+    /// @notice An initial deposit's `amount` is outside the protocol-accepted range
     ///         [1 ether, 2048 ether] or is not gwei-aligned. Enforced here in
-    ///         `validateDeposits()` so producer bugs fail before the heavy BLS path runs;
+    ///         `fetchAndValidateDeposits()` so producer bugs fail before the heavy BLS path runs;
     ///         downstream `_depositValidator` trusts this check.
-    /// @param index Index into the sub-array currently being validated
-    ///              (either `batch.deposits` or `batch.topUps`); the loop that raised
-    ///              the revert determines which.
+    /// @param index Index into `batch.deposits`
     /// @param amount The offending amount in wei
     error InvalidDepositAmount(uint256 index, uint256 amount);
+
+    /// @notice A top-up's `amount` is outside the protocol-accepted range
+    ///         [1 ether, 2048 ether] or is not gwei-aligned. Enforced here in
+    ///         `fetchAndValidateDeposits()` so producer bugs fail before the heavy BLS path runs;
+    ///         downstream `_depositValidator` trusts this check.
+    /// @param index Index into `batch.topUps`
+    /// @param amount The offending amount in wei
+    error InvalidTopUpAmount(uint256 index, uint256 amount);
 
     /// @notice The summed deposit amount exceeds the committed balance passed by River
     error NotEnoughFunds();
@@ -352,7 +361,7 @@ interface IAttestationVerifierV1 {
     /// @param committedBalance     Total amount summed over deposits must not exceed this
     /// @return batch               Validated deposit batch (caller executes)
     /// @return totalAmount         Sum of deposit + top-up amounts in the batch
-    function validateDeposits(
+    function fetchAndValidateDeposits(
         bytes32 depositDataBufferId,
         bytes32 depositRootHash,
         bytes[] calldata signatures,
@@ -372,9 +381,9 @@ interface IAttestationVerifierV1 {
 
     /// @notice Record one or more pubkeys as initial-deposited. Only callable by River.
     /// @dev Called by River after the deposit-execution loop. The recorded set is consulted
-    ///      by the top-up branch of `validateDeposits()` to require that top-ups reference a pubkey
+    ///      by the top-up branch of `fetchAndValidateDeposits()` to require that top-ups reference a pubkey
     ///      River has previously initial-deposited. Assumes `pubkeys` is already deduplicated
-    ///      against the lookup and against itself; `validateDeposits()` enforces both invariants
+    ///      against the lookup and against itself; `fetchAndValidateDeposits()` enforces both invariants
     ///      earlier in the same transaction. Per-pubkey logging is emitted on the caller
     ///      (ConsensusLayerDepositManager's `PubkeyFunded` event), not here.
     /// @param pubkeys The 48-byte BLS pubkeys to record
