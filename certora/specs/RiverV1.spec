@@ -39,9 +39,10 @@ rule riverBalanceIsSumOf_ToDeposit_Commmitted_ToRedeem_for_setConsensusLayerData
 {
     mathint assets_before = totalUnderlyingSupply();
     uint256 toDeposit_before = getBalanceToDeposit();
+    uint256 toConsolidate_before = getBalanceToConsolidate();
     uint256 committed_before = getCommittedBalance();
     uint256 toRedeem_before = getBalanceToRedeem();
-    require assets_before == toDeposit_before + committed_before + toRedeem_before;
+    require assets_before == toDeposit_before + toConsolidate_before + committed_before + toRedeem_before;
     // require assets_before == 0;
     // require toDeposit_before == 0;
     // require committed_before == 0;
@@ -53,10 +54,11 @@ rule riverBalanceIsSumOf_ToDeposit_Commmitted_ToRedeem_for_setConsensusLayerData
 
     mathint assets_after = totalUnderlyingSupply();
     uint256 toDeposit_after = getBalanceToDeposit();
+    uint256 toConsolidate_after = getBalanceToConsolidate();
     uint256 committed_after = getCommittedBalance();
     uint256 toRedeem_after = getBalanceToRedeem();
 
-    assert assets_after == toDeposit_after + committed_after + toRedeem_after;
+    assert assets_after == toDeposit_after + toConsolidate_after + committed_after + toRedeem_after;
 }
 
 rule memoryVarsCanBeModifiedFromWithinFunction(env e)
@@ -72,9 +74,10 @@ rule riverBalanceIsSumOf_ToDeposit_Commmitted_ToRedeem_for_helper2_helper7(env e
 {
     mathint assets_before = totalUnderlyingSupply();
     uint256 toDeposit_before = getBalanceToDeposit();
+    uint256 toConsolidate_before = getBalanceToConsolidate();
     uint256 committed_before = getCommittedBalance();
     uint256 toRedeem_before = getBalanceToRedeem();
-    mathint sum_before = toDeposit_before + committed_before + toRedeem_before;
+    mathint sum_before = toDeposit_before + toConsolidate_before + committed_before + toRedeem_before;
     uint256 river_balance_before = riverEthBalance();
     require e.msg.sender != currentContract;
     // require assets_before == 0;
@@ -123,9 +126,10 @@ rule riverBalanceIsSumOf_ToDeposit_Commmitted_ToRedeem_for_helper2_helper7(env e
 
     mathint assets_after = totalUnderlyingSupply();
     uint256 toDeposit_after = getBalanceToDeposit();
+    uint256 toConsolidate_after = getBalanceToConsolidate();
     uint256 committed_after = getCommittedBalance();
     uint256 toRedeem_after = getBalanceToRedeem();
-    mathint sum_after = toDeposit_after + committed_after + toRedeem_after;
+    mathint sum_after = toDeposit_after + toConsolidate_after + committed_after + toRedeem_after;
     uint256 river_balance_after = riverEthBalance();
     require assets_after == 34636832;
 
@@ -146,9 +150,10 @@ rule riverBalanceIsSumOf_ToDeposit_Commmitted_ToRedeem(env e, method f, calldata
 } {
     mathint assets_before = totalUnderlyingSupply();
     uint256 toDeposit_before = getBalanceToDeposit();
+    uint256 toConsolidate_before = getBalanceToConsolidate();
     uint256 committed_before = getCommittedBalance();
     uint256 toRedeem_before = getBalanceToRedeem();
-    mathint sum_before = toDeposit_before + committed_before + toRedeem_before;
+    mathint sum_before = toDeposit_before + toConsolidate_before + committed_before + toRedeem_before;
     uint256 river_balance_before = riverEthBalance();
 
     uint256 totalSupplyMidterm = totalUnderlyingSupply();
@@ -158,9 +163,10 @@ rule riverBalanceIsSumOf_ToDeposit_Commmitted_ToRedeem(env e, method f, calldata
 
     mathint assets_after = totalUnderlyingSupply();
     uint256 toDeposit_after = getBalanceToDeposit();
+    uint256 toConsolidate_after = getBalanceToConsolidate();
     uint256 committed_after = getCommittedBalance();
     uint256 toRedeem_after = getBalanceToRedeem();
-    mathint sum_after = toDeposit_after + committed_after + toRedeem_after;
+    mathint sum_after = toDeposit_after + toConsolidate_after + committed_after + toRedeem_after;
     uint256 river_balance_after = riverEthBalance();
     //require assets_after == 34636832;
 
@@ -168,7 +174,7 @@ rule riverBalanceIsSumOf_ToDeposit_Commmitted_ToRedeem(env e, method f, calldata
 }
 
 invariant riverBalanceIsSumOf_ToDeposit_Commmitted_ToRedeem_invariant()
-    to_mathint(totalUnderlyingSupply()) == getBalanceToDeposit() + getCommittedBalance() + getBalanceToRedeem()
+    to_mathint(totalUnderlyingSupply()) == getBalanceToDeposit() + getBalanceToConsolidate() + getCommittedBalance() + getBalanceToRedeem()
     filtered {
         f -> f.selector != sig:initRiverV1_1(address,uint64,uint64,uint64,uint64,uint64,uint256,uint256,uint128,uint128).selector
         && f.selector != sig:setConsensusLayerData(IOracleManagerV1.ConsensusLayerReport).selector
