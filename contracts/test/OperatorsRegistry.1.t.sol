@@ -6,6 +6,7 @@ import "forge-std/Test.sol";
 
 import "./OperatorAllocationTestBase.sol";
 import "../src/libraries/LibBytes.sol";
+import "./mocks/RejectEtherMock.sol";
 import "./utils/UserFactory.sol";
 import "./utils/BytesGenerator.sol";
 import "./utils/LibImplementationUnbricker.sol";
@@ -52,6 +53,8 @@ contract OperatorsRegistryStrictRiverV1 is OperatorsRegistryV1 {
 
 /// @dev Extension that exposes internal V1/V2 storage writers
 contract OperatorsRegistryWithMigrationHelpers is OperatorsRegistryV1 {
+    function sudoInitV1_1() external init(1) {}
+
     function sudoPushV2Operator(OperatorsV2.Operator memory op) external {
         OperatorsV2.push(op);
     }
@@ -789,7 +792,7 @@ contract OperatorsRegistryV1AllocationCorrectnessTests is OperatorAllocationTest
     address internal admin;
     address internal river;
 
-    event FundedValidatorKeys(uint256 indexed index, bytes[] publicKeys, bool deferred);
+    event Deposits(uint256 indexed index, bytes[] pubkeys, uint256[] amounts);
 
     /// @dev Per-operator raw key material, stored so we can verify returned keys match
     bytes[] internal rawKeysByOperator;
@@ -1517,39 +1520,47 @@ contract OperatorsRegistryV1FlattenAndAllocationTests is OperatorAllocationTestB
         IOperatorsRegistryV1.OperatorFundingDelta[] memory deltas = new IOperatorsRegistryV1.OperatorFundingDelta[](1);
         deltas[0].operatorIndex = 0;
         deltas[0].fundedETH = 32 ether;
-        deltas[0].newPublicKeys = new bytes[](1);
+        deltas[0].depositPubkeys = new bytes[](1);
+        deltas[0].depositAmounts = new uint256[](1);
         vm.prank(river);
         vm.expectRevert(abi.encodeWithSignature("OperatorIgnoredExitRequests(uint256)", 0));
         operatorsRegistry.incrementFundedETH(deltas);
     }
 
     /// @notice Asserts incrementFundedETH credits exactly the operators referenced in a sparse
-    ///         delta array, leaves untouched operators unchanged, and emits FundedValidatorKeys
-    ///         once per delta in ascending operator-index order.
+    ///         delta array, leaves untouched operators unchanged, and emits Deposits
+    ///         once per delta in ascending operator-index order, carrying per-key amounts.
     function testIncrementFundedSparseMultiOperator() external {
         _setupOperators(10, 10);
 
         IOperatorsRegistryV1.OperatorFundingDelta[] memory deltas = new IOperatorsRegistryV1.OperatorFundingDelta[](3);
         deltas[0].operatorIndex = 0;
         deltas[0].fundedETH = 32 ether;
-        deltas[0].newPublicKeys = new bytes[](1);
-        deltas[0].newPublicKeys[0] = bytes("op0-key");
+        deltas[0].depositPubkeys = new bytes[](1);
+        deltas[0].depositPubkeys[0] = bytes("op0-key");
+        deltas[0].depositAmounts = new uint256[](1);
+        deltas[0].depositAmounts[0] = 32 ether;
         deltas[1].operatorIndex = 2;
         deltas[1].fundedETH = 64 ether;
-        deltas[1].newPublicKeys = new bytes[](2);
-        deltas[1].newPublicKeys[0] = bytes("op2-key-a");
-        deltas[1].newPublicKeys[1] = bytes("op2-key-b");
+        deltas[1].depositPubkeys = new bytes[](2);
+        deltas[1].depositPubkeys[0] = bytes("op2-key-a");
+        deltas[1].depositPubkeys[1] = bytes("op2-key-b");
+        deltas[1].depositAmounts = new uint256[](2);
+        deltas[1].depositAmounts[0] = 32 ether;
+        deltas[1].depositAmounts[1] = 32 ether;
         deltas[2].operatorIndex = 5;
         deltas[2].fundedETH = 96 ether;
-        deltas[2].newPublicKeys = new bytes[](1);
-        deltas[2].newPublicKeys[0] = bytes("op5-key");
+        deltas[2].depositPubkeys = new bytes[](1);
+        deltas[2].depositPubkeys[0] = bytes("op5-key");
+        deltas[2].depositAmounts = new uint256[](1);
+        deltas[2].depositAmounts[0] = 96 ether;
 
         vm.expectEmit(true, false, false, true);
-        emit IOperatorsRegistryV1.FundedValidatorKeys(0, deltas[0].newPublicKeys, false);
+        emit IOperatorsRegistryV1.Deposits(0, deltas[0].depositPubkeys, deltas[0].depositAmounts);
         vm.expectEmit(true, false, false, true);
-        emit IOperatorsRegistryV1.FundedValidatorKeys(2, deltas[1].newPublicKeys, false);
+        emit IOperatorsRegistryV1.Deposits(2, deltas[1].depositPubkeys, deltas[1].depositAmounts);
         vm.expectEmit(true, false, false, true);
-        emit IOperatorsRegistryV1.FundedValidatorKeys(5, deltas[2].newPublicKeys, false);
+        emit IOperatorsRegistryV1.Deposits(5, deltas[2].depositPubkeys, deltas[2].depositAmounts);
 
         vm.prank(river);
         operatorsRegistry.incrementFundedETH(deltas);
@@ -1571,7 +1582,8 @@ contract OperatorsRegistryV1FlattenAndAllocationTests is OperatorAllocationTestB
         IOperatorsRegistryV1.OperatorFundingDelta[] memory deltas = new IOperatorsRegistryV1.OperatorFundingDelta[](1);
         deltas[0].operatorIndex = 3; // out of range: operatorCount = 3
         deltas[0].fundedETH = 32 ether;
-        deltas[0].newPublicKeys = new bytes[](1);
+        deltas[0].depositPubkeys = new bytes[](1);
+        deltas[0].depositAmounts = new uint256[](1);
         vm.prank(river);
         vm.expectRevert(abi.encodeWithSelector(IOperatorsRegistryV1.InvalidOperatorIndex.selector, 3, 3));
         operatorsRegistry.incrementFundedETH(deltas);
@@ -1586,10 +1598,12 @@ contract OperatorsRegistryV1FlattenAndAllocationTests is OperatorAllocationTestB
         IOperatorsRegistryV1.OperatorFundingDelta[] memory dup = new IOperatorsRegistryV1.OperatorFundingDelta[](2);
         dup[0].operatorIndex = 2;
         dup[0].fundedETH = 32 ether;
-        dup[0].newPublicKeys = new bytes[](1);
+        dup[0].depositPubkeys = new bytes[](1);
+        dup[0].depositAmounts = new uint256[](1);
         dup[1].operatorIndex = 2;
         dup[1].fundedETH = 32 ether;
-        dup[1].newPublicKeys = new bytes[](1);
+        dup[1].depositPubkeys = new bytes[](1);
+        dup[1].depositAmounts = new uint256[](1);
         vm.prank(river);
         vm.expectRevert(abi.encodeWithSelector(IOperatorsRegistryV1.OperatorIndicesUnsortedOrDuplicate.selector, 2));
         operatorsRegistry.incrementFundedETH(dup);
@@ -1598,13 +1612,114 @@ contract OperatorsRegistryV1FlattenAndAllocationTests is OperatorAllocationTestB
         IOperatorsRegistryV1.OperatorFundingDelta[] memory desc = new IOperatorsRegistryV1.OperatorFundingDelta[](2);
         desc[0].operatorIndex = 3;
         desc[0].fundedETH = 32 ether;
-        desc[0].newPublicKeys = new bytes[](1);
+        desc[0].depositPubkeys = new bytes[](1);
+        desc[0].depositAmounts = new uint256[](1);
         desc[1].operatorIndex = 1;
         desc[1].fundedETH = 32 ether;
-        desc[1].newPublicKeys = new bytes[](1);
+        desc[1].depositPubkeys = new bytes[](1);
+        desc[1].depositAmounts = new uint256[](1);
         vm.prank(river);
         vm.expectRevert(abi.encodeWithSelector(IOperatorsRegistryV1.OperatorIndicesUnsortedOrDuplicate.selector, 1));
         operatorsRegistry.incrementFundedETH(desc);
+    }
+
+    /// @notice Issue #543 (review follow-up) — defense-in-depth check: incrementFundedETH must
+    ///         revert MisalignedDeltaArrays when depositPubkeys.length != depositAmounts.length.
+    function testIncrementFundedRevertsMisalignedDepositArrays() external {
+        _setupOperators(3, 10);
+
+        IOperatorsRegistryV1.OperatorFundingDelta[] memory deltas = new IOperatorsRegistryV1.OperatorFundingDelta[](1);
+        deltas[0].operatorIndex = 0;
+        deltas[0].fundedETH = 32 ether;
+        deltas[0].depositPubkeys = new bytes[](2);
+        deltas[0].depositAmounts = new uint256[](1); // mismatched length
+        vm.prank(river);
+        vm.expectRevert(abi.encodeWithSelector(IOperatorsRegistryV1.MisalignedDeltaArrays.selector, 0, 2, 1));
+        operatorsRegistry.incrementFundedETH(deltas);
+    }
+
+    /// @notice Issue #543 (review follow-up) — defense-in-depth check: incrementFundedETH must
+    ///         revert MisalignedDeltaArrays when topUpPubkeys.length != topUpAmounts.length.
+    function testIncrementFundedRevertsMisalignedTopUpArrays() external {
+        _setupOperators(3, 10);
+
+        IOperatorsRegistryV1.OperatorFundingDelta[] memory deltas = new IOperatorsRegistryV1.OperatorFundingDelta[](1);
+        deltas[0].operatorIndex = 1;
+        deltas[0].fundedETH = 32 ether;
+        // deposit side is well-formed (both empty)
+        deltas[0].topUpPubkeys = new bytes[](3);
+        deltas[0].topUpAmounts = new uint256[](2); // mismatched length
+        vm.prank(river);
+        vm.expectRevert(abi.encodeWithSelector(IOperatorsRegistryV1.MisalignedDeltaArrays.selector, 1, 3, 2));
+        operatorsRegistry.incrementFundedETH(deltas);
+    }
+
+    /// @notice Issue #543 — initial-deposit pubkeys are emitted on Deposits; top-up
+    ///         pubkeys are emitted on the new TopUps event, with per-key amounts. A delta that
+    ///         carries only top-ups must NOT emit Deposits.
+    function testIncrementFunded_emitsTopUpsEventForTopUpOnlyDelta() external {
+        _setupOperators(3, 10);
+
+        IOperatorsRegistryV1.OperatorFundingDelta[] memory deltas = new IOperatorsRegistryV1.OperatorFundingDelta[](1);
+        deltas[0].operatorIndex = 1;
+        deltas[0].fundedETH = 80 ether; // 16 + 64
+        deltas[0].depositPubkeys = new bytes[](0);
+        deltas[0].topUpPubkeys = new bytes[](2);
+        deltas[0].topUpPubkeys[0] = bytes("op1-topup-a");
+        deltas[0].topUpPubkeys[1] = bytes("op1-topup-b");
+        deltas[0].topUpAmounts = new uint256[](2);
+        deltas[0].topUpAmounts[0] = 16 ether;
+        deltas[0].topUpAmounts[1] = 64 ether;
+
+        // TopUps event must fire with the top-up pubkeys + amounts in the same order.
+        vm.expectEmit(true, false, false, true);
+        emit IOperatorsRegistryV1.TopUps(1, deltas[0].topUpPubkeys, deltas[0].topUpAmounts);
+
+        // Deposits must NOT fire — top-ups are not new validator keys.
+        vm.recordLogs();
+        vm.prank(river);
+        operatorsRegistry.incrementFundedETH(deltas);
+
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        bytes32 depositsTopic = keccak256("Deposits(uint256,bytes[],uint256[])");
+        for (uint256 i = 0; i < logs.length; i++) {
+            if (logs[i].topics.length > 0) {
+                assertTrue(
+                    logs[i].topics[0] != depositsTopic,
+                    "Deposits must not fire for a top-up-only delta"
+                );
+            }
+        }
+
+        assertEq(operatorsRegistry.getOperator(1).funded, 80 ether, "op1 funded by both top-ups");
+    }
+
+    /// @notice Issue #543 — a delta carrying both classes must emit Deposits for the
+    ///         initial-deposit pubkeys AND TopUps for the top-up pubkeys, in that order.
+    function testIncrementFunded_emitsBothEventsForMixedDelta() external {
+        _setupOperators(3, 10);
+
+        IOperatorsRegistryV1.OperatorFundingDelta[] memory deltas = new IOperatorsRegistryV1.OperatorFundingDelta[](1);
+        deltas[0].operatorIndex = 2;
+        deltas[0].fundedETH = 48 ether; // 32 (initial) + 16 (top-up)
+        deltas[0].depositPubkeys = new bytes[](1);
+        deltas[0].depositPubkeys[0] = bytes("op2-initial");
+        deltas[0].depositAmounts = new uint256[](1);
+        deltas[0].depositAmounts[0] = 32 ether;
+        deltas[0].topUpPubkeys = new bytes[](1);
+        deltas[0].topUpPubkeys[0] = bytes("op2-topup");
+        deltas[0].topUpAmounts = new uint256[](1);
+        deltas[0].topUpAmounts[0] = 16 ether;
+
+        vm.expectEmit(true, false, false, true);
+        emit IOperatorsRegistryV1.Deposits(2, deltas[0].depositPubkeys, deltas[0].depositAmounts);
+        vm.expectEmit(true, false, false, true);
+        emit IOperatorsRegistryV1.TopUps(2, deltas[0].topUpPubkeys, deltas[0].topUpAmounts);
+
+        vm.prank(river);
+        operatorsRegistry.incrementFundedETH(deltas);
+
+        assertEq(operatorsRegistry.getOperator(2).funded, 48 ether, "op2 funded by initial + top-up");
     }
 }
 
@@ -1695,6 +1810,39 @@ contract OperatorsRegistryV1CoverageTests is OperatorsRegistryV1TestBase, Operat
         // Index 0 maps to stopped[1] = 3; index 1 is out of range and returns 0.
         assertEq(OperatorsRegistryWithMigrationHelpers(address(reg)).sudoGetStoppedValidatorCountAtIndexV2(0), 3);
         assertEq(OperatorsRegistryWithMigrationHelpers(address(reg)).sudoGetStoppedValidatorCountAtIndexV2(1), 0);
+    }
+
+    /// Asserts V2->V3 migration preserves a stopped-validator array longer than operatorCount + 1.
+    function testInitOperatorsRegistryV1_2KeepsLongStoppedValidatorArray() public {
+        reg.initOperatorsRegistryV1(admin, river);
+        reg.sudoPushV2Operator(
+            OperatorsV2.Operator({
+                limit: 1,
+                funded: 1,
+                requestedExits: 0,
+                keys: 1,
+                latestKeysEditBlockNumber: 0,
+                active: true,
+                name: "Op1",
+                operator: makeAddr("op1")
+            })
+        );
+
+        uint32[] memory stopped = new uint32[](4);
+        stopped[0] = 3;
+        stopped[1] = 1;
+        stopped[2] = 1;
+        stopped[3] = 1;
+        reg.sudoSetV2StoppedValidators(stopped);
+
+        reg.sudoInitV1_1();
+        reg.initOperatorsRegistryV1_2(makeAddr("withdraw"));
+
+        uint256[] memory exited = reg.getExitedETHPerOperator();
+        assertEq(exited.length, 3, "long stopped array preserved");
+        assertEq(exited[0], 32 ether, "operator 0 exited");
+        assertEq(exited[1], 32 ether, "extra stopped slot 1");
+        assertEq(exited[2], 32 ether, "extra stopped slot 2");
     }
 
     /// Asserts that reading a V2 operator by out-of-bounds index reverts with OperatorNotFound.
@@ -2412,5 +2560,47 @@ contract OperatorsRegistryV1ELExitTests is Test {
             abi.encodeWithSelector(IOperatorsRegistryV1.ExitsGreaterThanExitDemand.selector, 8 ether, 4 ether)
         );
         reg.requestETHExits(empty, allocs, 0);
+    }
+
+    function testRequestETHExitsRefundsExcessMsgValue() public {
+        vm.prank(admin);
+        reg.addOperator("Op0", makeAddr("op0addr"));
+        reg.sudoSetFundedV3(0, 32 ether);
+        reg.sudoSetActiveCLETH(0, 32 ether);
+        vm.prank(river);
+        reg.demandETHExits(8 ether, 32 ether);
+
+        IOperatorsRegistryV1.ExitETHAllocation[] memory empty = new IOperatorsRegistryV1.ExitETHAllocation[](0);
+        IOperatorsRegistryV1.ELExitETHAllocation[] memory allocs = _makeELAlloc(0, EIGHT_ETH_IN_GWEI);
+
+        vm.deal(keeper, 1 ether);
+        uint256 keeperBalanceBefore = keeper.balance;
+
+        vm.prank(keeper);
+        reg.requestETHExits{value: 1 wei}(empty, allocs, 0);
+
+        assertEq(keeper.balance, keeperBalanceBefore, "excess msg.value refunded");
+        assertEq(reg.getCurrentETHExitsDemand(), 0, "demand satisfied");
+        assertEq(reg.getTotalETHExitsRequested(), 8 ether, "total exits updated");
+    }
+
+    function testRequestETHExitsRevertsWhenExcessRefundFails() public {
+        RejectEtherMock rejectKeeper = new RejectEtherMock();
+        RiverMock(river).setKeeper(address(rejectKeeper));
+
+        vm.prank(admin);
+        reg.addOperator("Op0", makeAddr("op0addr"));
+        reg.sudoSetFundedV3(0, 32 ether);
+        reg.sudoSetActiveCLETH(0, 32 ether);
+        vm.prank(river);
+        reg.demandETHExits(8 ether, 32 ether);
+
+        IOperatorsRegistryV1.ExitETHAllocation[] memory empty = new IOperatorsRegistryV1.ExitETHAllocation[](0);
+        IOperatorsRegistryV1.ELExitETHAllocation[] memory allocs = _makeELAlloc(0, EIGHT_ETH_IN_GWEI);
+
+        vm.deal(address(rejectKeeper), 1 ether);
+        vm.prank(address(rejectKeeper));
+        vm.expectRevert(abi.encodeWithSelector(IOperatorsRegistryV1.UnsentRefund.selector, address(rejectKeeper), 1));
+        reg.requestETHExits{value: 1 wei}(empty, allocs, 0);
     }
 }
