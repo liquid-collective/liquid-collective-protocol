@@ -1,43 +1,40 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.34;
 
-import "./interfaces/IAllowlist.1.sol";
-import "./interfaces/IAttestationVerifier.1.sol";
-import "./interfaces/IOperatorRegistry.1.sol";
 import "./interfaces/IRiver.1.sol";
 import "./interfaces/IWithdraw.1.sol";
-import "./interfaces/IELFeeRecipient.1.sol";
+import "./interfaces/IAllowlist.1.sol";
 import "./interfaces/ICoverageFund.1.sol";
+import "./interfaces/IELFeeRecipient.1.sol";
 import "./interfaces/IProtocolVersion.sol";
 import "./interfaces/IExternalConsolidationRecipientMapping.1.sol";
 
-import "./components/ConsensusLayerDepositManager.1.sol";
-import "./components/UserDepositManager.1.sol";
 import "./components/SharesManager.1.sol";
 import "./components/OracleManager.1.sol";
+import "./components/UserDepositManager.1.sol";
+import "./components/ConsensusLayerDepositManager.1.sol";
 import "./Initializable.sol";
 import "./Administrable.sol";
 
-import "./libraries/LibAllowlistMasks.sol";
 import "./libraries/LibErrors.sol";
 import "./libraries/LibFundingDeltas.sol";
+import "./libraries/LibAllowlistMasks.sol";
 import "./interfaces/IDepositDataBuffer.sol";
 
-import "./state/river/AllowlistAddress.sol";
-import "./state/river/AttestationVerifierAddress.sol";
-import "./state/river/RedeemManagerAddress.sol";
-import "./state/river/CollectorAddress.sol";
-import "./state/river/ELFeeRecipientAddress.sol";
-import "./state/river/CoverageFundAddress.sol";
-import "./state/river/ConsolidationCoverageFundAddress.sol";
-import "./state/river/BalanceToRedeem.sol";
 import "./state/river/GlobalFee.sol";
 import "./state/river/MetadataURI.sol";
-import "./state/river/LastConsensusLayerReport.sol";
+import "./state/river/BalanceToRedeem.sol";
+import "./state/river/AllowlistAddress.sol";
+import "./state/river/CollectorAddress.sol";
 import "./state/river/TotalDepositedETH.sol";
+import "./state/river/CoverageFundAddress.sol";
+import "./state/river/ConsolidationCoverageFundAddress.sol";
+import "./state/river/RedeemManagerAddress.sol";
+import "./state/river/ELFeeRecipientAddress.sol";
 import "./state/river/DepositedValidatorCount.sol";
 import "./state/river/ExternalConsolidationRecipientMappingAddress.sol";
 import "./state/shared/OperatorsRegistryAddress.sol";
+import "./state/shared/AttestationVerifierAddress.sol";
 
 /// @title River (v1)
 /// @author Alluvial Finance Inc.
@@ -330,6 +327,17 @@ contract RiverV1 is
         if (msg.sender != RedeemManagerAddress.get()) {
             revert LibErrors.Unauthorized(msg.sender);
         }
+    }
+
+    /// @inheritdoc IRiverV1
+    function selfConsolidation(bytes[] calldata pubkeys, uint256 maxFeePerConsolidation) external payable onlyKeeper {
+        IWithdrawV1.ConsolidationRequest[] memory requests =
+            IAttestationVerifierV1(AttestationVerifierAddress.get()).validateSelfConsolidation(pubkeys);
+        address excessFeeRecipient = msg.sender;
+        IWithdrawV1(payable(WithdrawalCredentials.getAddress())).consolidate{value: msg.value}(
+            requests, maxFeePerConsolidation, excessFeeRecipient
+        );
+        emit PectraConsolidationRequested(requests, maxFeePerConsolidation, excessFeeRecipient, msg.value);
     }
 
     /// @inheritdoc IRiverV1
