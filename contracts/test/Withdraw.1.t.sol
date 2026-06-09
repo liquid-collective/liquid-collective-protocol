@@ -118,6 +118,28 @@ contract MockELWithdrawalFeeReadFails {
     }
 }
 
+/// @notice Mock predeploy whose fee read (staticcall) succeeds but returns fewer than
+///         32 bytes of raw returndata. Used to exercise the strict `abi.decode(feeData,
+///         (uint256))` path in `_validateAndReturnFee`, which must revert on short
+///         returndata (documents the divergence from the TVS `bytes32` cast).
+contract MockELShortReturn {
+    /// @dev Returns raw returndata of a configurable length (< 32 bytes) using assembly,
+    ///      bypassing Solidity's ABI return encoding so the returndata is genuinely short.
+    uint256 internal immutable returnLen;
+
+    constructor(uint256 _returnLen) {
+        returnLen = _returnLen;
+    }
+
+    fallback() external payable {
+        uint256 len = returnLen;
+        assembly {
+            mstore(0x00, 0x1234567890abcdef000000000000000000000000000000000000000000000000)
+            return(0x00, len)
+        }
+    }
+}
+
 abstract contract WithdrawV1TestBase is Test {
     WithdrawV1 internal withdraw;
     RiverMock internal river;
@@ -1181,5 +1203,240 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         vm.prank(address(river));
         vm.expectRevert(LibErrors.InvalidZeroAddress.selector);
         withdraw.consolidate{value: valueSent}(requests, maxFeePerConsolidation, address(0));
+    }
+
+    // --- Fee-decode robustness (issue #526, gap 1) ---
+    // `_validateAndReturnFee` uses `abi.decode(feeData, (uint256))`. When the predeploy
+    // returns malformed/short returndata (< 32 bytes) the staticcall still succeeds, so the
+    // strictness lives entirely in `abi.decode`, which must revert. These tests lock in that
+    // behavior and document the divergence from the TVS `bytes32` cast (liquid-collective/tvs#86).
+
+    /// @notice withdraw reverts when the withdrawal predeploy returns fewer than 32 bytes for the fee.
+    function testWithdrawRevertsOnShortFeeReturndata() public {
+        MockELShortReturn shortMock = new MockELShortReturn(2); // 2 bytes of returndata
+        WithdrawV1 w = new WithdrawV1();
+        LibImplementationUnbricker.unbrick(vm, address(w));
+        w.initializeWithdrawV1(address(river));
+        w.initWithdrawV1_1(
+            address(shortMock),
+            address(mockConsolidation),
+            address(operatorsRegistry),
+            address(attestationVerifier)
+        );
+
+        bytes[] memory pubkeys = new bytes[](1);
+        pubkeys[0] = VALID_PUBKEY_48;
+        uint64[] memory amounts = new uint64[](1);
+        amounts[0] = 1 gwei;
+
+        uint256 maxFeePerWithdrawal = 1 gwei;
+        vm.deal(address(operatorsRegistry), maxFeePerWithdrawal);
+
+        // Short returndata makes abi.decode(feeData, (uint256)) revert (no custom error).
+        vm.prank(address(operatorsRegistry));
+        vm.expectRevert();
+        w.withdraw{value: maxFeePerWithdrawal}(pubkeys, amounts, maxFeePerWithdrawal, excessFeeRecipient);
+    }
+
+    /// @notice consolidate reverts when the consolidation predeploy returns fewer than 32 bytes for the fee.
+    function testConsolidateRevertsOnShortFeeReturndata() public {
+        MockELShortReturn shortMock = new MockELShortReturn(31); // 31 bytes: one short of a full word
+        WithdrawV1 w = new WithdrawV1();
+        LibImplementationUnbricker.unbrick(vm, address(w));
+        w.initializeWithdrawV1(address(river));
+        w.initWithdrawV1_1(
+            address(mockWithdrawal),
+            address(shortMock),
+            address(operatorsRegistry),
+            address(attestationVerifier)
+        );
+
+        bytes[] memory srcPubkeys = new bytes[](1);
+        srcPubkeys[0] = VALID_PUBKEY_48;
+        IWithdrawV1.ConsolidationRequest[] memory requests = new IWithdrawV1.ConsolidationRequest[](1);
+        requests[0] = IWithdrawV1.ConsolidationRequest(srcPubkeys, VALID_PUBKEY_48);
+
+        uint256 maxFeePerConsolidation = 1 gwei;
+        vm.deal(address(river), maxFeePerConsolidation);
+
+        vm.prank(address(river));
+        vm.expectRevert();
+        w.consolidate{value: maxFeePerConsolidation}(requests, maxFeePerConsolidation, excessFeeRecipient);
+    }
+
+    /// @notice An empty fee return (0 bytes) also reverts: there is no 32-byte word to decode.
+    function testWithdrawRevertsOnEmptyFeeReturndata() public {
+        MockELShortReturn shortMock = new MockELShortReturn(0); // empty returndata
+        WithdrawV1 w = new WithdrawV1();
+        LibImplementationUnbricker.unbrick(vm, address(w));
+        w.initializeWithdrawV1(address(river));
+        w.initWithdrawV1_1(
+            address(shortMock),
+            address(mockConsolidation),
+            address(operatorsRegistry),
+            address(attestationVerifier)
+        );
+
+        bytes[] memory pubkeys = new bytes[](1);
+        pubkeys[0] = VALID_PUBKEY_48;
+        uint64[] memory amounts = new uint64[](1);
+        amounts[0] = 1 gwei;
+
+        uint256 maxFeePerWithdrawal = 1 gwei;
+        vm.deal(address(operatorsRegistry), maxFeePerWithdrawal);
+
+        vm.prank(address(operatorsRegistry));
+        vm.expectRevert();
+        w.withdraw{value: maxFeePerWithdrawal}(pubkeys, amounts, maxFeePerWithdrawal, excessFeeRecipient);
+    }
+
+    // --- Overflow boundary (issue #526, gap 3) ---
+    // `withdraw` computes `maxFeePerWithdrawal * pubkeys.length` and `consolidate` computes
+    // `fee * totalNumOfConsolidationOperations`. Under Solidity 0.8 checked arithmetic these
+    // must revert with a Panic(0x11) on overflow rather than silently wrapping.
+
+    /// @notice withdraw reverts (arithmetic overflow) when maxFeePerWithdrawal * pubkeys.length overflows uint256.
+    function testWithdrawRevertsOnFeeMultiplicationOverflow() public {
+        bytes[] memory pubkeys = new bytes[](2);
+        pubkeys[0] = VALID_PUBKEY_48;
+        pubkeys[1] = VALID_PUBKEY_48;
+        uint64[] memory amounts = new uint64[](2);
+        amounts[0] = 1 gwei;
+        amounts[1] = 1 gwei;
+
+        // type(uint256).max * 2 overflows; the overflow happens at `maxFeePayable` before any
+        // fee read or value check, so msg.value is irrelevant.
+        uint256 maxFeePerWithdrawal = type(uint256).max;
+
+        vm.prank(address(operatorsRegistry));
+        vm.expectRevert(stdError.arithmeticError);
+        withdraw.withdraw{value: 0}(pubkeys, amounts, maxFeePerWithdrawal, excessFeeRecipient);
+    }
+
+    /// @notice consolidate reverts (arithmetic overflow) when fee * totalNumOfConsolidationOperations overflows.
+    function testConsolidateRevertsOnFeeMultiplicationOverflow() public {
+        // Two source pubkeys => totalNumOfConsolidationOperations == 2.
+        bytes[] memory srcPubkeys = new bytes[](2);
+        srcPubkeys[0] = VALID_PUBKEY_48;
+        srcPubkeys[1] = VALID_PUBKEY_48;
+        IWithdrawV1.ConsolidationRequest[] memory requests = new IWithdrawV1.ConsolidationRequest[](1);
+        requests[0] = IWithdrawV1.ConsolidationRequest(srcPubkeys, VALID_PUBKEY_48);
+
+        // fee == type(uint256).max passes the `fee <= maxFee` check (maxFee == max) but
+        // `fee * 2` overflows when computing totalFeeRequired.
+        uint256 hugeFee = type(uint256).max;
+        mockConsolidation.setFee(hugeFee);
+
+        vm.prank(address(river));
+        vm.expectRevert(stdError.arithmeticError);
+        withdraw.consolidate{value: 0}(requests, hugeFee, excessFeeRecipient);
+    }
+
+    // --- Fuzzing (issue #526, gap 2) ---
+    // `withdraw`/`consolidate` were only exercised with fixed inputs. These fuzz over array
+    // lengths, fee/maxFee, and excess-refund amounts, asserting the fee-accounting and refund
+    // invariants hold across the input space.
+
+    /// @notice Fuzz withdraw: across variable pubkey counts, fees, and excess, the predeploy
+    ///         receives fee*N and the excess recipient receives the full remainder.
+    function testFuzzWithdrawFeeAccountingAndRefund(
+        uint256 rawNum,
+        uint256 rawFee,
+        uint256 rawMaxSlack,
+        uint256 rawExtra
+    ) public {
+        uint256 numKeys = bound(rawNum, 1, 20);
+        uint256 fee = bound(rawFee, 0, 1e18);
+        // maxFee >= fee so the FeeTooHigh check passes; kept small enough that maxFee*N never overflows.
+        uint256 maxFee = fee + bound(rawMaxSlack, 0, 1e18);
+        uint256 extra = bound(rawExtra, 0, 1e18);
+
+        bytes[] memory pubkeys = new bytes[](numKeys);
+        uint64[] memory amounts = new uint64[](numKeys);
+        for (uint256 i = 0; i < numKeys; i++) {
+            pubkeys[i] = VALID_PUBKEY_48;
+            amounts[i] = uint64(1 gwei);
+        }
+
+        mockWithdrawal.setFee(fee);
+        // The contract requires msg.value >= maxFee*N (maxFeePayable); add extra on top.
+        uint256 valueSent = maxFee * numKeys + extra;
+        vm.deal(address(operatorsRegistry), valueSent);
+
+        uint256 recipientBefore = excessFeeRecipient.balance;
+        vm.prank(address(operatorsRegistry));
+        withdraw.withdraw{value: valueSent}(pubkeys, amounts, maxFee, excessFeeRecipient);
+
+        uint256 totalFeePaid = fee * numKeys;
+        assertEq(address(mockWithdrawal).balance, totalFeePaid, "predeploy should receive fee * numKeys");
+        assertEq(
+            excessFeeRecipient.balance - recipientBefore,
+            valueSent - totalFeePaid,
+            "recipient should receive all excess value"
+        );
+        assertEq(address(withdraw).balance, 0, "withdraw contract should retain nothing");
+    }
+
+    /// @notice Fuzz consolidate: across variable request counts, source-pubkey counts, fees and
+    ///         excess, the predeploy receives fee*totalOps and the recipient receives the remainder.
+    function testFuzzConsolidateFeeAccountingAndRefund(
+        uint256 rawReqs,
+        uint256 rawSrc,
+        uint256 rawFee,
+        uint256 rawExtra
+    ) public {
+        uint256 numReqs = bound(rawReqs, 1, 5);
+        uint256 srcPer = bound(rawSrc, 1, 4);
+        uint256 fee = bound(rawFee, 0, 1e18);
+        uint256 extra = bound(rawExtra, 0, 1e18);
+
+        IWithdrawV1.ConsolidationRequest[] memory requests = new IWithdrawV1.ConsolidationRequest[](numReqs);
+        for (uint256 i = 0; i < numReqs; i++) {
+            bytes[] memory srcPubkeys = new bytes[](srcPer);
+            for (uint256 j = 0; j < srcPer; j++) {
+                srcPubkeys[j] = VALID_PUBKEY_48;
+            }
+            requests[i] = IWithdrawV1.ConsolidationRequest(srcPubkeys, VALID_PUBKEY_48);
+        }
+
+        mockConsolidation.setFee(fee);
+        uint256 totalOps = numReqs * srcPer;
+        // consolidate requires msg.value >= fee*totalOps; add extra on top. maxFee == fee passes the cap.
+        uint256 valueSent = fee * totalOps + extra;
+        vm.deal(address(river), valueSent);
+
+        uint256 recipientBefore = excessFeeRecipient.balance;
+        vm.prank(address(river));
+        withdraw.consolidate{value: valueSent}(requests, fee, excessFeeRecipient);
+
+        uint256 totalFeePaid = fee * totalOps;
+        assertEq(address(mockConsolidation).balance, totalFeePaid, "predeploy should receive fee * totalOps");
+        assertEq(
+            excessFeeRecipient.balance - recipientBefore,
+            valueSent - totalFeePaid,
+            "recipient should receive all excess value"
+        );
+        assertEq(address(withdraw).balance, 0, "withdraw contract should retain nothing");
+    }
+
+    /// @notice Fuzz withdraw: any msg.value strictly below maxFee*N reverts with InsufficientValueForFee.
+    function testFuzzWithdrawInsufficientValueReverts(uint256 rawNum, uint256 rawMaxFee, uint256 rawShortfall) public {
+        uint256 numKeys = bound(rawNum, 1, 20);
+        uint256 maxFee = bound(rawMaxFee, 1, 1e18);
+        uint256 maxFeePayable = maxFee * numKeys;
+        uint256 shortfall = bound(rawShortfall, 1, maxFeePayable);
+        uint256 valueSent = maxFeePayable - shortfall;
+
+        bytes[] memory pubkeys = new bytes[](numKeys);
+        uint64[] memory amounts = new uint64[](numKeys);
+        for (uint256 i = 0; i < numKeys; i++) {
+            pubkeys[i] = VALID_PUBKEY_48;
+            amounts[i] = uint64(1 gwei);
+        }
+
+        vm.deal(address(operatorsRegistry), valueSent);
+        vm.prank(address(operatorsRegistry));
+        vm.expectRevert(abi.encodeWithSelector(IWithdrawV1.InsufficientValueForFee.selector, valueSent, maxFeePayable));
+        withdraw.withdraw{value: valueSent}(pubkeys, amounts, maxFee, excessFeeRecipient);
     }
 }
