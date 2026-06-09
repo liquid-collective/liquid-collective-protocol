@@ -9,6 +9,7 @@ import "./utils/LibImplementationUnbricker.sol";
 import "../src/interfaces/IWithdraw.1.sol";
 import "../src/Withdraw.1.sol";
 import "../src/OperatorsRegistry.1.sol";
+import "../src/AttestationVerifier.1.sol";
 
 contract RiverMock {
     event DebugReceivedCLFunds(uint256 amount);
@@ -143,8 +144,14 @@ abstract contract WithdrawV1TestBase is Test {
     RiverMock internal river;
     UserFactory internal uf = new UserFactory();
     OperatorsRegistryV1 internal operatorsRegistry;
+    AttestationVerifierV1 internal attestationVerifier;
 
     event DebugReceivedCLFunds(uint256 amount);
+
+    bytes32 internal constant PECTRA_VALIDATOR_PUBKEY_LOOKUP_SLOT =
+        bytes32(uint256(keccak256("attestationVerifier.state.pectraValidatorPubkeyLookup")) - 1);
+    bytes32 internal constant PRE_PECTRA_VALIDATOR_PUBKEY_LOOKUP_SLOT =
+        bytes32(uint256(keccak256("attestationVerifier.state.prePectraValidatorPubkeyLookup")) - 1);
 
     function setUp() public virtual {
         river = new RiverMock();
@@ -152,6 +159,22 @@ abstract contract WithdrawV1TestBase is Test {
         LibImplementationUnbricker.unbrick(vm, address(operatorsRegistry));
         withdraw = new WithdrawV1();
         LibImplementationUnbricker.unbrick(vm, address(withdraw));
+        attestationVerifier = new AttestationVerifierV1();
+        LibImplementationUnbricker.unbrick(vm, address(attestationVerifier));
+    }
+
+    function _seedValidatorPubkey(bytes memory pubkey) internal {
+        bytes32 slot = keccak256(abi.encode(PECTRA_VALIDATOR_PUBKEY_LOOKUP_SLOT, pubkey));
+        vm.store(address(attestationVerifier), slot, bytes32(uint256(1)));
+    }
+
+    function _seedPrePectraPubkey(bytes memory pubkey) internal {
+        bytes32 slot = keccak256(abi.encode(PRE_PECTRA_VALIDATOR_PUBKEY_LOOKUP_SLOT, pubkey));
+        vm.store(address(attestationVerifier), slot, bytes32(uint256(1)));
+    }
+
+    function _consolidationPubkey(uint256 seed) internal pure returns (bytes memory) {
+        return abi.encodePacked(sha256(abi.encode("withdraw-consolidation", seed)), bytes16(0));
     }
 }
 
@@ -309,7 +332,13 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         mockWithdrawal = new MockELWithdrawal();
         mockConsolidation = new MockELConsolidation();
         excessFeeRecipient = makeAddr("excessFeeRecipient");
-        withdraw.initWithdrawV1_1(address(mockWithdrawal), address(mockConsolidation), address(operatorsRegistry));
+        withdraw.initWithdrawV1_1(
+            address(mockWithdrawal),
+            address(mockConsolidation),
+            address(operatorsRegistry),
+            address(attestationVerifier)
+        );
+        _seedValidatorPubkey(VALID_PUBKEY_48);
     }
 
     function testInitWithdrawV1_1SetsAddresses() external {
@@ -318,7 +347,12 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         w.initializeWithdrawV1(address(river));
         assertEq(w.getRiver(), address(river));
 
-        w.initWithdrawV1_1(address(mockWithdrawal), address(mockConsolidation), address(operatorsRegistry));
+        w.initWithdrawV1_1(
+            address(mockWithdrawal),
+            address(mockConsolidation),
+            address(operatorsRegistry),
+            address(attestationVerifier)
+        );
         // Unstructured storage slots match PectraWithdrawalContractAddress, PectraConsolidationContractAddress,
         // OperatorsRegistryAddress (see ../src/state/shared/*.sol)
         assertEq(
@@ -333,11 +367,20 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
             vm.load(address(w), bytes32(uint256(keccak256("river.state.operatorsRegistryAddress")) - 1)),
             bytes32(uint256(uint160(address(operatorsRegistry))))
         );
+        assertEq(
+            vm.load(address(w), bytes32(uint256(keccak256("river.state.attestationVerifierAddress")) - 1)),
+            bytes32(uint256(uint160(address(attestationVerifier))))
+        );
     }
 
     function testReinitWithdrawV1_1Reverts() external {
         vm.expectRevert(abi.encodeWithSignature("InvalidInitialization(uint256,uint256)", 1, 2));
-        withdraw.initWithdrawV1_1(address(mockWithdrawal), address(mockConsolidation), address(operatorsRegistry));
+        withdraw.initWithdrawV1_1(
+            address(mockWithdrawal),
+            address(mockConsolidation),
+            address(operatorsRegistry),
+            address(attestationVerifier)
+        );
     }
 
     function testWithdrawOnlyCallableByOperatorsRegistry() external {
@@ -463,12 +506,122 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         assertEq(excessFeeRecipient.balance, valueSent - 1 gwei);
     }
 
+    function testConsolidateSourceAndTargetInValidatorLookupSucceeds() external {
+        bytes[] memory srcPubkeys = new bytes[](1);
+        srcPubkeys[0] = VALID_PUBKEY_48;
+        IWithdrawV1.ConsolidationRequest[] memory requests = new IWithdrawV1.ConsolidationRequest[](1);
+        requests[0] = IWithdrawV1.ConsolidationRequest({srcPubkeys: srcPubkeys, targetPubkey: VALID_PUBKEY_48});
+
+        uint256 fee = 1 gwei;
+        vm.deal(address(river), fee);
+
+        vm.expectCall(address(mockConsolidation), fee, bytes.concat(srcPubkeys[0], VALID_PUBKEY_48));
+        vm.prank(address(river));
+        withdraw.consolidate{value: fee}(requests, fee, excessFeeRecipient);
+
+        assertEq(address(mockConsolidation).balance, fee);
+    }
+
+    function testConsolidateSourceOnlyInPrePectraLookupSucceeds() external {
+        bytes memory sourcePubkey = _consolidationPubkey(1);
+        _seedPrePectraPubkey(sourcePubkey);
+
+        bytes[] memory srcPubkeys = new bytes[](1);
+        srcPubkeys[0] = sourcePubkey;
+        IWithdrawV1.ConsolidationRequest[] memory requests = new IWithdrawV1.ConsolidationRequest[](1);
+        requests[0] = IWithdrawV1.ConsolidationRequest({srcPubkeys: srcPubkeys, targetPubkey: VALID_PUBKEY_48});
+
+        uint256 fee = 1 gwei;
+        vm.deal(address(river), fee);
+
+        vm.expectCall(address(mockConsolidation), fee, bytes.concat(sourcePubkey, VALID_PUBKEY_48));
+        vm.prank(address(river));
+        withdraw.consolidate{value: fee}(requests, fee, excessFeeRecipient);
+
+        assertEq(address(mockConsolidation).balance, fee);
+    }
+
+    function testConsolidateTargetOnlyInPrePectraLookupReverts() external {
+        bytes memory targetPubkey = _consolidationPubkey(2);
+        _seedPrePectraPubkey(targetPubkey);
+
+        bytes[] memory srcPubkeys = new bytes[](1);
+        srcPubkeys[0] = VALID_PUBKEY_48;
+        IWithdrawV1.ConsolidationRequest[] memory requests = new IWithdrawV1.ConsolidationRequest[](1);
+        requests[0] = IWithdrawV1.ConsolidationRequest({srcPubkeys: srcPubkeys, targetPubkey: targetPubkey});
+
+        vm.deal(address(river), 1 gwei);
+        vm.prank(address(river));
+        vm.expectRevert(abi.encodeWithSelector(IWithdrawV1.TargetPubkeyNotFunded.selector, targetPubkey));
+        withdraw.consolidate{value: 1 gwei}(requests, 1 gwei, excessFeeRecipient);
+
+        assertEq(address(mockConsolidation).balance, 0);
+    }
+
+    function testConsolidateSelfConsolidationWithPrePectraTargetSucceeds() external {
+        bytes memory pubkey = _consolidationPubkey(20);
+        _seedPrePectraPubkey(pubkey);
+
+        bytes[] memory srcPubkeys = new bytes[](1);
+        srcPubkeys[0] = pubkey;
+        IWithdrawV1.ConsolidationRequest[] memory requests = new IWithdrawV1.ConsolidationRequest[](1);
+        requests[0] = IWithdrawV1.ConsolidationRequest({srcPubkeys: srcPubkeys, targetPubkey: pubkey});
+
+        uint256 fee = 1 gwei;
+        vm.deal(address(river), fee);
+
+        vm.expectCall(address(mockConsolidation), fee, bytes.concat(pubkey, pubkey));
+        vm.prank(address(river));
+        withdraw.consolidate{value: fee}(requests, fee, excessFeeRecipient);
+
+        assertEq(address(mockConsolidation).balance, fee);
+    }
+
+    function testConsolidateSourceInNeitherLookupReverts() external {
+        bytes memory sourcePubkey = _consolidationPubkey(3);
+
+        bytes[] memory srcPubkeys = new bytes[](1);
+        srcPubkeys[0] = sourcePubkey;
+        IWithdrawV1.ConsolidationRequest[] memory requests = new IWithdrawV1.ConsolidationRequest[](1);
+        requests[0] = IWithdrawV1.ConsolidationRequest({srcPubkeys: srcPubkeys, targetPubkey: VALID_PUBKEY_48});
+
+        vm.deal(address(river), 1 gwei);
+        vm.prank(address(river));
+        vm.expectRevert(abi.encodeWithSelector(IWithdrawV1.SourcePubkeyNotFunded.selector, sourcePubkey));
+        withdraw.consolidate{value: 1 gwei}(requests, 1 gwei, excessFeeRecipient);
+
+        assertEq(address(mockConsolidation).balance, 0);
+    }
+
+    function testConsolidateMixedRequestsRevertBeforeForwardingIfAnySourceUnfunded() external {
+        bytes memory unfundedSource = _consolidationPubkey(4);
+
+        bytes[] memory validSources = new bytes[](1);
+        validSources[0] = VALID_PUBKEY_48;
+        bytes[] memory invalidSources = new bytes[](1);
+        invalidSources[0] = unfundedSource;
+
+        IWithdrawV1.ConsolidationRequest[] memory requests = new IWithdrawV1.ConsolidationRequest[](2);
+        requests[0] = IWithdrawV1.ConsolidationRequest({srcPubkeys: validSources, targetPubkey: VALID_PUBKEY_48});
+        requests[1] = IWithdrawV1.ConsolidationRequest({srcPubkeys: invalidSources, targetPubkey: VALID_PUBKEY_48});
+
+        uint256 totalValue = 2 gwei;
+        vm.deal(address(river), totalValue);
+        vm.prank(address(river));
+        vm.expectRevert(abi.encodeWithSelector(IWithdrawV1.SourcePubkeyNotFunded.selector, unfundedSource));
+        withdraw.consolidate{value: totalValue}(requests, 1 gwei, excessFeeRecipient);
+
+        assertEq(address(mockConsolidation).balance, 0, "no EL call should happen before full validation passes");
+    }
+
     function testWithdrawRequestFailedReverts() external {
         MockELWithdrawalFails mockFail = new MockELWithdrawalFails();
         WithdrawV1 w = new WithdrawV1();
         LibImplementationUnbricker.unbrick(vm, address(w));
         w.initializeWithdrawV1(address(river));
-        w.initWithdrawV1_1(address(mockFail), address(mockConsolidation), address(operatorsRegistry));
+        w.initWithdrawV1_1(
+            address(mockFail), address(mockConsolidation), address(operatorsRegistry), address(attestationVerifier)
+        );
 
         bytes[] memory pubkeys = new bytes[](1);
         pubkeys[0] = VALID_PUBKEY_48;
@@ -488,7 +641,12 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         WithdrawV1 w = new WithdrawV1();
         LibImplementationUnbricker.unbrick(vm, address(w));
         w.initializeWithdrawV1(address(river));
-        w.initWithdrawV1_1(address(mockWithdrawal), address(mockConsolidationFeeReadFails), address(operatorsRegistry));
+        w.initWithdrawV1_1(
+            address(mockWithdrawal),
+            address(mockConsolidationFeeReadFails),
+            address(operatorsRegistry),
+            address(attestationVerifier)
+        );
 
         bytes[] memory srcPubkeys = new bytes[](1);
         srcPubkeys[0] = VALID_PUBKEY_48;
@@ -628,7 +786,12 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         WithdrawV1 w = new WithdrawV1();
         LibImplementationUnbricker.unbrick(vm, address(w));
         w.initializeWithdrawV1(address(river));
-        w.initWithdrawV1_1(address(mockWithdrawal), address(mockConsolidationFails), address(operatorsRegistry));
+        w.initWithdrawV1_1(
+            address(mockWithdrawal),
+            address(mockConsolidationFails),
+            address(operatorsRegistry),
+            address(attestationVerifier)
+        );
 
         bytes[] memory srcPubkeys = new bytes[](1);
         srcPubkeys[0] = VALID_PUBKEY_48;
@@ -753,7 +916,12 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         WithdrawV1 w = new WithdrawV1();
         LibImplementationUnbricker.unbrick(vm, address(w));
         w.initializeWithdrawV1(address(river));
-        w.initWithdrawV1_1(address(mockWithdrawalFeeReadFails), address(mockConsolidation), address(operatorsRegistry));
+        w.initWithdrawV1_1(
+            address(mockWithdrawalFeeReadFails),
+            address(mockConsolidation),
+            address(operatorsRegistry),
+            address(attestationVerifier)
+        );
 
         bytes[] memory pubkeys = new bytes[](1);
         pubkeys[0] = VALID_PUBKEY_48;
@@ -791,7 +959,12 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         WithdrawV1 w = new WithdrawV1();
         LibImplementationUnbricker.unbrick(vm, address(w));
         w.initializeWithdrawV1(address(river));
-        w.initWithdrawV1_1(address(mockWithdrawalFails), address(mockConsolidation), address(operatorsRegistry));
+        w.initWithdrawV1_1(
+            address(mockWithdrawalFails),
+            address(mockConsolidation),
+            address(operatorsRegistry),
+            address(attestationVerifier)
+        );
 
         bytes[] memory pubkeys = new bytes[](1);
         pubkeys[0] = VALID_PUBKEY_48;
