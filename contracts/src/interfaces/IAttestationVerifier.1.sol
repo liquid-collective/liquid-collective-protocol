@@ -422,11 +422,6 @@ interface IAttestationVerifierV1 {
     /// @return Always `true` if the call returns; reverts otherwise.
     function validateConsolidation(ConsolidationObject calldata consolidation) external returns (bool);
 
-    /// @notice Mark a `depositDataBufferId` as processed. Only callable by River.
-    /// @dev Called by River after the deposit-execution loop; consulted by `validateDeposits()` to reject replays.
-    /// @param depositDataBufferId The batch identifier to mark processed.
-    function markDepositDataBufferIdProcessed(bytes32 depositDataBufferId) external;
-
     // -----------------------------------------------------------------------
     // Admin setters
     // -----------------------------------------------------------------------
