@@ -3559,7 +3559,7 @@ contract RiverV1PectraTests is RiverV1TestBase {
             address(attestationVerifier)
         );
         _seedValidatorPubkey(VALID_PUBKEY_48);
-        vm.prank(admin);
+        vm.startPrank(admin);
         river.setKeeper(keeper);
         river.setConsolidator(consolidator);
         vm.stopPrank();
