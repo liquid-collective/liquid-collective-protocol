@@ -22,8 +22,11 @@ library LibFundingDeltas {
     /// @dev    Pure aggregation only. Operator-status invariants (`active`, `requestedExits`
     ///         vs `exitedETH`) are NOT checked here; they are enforced by
     ///         `OperatorsRegistryV1.incrementFundedETH`.
-    /// @dev    Top-up pubkeys ARE included in the returned `newPublicKeys[]` so the registry
-    ///         can emit a complete `FundedValidatorKeys` event for the batch.
+    /// @dev    Initial-deposit pubkeys are placed in `depositPubkeys[]` with their amounts aligned
+    ///         1:1 in `depositAmounts[]`; top-up pubkeys are placed in `topUpPubkeys[]` with
+    ///         their amounts aligned 1:1 in `topUpAmounts[]`. The registry emits the two classes
+    ///         via distinct events so indexers do not conflate top-ups with newly funded
+    ///         validator keys.
     /// @param deposits The initial deposits to aggregate
     /// @param topUps The top-ups to aggregate
     /// @param operatorCount The current number of registered operators (upper bound exclusive)
@@ -33,63 +36,124 @@ library LibFundingDeltas {
         IDepositDataBuffer.TopUp[] memory topUps,
         uint256 operatorCount
     ) internal pure returns (IOperatorsRegistryV1.OperatorFundingDelta[] memory deltas) {
-        uint256 depositCount = deposits.length;
-        uint256 topUpCount = topUps.length;
-        if (depositCount == 0 && topUpCount == 0) {
+        if (deposits.length == 0 && topUps.length == 0) {
             return new IOperatorsRegistryV1.OperatorFundingDelta[](0);
         }
 
-        // Pass 1 (over both arrays): validate operator indices and bucket-aggregate amounts and
-        // key counts per operator. Buckets are sized to operatorCount rather than highestOpIdx+1
-        // so the previous index-caching pass over inputs is no longer needed.
-        uint256[] memory amountPerOp = new uint256[](operatorCount);
-        uint256[] memory keyCountPerOp = new uint256[](operatorCount);
+        // Pass 1: validate operator indices and bucket-aggregate amounts and per-class key counts.
+        // Buckets are sized to operatorCount rather than highestOpIdx+1 so the previous
+        // index-caching pass over inputs is no longer needed.
+        (uint256[] memory amountPerOp, uint256[] memory depositCountPerOp, uint256[] memory topUpCountPerOp) =
+            _bucketCounts(deposits, topUps, operatorCount);
+
+        // Pass 2: allocate sparse deltas in ascending operator-index order, each pre-sized for
+        // its deposit and top-up arrays. Returns deltaIdxByOp to map operatorIdx -> deltas index.
+        uint256[] memory deltaIdxByOp;
+        (deltas, deltaIdxByOp) = _allocateDeltas(operatorCount, amountPerOp, depositCountPerOp, topUpCountPerOp);
+
+        // Pass 3: fill per-operator pubkeys + amounts per class, preserving input order.
+        _fillDeposits(deposits, deltas, deltaIdxByOp, operatorCount);
+        _fillTopUps(topUps, deltas, deltaIdxByOp, operatorCount);
+    }
+
+    /// @dev Pass 1 helper: split into its own frame to keep `build`'s stack shallow enough for
+    ///      coverage builds (viaIR disabled).
+    function _bucketCounts(
+        IDepositDataBuffer.Deposit[] memory deposits,
+        IDepositDataBuffer.TopUp[] memory topUps,
+        uint256 operatorCount
+    )
+        private
+        pure
+        returns (uint256[] memory amountPerOp, uint256[] memory depositCountPerOp, uint256[] memory topUpCountPerOp)
+    {
+        amountPerOp = new uint256[](operatorCount);
+        depositCountPerOp = new uint256[](operatorCount);
+        topUpCountPerOp = new uint256[](operatorCount);
+
+        uint256 depositCount = deposits.length;
         for (uint256 i = 0; i < depositCount; i++) {
             uint256 opIdx = deposits[i].operatorIdx;
             if (opIdx >= operatorCount) revert InvalidOperatorIndex(opIdx, operatorCount);
             amountPerOp[opIdx] += deposits[i].amount;
-            keyCountPerOp[opIdx]++;
+            depositCountPerOp[opIdx]++;
         }
+
+        uint256 topUpCount = topUps.length;
         for (uint256 i = 0; i < topUpCount; i++) {
             uint256 opIdx = topUps[i].operatorIdx;
             if (opIdx >= operatorCount) revert InvalidOperatorIndex(opIdx, operatorCount);
             amountPerOp[opIdx] += topUps[i].amount;
-            keyCountPerOp[opIdx]++;
+            topUpCountPerOp[opIdx]++;
         }
+    }
 
-        // Count populated buckets to size the deltas array.
+    /// @dev Pass 2 helper: counts populated buckets, allocates the sparse deltas array, and
+    ///      pre-sizes per-class pubkey / amount arrays.
+    function _allocateDeltas(
+        uint256 operatorCount,
+        uint256[] memory amountPerOp,
+        uint256[] memory depositCountPerOp,
+        uint256[] memory topUpCountPerOp
+    ) private pure returns (IOperatorsRegistryV1.OperatorFundingDelta[] memory deltas, uint256[] memory deltaIdxByOp) {
         uint256 nonEmpty = 0;
         for (uint256 j = 0; j < operatorCount; j++) {
-            if (keyCountPerOp[j] > 0) ++nonEmpty;
+            if (depositCountPerOp[j] + topUpCountPerOp[j] > 0) ++nonEmpty;
         }
 
-        // Pass 2 (over buckets): allocate sparse deltas in ascending operator-index order.
         deltas = new IOperatorsRegistryV1.OperatorFundingDelta[](nonEmpty);
-        uint256[] memory deltaIdxByOp = new uint256[](operatorCount);
-        uint256[] memory keyCursors = new uint256[](operatorCount);
+        deltaIdxByOp = new uint256[](operatorCount);
+
         uint256 di = 0;
         for (uint256 j = 0; j < operatorCount; j++) {
-            if (keyCountPerOp[j] > 0) {
+            uint256 dc = depositCountPerOp[j];
+            uint256 tc = topUpCountPerOp[j];
+            if (dc + tc > 0) {
                 deltas[di].operatorIndex = j;
                 deltas[di].fundedETH = amountPerOp[j];
-                deltas[di].newPublicKeys = new bytes[](keyCountPerOp[j]);
+                deltas[di].depositPubkeys = new bytes[](dc);
+                deltas[di].depositAmounts = new uint256[](dc);
+                deltas[di].topUpPubkeys = new bytes[](tc);
+                deltas[di].topUpAmounts = new uint256[](tc);
                 deltaIdxByOp[j] = di;
                 ++di;
             }
         }
+    }
 
-        // Pass 3 (over both arrays): fill per-operator pubkeys. Deposits come first, then top-ups,
-        // preserving within-class ordering. Cross-class ordering matches the deposit-execution
-        // order in ConsensusLayerDepositManager (deposits before top-ups).
-        for (uint256 i = 0; i < depositCount; i++) {
+    /// @dev Pass 3 helper for initial deposits.
+    function _fillDeposits(
+        IDepositDataBuffer.Deposit[] memory deposits,
+        IOperatorsRegistryV1.OperatorFundingDelta[] memory deltas,
+        uint256[] memory deltaIdxByOp,
+        uint256 operatorCount
+    ) private pure {
+        uint256[] memory cursors = new uint256[](operatorCount);
+        uint256 n = deposits.length;
+        for (uint256 i = 0; i < n; i++) {
             uint256 opIdx = deposits[i].operatorIdx;
             uint256 d = deltaIdxByOp[opIdx];
-            deltas[d].newPublicKeys[keyCursors[opIdx]++] = deposits[i].pubkey;
+            uint256 c = cursors[opIdx]++;
+            deltas[d].depositPubkeys[c] = deposits[i].pubkey;
+            deltas[d].depositAmounts[c] = deposits[i].amount;
         }
-        for (uint256 i = 0; i < topUpCount; i++) {
+    }
+
+    /// @dev Pass 3 helper for top-ups.
+    function _fillTopUps(
+        IDepositDataBuffer.TopUp[] memory topUps,
+        IOperatorsRegistryV1.OperatorFundingDelta[] memory deltas,
+        uint256[] memory deltaIdxByOp,
+        uint256 operatorCount
+    ) private pure {
+        uint256[] memory cursors = new uint256[](operatorCount);
+        uint256 n = topUps.length;
+        for (uint256 i = 0; i < n; i++) {
             uint256 opIdx = topUps[i].operatorIdx;
             uint256 d = deltaIdxByOp[opIdx];
-            deltas[d].newPublicKeys[keyCursors[opIdx]++] = topUps[i].pubkey;
+            uint256 c = cursors[opIdx]++;
+            deltas[d].topUpPubkeys[c] = topUps[i].pubkey;
+            deltas[d].topUpAmounts[c] = topUps[i].amount;
         }
     }
 }
