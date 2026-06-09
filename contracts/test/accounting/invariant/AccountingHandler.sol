@@ -12,6 +12,7 @@ interface IAccountingActions {
     function handler_completeExit(uint256 opIdx, uint256 ethAmount, uint256 penalty) external;
     function handler_slash(uint256 opIdx, uint256 penalty) external;
     function handler_oracleReport(bool rebalance, bool slashingContainment) external;
+    function handler_consolidationReport(uint256 deltaSeed) external;
 
     function handler_pendingCount() external view returns (uint256);
     function handler_activeAvailableETH(uint256 opIdx) external view returns (uint256);
@@ -46,6 +47,7 @@ contract AccountingHandler is StdUtils {
     uint256 public calls_completeExit;
     uint256 public calls_slash;
     uint256 public calls_oracleReport;
+    uint256 public calls_consolidationReport;
 
     constructor(IAccountingActions test_) {
         _test = test_;
@@ -103,9 +105,11 @@ contract AccountingHandler is StdUtils {
     /// @param amountSeed Seed used to derive the ETH amount to exit.
     function requestExit(uint256 opSeed, uint256 amountSeed) external {
         // Step 1: Select operator and guard — skip if no active ETH is available to exit.
+        //         `bound` requires min <= max, so we must also skip when the remaining active
+        //         ETH is non-zero but below the 1 ether minimum we want to exit for.
         uint256 opIdx = (opSeed % 2 == 0) ? _opOne : _opTwo;
         uint256 available = _test.handler_activeAvailableETH(opIdx);
-        if (available == 0) return;
+        if (available < 1 ether) return;
         // Step 2: Bound the exit amount to the available active ETH.
         uint256 ethAmount = bound(amountSeed, 1 ether, available);
         // Step 3: Delegate the exit request to the test contract.
@@ -115,20 +119,28 @@ contract AccountingHandler is StdUtils {
 
     /// @notice Fuzzer entry point: completes a fuzzed ETH amount of queued exits for a
     ///         pseudo-randomly selected operator, with a random penalty up to 2 ETH.
-    ///         Skips silently if no ETH is queued for exit (handles both partial and full exits).
+    ///         Skips silently if no ETH is queued for exit (handles both EL and CL exits).
     /// @param opSeed      Seed used to select the target operator.
     /// @param amountSeed  Seed used to derive the ETH amount to complete, bounded to [1 ETH, queued ETH].
     /// @param penaltySeed Seed used to derive the exit penalty, bounded to [0, 2 ETH].
     function completeExit(uint256 opSeed, uint256 amountSeed, uint256 penaltySeed) external {
         // Step 1: Select operator and guard — skip if no ETH is currently queued for exit.
+        //         `bound` requires min <= max, so we must also skip when the queued amount is
+        //         non-zero but below the 1 ether minimum we want to complete.
         uint256 opIdx = (opSeed % 2 == 0) ? _opOne : _opTwo;
         uint256 exiting = _test.handler_exitingETH(opIdx);
-        if (exiting == 0) return;
+        if (exiting < 1 ether) return;
         // Step 2: Bound the amount and penalty, then delegate.
         uint256 ethAmount = bound(amountSeed, 1 ether, exiting);
         uint256 penalty = bound(penaltySeed, 0, 2 ether);
         // Step 3: Delegate the exit completion to the test contract.
         _test.handler_completeExit(opIdx, ethAmount, penalty);
+        // A penalised exit returns less ETH than deposited, reducing total pool ETH exactly like
+        // a slash. Signal this so the next oracle report uses slashing-containment mode and the
+        // River contract accepts the share-price decrease.
+        if (penalty > 0) {
+            ghost_slashOccurred = true;
+        }
         calls_completeExit++;
     }
 
@@ -165,5 +177,19 @@ contract AccountingHandler is StdUtils {
         ghost_slashOccurred = false;
         ghost_reportCount++;
         calls_oracleReport++;
+    }
+
+    /// @notice Fuzzer entry point: submits an external-consolidation report (credits the buffer, lands the
+    ///         consolidated principal in validatorsBalance, then draws the buffer back down by the same delta).
+    ///         Skips if no deposits exist yet, or while a loss is pending — this path reports in normal,
+    ///         non-containment mode, so it must not coincide with an unreported slash/penalty. This is the
+    ///         action that exercises invariant I21 (monotonic non-decreasing consolidation total).
+    /// @param deltaSeed  Seed for the consolidation delta (bounded inside the test contract).
+    function consolidationReport(uint256 deltaSeed) external {
+        // Step 1: Guard — need a deposit baseline and no pending loss (non-containment report).
+        if (ghost_depositCount == 0 || ghost_slashOccurred) return;
+        // Step 2: Delegate; the test contract itself no-ops until a baseline report has set CLValidatorCount.
+        _test.handler_consolidationReport(deltaSeed);
+        calls_consolidationReport++;
     }
 }

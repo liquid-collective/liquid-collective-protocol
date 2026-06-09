@@ -47,6 +47,25 @@ contract SlashingContainmentTest is AccountingInvariants {
         assertEq(exitsBefore, exitsAfter, "no exits during slashing containment");
     }
 
+    /// @notice Verifies that SkippedCommitToDepositDueToSlashingContainment is emitted when
+    ///         balance commitment to deposit is suppressed due to slashing containment mode.
+    function testEmitsSkippedCommitToDepositEventDuringContainment() public {
+        // Step 1: Fund river with enough ETH for 4 validators and deposit them for operator one.
+        _fundRiver(4 * DEPOSIT_SIZE);
+        sim_deposit(operatorOneIndex, _amounts(4, DEPOSIT_SIZE));
+        // Step 2: Activate all 4 validators and submit the initial oracle report.
+        sim_activateValidators(4);
+        sim_oracleReport();
+        // Step 3: Apply a 4 ETH slash penalty to operator one.
+        sim_slash(operatorOneIndex, 4 ether);
+        // Step 4: Expect the SkippedCommitToDepositDueToSlashingContainment event when reporting in containment mode.
+        vm.expectEmit(false, false, false, false, address(river));
+        emit IRiverV1.SkippedCommitToDepositDueToSlashingContainment();
+        _setAllowSharePriceDecrease(true);
+        sim_oracleReport(false, true);
+        _setAllowSharePriceDecrease(false);
+    }
+
     /// @notice Verifies that the protocol can resume normal oracle reporting after a slashing-
     ///         containment episode. Ensures all accounting invariants hold across the full
     ///         sequence: normal report → slash → containment report → normal report.
