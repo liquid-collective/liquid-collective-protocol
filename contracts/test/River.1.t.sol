@@ -572,6 +572,7 @@ contract RiverV1Tests is RiverV1TestBase {
         river.setConsolidator(newConsolidator);
 
         assertEq(_storedConsolidator(), address(0));
+        assertEq(river.getConsolidator(), address(0));
     }
 
     function testSetConsolidatorZero() public {
@@ -587,6 +588,7 @@ contract RiverV1Tests is RiverV1TestBase {
         river.setConsolidator(consolidator);
 
         assertEq(_storedConsolidator(), consolidator);
+        assertEq(river.getConsolidator(), consolidator);
     }
 
     function testSetConsolidatorRotation() public {
@@ -595,6 +597,7 @@ contract RiverV1Tests is RiverV1TestBase {
         vm.startPrank(admin);
         river.setConsolidator(consolidator);
         assertEq(_storedConsolidator(), consolidator);
+        assertEq(river.getConsolidator(), consolidator);
 
         vm.expectEmit(true, true, true, true);
         emit SetConsolidator(newConsolidator);
@@ -602,6 +605,7 @@ contract RiverV1Tests is RiverV1TestBase {
         vm.stopPrank();
 
         assertEq(_storedConsolidator(), newConsolidator);
+        assertEq(river.getConsolidator(), newConsolidator);
     }
 
     function _storedConsolidator() internal view returns (address) {
@@ -3056,6 +3060,7 @@ contract RiverV1CoverageTests is RiverV1TestBase {
             address(externalConsolidationRecipientMapping)
         );
         assertEq(address(uint160(uint256(vm.load(address(river), CONSOLIDATOR_ADDRESS_SLOT)))), consolidator);
+        assertEq(river.getConsolidator(), consolidator);
     }
 
     /// Asserts that initRiverV1_3 leaves in-flight deposit zero when reported count equals deposited count.
