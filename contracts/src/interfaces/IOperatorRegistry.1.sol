@@ -192,6 +192,11 @@ interface IOperatorsRegistryV1 {
     /// @notice Thrown when the provided active CL ETH array length does not match the operator count
     error InvalidActiveCLETHArrayLength();
 
+    /// @notice Thrown when the operator state is invalid
+    /// @param index The operator index
+    /// @param funded The funded ETH(wei) amount
+    /// @param requestedExits The requested ETH(wei) amount
+    error InvalidOperatorState(uint256 index, uint256 funded, uint256 requestedExits);
     /// @notice Thrown when a delta references an operator index outside the registered range
     /// @param operatorIndex The offending operator index
     /// @param operatorCount The current number of registered operators
@@ -213,6 +218,17 @@ interface IOperatorsRegistryV1 {
     /// @param elExitAmount The total EL exit amount requested (sum of all EL allocations)
     /// @param remainingETHExitsDemand The remaining exit demand
     error ExitsGreaterThanExitDemand(uint256 elExitAmount, uint256 remainingETHExitsDemand);
+
+    /// @notice Thrown when the pre-Pectra range exceeds the funded validator count
+    /// @param operatorIndex The operator index
+    /// @param stopIndex The exclusive stop key index
+    error PrePectraRangeExceedsFunded(uint256 operatorIndex, uint256 stopIndex);
+
+    /// @notice Thrown when the pre-Pectra range is invalid
+    /// @param operatorIndex The operator index
+    /// @param startIndex The first key index
+    /// @param stopIndex The exclusive stop key index
+    error InvalidPrePectraRange(uint256 operatorIndex, uint256 startIndex, uint256 stopIndex);
 
     /// @notice Initializes the operators registry
     /// @param _admin Admin in charge of managing operators
@@ -261,6 +277,22 @@ interface IOperatorsRegistryV1 {
     /// @notice Retrieve the active operator set
     /// @return The list of active operators and their details
     function listActiveOperators() external view returns (OperatorsV3.Operator[] memory);
+
+    /// @notice Retrieve the pre-Pectra funded validator count for an operator from legacy V2 storage.
+    /// @param operatorIndex The operator index
+    /// @return The legacy funded validator count
+    function getPrePectraFundedValidatorCount(uint256 operatorIndex) external view returns (uint256);
+
+    /// @notice Retrieve pre-Pectra validator pubkeys from legacy ValidatorKeys storage.
+    /// @dev `stopIndex` is exclusive; returns pubkeys for indexes [startIndex, stopIndex).
+    /// @param operatorIndex The operator index
+    /// @param startIndex The first key index to read
+    /// @param stopIndex The exclusive stop key index
+    /// @return publicKeys The legacy validator pubkeys in the requested range
+    function getPrePectraValidatorPubkeys(uint256 operatorIndex, uint256 startIndex, uint256 stopIndex)
+        external
+        view
+        returns (bytes[] memory publicKeys);
 
     /// @notice Updates the funded ETH for the node operators referenced in the provided deltas
     /// @dev Deltas must be sorted by operatorIndex in strictly ascending order with no duplicates
