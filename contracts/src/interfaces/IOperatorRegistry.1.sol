@@ -192,6 +192,11 @@ interface IOperatorsRegistryV1 {
     /// @notice Thrown when the provided active CL ETH array length does not match the operator count
     error InvalidActiveCLETHArrayLength();
 
+    /// @notice Thrown when the operator state is invalid
+    /// @param index The operator index
+    /// @param funded The funded ETH(wei) amount
+    /// @param requestedExits The requested ETH(wei) amount
+    error InvalidOperatorState(uint256 index, uint256 funded, uint256 requestedExits);
     /// @notice Thrown when a delta references an operator index outside the registered range
     /// @param operatorIndex The offending operator index
     /// @param operatorCount The current number of registered operators
