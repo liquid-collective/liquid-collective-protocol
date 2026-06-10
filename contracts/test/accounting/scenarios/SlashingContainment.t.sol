@@ -65,9 +65,8 @@ contract SlashingContainmentTest is AccountingInvariants {
         sim_oracleReport(false, true);
         _setAllowSharePriceDecrease(false);
     }
-    
-    
-  /// @notice Verifies that SkippedExitRequestsDueToSlashingContainment is emitted when
+
+    /// @notice Verifies that SkippedExitRequestsDueToSlashingContainment is emitted when
     ///         exit request processing is suppressed due to slashing containment mode.
     function testEmitsSkippedExitRequestsEventDuringContainment() public {
         // Step 1: Fund river with enough ETH for 4 validators and deposit them for operator one.
