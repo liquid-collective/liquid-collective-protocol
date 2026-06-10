@@ -64,7 +64,7 @@ contract AccountingFuzzTest is AccountingInvariants {
 
     /// @notice Fuzz test exercising a pseudo-random sequence of accounting operations derived
     ///         from a single seed. The sequence covers deposits for two operators, conditional
-    ///         epoch advancement with rewards, and a conditional partial exit for operator one.
+    ///         epoch advancement with rewards, and a conditional EL exit for operator one.
     ///         Verifies that all accounting invariants hold throughout the entire sequence.
     /// @param seed  Seed used to derive all fuzzed parameters via sequential keccak256 hashing.
     function testFuzz_randomSequence(uint256 seed) public {

@@ -3,6 +3,8 @@ pragma solidity 0.8.34;
 
 import "./AccountingHarnessBase.sol";
 import "../../src/interfaces/components/IOracleManager.1.sol";
+import "../../src/interfaces/IDepositDataBuffer.sol";
+import "../../src/libraries/BLS12_381.sol";
 
 /// @dev Beacon-chain simulator mixin for accounting tests.
 ///      Step functions are shells that revert; view helpers are fully implemented.
@@ -33,12 +35,20 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
     uint256 internal _simCumulativeSkimmed;
     /// @dev Cumulative exited ETH (monotonically increasing).
     uint256 internal _simCumulativeExited;
+    /// @dev Cumulative autocompounded rewards (Pectra 0x02). Increases validator CL balance
+    ///      rather than being skimmed, so exits can return more than the original deposit.
+    uint256 internal _simCumulativeAutocompounded;
     /// @dev Mirrors the contract's InFlightDeposit: ETH sent to the deposit contract
     ///      but not yet oracle-confirmed. Incremented in sim_deposit, reset after oracle report.
     uint256 internal _simInFlightDeposit;
     /// @dev Cumulative ETH deposited on the EL deposit contract that has been activated on the CL.
     ///      Monotonically increasing — incremented in sim_activateValidators.
     uint256 internal _simTotalDepositedActivatedETH;
+    /// @dev Cumulative external-consolidation principal that has landed in validatorsBalance and been reported.
+    ///      Monotonically increasing — incremented by the consolidation report step. `_buildReport` adds it to
+    ///      validatorsBalance and reports it as totalExternalConsolidationsAmountReported, so every report
+    ///      carries the current cumulative value (normal reports keep it unchanged → on-chain delta 0).
+    uint256 internal _simConsolidatedBalance;
 
     uint256 internal _lastReportedSkimmed;
     uint256 internal _lastReportedExited;
@@ -60,9 +70,25 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
             _fundRiver(needed - river.getCommittedBalance());
         }
         uint256 prevInFlight = river.getInFlightDeposit();
-        IOperatorsRegistryV1.ValidatorDeposit[] memory allocs = _makeDeposits(opIdx, amounts);
+
+        // Build DepositObjects for the attestation-based deposit path.
+        uint256[] memory opIndices = new uint256[](amounts.length);
+        for (uint256 i = 0; i < amounts.length; i++) {
+            opIndices[i] = opIdx;
+        }
+        IDepositDataBuffer.DepositObject memory batch = _makeDepositObjects(opIndices, amounts);
+
+        bytes32 bufferId = keccak256(abi.encode(batch));
+        depositBuffer.submitDepositData(bufferId, batch);
+        bytes32 rootHash = depositContract.get_deposit_root();
+
+        bytes[] memory sigs = new bytes[](2);
+        sigs[0] = _signAttestation(ROOT_ATTESTER_PK_1, bufferId, rootHash);
+        sigs[1] = _signAttestation(ROOT_ATTESTER_PK_2, bufferId, rootHash);
+
         vm.prank(keeper);
-        river.depositToConsensusLayerWithDepositRoot(allocs, bytes32(0));
+        river.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+
         for (uint256 i = 0; i < amounts.length; i++) {
             _simValidators.push(
                 SimValidator({
@@ -94,10 +120,21 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
     function sim_advanceEpoch(uint256 rewardsPerValidator) internal {
         for (uint256 i = 0; i < _simValidators.length; i++) {
             if (_simValidators[i].state == ValidatorState.Active) {
-                // Rewards are swept (skimmed) from the CL to EL each epoch.
-                // The validator's CL balance remains at the principal (DEPOSIT_SIZE)
-                // after the sweep, so we only track cumulative skimmed rewards separately.
+                // Models the skimmed-reward path: rewards are swept from the CL to the EL
+                // each epoch, so the validator's CL balance remains at principal after
+                // the sweep. See sim_autocompound for the compounding behavior.
                 _simCumulativeSkimmed += rewardsPerValidator;
+            }
+        }
+    }
+
+    /// @dev Models autocompounding behavior: rewards increase the validator's CL balance
+    ///      instead of being skimmed, so exits can return more than the original deposit.
+    function sim_autocompound(uint256 rewardsPerValidator) internal {
+        for (uint256 i = 0; i < _simValidators.length; i++) {
+            if (_simValidators[i].state == ValidatorState.Active) {
+                _simValidators[i].currentBalance += rewardsPerValidator;
+                _simCumulativeAutocompounded += rewardsPerValidator;
             }
         }
     }
@@ -201,10 +238,8 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
         uint256 validatorsExiting = 0;
         uint32 activatedCount = 0;
 
-        uint256 opCount = operatorsRegistry.getOperatorCount();
-        uint256[] memory exitedArr = new uint256[](opCount + 1);
-        uint256[] memory activeCLETHArr = new uint256[](opCount);
-        uint256 cumulativeExited = 0;
+        uint256[] memory exitedArr = new uint256[](operatorsRegistry.getOperatorCount() + 1);
+        uint256[] memory activeCLETHArr = new uint256[](exitedArr.length - 1);
 
         for (uint256 i = 0; i < _simValidators.length; i++) {
             SimValidator memory v = _simValidators[i];
@@ -226,16 +261,20 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
             // Cumulative exited ETH tracked per-operator across all partial and full exits
             if (v.state != ValidatorState.Pending && v.exitedETH > 0) {
                 exitedArr[v.operatorIndex + 1] += v.exitedETH;
-                cumulativeExited += v.exitedETH;
             }
         }
-        exitedArr[0] = cumulativeExited;
+        // Sum per-operator exited ETH into exitedArr[0]
+        for (uint256 i = 1; i < exitedArr.length; i++) {
+            exitedArr[0] += exitedArr[i];
+        }
 
-        report.validatorsBalance = validatorsBalance;
+        // The consolidated principal has landed on the CL, so it is part of the reported validatorsBalance.
+        report.validatorsBalance = validatorsBalance + _simConsolidatedBalance;
         report.validatorsSkimmedBalance = _simCumulativeSkimmed;
         report.validatorsExitedBalance = _simCumulativeExited;
         report.validatorsExitingBalance = validatorsExiting;
         report.totalDepositedActivatedETH = _simTotalDepositedActivatedETH;
+        report.totalExternalConsolidationsAmountReported = _simConsolidatedBalance;
         report.validatorsCount = activatedCount;
         report.exitedETHPerOperator = exitedArr;
         report.activeCLETHPerOperator = activeCLETHArr;
