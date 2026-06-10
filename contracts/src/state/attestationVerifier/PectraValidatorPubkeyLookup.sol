@@ -15,28 +15,28 @@ import "../../libraries/LibUnstructuredStorage.sol";
 ///         against any on-chain record: the root-attested buffer is the only attestation
 ///         we have for which operator a top-up credits.
 library PectraValidatorPubkeyLookup {
-    bytes32 internal constant PECTRA_VALIDATOR_PUBKEY_LOOKUP_MAPPING_BASE_SLOT =
-        bytes32(uint256(keccak256("attestationVerifier.state.pectraValidatorPubkeyLookup.mapping")) - 1);
+    bytes32 internal constant PECTRA_VALIDATOR_PUBKEY_LOOKUP_SLOT =
+        bytes32(uint256(keccak256("attestationVerifier.state.pectraValidatorPubkeyLookup")) - 1);
 
     /// @notice Check if a pubkey has been recorded.
     /// @param pubkey The raw 48-byte BLS pubkey.
     /// @return True if the pubkey was recorded.
     function isPubkeyFunded(bytes memory pubkey) internal view returns (bool) {
-        bytes32 slot = keccak256(abi.encode(PECTRA_VALIDATOR_PUBKEY_LOOKUP_MAPPING_BASE_SLOT, pubkey));
+        bytes32 slot = keccak256(abi.encode(PECTRA_VALIDATOR_PUBKEY_LOOKUP_SLOT, pubkey));
         return LibUnstructuredStorage.getStorageBool(slot);
     }
 
     /// @notice Record a pubkey as initial-deposited.
     /// @param pubkey The raw 48-byte BLS pubkey.
     function add(bytes memory pubkey) internal {
-        bytes32 slot = keccak256(abi.encode(PECTRA_VALIDATOR_PUBKEY_LOOKUP_MAPPING_BASE_SLOT, pubkey));
+        bytes32 slot = keccak256(abi.encode(PECTRA_VALIDATOR_PUBKEY_LOOKUP_SLOT, pubkey));
         LibUnstructuredStorage.setStorageBool(slot, true);
     }
 
     /// @notice Clear the entry for a pubkey.
     /// @param pubkey The raw 48-byte BLS pubkey.
     function remove(bytes memory pubkey) internal {
-        bytes32 slot = keccak256(abi.encode(PECTRA_VALIDATOR_PUBKEY_LOOKUP_MAPPING_BASE_SLOT, pubkey));
+        bytes32 slot = keccak256(abi.encode(PECTRA_VALIDATOR_PUBKEY_LOOKUP_SLOT, pubkey));
         LibUnstructuredStorage.setStorageBool(slot, false);
     }
 }

@@ -13,6 +13,7 @@ import "./Administrable.sol";
 
 import "./state/operatorsRegistry/Operators.2.sol";
 import "./state/operatorsRegistry/Operators.3.sol";
+import "./state/operatorsRegistry/ValidatorKeys.sol";
 import "./state/operatorsRegistry/TotalETHExitsRequested.sol";
 import "./state/operatorsRegistry/CurrentETHExitsDemand.sol";
 import "./state/operatorsRegistry/TotalValidatorExitsRequested.sol";
@@ -54,6 +55,9 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         uint256 opCount = OperatorsV2.getCount();
         for (uint256 idx = 0; idx < opCount; ++idx) {
             OperatorsV2.Operator memory operator = OperatorsV2.get(idx);
+            if (operator.funded < operator.requestedExits) {
+                revert InvalidOperatorState(idx, operator.funded, operator.requestedExits);
+            }
             OperatorsV3.push(
                 OperatorsV3.Operator({
                     funded: operator.funded * DEPOSIT_SIZE,
@@ -164,6 +168,23 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @inheritdoc IOperatorsRegistryV1
+    function getPrePectraFundedValidatorCount(uint256 operatorIndex) external view returns (uint256) {
+        return OperatorsV2.get(operatorIndex).funded;
+    }
+
+    /// @inheritdoc IOperatorsRegistryV1
+    function getPrePectraValidatorPubkeys(uint256 operatorIndex, uint256 startIndex, uint256 stopIndex)
+        external
+        view
+        returns (bytes[] memory publicKeys)
+    {
+        OperatorsV2.Operator storage op = OperatorsV2.get(operatorIndex);
+        if (stopIndex > op.funded) revert PrePectraRangeExceedsFunded(operatorIndex, stopIndex);
+        if (startIndex >= stopIndex) revert InvalidPrePectraRange(operatorIndex, startIndex, stopIndex);
+        (publicKeys,) = ValidatorKeys.getKeys(operatorIndex, startIndex, stopIndex - startIndex);
+    }
+
+    /// @inheritdoc IOperatorsRegistryV1
     function incrementFundedETH(OperatorFundingDelta[] calldata _deltas) external onlyRiver {
         uint256 len = _deltas.length;
         if (len == 0) {
@@ -192,8 +213,31 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                 revert OperatorIgnoredExitRequests(operatorIndex);
             }
 
+            // Defense-in-depth: enforce the per-class pubkey/amount alignment that
+            // `LibFundingDeltas.build` already guarantees, so the registry never emits an event
+            // whose pubkeys and amounts disagree on length (which would silently break indexers).
+            if (delta.depositPubkeys.length != delta.depositAmounts.length) {
+                revert MisalignedDeltaArrays(
+                    operatorIndex, delta.depositPubkeys.length, delta.depositAmounts.length
+                );
+            }
+            if (delta.topUpPubkeys.length != delta.topUpAmounts.length) {
+                revert MisalignedDeltaArrays(
+                    operatorIndex, delta.topUpPubkeys.length, delta.topUpAmounts.length
+                );
+            }
+
             operator.funded += delta.fundedETH;
-            emit FundedValidatorKeys(operatorIndex, delta.newPublicKeys, false);
+            // Emit initial-deposit pubkeys and top-up pubkeys on separate events so off-chain
+            // indexers do not conflate a top-up (existing key, additional ETH) with a brand-new
+            // validator key. Both events carry per-key amounts under Pectra's variable deposit
+            // sizes (1–2048 ETH).
+            if (delta.depositPubkeys.length > 0) {
+                emit Deposits(operatorIndex, delta.depositPubkeys, delta.depositAmounts);
+            }
+            if (delta.topUpPubkeys.length > 0) {
+                emit TopUps(operatorIndex, delta.topUpPubkeys, delta.topUpAmounts);
+            }
         }
     }
 
@@ -214,8 +258,8 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @inheritdoc IOperatorsRegistryV1
-    function reportExitedETH(uint256[] calldata _exitedETH, uint256 _totalDepositedETH) external onlyRiver {
-        _setExitedETH(_exitedETH, _totalDepositedETH);
+    function reportExitedETH(uint256[] calldata _exitedETH) external onlyRiver {
+        _setExitedETH(_exitedETH);
     }
 
     /// @inheritdoc IOperatorsRegistryV1
@@ -473,8 +517,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     /// @notice Internal utility to set the exited ETH array
     /// @dev Please note that we rely on the Oracle to report the correct exitedETH array.
     /// @param _exitedETH The new exited ETH(wei) array per operator
-    /// @param _totalDepositedETH The total deposited ETH(wei)
-    function _setExitedETH(uint256[] calldata _exitedETH, uint256 _totalDepositedETH) internal {
+    function _setExitedETH(uint256[] calldata _exitedETH) internal {
         SetExitedETHInternalVars memory vars;
         // we check that the array is not empty
         vars.exitedETHLength = _exitedETH.length;
@@ -545,10 +588,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         // we check that the total is matching the sum of the individual values
         if (vars.totalExitedETH != vars.amountOfExitedETH) {
             revert ExitedETHSumMismatch();
-        }
-        // we check that the total is not higher than the current deposited ETH
-        if (vars.totalExitedETH > _totalDepositedETH) {
-            revert ExitedETHExceedsDepositedETH();
         }
 
         OperatorsV3.setRawExitedETH(_exitedETH);

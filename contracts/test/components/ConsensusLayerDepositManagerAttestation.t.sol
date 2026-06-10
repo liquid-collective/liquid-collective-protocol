@@ -9,12 +9,15 @@ import "../../src/components/ConsensusLayerDepositManager.1.sol";
 import "../../src/interfaces/IAttestationVerifier.1.sol";
 import "../../src/interfaces/IDepositDataBuffer.sol";
 import "../../src/interfaces/IOperatorRegistry.1.sol";
+import "../../src/interfaces/IWithdraw.1.sol";
 import "../../src/libraries/LibErrors.sol";
 import "../../src/libraries/LibFundingDeltas.sol";
 import "../../src/libraries/BLS12_381.sol";
-import "../../src/state/river/AttestationVerifierAddress.sol";
+import "../../src/state/river/DepositContractAddress.sol";
+import "../../src/state/shared/AttestationVerifierAddress.sol";
 import "../utils/LibImplementationUnbricker.sol";
 import "../mocks/DepositContractEnhancedMock.sol";
+import "../mocks/DepositContractInvalidMock.sol";
 
 // ---------------------------------------------------------------------------
 // Mock DepositDataBuffer — no real implementation exists; stores batches by ID
@@ -51,6 +54,34 @@ contract MockDepositDataBuffer is IDepositDataBuffer {
     }
 }
 
+contract MockPrePectraOperatorsRegistry {
+    mapping(uint256 => uint256) internal _funded;
+    mapping(uint256 => mapping(uint256 => bytes)) internal _pubkeys;
+
+    function setPrePectraFundedValidatorCount(uint256 operatorIndex, uint256 funded) external {
+        _funded[operatorIndex] = funded;
+    }
+
+    function setPrePectraValidatorPubkey(uint256 operatorIndex, uint256 keyIndex, bytes calldata pubkey) external {
+        _pubkeys[operatorIndex][keyIndex] = pubkey;
+    }
+
+    function getPrePectraFundedValidatorCount(uint256 operatorIndex) external view returns (uint256) {
+        return _funded[operatorIndex];
+    }
+
+    function getPrePectraValidatorPubkeys(uint256 operatorIndex, uint256 startIndex, uint256 stopIndex)
+        external
+        view
+        returns (bytes[] memory pubkeys)
+    {
+        pubkeys = new bytes[](stopIndex - startIndex);
+        for (uint256 i = startIndex; i < stopIndex; ++i) {
+            pubkeys[i - startIndex] = _pubkeys[operatorIndex][i];
+        }
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Test harness — mirrors RiverV1's wiring for the deposit-execution side. The
 // attestation+BLS validation now lives in AttestationVerifierV1 (a sibling
@@ -58,7 +89,7 @@ contract MockDepositDataBuffer is IDepositDataBuffer {
 //
 // Only _incrementFundedETH is stubbed (records values for assertions) because
 // the real implementation requires the full OperatorsRegistry. _updateFundedETHFromBuffer
-// is the real River implementation so that FundedValidatorKeys event emission is
+// is the real River implementation so that Deposits event emission is
 // covered end-to-end.
 // ---------------------------------------------------------------------------
 
@@ -74,6 +105,8 @@ contract AttestationDepositHarness is ConsensusLayerDepositManagerV1 {
     ///      revert path can shrink it via sudoSetOperatorCount.
     uint256 public harnessOperatorCount = 1024;
 
+    address internal operatorsRegistry;
+
     constructor(address admin_) {
         _admin = admin_;
     }
@@ -82,6 +115,10 @@ contract AttestationDepositHarness is ConsensusLayerDepositManagerV1 {
     ///         `onlyRiverAdmin` cross-contract lookup (IAdministrable.getAdmin) works.
     function getAdmin() external view returns (address) {
         return _admin;
+    }
+
+    function getOperatorsRegistry() external view returns (address) {
+        return operatorsRegistry;
     }
 
     function _getRiverAdmin() internal view override returns (address) {
@@ -104,8 +141,9 @@ contract AttestationDepositHarness is ConsensusLayerDepositManagerV1 {
     }
 
     /// @dev Delegates bucketing to LibFundingDeltas — the exact same code path River uses —
-    ///      then forwards to the recording stub and emits FundedValidatorKeys per delta
-    ///      (simulating what the real registry emits).
+    ///      then forwards to the recording stub and emits Deposits / TopUps per
+    ///      delta (simulating what the real registry emits: FVK only when there are initial
+    ///      deposits, TopUps only when there are top-ups).
     function _updateFundedETHFromBuffer(
         IDepositDataBuffer.Deposit[] memory deposits,
         IDepositDataBuffer.TopUp[] memory topUps
@@ -115,7 +153,16 @@ contract AttestationDepositHarness is ConsensusLayerDepositManagerV1 {
             LibFundingDeltas.build(deposits, topUps, harnessOperatorCount);
         _incrementFundedETH(deltas);
         for (uint256 i = 0; i < deltas.length; i++) {
-            emit IOperatorsRegistryV1.FundedValidatorKeys(deltas[i].operatorIndex, deltas[i].newPublicKeys, false);
+            if (deltas[i].depositPubkeys.length > 0) {
+                emit IOperatorsRegistryV1.Deposits(
+                    deltas[i].operatorIndex, deltas[i].depositPubkeys, deltas[i].depositAmounts
+                );
+            }
+            if (deltas[i].topUpPubkeys.length > 0) {
+                emit IOperatorsRegistryV1.TopUps(
+                    deltas[i].operatorIndex, deltas[i].topUpPubkeys, deltas[i].topUpAmounts
+                );
+            }
         }
     }
 
@@ -133,8 +180,16 @@ contract AttestationDepositHarness is ConsensusLayerDepositManagerV1 {
         CommittedBalance.set(v);
     }
 
+    function sudoSetDepositContract(address v) external {
+        DepositContractAddress.set(v);
+    }
+
     function sudoSetAttestationVerifier(address v) external {
         AttestationVerifierAddress.set(v);
+    }
+
+    function sudoSetOperatorsRegistry(address v) external {
+        operatorsRegistry = v;
     }
 
     function sudoSetOperatorCount(uint256 c) external {
@@ -157,18 +212,19 @@ contract AttestationDepositHarness is ConsensusLayerDepositManagerV1 {
 //         amounts, and maintains a real Merkle tree
 //       * EIP-712 attestation signatures are real (generated via vm.sign)
 //       * Operator metadata parsing, WC matching, balance accounting, and
-//         FundedValidatorKeys event emission all run production logic
+//         Deposits event emission all run production logic
 // ---------------------------------------------------------------------------
 
 contract ConsensusLayerDepositManagerAttestationTest is Test {
     AttestationDepositHarness internal dm;
     AttestationVerifierV1 internal validator;
     MockDepositDataBuffer internal buffer;
+    MockPrePectraOperatorsRegistry internal prePectraRegistry;
     DepositContractEnhancedMock internal depositContract;
 
     address internal admin = address(0xAD);
     address internal keeper = address(0xBEEF);
-    bytes32 internal withdrawalCredentials = bytes32(uint256(0x010000000000000000000000CAFEBABE));
+    bytes32 internal withdrawalCredentials = 0x02000000000000000000000000000000000000000000000000000000CAFEBABE;
 
     uint256 internal rootAttesterPk1 = 0xA1;
     uint256 internal rootAttesterPk2 = 0xA2;
@@ -190,9 +246,17 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         bytes32(uint256(keccak256("attestationVerifier.state.domainSeparator")) - 1);
     bytes32 internal constant VALIDATOR_DEPOSIT_DOMAIN_SLOT =
         bytes32(uint256(keccak256("attestationVerifier.state.depositDomain")) - 1);
-    bytes32 internal constant PECTRA_VALIDATOR_PUBKEY_LOOKUP_MAPPING_BASE_SLOT =
-        bytes32(uint256(keccak256("attestationVerifier.state.pectraValidatorPubkeyLookup.mapping")) - 1);
+    bytes32 internal constant VALIDATOR_ROOT_ATTESTATION_QUORUM_SLOT =
+        bytes32(uint256(keccak256("attestationVerifier.state.rootAttestationQuorum")) - 1);
+    bytes32 internal constant PECTRA_VALIDATOR_PUBKEY_LOOKUP_SLOT =
+        bytes32(uint256(keccak256("attestationVerifier.state.pectraValidatorPubkeyLookup")) - 1);
 
+    event Deposits(uint256 indexed operatorIndex, bytes[] pubkeys, uint256[] amounts);
+    event TopUps(uint256 indexed operatorIndex, bytes[] pubkeys, uint256[] amounts);
+    event MigratedPrePectraValidatorPubkeys(uint256 indexed operatorIndex, uint256 startIndex, uint256 stopIndex);
+    event RemovedPrePectraValidatorPubkeys(bytes[] pubkeys);
+    event AddedPectraValidatorPubkeys(bytes[] pubkeys);
+    event RemovedPectraValidatorPubkeys(bytes[] pubkeys);
     event FundedValidatorKeys(uint256 indexed operatorIndex, bytes[] publicKeys, bool deferred);
     event SetInFlightETH(uint256 oldInFlightETH, uint256 newInFlightETH);
     event SetTotalDepositedETH(uint256 oldTotalDepositedETH, uint256 newTotalDepositedETH);
@@ -223,7 +287,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     ///      full prior batch). The stored value matches the PectraValidatorPubkeyLookup library's
     ///      boolean-membership scheme.
     function _seedFundedPubkey(bytes memory pubkey) internal {
-        bytes32 slot = keccak256(abi.encode(PECTRA_VALIDATOR_PUBKEY_LOOKUP_MAPPING_BASE_SLOT, pubkey));
+        bytes32 slot = keccak256(abi.encode(PECTRA_VALIDATOR_PUBKEY_LOOKUP_SLOT, pubkey));
         vm.store(address(validator), slot, bytes32(uint256(1)));
     }
 
@@ -234,12 +298,14 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
         depositContract = new DepositContractEnhancedMock();
         buffer = new MockDepositDataBuffer();
+        prePectraRegistry = new MockPrePectraOperatorsRegistry();
 
         // 1. Deploy and init the harness (River-shaped).
         dm = new AttestationDepositHarness(admin);
         LibImplementationUnbricker.unbrick(vm, address(dm));
         dm.initialize(address(depositContract), withdrawalCredentials);
         dm.sudoSetKeeper(keeper);
+        dm.sudoSetOperatorsRegistry(address(prePectraRegistry));
 
         // 2. Deploy and init the AttestationVerifier. The validator's EIP-712
         //    domain separator binds verifyingContract to the harness's address
@@ -300,6 +366,15 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     ///      `PectraValidatorPubkeyLookup`. No signature field — consumer hardcodes 96 zero bytes.
     function _makeTopUpDeposit(uint256 opIdx, uint256 seed) internal pure returns (IDepositDataBuffer.TopUp memory) {
         return IDepositDataBuffer.TopUp({pubkey: _fakePubkey(seed), amount: 32 ether, operatorIdx: opIdx});
+    }
+
+    function _seedPrePectraValidator(uint256 operatorIdx, uint256 keyIndex, uint256 seed)
+        internal
+        returns (bytes memory)
+    {
+        bytes memory pubkey = _fakePubkey(seed);
+        prePectraRegistry.setPrePectraValidatorPubkey(operatorIdx, keyIndex, pubkey);
+        return pubkey;
     }
 
     /// @dev Convenience: build a DepositObject from a Deposit[] (no top-ups).
@@ -394,18 +469,23 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
         (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits);
 
-        // Expect: FundedValidatorKeys for operator 0 with 2 keys
+        // Expect: Deposits for operator 0 with 2 keys, each 32 ETH
         bytes[] memory op0Keys = new bytes[](2);
         op0Keys[0] = deposits[0].pubkey;
         op0Keys[1] = deposits[1].pubkey;
+        uint256[] memory op0Amounts = new uint256[](2);
+        op0Amounts[0] = deposits[0].amount;
+        op0Amounts[1] = deposits[1].amount;
         vm.expectEmit(true, false, false, true);
-        emit FundedValidatorKeys(0, op0Keys, false);
+        emit Deposits(0, op0Keys, op0Amounts);
 
-        // Expect: FundedValidatorKeys for operator 1 with 1 key
+        // Expect: Deposits for operator 1 with 1 key
         bytes[] memory op1Keys = new bytes[](1);
         op1Keys[0] = deposits[2].pubkey;
+        uint256[] memory op1Amounts = new uint256[](1);
+        op1Amounts[0] = deposits[2].amount;
         vm.expectEmit(true, false, false, true);
-        emit FundedValidatorKeys(1, op1Keys, false);
+        emit Deposits(1, op1Keys, op1Amounts);
 
         // Expect: balance events
         vm.expectEmit(true, true, false, true);
@@ -436,11 +516,13 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
         (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits);
 
-        // Expect: FundedValidatorKeys for operator 5
+        // Expect: Deposits for operator 5
         bytes[] memory opKeys = new bytes[](1);
         opKeys[0] = deposits[0].pubkey;
+        uint256[] memory opAmounts = new uint256[](1);
+        opAmounts[0] = deposits[0].amount;
         vm.expectEmit(true, false, false, true);
-        emit FundedValidatorKeys(5, opKeys, false);
+        emit Deposits(5, opKeys, opAmounts);
 
         vm.prank(keeper);
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
@@ -559,6 +641,25 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
     }
 
+    function testRevert_errorOnDepositWhenDepositContractDoesNotKeepETH() public {
+        DepositContractInvalidMock invalidDepositContract = new DepositContractInvalidMock();
+        dm.sudoSetDepositContract(address(invalidDepositContract));
+
+        IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](1);
+        deposits[0] = _makeDeposit(0, 0);
+
+        bytes32 bufferId = keccak256(abi.encode(_batchOf(deposits)));
+        buffer.submitDepositData(bufferId, _batchOf(deposits));
+        bytes32 rootHash = invalidDepositContract.get_deposit_root();
+        bytes[] memory sigs = new bytes[](2);
+        sigs[0] = _signAttestation(rootAttesterPk1, bufferId, rootHash);
+        sigs[1] = _signAttestation(rootAttesterPk2, bufferId, rootHash);
+
+        vm.prank(keeper);
+        vm.expectRevert(IConsensusLayerDepositManagerV1.ErrorOnDeposit.selector);
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+    }
+
     function testRevert_duplicateRootAttesterSignatures() public {
         IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](1);
         deposits[0] = _makeDeposit(0, 0);
@@ -596,7 +697,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
     }
 
-    // Regression test for the defense-in-depth bufferId check in validateDeposits().
+    // Regression test for the defense-in-depth bufferId check in fetchAndValidateDeposits().
     // A malicious or buggy DepositDataBuffer may store (id, deposits) where
     // id != keccak256(abi.encode(deposits)). The on-chain validator must catch this
     // and revert with BufferIdMismatch so the root attesters' signed commitment is
@@ -640,10 +741,31 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
     }
 
+    /// @dev The setter rejects a zero root quorum, but validateDeposits() also defends
+    ///      against corrupted/uninitialized quorum storage. With a zero quorum, a batch
+    ///      could otherwise pass with no meaningful root-attester approval.
+    function testRevert_validate_zeroRootQuorumStorage() public {
+        vm.store(address(validator), VALIDATOR_ROOT_ATTESTATION_QUORUM_SLOT, bytes32(0));
+
+        IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](1);
+        deposits[0] = _makeDeposit(0, 901);
+        bytes32 bufferId = keccak256(abi.encode(_batchOf(deposits)));
+        buffer.submitDepositData(bufferId, _batchOf(deposits));
+        bytes32 rootHash = depositContract.get_deposit_root();
+
+        bytes[] memory sigs = new bytes[](2);
+        sigs[0] = _signAttestation(rootAttesterPk1, bufferId, rootHash);
+        sigs[1] = _signAttestation(rootAttesterPk2, bufferId, rootHash);
+
+        vm.prank(keeper);
+        vm.expectRevert(IAttestationVerifierV1.ZeroQuorum.selector);
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+    }
+
     // verifyBLSDeposit is only callable via the internal self-staticcall trampoline in
     // _verifyBLSSignatures. Any external caller must hit the OnlySelfCall guard so future
     // additions of state or events to this function cannot become world-callable. The
-    // ZeroDepositDomain path is exercised via the proper validateDeposits() flow in
+    // ZeroDepositDomain path is exercised via the proper fetchAndValidateDeposits() flow in
     // testInitial_blsPathReached_revertsOnZeroDepositDomain below.
     function testRevert_verifyBLSDeposit_onlySelfCall() public {
         // Un-mock so the real function body and its guard run.
@@ -655,6 +777,26 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
         vm.expectRevert(IAttestationVerifierV1.OnlySelfCall.selector);
         validator.verifyBLSDeposit(pk, sig, 32 ether, dy, withdrawalCredentials);
+    }
+
+    /// @dev Once the cheap checks and root-attester quorum pass, initial deposits must enter
+    ///      the real BLS verifier. This clears the BLS success mock and supplies a 48-byte
+    ///      pubkey with invalid compression flags, proving the verifier call is reached and
+    ///      its revert is bubbled back through validateDeposits().
+    function testRevert_initialBLSVerifierRejectsInvalidCompressedPubkey() public {
+        vm.clearMockedCalls();
+
+        IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](1);
+        deposits[0] = _makeDeposit(0, 902);
+        deposits[0].pubkey[0] = bytes1(uint8(0)); // invalid compressed BLS component header
+
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits);
+
+        vm.prank(keeper);
+        vm.expectRevert(
+            abi.encodeWithSelector(BLS12_381.InvalidCompressedComponent.selector, BLS12_381.Component.PubKey)
+        );
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
     }
 
     // -----------------------------------------------------------------------
@@ -764,9 +906,10 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         dm.depositToConsensusLayerWithAttestation(signedId, rootHash, sigs);
     }
 
-    // Top-ups must still count toward the operator's fundedETH and appear in newPublicKeys
-    // exactly like initial deposits — LibFundingDeltas has no branch on deposit kind.
-    function testTopUp_fundingDeltas_accountIdenticallyToInitials() public {
+    // Top-ups credit the same `fundedETH` bucket as initial deposits, but they must be emitted
+    // through the dedicated `TopUps` event — never folded into `Deposits`, whose
+    // pubkeys carry brand-new-validator semantics for indexers. Issue #543.
+    function testTopUp_fundingDeltas_emitsTopUpsEventNotDeposits() public {
         // Mock from setUp() is still active: BLS verification succeeds for the initial deposit.
 
         IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](1);
@@ -780,17 +923,109 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
         (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits, topUps);
 
-        bytes[] memory opKeys = new bytes[](2);
-        opKeys[0] = deposits[0].pubkey;
-        opKeys[1] = topUps[0].pubkey;
+        // Deposits carries only the initial-deposit pubkey, with its amount.
+        bytes[] memory initialKeys = new bytes[](1);
+        initialKeys[0] = deposits[0].pubkey;
+        uint256[] memory initialAmounts = new uint256[](1);
+        initialAmounts[0] = deposits[0].amount;
         vm.expectEmit(true, false, false, true);
-        emit FundedValidatorKeys(0, opKeys, false);
+        emit Deposits(0, initialKeys, initialAmounts);
+
+        // TopUps carries the top-up pubkey alongside its amount.
+        bytes[] memory topUpKeys = new bytes[](1);
+        topUpKeys[0] = topUps[0].pubkey;
+        uint256[] memory topUpAmounts = new uint256[](1);
+        topUpAmounts[0] = topUps[0].amount;
+        vm.expectEmit(true, false, false, true);
+        emit TopUps(0, topUpKeys, topUpAmounts);
 
         vm.prank(keeper);
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
 
         assertEq(dm.lastFundedETH(0), 64 ether, "both initial and top-up bump fundedETH");
         assertEq(depositContract.deposit_count(), 2);
+    }
+
+    // Issue #543: a top-ups-only batch must NOT emit Deposits (which would inflate
+    // indexers' new-validator counts). It must emit TopUps with the per-key amounts.
+    function testTopUp_onlyBatch_emitsTopUpsEventNotDeposits() public {
+        // Two top-ups, varying amounts to prove the amounts array is per-entry, not aggregated.
+        IDepositDataBuffer.TopUp[] memory topUps = new IDepositDataBuffer.TopUp[](2);
+        topUps[0] = IDepositDataBuffer.TopUp({pubkey: _fakePubkey(200), amount: 16 ether, operatorIdx: 3});
+        topUps[1] = IDepositDataBuffer.TopUp({pubkey: _fakePubkey(201), amount: 64 ether, operatorIdx: 3});
+        _seedFundedPubkey(topUps[0].pubkey);
+        _seedFundedPubkey(topUps[1].pubkey);
+
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareTopUps(topUps);
+
+        bytes[] memory expectedPubkeys = new bytes[](2);
+        expectedPubkeys[0] = topUps[0].pubkey;
+        expectedPubkeys[1] = topUps[1].pubkey;
+        uint256[] memory expectedAmounts = new uint256[](2);
+        expectedAmounts[0] = 16 ether;
+        expectedAmounts[1] = 64 ether;
+
+        // Only the TopUps event should fire for this batch; Deposits would over-report
+        // these as brand-new validator keys.
+        vm.recordLogs();
+        vm.prank(keeper);
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        bytes32 depositsTopic = keccak256("Deposits(uint256,bytes[],uint256[])");
+        bytes32 topUpsTopic = keccak256("TopUps(uint256,bytes[],uint256[])");
+        uint256 depositsSeen = 0;
+        uint256 topUpsSeen = 0;
+        for (uint256 i = 0; i < logs.length; i++) {
+            if (logs[i].topics.length == 0) continue;
+            if (logs[i].emitter != address(dm)) continue;
+            if (logs[i].topics[0] == depositsTopic) depositsSeen++;
+            if (logs[i].topics[0] == topUpsTopic) {
+                topUpsSeen++;
+                // operator index is the indexed topic
+                assertEq(uint256(logs[i].topics[1]), 3, "TopUps must be indexed by operator");
+                (bytes[] memory pubs, uint256[] memory amts) = abi.decode(logs[i].data, (bytes[], uint256[]));
+                assertEq(pubs.length, 2);
+                assertEq(amts.length, 2);
+                assertEq(amts[0], 16 ether);
+                assertEq(amts[1], 64 ether);
+                assertEq(keccak256(pubs[0]), keccak256(expectedPubkeys[0]));
+                assertEq(keccak256(pubs[1]), keccak256(expectedPubkeys[1]));
+            }
+        }
+        assertEq(depositsSeen, 0, "Deposits must NOT fire for a top-ups-only batch");
+        assertEq(topUpsSeen, 1, "TopUps must fire exactly once for this batch");
+
+        assertEq(dm.lastFundedETH(3), 80 ether, "top-ups credit fundedETH");
+        assertEq(depositContract.deposit_count(), 2);
+    }
+
+    // Issue #543: an initial-deposits-only batch must NOT emit TopUps. Backwards-compat for
+    // existing indexers — they should keep seeing Deposits unchanged.
+    function testInitialDeposits_onlyBatch_emitsDepositsNotTopUps() public {
+        IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](2);
+        deposits[0] = _makeDeposit(7, 300);
+        deposits[1] = _makeDeposit(7, 301);
+
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits);
+
+        vm.recordLogs();
+        vm.prank(keeper);
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        bytes32 depositsTopic = keccak256("Deposits(uint256,bytes[],uint256[])");
+        bytes32 topUpsTopic = keccak256("TopUps(uint256,bytes[],uint256[])");
+        uint256 depositsSeen = 0;
+        uint256 topUpsSeen = 0;
+        for (uint256 i = 0; i < logs.length; i++) {
+            if (logs[i].topics.length == 0) continue;
+            if (logs[i].emitter != address(dm)) continue;
+            if (logs[i].topics[0] == depositsTopic) depositsSeen++;
+            if (logs[i].topics[0] == topUpsTopic) topUpsSeen++;
+        }
+        assertEq(depositsSeen, 1, "Deposits must fire exactly once for this batch");
+        assertEq(topUpsSeen, 0, "TopUps must NOT fire when there are no top-ups");
     }
 
     // -----------------------------------------------------------------------
@@ -859,6 +1094,237 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
         assertEq(depositContract.deposit_count(), 2, "both deposits executed");
         assertEq(dm.getTotalDepositedETH(), 64 ether, "total deposited reflects both initial and top-up");
+    }
+
+    function testMigratePrePectraValidatorPubkeys_adminMigratesRangeAndIsIdempotent() public {
+        uint256 operatorIdx = 7;
+        prePectraRegistry.setPrePectraFundedValidatorCount(operatorIdx, 4);
+        bytes memory pk1 = _seedPrePectraValidator(operatorIdx, 1, 610);
+        bytes memory pk2 = _seedPrePectraValidator(operatorIdx, 2, 611);
+
+        assertFalse(validator.isPubkeyFunded(pk1), "precondition key 1");
+        assertFalse(validator.isPubkeyFunded(pk2), "precondition key 2");
+
+        vm.expectEmit(true, false, false, true);
+        emit MigratedPrePectraValidatorPubkeys(operatorIdx, 1, 3);
+
+        vm.prank(admin);
+        validator.migratePrePectraValidatorPubkeys(operatorIdx, 1, 3);
+
+        assertTrue(validator.isPrePectraValidatorPubkeyFunded(pk1), "migrated pre-Pectra key 1");
+        assertTrue(validator.isPrePectraValidatorPubkeyFunded(pk2), "migrated pre-Pectra key 2");
+        assertFalse(validator.isPubkeyFunded(pk1), "migrated key 1 not runtime-funded");
+        assertFalse(validator.isPubkeyFunded(pk2), "migrated key 2 not runtime-funded");
+
+        vm.prank(admin);
+        validator.migratePrePectraValidatorPubkeys(operatorIdx, 1, 3);
+
+        assertTrue(validator.isPrePectraValidatorPubkeyFunded(pk1), "remigrated pre-Pectra key 1");
+        assertTrue(validator.isPrePectraValidatorPubkeyFunded(pk2), "remigrated pre-Pectra key 2");
+        assertFalse(validator.isPubkeyFunded(pk1), "remigrated key 1 not runtime-funded");
+        assertFalse(validator.isPubkeyFunded(pk2), "remigrated key 2 not runtime-funded");
+    }
+
+    function testMigratePrePectraValidatorPubkeys_revertsWhenUnauthorized() public {
+        address stranger = makeAddr("stranger");
+
+        vm.prank(stranger);
+        vm.expectRevert(abi.encodeWithSelector(LibErrors.Unauthorized.selector, stranger));
+        validator.migratePrePectraValidatorPubkeys(0, 0, 1);
+    }
+
+    function testMigratePrePectraValidatorPubkeys_revertsWhenMigratedPubkeyLengthInvalid() public {
+        uint256 operatorIdx = 4;
+        prePectraRegistry.setPrePectraFundedValidatorCount(operatorIdx, 1);
+        prePectraRegistry.setPrePectraValidatorPubkey(operatorIdx, 0, hex"1234");
+
+        vm.prank(admin);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAttestationVerifierV1.InvalidPrePectraMigrationPubkeyLength.selector, operatorIdx, 0, 2
+            )
+        );
+        validator.migratePrePectraValidatorPubkeys(operatorIdx, 0, 1);
+    }
+
+    function testValidateSelfConsolidation_riverBuildsOneSelfRequestPerMigratedPubkey() public {
+        uint256 operatorIdx = 8;
+        prePectraRegistry.setPrePectraFundedValidatorCount(operatorIdx, 2);
+        bytes memory pk0 = _seedPrePectraValidator(operatorIdx, 0, 650);
+        bytes memory pk1 = _seedPrePectraValidator(operatorIdx, 1, 651);
+
+        vm.prank(admin);
+        validator.migratePrePectraValidatorPubkeys(operatorIdx, 0, 2);
+
+        bytes[] memory pubkeys = new bytes[](2);
+        pubkeys[0] = pk0;
+        pubkeys[1] = pk1;
+
+        vm.expectEmit(false, false, false, true);
+        emit RemovedPrePectraValidatorPubkeys(pubkeys);
+        vm.expectEmit(false, false, false, true);
+        emit AddedPectraValidatorPubkeys(pubkeys);
+
+        vm.prank(address(dm));
+        IWithdrawV1.ConsolidationRequest[] memory requests = validator.validateSelfConsolidation(pubkeys);
+
+        assertEq(requests.length, 2, "request count");
+        assertEq(requests[0].srcPubkeys.length, 1, "request 0 source count");
+        assertEq(requests[0].srcPubkeys[0], pk0, "request 0 source");
+        assertEq(requests[0].targetPubkey, pk0, "request 0 target");
+        assertEq(requests[1].srcPubkeys.length, 1, "request 1 source count");
+        assertEq(requests[1].srcPubkeys[0], pk1, "request 1 source");
+        assertEq(requests[1].targetPubkey, pk1, "request 1 target");
+
+        assertFalse(validator.isPrePectraValidatorPubkeyFunded(pk0), "pk0 cleared from pre-Pectra");
+        assertFalse(validator.isPrePectraValidatorPubkeyFunded(pk1), "pk1 cleared from pre-Pectra");
+        assertTrue(validator.isPubkeyFunded(pk0), "pk0 added to post-Pectra");
+        assertTrue(validator.isPubkeyFunded(pk1), "pk1 added to post-Pectra");
+    }
+
+    function testValidateSelfConsolidation_revertsWhenCallerNotRiver() public {
+        uint256 operatorIdx = 9;
+        prePectraRegistry.setPrePectraFundedValidatorCount(operatorIdx, 1);
+        bytes memory pubkey = _seedPrePectraValidator(operatorIdx, 0, 652);
+
+        vm.prank(admin);
+        validator.migratePrePectraValidatorPubkeys(operatorIdx, 0, 1);
+
+        bytes[] memory pubkeys = new bytes[](1);
+        pubkeys[0] = pubkey;
+
+        vm.prank(admin);
+        vm.expectRevert(abi.encodeWithSelector(LibErrors.Unauthorized.selector, admin));
+        validator.validateSelfConsolidation(pubkeys);
+    }
+
+    function testValidateSelfConsolidation_revertsWhenBatchEmpty() public {
+        bytes[] memory pubkeys = new bytes[](0);
+
+        vm.prank(address(dm));
+        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InvalidSelfConsolidationEmptyPubkeys.selector));
+        validator.validateSelfConsolidation(pubkeys);
+    }
+
+    function testValidateSelfConsolidation_revertsWhenPubkeyLengthInvalid() public {
+        bytes[] memory pubkeys = new bytes[](1);
+        pubkeys[0] = hex"1234";
+
+        vm.prank(address(dm));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAttestationVerifierV1.InvalidSelfConsolidationPubkeyLength.selector, uint256(0), uint256(2)
+            )
+        );
+        validator.validateSelfConsolidation(pubkeys);
+    }
+
+    function testValidateSelfConsolidation_revertsWhenPubkeyNotFunded() public {
+        bytes memory pubkey = _fakePubkey(653);
+        bytes[] memory pubkeys = new bytes[](1);
+        pubkeys[0] = pubkey;
+
+        vm.prank(address(dm));
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.PrePectraValidatorPubkeyNotFunded.selector, pubkey)
+        );
+        validator.validateSelfConsolidation(pubkeys);
+    }
+
+    function testRemovePrePectraValidatorPubkeys_adminRemovesSubsetAndEmits() public {
+        uint256 operatorIdx = 5;
+        prePectraRegistry.setPrePectraFundedValidatorCount(operatorIdx, 3);
+        bytes memory pk0 = _seedPrePectraValidator(operatorIdx, 0, 630);
+        bytes memory pk1 = _seedPrePectraValidator(operatorIdx, 1, 631);
+        bytes memory pk2 = _seedPrePectraValidator(operatorIdx, 2, 632);
+
+        vm.prank(admin);
+        validator.migratePrePectraValidatorPubkeys(operatorIdx, 0, 3);
+
+        assertTrue(validator.isPrePectraValidatorPubkeyFunded(pk0), "precondition key 0");
+        assertTrue(validator.isPrePectraValidatorPubkeyFunded(pk1), "precondition key 1");
+        assertTrue(validator.isPrePectraValidatorPubkeyFunded(pk2), "precondition key 2");
+
+        bytes[] memory pubkeys = new bytes[](2);
+        pubkeys[0] = pk0;
+        pubkeys[1] = pk2;
+
+        // Governance may need to roll back a partial migration. Removing a subset must
+        // clear only the named pubkeys and leave unrelated migrated keys available.
+        vm.expectEmit(false, false, false, true);
+        emit RemovedPrePectraValidatorPubkeys(pubkeys);
+
+        vm.prank(admin);
+        validator.removePrePectraValidatorPubkeys(pubkeys);
+
+        assertFalse(validator.isPrePectraValidatorPubkeyFunded(pk0), "removed key 0");
+        assertTrue(validator.isPrePectraValidatorPubkeyFunded(pk1), "unremoved key 1");
+        assertFalse(validator.isPrePectraValidatorPubkeyFunded(pk2), "removed key 2");
+    }
+
+    function testRemovePrePectraValidatorPubkeys_revertsWhenUnauthorized() public {
+        address stranger = makeAddr("prePectraRemovalStranger");
+        bytes[] memory pubkeys = new bytes[](1);
+        pubkeys[0] = _fakePubkey(640);
+
+        // The removal hook has the same governance blast radius as migration, so it must
+        // use the River admin check instead of allowing arbitrary callers to clear keys.
+        vm.prank(stranger);
+        vm.expectRevert(abi.encodeWithSelector(LibErrors.Unauthorized.selector, stranger));
+        validator.removePrePectraValidatorPubkeys(pubkeys);
+    }
+
+    function testRemovePrePectraValidatorPubkeys_revertsWhenBatchEmpty() public {
+        bytes[] memory pubkeys = new bytes[](0);
+
+        vm.prank(admin);
+        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InvalidPrePectraRemovalEmptyPubkeys.selector));
+        validator.removePrePectraValidatorPubkeys(pubkeys);
+    }
+
+    function testRemovePrePectraValidatorPubkeys_revertsWhenPubkeyLengthInvalid() public {
+        bytes[] memory pubkeys = new bytes[](1);
+        pubkeys[0] = hex"1234";
+
+        vm.prank(admin);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAttestationVerifierV1.InvalidPrePectraRemovalPubkeyLength.selector, uint256(0), uint256(2)
+            )
+        );
+        validator.removePrePectraValidatorPubkeys(pubkeys);
+    }
+
+    function testRemovePrePectraValidatorPubkeys_revertsWhenPubkeyNotFunded() public {
+        bytes memory pubkey = _fakePubkey(641);
+        bytes[] memory pubkeys = new bytes[](1);
+        pubkeys[0] = pubkey;
+
+        vm.prank(admin);
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.PrePectraValidatorPubkeyNotFunded.selector, pubkey)
+        );
+        validator.removePrePectraValidatorPubkeys(pubkeys);
+    }
+
+    function testTopUp_migratedPrePectraPubkeyStillRevertsInValidate() public {
+        uint256 operatorIdx = 3;
+        uint256 seed = 620;
+        prePectraRegistry.setPrePectraFundedValidatorCount(operatorIdx, 1);
+        bytes memory pubkey = _seedPrePectraValidator(operatorIdx, 0, seed);
+
+        vm.prank(admin);
+        validator.migratePrePectraValidatorPubkeys(operatorIdx, 0, 1);
+        assertTrue(validator.isPrePectraValidatorPubkeyFunded(pubkey), "pre-Pectra lookup migration");
+        assertFalse(validator.isPubkeyFunded(pubkey), "runtime lookup still empty");
+
+        IDepositDataBuffer.TopUp[] memory topUps = new IDepositDataBuffer.TopUp[](1);
+        topUps[0] = _makeTopUpDeposit(operatorIdx, seed);
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareTopUps(topUps);
+
+        vm.prank(keeper);
+        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.TopUpPubkeyNotFunded.selector, topUps[0].pubkey));
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
     }
 
     /// @dev Re-using a processed `depositDataBufferId` must revert with `DepositDataBufferIdAlreadyProcessed`.
@@ -974,7 +1440,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     }
 
     /// @dev Same-batch initial + top-up for the SAME pubkey must revert. The top-up check
-    ///      runs during validateDeposits() before the deposit executes, so the mapping is empty at
+    ///      runs during fetchAndValidateDeposits() before the deposit executes, so the mapping is empty at
     ///      that moment and TopUpPubkeyNotFunded fires.
     function testSameBatch_initialAndTopUpSamePubkey_reverts() public {
         IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](1);
@@ -990,7 +1456,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     }
 
     /// @dev Initial deposit for a pubkey that's already in the lookup (e.g., re-deposit after
-    ///      a prior batch) must revert in `validateDeposits()` with PubkeyAlreadyFunded before any
+    ///      a prior batch) must revert in `fetchAndValidateDeposits()` with PubkeyAlreadyFunded before any
     ///      `IDepositContract.deposit{}()` call runs. Uses the test helper to seed the mapping
     ///      directly; submitting two identical batches through the real buffer would collide on
     ///      bufferId before the mapping check fires.
@@ -1011,7 +1477,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     }
 
     /// @dev Same-batch duplicate-initial (two entries with the same pubkey, both flagged as
-    ///      initials via non-zero depositY) must revert in `validateDeposits()` with PubkeyAlreadyFunded
+    ///      initials via non-zero depositY) must revert in `fetchAndValidateDeposits()` with PubkeyAlreadyFunded
     ///      before any deposit is sent to the beacon contract. Catches the producer-bug class where
     ///      the dup is intra-batch and not yet recorded on-chain — the on-chain lookup is empty for
     ///      this pubkey at validate-time, so the inner per-batch scan is what fires.
@@ -1143,7 +1609,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         validator.removeExitedValidatorPubkeys(pubkeys);
     }
 
-    /// @dev `validateDeposits()` must fail-fast on out-of-range or mis-aligned `amount` rather than
+    /// @dev `fetchAndValidateDeposits()` must fail-fast on out-of-range or mis-aligned `amount` rather than
     ///      deferring to the per-deposit check inside `_depositValidator`. Tests all three
     ///      branches: below minimum (1 ether), above maximum (2048 ether), and non-gwei-aligned.
     function testRevert_validate_invalidDepositAmount() public {
@@ -1293,10 +1759,10 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     }
 
     // -----------------------------------------------------------------------
-    // validateDeposits() length / empty-batch reverts
+    // fetchAndValidateDeposits() length / empty-batch reverts
     // -----------------------------------------------------------------------
 
-    /// @dev A deposit with a mis-sized pubkey must revert in validateDeposits() before the BLS path.
+    /// @dev A deposit with a mis-sized pubkey must revert in fetchAndValidateDeposits() before the BLS path.
     function testRevert_validate_invalidPubkeyLength() public {
         IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](1);
         deposits[0] = _makeDeposit(0, 700);
@@ -1307,7 +1773,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
     }
 
-    /// @dev A deposit with a mis-sized signature must revert in validateDeposits() before the BLS path.
+    /// @dev A deposit with a mis-sized signature must revert in fetchAndValidateDeposits() before the BLS path.
     function testRevert_validate_invalidSignatureLength() public {
         IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](1);
         deposits[0] = _makeDeposit(0, 701);
@@ -1444,6 +1910,41 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         freshValidator.initAttestationVerifierV1(address(dm), address(buffer), empty, 1, bytes4(0), empty, 1);
     }
 
+    /// @dev Cannot init with a root quorum of zero. This is distinct from an empty
+    ///      attester set: a populated committee with quorum=0 would make signatures optional.
+    function testRevert_init_zeroRootQuorum() public {
+        AttestationVerifierV1 freshValidator = new AttestationVerifierV1();
+        LibImplementationUnbricker.unbrick(vm, address(freshValidator));
+        address[] memory rootAttesters = new address[](1);
+        rootAttesters[0] = rootAttester1;
+        address[] memory consolidationAttesters = new address[](1);
+        consolidationAttesters[0] = makeAddr("consolidation-attester");
+
+        vm.expectRevert(IAttestationVerifierV1.ZeroQuorum.selector);
+        freshValidator.initAttestationVerifierV1(
+            address(dm), address(buffer), rootAttesters, 0, bytes4(0), consolidationAttesters, 1
+        );
+    }
+
+    /// @dev Cannot init with more root attesters than the defensive cap. The empty-array
+    ///      case exercises the same top-level InvalidArgument revert but a different
+    ///      production risk: unbounded storage growth and a larger quorum-dedup surface.
+    function testRevert_init_tooManyRootAttesters() public {
+        AttestationVerifierV1 freshValidator = new AttestationVerifierV1();
+        LibImplementationUnbricker.unbrick(vm, address(freshValidator));
+        address[] memory tooManyRootAttesters = new address[](validator.MAX_ROOT_ATTESTERS() + 1);
+        for (uint256 i = 0; i < tooManyRootAttesters.length; i++) {
+            tooManyRootAttesters[i] = address(uint160(0xB000 + i));
+        }
+        address[] memory consolidationAttesters = new address[](1);
+        consolidationAttesters[0] = makeAddr("consolidation-attester");
+
+        vm.expectRevert(LibErrors.InvalidArgument.selector);
+        freshValidator.initAttestationVerifierV1(
+            address(dm), address(buffer), tooManyRootAttesters, 1, bytes4(0), consolidationAttesters, 1
+        );
+    }
+
     /// @dev Cannot init with a quorum strictly greater than the attester count.
     function testRevert_init_quorumExceedsAttesterCount() public {
         AttestationVerifierV1 freshValidator = new AttestationVerifierV1();
@@ -1474,7 +1975,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     // G-1: TooManySignatures bound
     // -----------------------------------------------------------------------
 
-    /// @dev `validateDeposits()` rejects a signature array longer than MAX_SIGNATURES (20) before any
+    /// @dev `fetchAndValidateDeposits()` rejects a signature array longer than MAX_SIGNATURES (20) before any
     ///      recovery work runs — bounds the O(n^2) dedup loop. Sig content doesn't matter
     ///      since the length check fires first.
     function testRevert_validate_tooManySignatures() public {
@@ -1560,6 +2061,32 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         // sigs[2] / sigs[3]: two valid signatures — only 2 of 4 will count toward quorum
         sigs[2] = _signAttestation(rootAttesterPk1, bufferId, rootHash);
         sigs[3] = _signAttestation(rootAttesterPk2, bufferId, rootHash);
+
+        vm.prank(keeper);
+        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InsufficientAttestations.selector, 2, 3));
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+    }
+
+    /// @dev A signature can be exactly 65 bytes and have a normalized v, yet still fail
+    ///      inside ECDSA.tryRecover (here r=s=0). The verifier must treat that as
+    ///      address(0), skip it, and continue counting only valid unique root attesters.
+    function testRecover_skipsTryRecoverErrors() public {
+        vm.prank(admin);
+        validator.setRootAttestationQuorum(3);
+
+        IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](1);
+        deposits[0] = _makeDeposit(0, 852);
+        bytes32 bufferId = keccak256(abi.encode(_batchOf(deposits)));
+        buffer.submitDepositData(bufferId, _batchOf(deposits));
+        bytes32 rootHash = depositContract.get_deposit_root();
+
+        bytes memory invalidButWellSized = new bytes(65);
+        invalidButWellSized[64] = bytes1(uint8(27));
+
+        bytes[] memory sigs = new bytes[](3);
+        sigs[0] = invalidButWellSized;
+        sigs[1] = _signAttestation(rootAttesterPk1, bufferId, rootHash);
+        sigs[2] = _signAttestation(rootAttesterPk2, bufferId, rootHash);
 
         vm.prank(keeper);
         vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InsufficientAttestations.selector, 2, 3));
@@ -1669,8 +2196,15 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         );
 
         (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits, topUps);
+
+        vm.expectEmit(false, false, false, true, address(validator));
+        emit AddedPectraValidatorPubkeys(expectedPubkeys);
+
         vm.prank(keeper);
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+
+        assertTrue(validator.isPubkeyFunded(deposits[0].pubkey), "deposit 0 pubkey recorded in post-Pectra lookup");
+        assertTrue(validator.isPubkeyFunded(deposits[1].pubkey), "deposit 1 pubkey recorded in post-Pectra lookup");
     }
 
     /// @dev `LibFundingDeltas.build` aggregates fundedETH across BOTH the deposits[] and
@@ -1714,11 +2248,11 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     }
 
     // -----------------------------------------------------------------------
-    // validateDeposits() top-up length / amount reverts
+    // fetchAndValidateDeposits() top-up length / amount reverts
     // -----------------------------------------------------------------------
 
-    /// @dev A top-up with a mis-sized pubkey must revert in validateDeposits()'s top-up loop with
-    ///      InvalidPubkeyLength. Mirrors the initial-deposit pubkey-length check, exercising
+    /// @dev A top-up with a mis-sized pubkey must revert in fetchAndValidateDeposits()'s top-up loop with
+    ///      InvalidTopUpPubkeyLength. Mirrors the initial-deposit pubkey-length check, exercising
     ///      the separate top-up validation path.
     function testRevert_validate_topUp_invalidPubkeyLength() public {
         IDepositDataBuffer.TopUp[] memory topUps = new IDepositDataBuffer.TopUp[](1);
@@ -1726,12 +2260,12 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         topUps[0].pubkey = new bytes(47); // off by one
         (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareTopUps(topUps);
         vm.prank(keeper);
-        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InvalidPubkeyLength.selector, 0, 47));
+        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InvalidTopUpPubkeyLength.selector, 0, 47));
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
     }
 
     /// @dev A top-up amount outside the [1 ether, 2048 ether] gwei-aligned range must revert in
-    ///      validateDeposits()'s top-up loop with InvalidDepositAmount. The amount bound is checked
+    ///      fetchAndValidateDeposits()'s top-up loop with InvalidTopUpAmount. The amount bound is checked
     ///      before the funded-membership check, so no pubkey seeding is required.
     function testRevert_validate_topUp_invalidDepositAmount() public {
         // Below minimum (0 wei).
@@ -1740,7 +2274,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         topUps[0].amount = 0;
         (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareTopUps(topUps);
         vm.prank(keeper);
-        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InvalidDepositAmount.selector, 0, 0));
+        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InvalidTopUpAmount.selector, 0, 0));
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
 
         // Not gwei-aligned (32 ether + 1 wei).
@@ -1748,7 +2282,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         topUps[0].amount = 32 ether + 1;
         (bufferId, rootHash, sigs) = _prepareTopUps(topUps);
         vm.prank(keeper);
-        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InvalidDepositAmount.selector, 0, 32 ether + 1));
+        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InvalidTopUpAmount.selector, 0, 32 ether + 1));
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
     }
 

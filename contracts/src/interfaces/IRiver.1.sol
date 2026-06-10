@@ -56,6 +56,10 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @param allowlist The new Allowlist
     event SetAllowlist(address indexed allowlist);
 
+    /// @notice The stored Consolidator has been changed
+    /// @param consolidator The new Consolidator
+    event SetConsolidator(address indexed consolidator);
+
     /// @notice The stored Global Fee has been changed
     /// @param fee The new Global Fee
     event SetGlobalFee(uint256 fee);
@@ -159,6 +163,9 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @notice Thrown when the attestation verifier supplied to initRiverV1_3 is not bound to this River
     error InvalidAttestationVerifier();
 
+    /// @notice Thrown when the consolidator address is not authorized
+    error OnlyConsolidator();
+
     /// @notice Initializes version 1.3 of the River System. Performs the Pectra accounting migration,
     ///         updates the withdrawal credentials, and wires the AttestationVerifier sibling contract
     ///         that River delegates attestation-quorum + BLS verification to. The verifier must be
@@ -167,11 +174,13 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @param _consolidationCoverageFund The address of the consolidation coverage fund
     /// @param _attestationVerifier The pre-initialized AttestationVerifier contract address
     /// @param _externalConsolidationRecipientMapping The pre-initialized External Consolidation Recipient Mapping contract address
+    /// @param _consolidator The address authorized to perform consolidator-only operations (EOA or contract)
     function initRiverV1_3(
         bytes32 _withdrawalCredentials,
         address _consolidationCoverageFund,
         address _attestationVerifier,
-        address _externalConsolidationRecipientMapping
+        address _externalConsolidationRecipientMapping,
+        address _consolidator
     ) external;
 
     /// @notice Get the current global fee
@@ -205,6 +214,10 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @notice Retrieve the operators registry
     /// @return The operators registry address
     function getOperatorsRegistry() external view returns (address);
+
+    /// @notice Retrieve the consolidator address
+    /// @return The consolidator address
+    function getConsolidator() external view returns (address);
 
     /// @notice Retrieve the metadata uri string value
     /// @return The metadata uri string value
@@ -241,7 +254,7 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @return The current balance to consolidate
     function getBalanceToConsolidate() external view returns (uint256);
 
-    /// @notice Mints LsETH to a recipient for consolidated ETH (keeper only)
+    /// @notice Mints LsETH to a recipient for consolidated ETH (consolidator only)
     /// @param consolidation The consolidation object
     function mintLsETHForConsolidation(IAttestationVerifierV1.ConsolidationObject calldata consolidation) external;
 
@@ -284,8 +297,12 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     function setCoverageFund(address _newCoverageFund) external;
 
     /// @notice Changes the consolidation coverage fund
-    /// @param _newConsolidationCoverageFund New address for the fund (address(0) to disable)
+    /// @param _newConsolidationCoverageFund New address for the fund
     function setConsolidationCoverageFund(address _newConsolidationCoverageFund) external;
+
+    /// @notice Changes the consolidator address
+    /// @param _newConsolidator New address for the consolidator
+    function setConsolidator(address _newConsolidator) external;
 
     /// @notice Sets the metadata uri string value
     /// @param _metadataURI The new metadata uri string value
@@ -306,8 +323,13 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @notice Input for the redeem manager funds
     function sendRedeemManagerExceedingFunds() external payable;
 
+    /// @notice Request self consolidation of pre-Pectra validator pubkeys. Only callable by the keeper
+    /// @param pubkeys The 48-byte BLS pubkeys to consolidate
+    /// @param maxFeePerConsolidation The maximum fee per consolidation to accept
+    function selfConsolidation(bytes[] calldata pubkeys, uint256 maxFeePerConsolidation) external payable;
+
     /// @notice Request Pectra consolidations via the Withdraw contract. fee ETH sent as msg.value.
-    /// @dev Only callable by the keeper
+    /// @dev Only callable by the consolidator
     /// @dev Since we consolidate to validators we own there is no need to track the consolidation buffer
     /// @param requests Consolidation requests (each: src pubkeys[] -> target pubkey)
     /// @param maxFeePerConsolidation Maximum fee per consolidation to accept

@@ -9,6 +9,9 @@ import "./interfaces/IAttestationVerifier.1.sol";
 import "./interfaces/IDepositContract.sol";
 import "./interfaces/IDepositDataBuffer.sol";
 import "./interfaces/components/IConsensusLayerDepositManager.1.sol";
+import "./interfaces/IOperatorRegistry.1.sol";
+import "./interfaces/IRiver.1.sol";
+import "./interfaces/IWithdraw.1.sol";
 
 import "./libraries/BLS12_381.sol";
 import "./libraries/LibErrors.sol";
@@ -24,6 +27,7 @@ import "./state/attestationVerifier/DepositDomainValue.sol";
 import "./state/attestationVerifier/DomainSeparator.sol";
 import "./state/attestationVerifier/ProcessedDepositDataBufferIds.sol";
 import "./state/attestationVerifier/PectraValidatorPubkeyLookup.sol";
+import "./state/attestationVerifier/PrePectraValidatorPubkeyLookup.sol";
 import "./state/shared/RiverAddress.sol";
 
 /// @title AttestationVerifier (v1)
@@ -32,7 +36,7 @@ import "./state/shared/RiverAddress.sol";
 ///         for two independent flows, each with its own committee, quorum, and EIP-712
 ///         domain separator anchored to River:
 ///
-///         1. Deposit flow (`validateDeposits`):
+///         1. Deposit flow (`fetchAndValidateDeposits`):
 ///            Validates attestation-quorum + BLS deposit messages over a batch fetched
 ///            from the `DepositDataBuffer`, enforces withdrawal-credentials and
 ///            committed-balance bounds, and returns the validated batch + total
@@ -364,7 +368,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     // -----------------------------------------------------------------------
 
     /// @inheritdoc IAttestationVerifierV1
-    function validateDeposits(
+    function fetchAndValidateDeposits(
         bytes32 depositDataBufferId,
         bytes32 depositRootHash,
         bytes[] calldata signatures,
@@ -428,10 +432,10 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         for (uint256 i = 0; i < topUpCount; i++) {
             IDepositDataBuffer.TopUp memory t = batch.topUps[i];
             if (t.pubkey.length != DEPOSIT_PUBKEY_LENGTH) {
-                revert InvalidPubkeyLength(i, t.pubkey.length);
+                revert InvalidTopUpPubkeyLength(i, t.pubkey.length);
             }
             if (t.amount < 1 ether || t.amount > 2048 ether || t.amount % 1 gwei != 0) {
-                revert InvalidDepositAmount(i, t.amount);
+                revert InvalidTopUpAmount(i, t.amount);
             }
             totalAmount += t.amount;
 
@@ -451,15 +455,16 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
 
     /// @inheritdoc IAttestationVerifierV1
     /// @dev Assumes `pubkeys` is already deduplicated against the lookup and against itself —
-    ///      `validateDeposits()` enforces both invariants (initial-deposit branch at the top of
-    ///      `validateDeposits()`) and runs in the same transaction. Re-checking here would only fire
-    ///      on a `validateDeposits()` regression and would cost a cold SLOAD per pubkey for a
+    ///      `fetchAndValidateDeposits()` enforces both invariants (initial-deposit branch at the top of
+    ///      `fetchAndValidateDeposits()`) and runs in the same transaction. Re-checking here would only fire
+    ///      on a `fetchAndValidateDeposits()` regression and would cost a cold SLOAD per pubkey for a
     ///      condition that cannot occur in production.
     function recordNewlyFundedPubkeys(bytes[] calldata pubkeys) external onlyRiver {
         uint256 len = pubkeys.length;
         for (uint256 i = 0; i < len; ++i) {
             PectraValidatorPubkeyLookup.add(pubkeys[i]);
         }
+        emit AddedPectraValidatorPubkeys(pubkeys);
     }
 
     /// @inheritdoc IAttestationVerifierV1
@@ -483,6 +488,85 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     /// @inheritdoc IAttestationVerifierV1
     function isPubkeyFunded(bytes calldata pubkey) external view returns (bool) {
         return PectraValidatorPubkeyLookup.isPubkeyFunded(pubkey);
+    }
+
+    /// @inheritdoc IAttestationVerifierV1
+    function isPrePectraValidatorPubkeyFunded(bytes calldata pubkey) external view returns (bool) {
+        return PrePectraValidatorPubkeyLookup.isPubkeyFunded(pubkey);
+    }
+
+    /// @inheritdoc IAttestationVerifierV1
+    function migratePrePectraValidatorPubkeys(uint256 operatorIndex, uint256 startIndex, uint256 stopIndex)
+        external
+        onlyRiverAdmin
+    {
+        IOperatorsRegistryV1 operatorsRegistry =
+            IOperatorsRegistryV1(IRiverV1(payable(RiverAddress.get())).getOperatorsRegistry());
+
+        bytes[] memory pubkeys = operatorsRegistry.getPrePectraValidatorPubkeys(operatorIndex, startIndex, stopIndex);
+        uint256 len = pubkeys.length;
+        for (uint256 i = 0; i < len; ++i) {
+            bytes memory pubkey = pubkeys[i];
+            if (pubkey.length != DEPOSIT_PUBKEY_LENGTH) {
+                revert InvalidPrePectraMigrationPubkeyLength(operatorIndex, startIndex + i, pubkey.length);
+            }
+            PrePectraValidatorPubkeyLookup.add(pubkey);
+        }
+
+        emit MigratedPrePectraValidatorPubkeys(operatorIndex, startIndex, stopIndex);
+    }
+
+    /// @inheritdoc IAttestationVerifierV1
+    function validateSelfConsolidation(bytes[] calldata pubkeys)
+        external
+        onlyRiver
+        returns (IWithdrawV1.ConsolidationRequest[] memory)
+    {
+        uint256 len = pubkeys.length;
+        if (len == 0) {
+            revert InvalidSelfConsolidationEmptyPubkeys();
+        }
+
+        IWithdrawV1.ConsolidationRequest[] memory requests = new IWithdrawV1.ConsolidationRequest[](len);
+
+        for (uint256 i = 0; i < len; ++i) {
+            bytes calldata pubkey = pubkeys[i];
+            if (pubkey.length != DEPOSIT_PUBKEY_LENGTH) {
+                revert InvalidSelfConsolidationPubkeyLength(i, pubkey.length);
+            }
+            if (!PrePectraValidatorPubkeyLookup.isPubkeyFunded(pubkey)) {
+                revert PrePectraValidatorPubkeyNotFunded(pubkey);
+            }
+            PrePectraValidatorPubkeyLookup.remove(pubkey);
+            PectraValidatorPubkeyLookup.add(pubkey);
+            requests[i] = IWithdrawV1.ConsolidationRequest({srcPubkeys: new bytes[](1), targetPubkey: pubkey});
+            requests[i].srcPubkeys[0] = pubkey;
+        }
+
+        emit RemovedPrePectraValidatorPubkeys(pubkeys);
+        emit AddedPectraValidatorPubkeys(pubkeys);
+
+        return requests;
+    }
+
+    /// @inheritdoc IAttestationVerifierV1
+    function removePrePectraValidatorPubkeys(bytes[] calldata pubkeys) external onlyRiverAdmin {
+        uint256 len = pubkeys.length;
+        if (len == 0) {
+            revert InvalidPrePectraRemovalEmptyPubkeys();
+        }
+
+        for (uint256 i = 0; i < len; ++i) {
+            bytes calldata pubkey = pubkeys[i];
+            if (pubkey.length != DEPOSIT_PUBKEY_LENGTH) {
+                revert InvalidPrePectraRemovalPubkeyLength(i, pubkey.length);
+            }
+            if (!PrePectraValidatorPubkeyLookup.isPubkeyFunded(pubkey)) {
+                revert PrePectraValidatorPubkeyNotFunded(pubkey);
+            }
+            PrePectraValidatorPubkeyLookup.remove(pubkey);
+        }
+        emit RemovedPrePectraValidatorPubkeys(pubkeys);
     }
 
     /// @inheritdoc IAttestationVerifierV1
@@ -674,7 +758,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
 
     /// @notice Verify the BLS signatures of all initial deposits against the canonical River
     ///         withdrawal credentials. Top-ups are handled by the caller and never reach this
-    ///         function — they're cleared upstream in `validateDeposits()` via the membership check
+    ///         function — they're cleared upstream in `fetchAndValidateDeposits()` via the membership check
     ///         on `PectraValidatorPubkeyLookup`.
     /// @param deposits The initial deposits.
     /// @param withdrawalCredentials The canonical River withdrawal credentials.
@@ -705,7 +789,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     }
 
     /// @notice Verify a single BLS deposit message against the cached deposit domain.
-    /// @dev External only as a self-staticcall trampoline from validateDeposits: the call
+    /// @dev External only as a self-staticcall trampoline from fetchAndValidateDeposits: the call
     ///      promotes the deposit's memory bytes into calldata so BLS12_381 can consume them
     ///      without a memory copy. Direct external callers revert with `OnlySelfCall` —
     ///      the function is restricted to `address(this)` and not part of the contract's

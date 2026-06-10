@@ -35,12 +35,20 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
     uint256 internal _simCumulativeSkimmed;
     /// @dev Cumulative exited ETH (monotonically increasing).
     uint256 internal _simCumulativeExited;
+    /// @dev Cumulative autocompounded rewards (Pectra 0x02). Increases validator CL balance
+    ///      rather than being skimmed, so exits can return more than the original deposit.
+    uint256 internal _simCumulativeAutocompounded;
     /// @dev Mirrors the contract's InFlightDeposit: ETH sent to the deposit contract
     ///      but not yet oracle-confirmed. Incremented in sim_deposit, reset after oracle report.
     uint256 internal _simInFlightDeposit;
     /// @dev Cumulative ETH deposited on the EL deposit contract that has been activated on the CL.
     ///      Monotonically increasing — incremented in sim_activateValidators.
     uint256 internal _simTotalDepositedActivatedETH;
+    /// @dev Cumulative external-consolidation principal that has landed in validatorsBalance and been reported.
+    ///      Monotonically increasing — incremented by the consolidation report step. `_buildReport` adds it to
+    ///      validatorsBalance and reports it as totalExternalConsolidationsAmountReported, so every report
+    ///      carries the current cumulative value (normal reports keep it unchanged → on-chain delta 0).
+    uint256 internal _simConsolidatedBalance;
 
     uint256 internal _lastReportedSkimmed;
     uint256 internal _lastReportedExited;
@@ -112,10 +120,21 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
     function sim_advanceEpoch(uint256 rewardsPerValidator) internal {
         for (uint256 i = 0; i < _simValidators.length; i++) {
             if (_simValidators[i].state == ValidatorState.Active) {
-                // Rewards are swept (skimmed) from the CL to EL each epoch.
-                // The validator's CL balance remains at the principal (DEPOSIT_SIZE)
-                // after the sweep, so we only track cumulative skimmed rewards separately.
+                // Models the skimmed-reward path: rewards are swept from the CL to the EL
+                // each epoch, so the validator's CL balance remains at principal after
+                // the sweep. See sim_autocompound for the compounding behavior.
                 _simCumulativeSkimmed += rewardsPerValidator;
+            }
+        }
+    }
+
+    /// @dev Models autocompounding behavior: rewards increase the validator's CL balance
+    ///      instead of being skimmed, so exits can return more than the original deposit.
+    function sim_autocompound(uint256 rewardsPerValidator) internal {
+        for (uint256 i = 0; i < _simValidators.length; i++) {
+            if (_simValidators[i].state == ValidatorState.Active) {
+                _simValidators[i].currentBalance += rewardsPerValidator;
+                _simCumulativeAutocompounded += rewardsPerValidator;
             }
         }
     }
@@ -249,11 +268,13 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
             exitedArr[0] += exitedArr[i];
         }
 
-        report.validatorsBalance = validatorsBalance;
+        // The consolidated principal has landed on the CL, so it is part of the reported validatorsBalance.
+        report.validatorsBalance = validatorsBalance + _simConsolidatedBalance;
         report.validatorsSkimmedBalance = _simCumulativeSkimmed;
         report.validatorsExitedBalance = _simCumulativeExited;
         report.validatorsExitingBalance = validatorsExiting;
         report.totalDepositedActivatedETH = _simTotalDepositedActivatedETH;
+        report.totalExternalConsolidationsAmountReported = _simConsolidatedBalance;
         report.validatorsCount = activatedCount;
         report.exitedETHPerOperator = exitedArr;
         report.activeCLETHPerOperator = activeCLETHArr;

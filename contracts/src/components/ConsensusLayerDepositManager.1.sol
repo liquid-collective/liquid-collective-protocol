@@ -11,7 +11,6 @@ import "../libraries/LibBytes.sol";
 import "../libraries/LibUint256.sol";
 import "../libraries/LibErrors.sol";
 
-import "../state/river/AttestationVerifierAddress.sol";
 import "../state/river/BalanceToDeposit.sol";
 import "../state/river/CommittedBalance.sol";
 import "../state/river/DepositContractAddress.sol";
@@ -19,6 +18,7 @@ import "../state/river/InFlightDeposit.sol";
 import "../state/river/KeeperAddress.sol";
 import "../state/river/TotalDepositedETH.sol";
 import "../state/river/WithdrawalCredentials.sol";
+import "../state/shared/AttestationVerifierAddress.sol";
 
 /// @title Consensus Layer Deposit Manager (v1)
 /// @author Alluvial Finance Inc.
@@ -83,6 +83,10 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     {
         DepositContractAddress.set(_depositContractAddress);
         emit SetDepositContractAddress(_depositContractAddress);
+
+        if (bytes1(_withdrawalCredentials) != 0x02) {
+            revert InvalidWithdrawalCredentialsPrefix();
+        }
 
         WithdrawalCredentials.set(_withdrawalCredentials);
         emit SetWithdrawalCredentials(_withdrawalCredentials);
@@ -150,7 +154,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         uint256 committedBalance = CommittedBalance.get();
         address depositContract = DepositContractAddress.get();
         IAttestationVerifierV1 verifier = IAttestationVerifierV1(AttestationVerifierAddress.get());
-        (IDepositDataBuffer.DepositObject memory batch, uint256 totalAmount) = verifier.validateDeposits(
+        (IDepositDataBuffer.DepositObject memory batch, uint256 totalAmount) = verifier.fetchAndValidateDeposits(
             depositDataBufferId, depositRootHash, signatures, depositContract, withdrawalCredentials, committedBalance
         );
 
@@ -235,8 +239,8 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         bytes32 _withdrawalCredentials,
         address _depositContract
     ) internal {
-        // `_depositAmount` bounds are enforced upstream in `AttestationVerifier.validateDeposits()`
-        // (revert: InvalidDepositAmount). The attestation flow is the only caller.
+        // `_depositAmount` bounds are enforced upstream in `AttestationVerifier.fetchAndValidateDeposits()`
+        // (revert: InvalidDepositAmount / InvalidTopUpAmount). The attestation flow is the only caller.
         uint256 depositAmount = _depositAmount / 1 gwei;
 
         bytes32 pubkeyRoot = sha256(bytes.concat(_publicKey, bytes16(0)));

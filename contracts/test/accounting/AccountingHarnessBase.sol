@@ -110,7 +110,7 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
     /// @dev Monotonic counter mixed into pubkey/signature generation in `_makeDepositObjects`.
     ///      Without it, two batches built in the same block with the same `(i, opIdx)` produce
     ///      identical pubkeys, which collides with the on-chain `PubkeyAlreadyFunded` guard
-    ///      enforced inside `AttestationVerifier.validateDeposits()` (initial-deposit branch).
+    ///      enforced inside `AttestationVerifier.fetchAndValidateDeposits()` (initial-deposit branch).
     uint256 internal _depositBatchNonce;
 
     // ─── attestation ──────────────────────────────────────────────────────────
@@ -133,6 +133,7 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
     address internal admin;
     address internal allower;
     address internal keeper;
+    address internal consolidator;
     address internal oracleMember;
     address internal operatorOneAddr;
     address internal operatorTwoAddr;
@@ -150,6 +151,7 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
         admin = makeAddr("admin");
         allower = makeAddr("allower");
         keeper = makeAddr("keeper");
+        consolidator = makeAddr("consolidator");
         oracleMember = makeAddr("oracleMember");
         operatorOneAddr = makeAddr("operatorOne");
         operatorTwoAddr = makeAddr("operatorTwo");
@@ -245,7 +247,8 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
             _initWc,
             _initConsolidationCoverageFund,
             address(attestationVerifier),
-            address(externalConsolidationRecipientMapping)
+            address(externalConsolidationRecipientMapping),
+            consolidator
         );
         // Mock BLS verification: EIP-2537 precompiles are unavailable in Foundry.
         vm.mockCall(
