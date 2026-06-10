@@ -8,6 +8,7 @@ import "./interfaces/IAdministrable.sol";
 import "./interfaces/IAttestationVerifier.1.sol";
 import "./interfaces/IDepositContract.sol";
 import "./interfaces/IDepositDataBuffer.sol";
+import "./interfaces/components/IConsensusLayerDepositManager.1.sol";
 
 import "./libraries/BLS12_381.sol";
 import "./libraries/LibErrors.sol";
@@ -110,6 +111,13 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     modifier onlyRiver() {
         if (msg.sender != RiverAddress.get()) {
             revert LibErrors.Unauthorized(msg.sender);
+        }
+        _;
+    }
+
+    modifier onlyKeeper() {
+        if (msg.sender != IConsensusLayerDepositManagerV1(RiverAddress.get()).getKeeper()) {
+            revert IConsensusLayerDepositManagerV1.OnlyKeeper();
         }
         _;
     }
@@ -455,16 +463,17 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     }
 
     /// @inheritdoc IAttestationVerifierV1
-    function removeExitedValidatorPubkeys(bytes[] calldata pubkeys) external onlyRiver {
+    function removeExitedValidatorPubkeys(bytes[] calldata pubkeys) external onlyKeeper {
         uint256 len = pubkeys.length;
         for (uint256 i = 0; i < len; ++i) {
             bytes calldata pubkey = pubkeys[i];
             if (pubkey.length != DEPOSIT_PUBKEY_LENGTH) {
                 revert InvalidPubkeyLength(i, pubkey.length);
             }
-            if (!PectraValidatorPubkeyLookup.remove(pubkey)) {
+            if (!PectraValidatorPubkeyLookup.isPubkeyFunded(pubkey)) {
                 revert PectraValidatorPubkeyNotFunded(pubkey);
             }
+            PectraValidatorPubkeyLookup.remove(pubkey);
         }
         if (len > 0) {
             emit RemovedPectraValidatorPubkeys(pubkeys);

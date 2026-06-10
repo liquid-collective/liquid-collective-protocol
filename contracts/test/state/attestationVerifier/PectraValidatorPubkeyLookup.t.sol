@@ -66,6 +66,12 @@ contract PectraValidatorPubkeyLookupTest is Test {
         assertFalse(inputs.isPubkeyFunded(pk));
     }
 
+    function testRemoveAbsentIsNoOp() public {
+        bytes memory pk = _pubkey(keccak256("pubkey-absent"));
+        inputs.remove(pk);
+        assertFalse(inputs.isPubkeyFunded(pk));
+    }
+
     function testAddIsIdempotent() public {
         bytes memory pk = _pubkey(keccak256("pubkey-D"));
         inputs.add(pk);
