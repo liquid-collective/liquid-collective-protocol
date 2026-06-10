@@ -121,7 +121,7 @@ contract MockELWithdrawalFeeReadFails {
 /// @notice Mock predeploy whose fee read (staticcall) succeeds but returns fewer than
 ///         32 bytes of raw returndata. Used to exercise the strict `abi.decode(feeData,
 ///         (uint256))` path in `_validateAndReturnFee`, which must revert on short
-///         returndata (documents the divergence from the TVS `bytes32` cast).
+///         returndata.
 contract MockELShortReturn {
     /// @dev Returns raw returndata of a configurable length (< 32 bytes) using assembly,
     ///      bypassing Solidity's ABI return encoding so the returndata is genuinely short.
@@ -1205,11 +1205,11 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         withdraw.consolidate{value: valueSent}(requests, maxFeePerConsolidation, address(0));
     }
 
-    // --- Fee-decode robustness (issue #526, gap 1) ---
+    // --- Fee-decode robustness ---
     // `_validateAndReturnFee` uses `abi.decode(feeData, (uint256))`. When the predeploy
     // returns malformed/short returndata (< 32 bytes) the staticcall still succeeds, so the
     // strictness lives entirely in `abi.decode`, which must revert. These tests lock in that
-    // behavior and document the divergence from the TVS `bytes32` cast (liquid-collective/tvs#86).
+    // behavior.
 
     /// @notice withdraw reverts when the withdrawal predeploy returns fewer than 32 bytes for the fee.
     function testWithdrawRevertsOnShortFeeReturndata() public {
@@ -1218,10 +1218,7 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         LibImplementationUnbricker.unbrick(vm, address(w));
         w.initializeWithdrawV1(address(river));
         w.initWithdrawV1_1(
-            address(shortMock),
-            address(mockConsolidation),
-            address(operatorsRegistry),
-            address(attestationVerifier)
+            address(shortMock), address(mockConsolidation), address(operatorsRegistry), address(attestationVerifier)
         );
 
         bytes[] memory pubkeys = new bytes[](1);
@@ -1245,10 +1242,7 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         LibImplementationUnbricker.unbrick(vm, address(w));
         w.initializeWithdrawV1(address(river));
         w.initWithdrawV1_1(
-            address(mockWithdrawal),
-            address(shortMock),
-            address(operatorsRegistry),
-            address(attestationVerifier)
+            address(mockWithdrawal), address(shortMock), address(operatorsRegistry), address(attestationVerifier)
         );
 
         bytes[] memory srcPubkeys = new bytes[](1);
@@ -1271,10 +1265,7 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         LibImplementationUnbricker.unbrick(vm, address(w));
         w.initializeWithdrawV1(address(river));
         w.initWithdrawV1_1(
-            address(shortMock),
-            address(mockConsolidation),
-            address(operatorsRegistry),
-            address(attestationVerifier)
+            address(shortMock), address(mockConsolidation), address(operatorsRegistry), address(attestationVerifier)
         );
 
         bytes[] memory pubkeys = new bytes[](1);
@@ -1290,7 +1281,7 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         w.withdraw{value: maxFeePerWithdrawal}(pubkeys, amounts, maxFeePerWithdrawal, excessFeeRecipient);
     }
 
-    // --- Overflow boundary (issue #526, gap 3) ---
+    // --- Overflow boundary ---
     // `withdraw` computes `maxFeePerWithdrawal * pubkeys.length` and `consolidate` computes
     // `fee * totalNumOfConsolidationOperations`. Under Solidity 0.8 checked arithmetic these
     // must revert with a Panic(0x11) on overflow rather than silently wrapping.
@@ -1332,7 +1323,7 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         withdraw.consolidate{value: 0}(requests, hugeFee, excessFeeRecipient);
     }
 
-    // --- Fuzzing (issue #526, gap 2) ---
+    // --- Fuzzing ---
     // `withdraw`/`consolidate` were only exercised with fixed inputs. These fuzz over array
     // lengths, fee/maxFee, and excess-refund amounts, asserting the fee-accounting and refund
     // invariants hold across the input space.
