@@ -1218,10 +1218,7 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         LibImplementationUnbricker.unbrick(vm, address(w));
         w.initializeWithdrawV1(address(river));
         w.initWithdrawV1_1(
-            address(shortMock),
-            address(mockConsolidation),
-            address(operatorsRegistry),
-            address(attestationVerifier)
+            address(shortMock), address(mockConsolidation), address(operatorsRegistry), address(attestationVerifier)
         );
 
         bytes[] memory pubkeys = new bytes[](1);
@@ -1245,10 +1242,7 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         LibImplementationUnbricker.unbrick(vm, address(w));
         w.initializeWithdrawV1(address(river));
         w.initWithdrawV1_1(
-            address(mockWithdrawal),
-            address(shortMock),
-            address(operatorsRegistry),
-            address(attestationVerifier)
+            address(mockWithdrawal), address(shortMock), address(operatorsRegistry), address(attestationVerifier)
         );
 
         bytes[] memory srcPubkeys = new bytes[](1);
@@ -1271,10 +1265,7 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         LibImplementationUnbricker.unbrick(vm, address(w));
         w.initializeWithdrawV1(address(river));
         w.initWithdrawV1_1(
-            address(shortMock),
-            address(mockConsolidation),
-            address(operatorsRegistry),
-            address(attestationVerifier)
+            address(shortMock), address(mockConsolidation), address(operatorsRegistry), address(attestationVerifier)
         );
 
         bytes[] memory pubkeys = new bytes[](1);
