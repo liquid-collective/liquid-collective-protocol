@@ -79,13 +79,13 @@ interface IAttestationVerifierV1 {
     /// @param consolidationHash The EIP-712 structHash of the consolidation request
     event ConsolidationProcessed(bytes32 indexed consolidationHash);
 
-    /// @notice Emitted when a chunk of pre-Pectra validator pubkeys is migrated into verifier state.
+    /// @notice Emitted when a chunk of pre-Pectra validator pubkeys is migrated into the pre-Pectra lookup.
     /// @param operatorIndex The operator whose legacy pubkeys were migrated
     /// @param startIndex The first migrated key index
     /// @param stopIndex The exclusive stop key index
     event MigratedPrePectraValidatorPubkeys(uint256 indexed operatorIndex, uint256 startIndex, uint256 stopIndex);
 
-    /// @notice Emitted when a chunk of pre-Pectra validator pubkeys is removed from verifier state.
+    /// @notice Emitted when a chunk of pre-Pectra validator pubkeys is removed from the pre-Pectra lookup.
     /// @param pubkeys The 48-byte BLS pubkeys that were removed
     event RemovedPrePectraValidatorPubkeys(bytes[] pubkeys);
 
@@ -389,7 +389,7 @@ interface IAttestationVerifierV1 {
     /// @param pubkeys The 48-byte BLS pubkeys to record
     function recordNewlyFundedPubkeys(bytes[] calldata pubkeys) external;
 
-    /// @notice Migrate a chunk of pre-Pectra funded validator pubkeys into the verifier lookup.
+    /// @notice Migrate a chunk of pre-Pectra funded validator pubkeys into the pre-Pectra lookup.
     /// @dev Only callable by River admin. `stopIndex` is exclusive and must be no greater than
     ///      the operator's legacy funded validator count in OperatorsV2 storage.
     /// @param operatorIndex The operator whose legacy keys should be migrated
@@ -397,7 +397,7 @@ interface IAttestationVerifierV1 {
     /// @param stopIndex The exclusive stop legacy key index
     function migratePrePectraValidatorPubkeys(uint256 operatorIndex, uint256 startIndex, uint256 stopIndex) external;
 
-    /// @notice Remove a chunk of pre-Pectra funded validator pubkeys from the verifier lookup.
+    /// @notice Remove a chunk of pre-Pectra funded validator pubkeys from the pre-Pectra lookup.
     /// @dev Only callable by River admin. Reverts if the batch is empty, any pubkey is not 48
     ///      bytes, or any pubkey is not currently in the pre-Pectra lookup.
     /// @param pubkeys The 48-byte BLS pubkeys to remove
