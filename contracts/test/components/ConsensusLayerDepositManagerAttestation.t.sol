@@ -1609,12 +1609,16 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     }
 
     function testRevert_removeExitedValidatorPubkeys_invalidPubkeyLength() public {
-        bytes[] memory pubkeys = new bytes[](1);
-        pubkeys[0] = new bytes(47);
+        bytes[] memory pubkeys = new bytes[](2);
+        pubkeys[0] = _fakePubkey(0xE009);
+        pubkeys[1] = new bytes(47);
+        _seedFundedPubkey(pubkeys[0]);
 
         vm.prank(keeper);
-        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InvalidPubkeyLength.selector, 0, 47));
+        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InvalidPubkeyLength.selector, 1, 47));
         verifier.removeExitedValidatorPubkeys(pubkeys);
+
+        assertTrue(verifier.isPubkeyFunded(pubkeys[0]), "revert should roll back earlier removal");
     }
 
     /// @dev `fetchAndValidateDeposits()` must fail-fast on out-of-range or mis-aligned `amount` rather than

@@ -482,7 +482,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
             if (!PectraValidatorPubkeyLookup.isPubkeyFunded(pubkey)) {
                 revert PectraValidatorPubkeyNotFunded(pubkey);
             }
-            PectraValidatorPubkeyLookup.setPubkeyFunded(pubkey, false);
+            PectraValidatorPubkeyLookup.remove(pubkey);
         }
         emit RemovedPectraValidatorPubkeys(pubkeys);
     }

@@ -29,14 +29,14 @@ library PectraValidatorPubkeyLookup {
     /// @notice Record a pubkey as initial-deposited.
     /// @param pubkey The raw 48-byte BLS pubkey.
     function add(bytes memory pubkey) internal {
-        setPubkeyFunded(pubkey, true);
+        bytes32 slot = keccak256(abi.encode(PECTRA_VALIDATOR_PUBKEY_LOOKUP_SLOT, pubkey));
+        LibUnstructuredStorage.setStorageBool(slot, true);
     }
 
-    /// @notice Set the funded status for a pubkey.
+    /// @notice Clear the entry for a pubkey.
     /// @param pubkey The raw 48-byte BLS pubkey.
-    /// @param value The funded status to store.
-    function setPubkeyFunded(bytes memory pubkey, bool value) internal {
+    function remove(bytes memory pubkey) internal {
         bytes32 slot = keccak256(abi.encode(PECTRA_VALIDATOR_PUBKEY_LOOKUP_SLOT, pubkey));
-        LibUnstructuredStorage.setStorageBool(slot, value);
+        LibUnstructuredStorage.setStorageBool(slot, false);
     }
 }
