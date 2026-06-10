@@ -470,6 +470,10 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     /// @inheritdoc IAttestationVerifierV1
     function removeExitedValidatorPubkeys(bytes[] calldata pubkeys) external onlyKeeper {
         uint256 len = pubkeys.length;
+        if (len == 0) {
+            revert InvalidPectraRemovalEmptyPubkeys();
+        }
+
         for (uint256 i = 0; i < len; ++i) {
             bytes calldata pubkey = pubkeys[i];
             if (pubkey.length != DEPOSIT_PUBKEY_LENGTH) {
@@ -478,11 +482,9 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
             if (!PectraValidatorPubkeyLookup.isPubkeyFunded(pubkey)) {
                 revert PectraValidatorPubkeyNotFunded(pubkey);
             }
-            PectraValidatorPubkeyLookup.remove(pubkey);
+            PectraValidatorPubkeyLookup.setPubkeyFunded(pubkey, false);
         }
-        if (len > 0) {
-            emit RemovedPectraValidatorPubkeys(pubkeys);
-        }
+        emit RemovedPectraValidatorPubkeys(pubkeys);
     }
 
     /// @inheritdoc IAttestationVerifierV1

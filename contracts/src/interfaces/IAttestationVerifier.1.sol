@@ -286,6 +286,9 @@ interface IAttestationVerifierV1 {
     /// @param length The observed pubkey length
     error InvalidSelfConsolidationPubkeyLength(uint256 index, uint256 length);
 
+    /// @notice The post-Pectra removal batch is empty.
+    error InvalidPectraRemovalEmptyPubkeys();
+
     /// @notice A pubkey was requested for removal but is not in the funded-pubkey lookup.
     /// @param pubkey The offending 48-byte BLS pubkey
     error PectraValidatorPubkeyNotFunded(bytes pubkey);
