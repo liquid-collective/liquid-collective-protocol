@@ -2020,7 +2020,7 @@ contract RejectingRefundRecipient {
 contract OperatorsRegistryV1ELExitTests is Test {
     OperatorsRegistryWithMigrationHelpers internal reg;
     MockWithdrawForELExits internal mockWithdraw;
-    WithdrawV1 internal realWithdraw;
+    WithdrawV1 internal withdrawContract;
     address internal pectraWithdrawal;
     address internal admin;
     address internal keeper;
@@ -2031,8 +2031,6 @@ contract OperatorsRegistryV1ELExitTests is Test {
     // 48-byte placeholder pubkey
     bytes internal constant PUBKEY_48 =
         hex"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
-
-    event RequestedELETHExits(uint256 indexed index, bytes[] pubkeys, uint64[] amounts);
 
     function setUp() public {
         admin = makeAddr("admin");
@@ -2056,16 +2054,18 @@ contract OperatorsRegistryV1ELExitTests is Test {
         reg.demandETHExits(exitDemand, activeCLETH);
     }
 
-    function _useRealWithdraw(uint256 fee) internal {
+    function _useWithdrawContract(uint256 fee) internal {
         MockELWithdrawal mockELWithdrawal = new MockELWithdrawal();
         mockELWithdrawal.setFee(fee);
         pectraWithdrawal = address(mockELWithdrawal);
 
-        realWithdraw = new WithdrawV1();
-        LibImplementationUnbricker.unbrick(vm, address(realWithdraw));
-        realWithdraw.initializeWithdrawV1(river);
-        realWithdraw.initWithdrawV1_1(pectraWithdrawal, makeAddr("pectraConsolidation"), address(reg));
-        reg.sudoSetWithdrawAddress(address(realWithdraw));
+        withdrawContract = new WithdrawV1();
+        LibImplementationUnbricker.unbrick(vm, address(withdrawContract));
+        withdrawContract.initializeWithdrawV1(river);
+        withdrawContract.initWithdrawV1_1(
+            pectraWithdrawal, makeAddr("pectraConsolidation"), address(reg), makeAddr("attestationVerifier")
+        );
+        reg.sudoSetWithdrawAddress(address(withdrawContract));
     }
 
     function _makeELAlloc(uint256 opIndex, uint64 gweiAmount)
@@ -2189,9 +2189,10 @@ contract OperatorsRegistryV1ELExitTests is Test {
         reg.requestETHExits(empty, allocs, 0);
     }
 
-    /// Empty amounts are production-invalid: the real withdrawal contract rejects empty pubkeys.
+    /// An empty EL allocation is production-invalid: the withdrawal contract reverts with
+    /// InvalidEmptyArray when forwarded an empty pubkeys array.
     function testELExitWithRealWithdrawRevertsOnEmptyAmounts() public {
-        _useRealWithdraw(0);
+        _useWithdrawContract(0);
         _setupSingleOperator(32 ether, 32 ether, 8 ether);
 
         IOperatorsRegistryV1.ExitETHAllocation[] memory emptyFull = new IOperatorsRegistryV1.ExitETHAllocation[](0);
@@ -2445,7 +2446,7 @@ contract OperatorsRegistryV1ELExitTests is Test {
         uint256 actualFee = 1 gwei;
         uint256 maxFee = 5 gwei;
         uint256 valueSent = 7 gwei;
-        _useRealWithdraw(actualFee);
+        _useWithdrawContract(actualFee);
         _setupSingleOperator(32 ether, 32 ether, 8 ether);
 
         IOperatorsRegistryV1.ExitETHAllocation[] memory empty = new IOperatorsRegistryV1.ExitETHAllocation[](0);
@@ -2458,7 +2459,7 @@ contract OperatorsRegistryV1ELExitTests is Test {
         reg.requestETHExits{value: valueSent}(empty, allocs, maxFee);
 
         assertEq(pectraWithdrawal.balance, actualFee, "only the actual withdrawal fee should be paid");
-        assertEq(address(realWithdraw).balance, 0, "withdraw should not retain the max-fee excess");
+        assertEq(address(withdrawContract).balance, 0, "withdraw should not retain the max-fee excess");
         assertEq(address(reg).balance, 0, "registry should not retain caller excess");
         assertEq(
             keeper.balance,
@@ -2474,7 +2475,7 @@ contract OperatorsRegistryV1ELExitTests is Test {
         RejectingRefundRecipient rejectingKeeper = new RejectingRefundRecipient();
         keeper = address(rejectingKeeper);
         RiverMock(river).setKeeper(keeper);
-        _useRealWithdraw(maxFee);
+        _useWithdrawContract(maxFee);
         _setupSingleOperator(32 ether, 32 ether, 8 ether);
 
         IOperatorsRegistryV1.ExitETHAllocation[] memory empty = new IOperatorsRegistryV1.ExitETHAllocation[](0);
@@ -2511,7 +2512,7 @@ contract OperatorsRegistryV1ELExitTests is Test {
         IOperatorsRegistryV1.ELExitETHAllocation[] memory allocs = _makeELAlloc(0, EIGHT_ETH_IN_GWEI);
 
         vm.expectEmit(true, false, false, true, address(reg));
-        emit RequestedELETHExits(0, allocs[0].pubkeys, allocs[0].amounts);
+        emit IOperatorsRegistryV1.RequestedELETHExits(0, allocs[0].pubkeys, allocs[0].amounts);
 
         vm.prank(keeper);
         reg.requestETHExits(empty, allocs, 0);
