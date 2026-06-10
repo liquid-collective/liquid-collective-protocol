@@ -1557,6 +1557,20 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         assertFalse(verifier.isPubkeyFunded(pubkeys[1]), "missing pubkey should remain absent");
     }
 
+    function testRevert_removeExitedValidatorPubkeys_duplicatePubkeyRollsBackBatch() public {
+        bytes memory pubkey = _fakePubkey(0xE00A);
+        bytes[] memory pubkeys = new bytes[](2);
+        pubkeys[0] = pubkey;
+        pubkeys[1] = pubkey;
+        _seedFundedPubkey(pubkey);
+
+        vm.prank(keeper);
+        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.PectraValidatorPubkeyNotFunded.selector, pubkey));
+        verifier.removeExitedValidatorPubkeys(pubkeys);
+
+        assertTrue(verifier.isPubkeyFunded(pubkey), "revert should roll back earlier removal");
+    }
+
     function testRemoveExitedValidatorPubkeys_removedPubkeyCannotTopUp() public {
         IDepositDataBuffer.TopUp[] memory topUps = new IDepositDataBuffer.TopUp[](1);
         topUps[0] = _makeTopUpDeposit(0, 175);
