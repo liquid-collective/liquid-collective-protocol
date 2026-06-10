@@ -1686,10 +1686,7 @@ contract OperatorsRegistryV1FlattenAndAllocationTests is OperatorAllocationTestB
         bytes32 depositsTopic = keccak256("Deposits(uint256,bytes[],uint256[])");
         for (uint256 i = 0; i < logs.length; i++) {
             if (logs[i].topics.length > 0) {
-                assertTrue(
-                    logs[i].topics[0] != depositsTopic,
-                    "Deposits must not fire for a top-up-only delta"
-                );
+                assertTrue(logs[i].topics[0] != depositsTopic, "Deposits must not fire for a top-up-only delta");
             }
         }
 
@@ -2680,8 +2677,7 @@ contract OperatorsRegistryV1ELExitTests is Test {
     function testELExitSupportsMixedCLAndELForSameOperator() public {
         _setupSingleOperator(64 ether, 64 ether, 40 ether);
 
-        IOperatorsRegistryV1.ExitETHAllocation[] memory fullExitAllocs =
-            new IOperatorsRegistryV1.ExitETHAllocation[](1);
+        IOperatorsRegistryV1.ExitETHAllocation[] memory fullExitAllocs = new IOperatorsRegistryV1.ExitETHAllocation[](1);
         fullExitAllocs[0] = IOperatorsRegistryV1.ExitETHAllocation({operatorIndex: 0, ethAmount: 32 ether});
         IOperatorsRegistryV1.ELExitETHAllocation[] memory elAllocs = _makeELAlloc(0, EIGHT_ETH_IN_GWEI);
 
