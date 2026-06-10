@@ -8,6 +8,7 @@ import "./interfaces/IRiver.1.sol";
 import "./interfaces/IWithdraw.1.sol";
 import "./interfaces/IProtocolVersion.sol";
 import "./interfaces/IAttestationVerifier.1.sol";
+import "./interfaces/IAttestationVerifierPectraMigration.1.sol";
 import "./libraries/LibErrors.sol";
 import "./libraries/LibUint256.sol";
 
@@ -130,9 +131,9 @@ contract WithdrawV1 is IWithdrawV1, Initializable, ReentrancyGuard, IProtocolVer
         uint256 totalFeeRequired = fee * totalNumOfConsolidationOperations;
         _validateSufficientValueForFee(msg.value, totalFeeRequired);
 
-        IAttestationVerifierV1 attestationVerifier = IAttestationVerifierV1(AttestationVerifierAddress.get());
+        address attestationVerifierAddress = AttestationVerifierAddress.get();
         for (uint256 i = 0; i < requests.length; i++) {
-            _processConsolidationRequest(requests[i], consolidationContract, attestationVerifier, fee);
+            _processConsolidationRequest(requests[i], consolidationContract, attestationVerifierAddress, fee);
         }
         _refundExcessFee(msg.value, totalFeeRequired, excessFeeRecipient);
     }
@@ -142,9 +143,10 @@ contract WithdrawV1 is IWithdrawV1, Initializable, ReentrancyGuard, IProtocolVer
     function _processConsolidationRequest(
         IWithdrawV1.ConsolidationRequest calldata request,
         address consolidationContract,
-        IAttestationVerifierV1 attestationVerifier,
+        address attestationVerifierAddress,
         uint256 fee
     ) internal {
+        IAttestationVerifierV1 attestationVerifier = IAttestationVerifierV1(attestationVerifierAddress);
         bytes calldata targetPubkey = request.targetPubkey;
         _validatePubkeyLength(targetPubkey);
 
@@ -152,14 +154,17 @@ contract WithdrawV1 is IWithdrawV1, Initializable, ReentrancyGuard, IProtocolVer
         bool isSelfConsolidation =
             request.srcPubkeys.length == 1 && keccak256(request.srcPubkeys[0]) == keccak256(targetPubkey);
 
-        if (!isTargetFunded && (!isSelfConsolidation || !_isKnownValidatorPubkey(attestationVerifier, targetPubkey))) {
+        if (
+            !isTargetFunded
+                && (!isSelfConsolidation || !_isKnownValidatorPubkey(attestationVerifierAddress, targetPubkey))
+        ) {
             revert TargetPubkeyNotFunded(targetPubkey);
         }
 
         for (uint256 j = 0; j < request.srcPubkeys.length; j++) {
             bytes calldata srcPubkey = request.srcPubkeys[j];
             _validatePubkeyLength(srcPubkey);
-            if (!_isKnownValidatorPubkey(attestationVerifier, srcPubkey)) {
+            if (!_isKnownValidatorPubkey(attestationVerifierAddress, srcPubkey)) {
                 revert SourcePubkeyNotFunded(srcPubkey);
             }
 
@@ -207,13 +212,16 @@ contract WithdrawV1 is IWithdrawV1, Initializable, ReentrancyGuard, IProtocolVer
     }
 
     /// @notice Internal: check whether a pubkey is in either funded validator lookup
-    function _isKnownValidatorPubkey(IAttestationVerifierV1 attestationVerifier, bytes calldata pubkey)
+    function _isKnownValidatorPubkey(address attestationVerifierAddress, bytes calldata pubkey)
         internal
         view
         returns (bool)
     {
-        return
-            attestationVerifier.isPubkeyFunded(pubkey) || attestationVerifier.isPrePectraValidatorPubkeyFunded(pubkey);
+        IAttestationVerifierV1 attestationVerifier = IAttestationVerifierV1(attestationVerifierAddress);
+        IAttestationVerifierPectraMigrationV1 pectraMigration =
+            IAttestationVerifierPectraMigrationV1(attestationVerifierAddress);
+
+        return attestationVerifier.isPubkeyFunded(pubkey) || pectraMigration.isPrePectraValidatorPubkeyFunded(pubkey);
     }
 
     /// @notice Internal: refund excess fee to recipient
