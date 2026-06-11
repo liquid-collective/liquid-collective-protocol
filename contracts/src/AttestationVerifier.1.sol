@@ -9,7 +9,6 @@ import "./interfaces/IAttestationVerifier.1.sol";
 import "./interfaces/IAttestationVerifierPectraMigration.1.sol";
 import "./interfaces/IDepositContract.sol";
 import "./interfaces/IDepositDataBuffer.sol";
-import "./interfaces/components/IConsensusLayerDepositManager.1.sol";
 import "./interfaces/IOperatorRegistry.1.sol";
 import "./interfaces/IRiver.1.sol";
 import "./interfaces/IWithdraw.1.sol";
@@ -116,13 +115,6 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
     modifier onlyRiver() {
         if (msg.sender != RiverAddress.get()) {
             revert LibErrors.Unauthorized(msg.sender);
-        }
-        _;
-    }
-
-    modifier onlyKeeper() {
-        if (msg.sender != IConsensusLayerDepositManagerV1(RiverAddress.get()).getKeeper()) {
-            revert IConsensusLayerDepositManagerV1.OnlyKeeper();
         }
         _;
     }
