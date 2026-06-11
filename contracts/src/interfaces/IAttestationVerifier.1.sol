@@ -342,7 +342,7 @@ interface IAttestationVerifierV1 {
     /// @param pubkeys The 48-byte BLS pubkeys to record
     function recordNewlyFundedPubkeys(bytes[] calldata pubkeys) external;
 
-    /// @notice Remove exited validator pubkeys from the initial-deposit lookup. Only callable by the keeper.
+    /// @notice Remove exited validator pubkeys from the initial-deposit lookup. Only callable by River.
     /// @dev Once removed, the pubkeys no longer authorize top-up deposits through `fetchAndValidateDeposits()`.
     /// @param pubkeys The 48-byte BLS pubkeys to remove
     function removeExitedValidatorPubkeys(bytes[] calldata pubkeys) external;
