@@ -696,6 +696,7 @@ contract RiverV1 is
         // When slashing containment mode is active, skip exit demand logic to avoid forcing additional
         // validator exits during a slashing event. The reward-pull pipeline is unaffected by this check.
         if (_slashingContainmentModeEnabled) {
+            emit SkippedExitRequestsDueToSlashingContainment();
             return;
         }
 
