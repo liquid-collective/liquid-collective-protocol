@@ -119,6 +119,7 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
         _assertI6_ExitedETHAggregate();
         _assertI7_ExitDemandBounded();
         _assertI8_ContainmentSuppressesDemand();
+        _assertI7_ActiveCLETHConsistency();
     }
 
     /// @notice I1: Verifies that the share price has not decreased since the pre-report snapshot.
@@ -229,5 +230,30 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
         if (!_lastReportWasContainment) return;
         uint256 demandAfter = operatorsRegistry.getCurrentETHExitsDemand();
         assertLe(demandAfter, _snapExitDemand, "I8: exit demand increased during slashing containment");
+    /// @notice I7: Verifies activeCLETH consistency — each operator's on-chain activeCLETH must match
+    ///         the simulator's independently computed active CL balance (the sum of its Active/Exiting
+    ///         validator balances, which under autocunding legitimately exceed deposited principal
+    ///         because rewards accrue on the CL). This per-operator equality fully pins activeCLETH to
+    ///         the simulator's ground truth; no aggregate-vs-deposited bound is asserted because rewards
+    ///         have no `<= depositedActivated - exited` upper bound.
+    function _assertI7_ActiveCLETHConsistency() internal {
+        uint256 opCount = operatorsRegistry.getOperatorCount();
+
+        uint256[] memory simActiveCLETH = new uint256[](opCount);
+        for (uint256 i = 0; i < _simValidators.length; i++) {
+            SimValidator memory v = _simValidators[i];
+            if (v.state == ValidatorState.Active || v.state == ValidatorState.Exiting) {
+                simActiveCLETH[v.operatorIndex] += v.currentBalance;
+            }
+        }
+
+        for (uint256 i = 0; i < opCount; i++) {
+            OperatorsV3.Operator memory op = operatorsRegistry.getOperator(i);
+            assertEq(
+                op.activeCLETH,
+                simActiveCLETH[i],
+                string(abi.encodePacked("I7: op", vm.toString(i), " activeCLETH mismatch"))
+            );
+        }
     }
 }
