@@ -55,13 +55,15 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         uint256 opCount = OperatorsV2.getCount();
         for (uint256 idx = 0; idx < opCount; ++idx) {
             OperatorsV2.Operator memory operator = OperatorsV2.get(idx);
-            if (operator.funded < operator.requestedExits) {
-                revert InvalidOperatorState(idx, operator.funded, operator.requestedExits);
+            uint256 fundedETH = operator.funded * DEPOSIT_SIZE;
+            uint256 requestedExitsETH = operator.requestedExits * DEPOSIT_SIZE;
+            if (fundedETH < requestedExitsETH) {
+                revert InvalidOperatorState(idx, fundedETH, requestedExitsETH);
             }
             OperatorsV3.push(
                 OperatorsV3.Operator({
-                    funded: operator.funded * DEPOSIT_SIZE,
-                    requestedExits: operator.requestedExits * DEPOSIT_SIZE,
+                    funded: fundedETH,
+                    requestedExits: requestedExitsETH,
                     active: operator.active,
                     name: operator.name,
                     operator: operator.operator,
@@ -217,14 +219,10 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             // `LibFundingDeltas.build` already guarantees, so the registry never emits an event
             // whose pubkeys and amounts disagree on length (which would silently break indexers).
             if (delta.depositPubkeys.length != delta.depositAmounts.length) {
-                revert MisalignedDeltaArrays(
-                    operatorIndex, delta.depositPubkeys.length, delta.depositAmounts.length
-                );
+                revert MisalignedDeltaArrays(operatorIndex, delta.depositPubkeys.length, delta.depositAmounts.length);
             }
             if (delta.topUpPubkeys.length != delta.topUpAmounts.length) {
-                revert MisalignedDeltaArrays(
-                    operatorIndex, delta.topUpPubkeys.length, delta.topUpAmounts.length
-                );
+                revert MisalignedDeltaArrays(operatorIndex, delta.topUpPubkeys.length, delta.topUpAmounts.length);
             }
 
             operator.funded += delta.fundedETH;

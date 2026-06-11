@@ -40,7 +40,7 @@ contract MockRiverAdmin {
 // ---------------------------------------------------------------------------
 
 contract ConsolidationAttestationTest is Test {
-    AttestationVerifierV1 internal validator;
+    AttestationVerifierV1 internal verifier;
     MockRiverAdmin internal river;
 
     address internal admin = address(0xAD);
@@ -80,8 +80,8 @@ contract ConsolidationAttestationTest is Test {
         // EOA satisfies the deposit buffer's LibSanitize._notZeroAddress check at init.
         depositBufferStub = makeAddr("depositDataBufferStub");
 
-        validator = new AttestationVerifierV1();
-        LibImplementationUnbricker.unbrick(vm, address(validator));
+        verifier = new AttestationVerifierV1();
+        LibImplementationUnbricker.unbrick(vm, address(verifier));
 
         address[] memory depCommittee = new address[](1);
         depCommittee[0] = depositAttester;
@@ -89,18 +89,16 @@ contract ConsolidationAttestationTest is Test {
         cCommittee[0] = attester1;
         cCommittee[1] = attester2;
         cCommittee[2] = attester3;
-        validator.initAttestationVerifierV1(
-            address(river), depositBufferStub, depCommittee, 1, bytes4(0), cCommittee, 2
-        );
+        verifier.initAttestationVerifierV1(address(river), depositBufferStub, depCommittee, 1, bytes4(0), cCommittee, 2);
     }
 
-    /// @dev Deploy + unbrick a fresh validator.
-    function _deployFreshValidator() internal returns (AttestationVerifierV1 fresh) {
+    /// @dev Deploy + unbrick a fresh verifier.
+    function _deployFreshVerifier() internal returns (AttestationVerifierV1 fresh) {
         fresh = new AttestationVerifierV1();
         LibImplementationUnbricker.unbrick(vm, address(fresh));
     }
 
-    /// @dev Init a fresh validator with the provided consolidation params, reusing a valid
+    /// @dev Init a fresh verifier with the provided consolidation params, reusing a valid
     ///      1-attester deposit committee. Internal so `vm.expectRevert` pierces through to
     ///      the init external call.
     function _initFreshWithConsolidationParams(
@@ -203,7 +201,7 @@ contract ConsolidationAttestationTest is Test {
         returns (bool)
     {
         vm.prank(address(river));
-        return validator.validateConsolidation(consolidation);
+        return verifier.validateConsolidation(consolidation);
     }
 
     // -----------------------------------------------------------------------
@@ -252,7 +250,7 @@ contract ConsolidationAttestationTest is Test {
     function testRevert_validateConsolidation_onlyRiver() public {
         IAttestationVerifierV1.ConsolidationObject memory c = _validConsolidation(address(0xBEEF), 123);
         vm.expectRevert(abi.encodeWithSelector(LibErrors.Unauthorized.selector, address(this)));
-        validator.validateConsolidation(c);
+        verifier.validateConsolidation(c);
     }
 
     // -----------------------------------------------------------------------
@@ -260,14 +258,14 @@ contract ConsolidationAttestationTest is Test {
     // -----------------------------------------------------------------------
 
     function testInit_revertEmptyAttesterArray() public {
-        AttestationVerifierV1 fresh = _deployFreshValidator();
+        AttestationVerifierV1 fresh = _deployFreshVerifier();
         address[] memory empty = new address[](0);
         vm.expectRevert(LibErrors.InvalidArgument.selector);
         _initFreshWithConsolidationParams(fresh, empty, 1);
     }
 
     function testInit_revertTooManyAttesters() public {
-        AttestationVerifierV1 fresh = _deployFreshValidator();
+        AttestationVerifierV1 fresh = _deployFreshVerifier();
         address[] memory many = new address[](33);
         for (uint256 i = 0; i < 33; i++) {
             many[i] = address(uint160(0x1000 + i));
@@ -277,7 +275,7 @@ contract ConsolidationAttestationTest is Test {
     }
 
     function testInit_revertZeroQuorum() public {
-        AttestationVerifierV1 fresh = _deployFreshValidator();
+        AttestationVerifierV1 fresh = _deployFreshVerifier();
         address[] memory cc = new address[](1);
         cc[0] = attester1;
         vm.expectRevert(IAttestationVerifierV1.ZeroQuorum.selector);
@@ -285,21 +283,21 @@ contract ConsolidationAttestationTest is Test {
     }
 
     function testInit_revertQuorumExceedsMaxSignatures() public {
-        AttestationVerifierV1 fresh = _deployFreshValidator();
+        AttestationVerifierV1 fresh = _deployFreshVerifier();
         address[] memory cc = new address[](32);
         for (uint256 i = 0; i < 32; i++) {
             cc[i] = address(uint160(0x2000 + i));
         }
         vm.expectRevert(
             abi.encodeWithSelector(
-                IAttestationVerifierV1.QuorumExceedsMaxSignatures.selector, 21, validator.MAX_SIGNATURES()
+                IAttestationVerifierV1.QuorumExceedsMaxSignatures.selector, 21, verifier.MAX_SIGNATURES()
             )
         );
         _initFreshWithConsolidationParams(fresh, cc, 21);
     }
 
     function testInit_revertQuorumExceedsAttesterCount() public {
-        AttestationVerifierV1 fresh = _deployFreshValidator();
+        AttestationVerifierV1 fresh = _deployFreshVerifier();
         address[] memory cc = new address[](2);
         cc[0] = attester1;
         cc[1] = attester2;
@@ -318,26 +316,26 @@ contract ConsolidationAttestationTest is Test {
         address[] memory cc = new address[](1);
         cc[0] = attester1;
         vm.expectRevert();
-        validator.initAttestationVerifierV1(address(river), depositBufferStub, dep, 1, bytes4(0), cc, 1);
+        verifier.initAttestationVerifierV1(address(river), depositBufferStub, dep, 1, bytes4(0), cc, 1);
     }
 
     function testInit_consolidationDomainSeparatorDiffersFromDeposit() public {
-        bytes32 depositDS = validator.getDomainSeparator();
-        bytes32 consolidationDS = validator.getConsolidationDomainSeparator();
+        bytes32 depositDS = verifier.getDomainSeparator();
+        bytes32 consolidationDS = verifier.getConsolidationDomainSeparator();
         assertTrue(depositDS != consolidationDS, "consolidation domain separator must differ from deposit's");
         assertTrue(consolidationDS != bytes32(0), "consolidation domain separator must be set");
     }
 
     function testInit_setsAttesterCount() public {
-        assertEq(validator.getConsolidationCommitteeAttesterCount(), 3);
-        assertTrue(validator.isConsolidationCommitteeAttester(attester1));
-        assertTrue(validator.isConsolidationCommitteeAttester(attester2));
-        assertTrue(validator.isConsolidationCommitteeAttester(attester3));
-        assertEq(validator.getConsolidationCommitteeAttestationQuorum(), 2);
+        assertEq(verifier.getConsolidationCommitteeAttesterCount(), 3);
+        assertTrue(verifier.isConsolidationCommitteeAttester(attester1));
+        assertTrue(verifier.isConsolidationCommitteeAttester(attester2));
+        assertTrue(verifier.isConsolidationCommitteeAttester(attester3));
+        assertEq(verifier.getConsolidationCommitteeAttestationQuorum(), 2);
     }
 
     function testInit_revertZeroRiver() public {
-        AttestationVerifierV1 fresh = _deployFreshValidator();
+        AttestationVerifierV1 fresh = _deployFreshVerifier();
         address[] memory dep = new address[](1);
         dep[0] = depositAttester;
         address[] memory cc = new address[](1);
@@ -348,7 +346,7 @@ contract ConsolidationAttestationTest is Test {
     }
 
     function testInit_revertZeroAttesterInArray() public {
-        AttestationVerifierV1 fresh = _deployFreshValidator();
+        AttestationVerifierV1 fresh = _deployFreshVerifier();
         // Length-2 array containing address(0) — passes the length bounds check, then
         // fails inside the registration loop when setConsolidationCommitteeAttester
         // calls LibSanitize._notZeroAddress.
@@ -763,7 +761,7 @@ contract ConsolidationAttestationTest is Test {
 
     function testRevert_zeroDomainSeparator() public {
         // Wipe the consolidation domain separator via vm.store.
-        vm.store(address(validator), CONSOLIDATION_DOMAIN_SEPARATOR_SLOT, bytes32(0));
+        vm.store(address(verifier), CONSOLIDATION_DOMAIN_SEPARATOR_SLOT, bytes32(0));
 
         address user = address(0x11);
         IAttestationVerifierV1.ConsolidationObject memory c = _validConsolidation(user, 1);
@@ -776,7 +774,7 @@ contract ConsolidationAttestationTest is Test {
         // The quorum setter rejects zero, but validateConsolidation() still guards the
         // internal verifier helper. If the slot were corrupted to zero, signatures must
         // not become optional for a structurally valid consolidation request.
-        vm.store(address(validator), CONSOLIDATION_COMMITTEE_ATTESTATION_QUORUM_SLOT, bytes32(0));
+        vm.store(address(verifier), CONSOLIDATION_COMMITTEE_ATTESTATION_QUORUM_SLOT, bytes32(0));
 
         IAttestationVerifierV1.ConsolidationObject memory c = _validConsolidation(address(0x11), 2);
 
@@ -791,16 +789,16 @@ contract ConsolidationAttestationTest is Test {
     function testSetConsolidationCommitteeAttester_addSucceeds() public {
         address newAttester = address(0xABCD);
         vm.prank(admin);
-        validator.setConsolidationCommitteeAttester(newAttester, true);
-        assertTrue(validator.isConsolidationCommitteeAttester(newAttester));
-        assertEq(validator.getConsolidationCommitteeAttesterCount(), 4);
+        verifier.setConsolidationCommitteeAttester(newAttester, true);
+        assertTrue(verifier.isConsolidationCommitteeAttester(newAttester));
+        assertEq(verifier.getConsolidationCommitteeAttesterCount(), 4);
     }
 
     function testSetConsolidationCommitteeAttester_removeSucceeds() public {
         vm.prank(admin);
-        validator.setConsolidationCommitteeAttester(attester3, false);
-        assertFalse(validator.isConsolidationCommitteeAttester(attester3));
-        assertEq(validator.getConsolidationCommitteeAttesterCount(), 2);
+        verifier.setConsolidationCommitteeAttester(attester3, false);
+        assertFalse(verifier.isConsolidationCommitteeAttester(attester3));
+        assertEq(verifier.getConsolidationCommitteeAttesterCount(), 2);
     }
 
     function testSetConsolidationCommitteeAttester_revertStatusUnchanged() public {
@@ -810,7 +808,7 @@ contract ConsolidationAttestationTest is Test {
                 IAttestationVerifierV1.ConsolidationCommitteeAttesterStatusUnchanged.selector, attester1, true
             )
         );
-        validator.setConsolidationCommitteeAttester(attester1, true);
+        verifier.setConsolidationCommitteeAttester(attester1, true);
 
         address stranger = address(0xC0FFEE);
         vm.prank(admin);
@@ -819,28 +817,28 @@ contract ConsolidationAttestationTest is Test {
                 IAttestationVerifierV1.ConsolidationCommitteeAttesterStatusUnchanged.selector, stranger, false
             )
         );
-        validator.setConsolidationCommitteeAttester(stranger, false);
+        verifier.setConsolidationCommitteeAttester(stranger, false);
     }
 
     function testSetConsolidationCommitteeAttester_revertTooMany() public {
         // Add up to 32 attesters (3 already registered → add 29).
         for (uint256 i = 0; i < 29; i++) {
             vm.prank(admin);
-            validator.setConsolidationCommitteeAttester(address(uint160(0x9000 + i)), true);
+            verifier.setConsolidationCommitteeAttester(address(uint160(0x9000 + i)), true);
         }
-        assertEq(validator.getConsolidationCommitteeAttesterCount(), 32);
+        assertEq(verifier.getConsolidationCommitteeAttesterCount(), 32);
 
         vm.prank(admin);
         vm.expectRevert(
             abi.encodeWithSelector(IAttestationVerifierV1.TooManyConsolidationCommitteeAttesters.selector, 33, 32)
         );
-        validator.setConsolidationCommitteeAttester(address(0x9999), true);
+        verifier.setConsolidationCommitteeAttester(address(0x9999), true);
     }
 
     function testSetConsolidationCommitteeAttester_revertRemovingBreaksQuorum() public {
         // We start with 3 attesters and quorum 2. Removing two would leave count=1 < quorum=2.
         vm.prank(admin);
-        validator.setConsolidationCommitteeAttester(attester3, false); // 3 → 2
+        verifier.setConsolidationCommitteeAttester(attester3, false); // 3 → 2
 
         vm.prank(admin);
         vm.expectRevert(
@@ -848,24 +846,24 @@ contract ConsolidationAttestationTest is Test {
                 IAttestationVerifierV1.QuorumExceedsConsolidationCommitteeAttesterCount.selector, 2, 1
             )
         );
-        validator.setConsolidationCommitteeAttester(attester2, false); // would go 2 → 1
+        verifier.setConsolidationCommitteeAttester(attester2, false); // would go 2 → 1
     }
 
     function testSetConsolidationCommitteeAttester_onlyRiverAdmin() public {
         vm.expectRevert(abi.encodeWithSelector(LibErrors.Unauthorized.selector, address(this)));
-        validator.setConsolidationCommitteeAttester(address(0xABCD), true);
+        verifier.setConsolidationCommitteeAttester(address(0xABCD), true);
     }
 
     function testSetConsolidationCommitteeAttestationQuorum_succeeds() public {
         vm.prank(admin);
-        validator.setConsolidationCommitteeAttestationQuorum(3);
-        assertEq(validator.getConsolidationCommitteeAttestationQuorum(), 3);
+        verifier.setConsolidationCommitteeAttestationQuorum(3);
+        assertEq(verifier.getConsolidationCommitteeAttestationQuorum(), 3);
     }
 
     function testSetConsolidationCommitteeAttestationQuorum_revertZero() public {
         vm.prank(admin);
         vm.expectRevert(IAttestationVerifierV1.ZeroQuorum.selector);
-        validator.setConsolidationCommitteeAttestationQuorum(0);
+        verifier.setConsolidationCommitteeAttestationQuorum(0);
     }
 
     function testSetConsolidationCommitteeAttestationQuorum_revertExceedsAttesters() public {
@@ -875,25 +873,25 @@ contract ConsolidationAttestationTest is Test {
                 IAttestationVerifierV1.QuorumExceedsConsolidationCommitteeAttesterCount.selector, 4, 3
             )
         );
-        validator.setConsolidationCommitteeAttestationQuorum(4);
+        verifier.setConsolidationCommitteeAttestationQuorum(4);
     }
 
     function testSetConsolidationCommitteeAttestationQuorum_revertExceedsMaxSignatures() public {
         // Push attester count above MAX_SIGNATURES so the count check doesn't fire first.
         for (uint256 i = 0; i < 18; i++) {
             vm.prank(admin);
-            validator.setConsolidationCommitteeAttester(address(uint160(0xA000 + i)), true);
+            verifier.setConsolidationCommitteeAttester(address(uint160(0xA000 + i)), true);
         }
-        assertEq(validator.getConsolidationCommitteeAttesterCount(), 21);
+        assertEq(verifier.getConsolidationCommitteeAttesterCount(), 21);
 
         vm.prank(admin);
         vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.QuorumExceedsMaxSignatures.selector, 21, 20));
-        validator.setConsolidationCommitteeAttestationQuorum(21);
+        verifier.setConsolidationCommitteeAttestationQuorum(21);
     }
 
     function testSetConsolidationCommitteeAttestationQuorum_onlyRiverAdmin() public {
         vm.expectRevert(abi.encodeWithSelector(LibErrors.Unauthorized.selector, address(this)));
-        validator.setConsolidationCommitteeAttestationQuorum(3);
+        verifier.setConsolidationCommitteeAttestationQuorum(3);
     }
 
     // -----------------------------------------------------------------------
@@ -902,22 +900,22 @@ contract ConsolidationAttestationTest is Test {
 
     function testIsolation_consolidationAttesterNotADepositAttester() public {
         vm.prank(admin);
-        validator.setConsolidationCommitteeAttester(address(0xBABE), true);
-        assertFalse(validator.isRootAttester(address(0xBABE)));
-        assertTrue(validator.isConsolidationCommitteeAttester(address(0xBABE)));
+        verifier.setConsolidationCommitteeAttester(address(0xBABE), true);
+        assertFalse(verifier.isRootAttester(address(0xBABE)));
+        assertTrue(verifier.isConsolidationCommitteeAttester(address(0xBABE)));
     }
 
     function testIsolation_quorumsAreSeparate() public {
         // setUp configured consolidation quorum=2 and deposit quorum=1 — they must read independently.
-        assertEq(validator.getRootAttestationQuorum(), 1);
-        assertEq(validator.getConsolidationCommitteeAttestationQuorum(), 2);
+        assertEq(verifier.getRootAttestationQuorum(), 1);
+        assertEq(verifier.getConsolidationCommitteeAttestationQuorum(), 2);
     }
 
     function testIsolation_changingConsolidationQuorumDoesNotAffectDeposit() public {
-        uint256 depositQuorumBefore = validator.getRootAttestationQuorum();
+        uint256 depositQuorumBefore = verifier.getRootAttestationQuorum();
         vm.prank(admin);
-        validator.setConsolidationCommitteeAttestationQuorum(3);
-        assertEq(validator.getRootAttestationQuorum(), depositQuorumBefore);
-        assertEq(validator.getConsolidationCommitteeAttestationQuorum(), 3);
+        verifier.setConsolidationCommitteeAttestationQuorum(3);
+        assertEq(verifier.getRootAttestationQuorum(), depositQuorumBefore);
+        assertEq(verifier.getConsolidationCommitteeAttestationQuorum(), 3);
     }
 }

@@ -76,6 +76,29 @@ contract ExitAccountingTest is AccountingInvariants {
         assertEq(exitedPerOp[operatorOneIndex], DEPOSIT_SIZE - penalty, "slashed exit");
     }
 
+    /// @notice Verifies that autocompounded rewards increase the validator's CL balance,
+    ///         allowing exits to return more ETH than the original deposit.
+    ///         Models Pectra (0x02) behavior where CL rewards compound into the balance
+    ///         rather than being skimmed.
+    function testExitWithAutocompoundedRewards() public {
+        // Step 1: Deposit and activate 2 validators.
+        _fundRiver(2 * DEPOSIT_SIZE);
+        sim_deposit(operatorOneIndex, _amounts(2, DEPOSIT_SIZE));
+        sim_activateValidators(2);
+        sim_oracleReport();
+        // Step 2: Autocompound rewards — each validator gains 0.005 ETH (within APR bounds).
+        uint256 rewardPerValidator = 0.005 ether;
+        sim_autocompound(rewardPerValidator);
+        // Step 3: Request and complete exit for 1 validator — exit amount includes the reward.
+        uint256 fullBalance = DEPOSIT_SIZE + rewardPerValidator;
+        sim_requestExit(operatorOneIndex, fullBalance);
+        sim_completeExit(operatorOneIndex, fullBalance, 0);
+        // Step 4: Report — the exited amount should include the autocompounded reward.
+        sim_oracleReport();
+        uint256[] memory exitedPerOp = operatorsRegistry.getExitedETHPerOperator();
+        assertEq(exitedPerOp[operatorOneIndex], fullBalance, "exited ETH should include autocompounded rewards");
+    }
+
     /// @notice Verifies that `getTotalDepositedETH` is monotonically non-decreasing throughout
     ///         the full lifecycle: deposit → activate → report → exit request → exit completion → report.
     ///         Exits return ETH to the EL but must not reduce the total deposited counter.
