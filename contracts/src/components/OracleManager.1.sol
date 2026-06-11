@@ -12,6 +12,7 @@ import "../state/river/OracleAddress.sol";
 import "../state/river/CLValidatorTotalBalance.sol";
 import "../state/river/LastOracleRoundId.sol";
 import "../state/river/InFlightDeposit.sol";
+import "../state/river/ConsolidationBuffer.sol";
 
 /// @title Oracle Manager (v1)
 /// @author Alluvial Finance Inc.
@@ -22,8 +23,6 @@ import "../state/river/InFlightDeposit.sol";
 /// @notice validators that have been activated on the consensus layer.
 abstract contract OracleManagerV1 is IOracleManagerV1 {
     uint256 internal constant ONE_YEAR = 365 days;
-    /// @notice Size of a deposit in ETH
-    uint256 public constant _DEPOSIT_SIZE = 32 ether;
 
     /// @notice Handler called if the delta between the last and new validator balance sum is positive
     /// @dev Must be overridden
@@ -41,6 +40,12 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
     /// @param _max The maximum amount to pull inside the system
     /// @return The amount pulled inside the system
     function _pullCoverageFunds(uint256 _max) internal virtual returns (uint256);
+
+    /// @notice Handler called to pull the consolidation coverage funds
+    /// @dev Must be overridden
+    /// @param _max The maximum amount to pull inside the system
+    /// @return The amount pulled inside the system
+    function _pullConsolidationCoverageFunds(uint256 _max) internal virtual returns (uint256);
 
     /// @notice Handler called to retrieve the system administrator address
     /// @dev Must be overridden
@@ -67,6 +72,11 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
     /// @notice Reports the ETH that is currently active on the consensus layer for the operators
     /// @param _activeCLETH The array of active Consensus Layer ETH amounts per operator
     function _reportCLETH(uint256[] memory _activeCLETH) internal virtual;
+
+    /// @notice Sets the consolidation buffer
+    /// @param _oldConsolidationBuffer The old consolidation buffer value
+    /// @param _newConsolidationBuffer The new consolidation buffer value
+    function _setConsolidationBuffer(uint256 _oldConsolidationBuffer, uint256 _newConsolidationBuffer) internal virtual;
 
     /// @notice Requests exits of validators after possibly rebalancing deposit and redeem balances
     /// @param _exitingBalance The currently exiting funds, soon to be received on the execution layer
@@ -248,6 +258,8 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         uint256 skimmedAmountIncrease;
         uint256 inFlightDepositedETH;
         uint256 totalDepositedActivatedETHIncrease;
+        uint256 lastConsolidationBuffer;
+        uint256 totalExternalConsolidationsAmountReportedIncrease;
         uint256 timeElapsedSinceLastReport;
         uint256 availableAmountToUpperBound;
         uint256 redeemManagerDemand;
@@ -316,6 +328,34 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
                 revert InvalidValidatorCountReport(_report.validatorsCount, lastStoredReport.validatorsCount);
             }
 
+            if (
+                _report.totalExternalConsolidationsAmountReported
+                    < lastStoredReport.totalExternalConsolidationsAmountReported
+            ) {
+                revert InvalidTotalConsolidationsAmountReportedDecrease(
+                    lastStoredReport.totalExternalConsolidationsAmountReported,
+                    _report.totalExternalConsolidationsAmountReported
+                );
+            }
+
+            if (
+                _report.totalExternalConsolidationsAmountReported
+                    > lastStoredReport.totalExternalConsolidationsAmountReported
+            ) {
+                // the total consolidation amount reported has increased so we need to reduce the buffer
+                uint256 increaseInConsolidation = _report.totalExternalConsolidationsAmountReported
+                    - lastStoredReport.totalExternalConsolidationsAmountReported;
+                vars.lastConsolidationBuffer = ConsolidationBuffer.get();
+
+                if (increaseInConsolidation > vars.lastConsolidationBuffer) {
+                    // this means that the buffer is completely covered and the extra amount will go to rewards
+                    // as they would have already been accounted for in the validators balance increase we don't need to account for it
+                    vars.totalExternalConsolidationsAmountReportedIncrease = vars.lastConsolidationBuffer;
+                } else {
+                    vars.totalExternalConsolidationsAmountReportedIncrease = increaseInConsolidation;
+                }
+            }
+
             // we compute the new skimmed amount by taking the delta between reports
             vars.skimmedAmountIncrease = _report.validatorsSkimmedBalance - vars.lastReportSkimmedBalance;
 
@@ -329,6 +369,14 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         if (vars.exitedAmountIncrease + vars.skimmedAmountIncrease > 0) {
             // this method pulls and updates ethToDeposit / ethToRedeem accordingly
             _pullCLFunds(vars.skimmedAmountIncrease, vars.exitedAmountIncrease);
+        }
+
+        // if we have new external consolidation funds that were reported, we reduce the consolidation buffer
+        if (vars.totalExternalConsolidationsAmountReportedIncrease > 0) {
+            _setConsolidationBuffer(
+                vars.lastConsolidationBuffer,
+                vars.lastConsolidationBuffer - vars.totalExternalConsolidationsAmountReportedIncrease
+            );
         }
 
         // checks if we have new deposited stake that activated in the last oracle reporting
@@ -351,6 +399,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
             storedReport.rebalanceDepositToRedeemMode = _report.rebalanceDepositToRedeemMode;
             storedReport.slashingContainmentMode = _report.slashingContainmentMode;
             storedReport.totalDepositedActivatedETH = _report.totalDepositedActivatedETH;
+            storedReport.totalExternalConsolidationsAmountReported = _report.totalExternalConsolidationsAmountReported;
             LastConsensusLayerReport.set(storedReport);
         }
 
@@ -430,7 +479,20 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
             // we pull the funds from the coverage recipient
             vars.trace.pulledCoverageFunds = _pullCoverageFunds(vars.availableAmountToUpperBound);
             // we do not update the rewards as coverage is not considered rewards
-            // we do not update the available amount as there are no more pulling actions to perform afterwards
+        }
+
+        uint256 consolidationBuffer = ConsolidationBuffer.get();
+        // if the consolidation buffer is greater than 0, we attempt to pull the funds from the consolidation coverage fund
+        // we always attempt to pull the funds as we don't track on-chain if a consolidation failure has occurred
+        if (consolidationBuffer > 0) {
+            vars.trace.pulledConsolidationCoverageFunds = _pullConsolidationCoverageFunds(consolidationBuffer);
+            if (vars.trace.pulledConsolidationCoverageFunds > 0) {
+                // we update the consolidation buffer
+                _setConsolidationBuffer(
+                    consolidationBuffer, consolidationBuffer - vars.trace.pulledConsolidationCoverageFunds
+                );
+                // we do not update the rewards as consolidation coverage is not considered rewards
+            }
         }
 
         // if our rewards are not null, we dispatch the fee to the collector

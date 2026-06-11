@@ -17,6 +17,15 @@ contract AccountingInvariantTest is AccountingInvariants {
     uint256 internal ghost_lastSkimmedBalance;
     uint256 internal ghost_lastExitedBalance;
     uint256[] internal ghost_lastExitedPerOp;
+    /// @dev I21: the previous report's totalExternalConsolidationsAmountReported, snapshotted at the START of
+    ///      each report (not the end) so I21 verifies a genuine report-over-report non-decrease rather than a
+    ///      same-call tautology.
+    uint256 internal ghost_lastConsolidationsAmountReported;
+
+    /// @dev Storage slot of River's consolidation buffer (mirrors ConsolidationBuffer.sol). Used to credit the
+    ///      buffer for the consolidation-reporting step (no on-chain increase path exists on this branch).
+    bytes32 internal constant CONSOLIDATION_BUFFER_SLOT =
+        bytes32(uint256(keccak256("river.state.consolidationBuffer")) - 1);
 
     /// @notice Initialises the base harness, deploys the `AccountingHandler`, and registers it
     ///         as the sole Foundry invariant target so the fuzzer calls only its bounded functions.
@@ -82,12 +91,52 @@ contract AccountingInvariantTest is AccountingInvariants {
     /// @param rebalance            Whether to submit the report in rebalancing mode.
     /// @param slashingContainment  Whether to submit the report in slashing-containment mode.
     function handler_oracleReport(bool rebalance, bool slashingContainment) external {
+        // I21: capture the prior report's consolidation total BEFORE this report so the invariant verifies a
+        // genuine report-over-report non-decrease.
+        ghost_lastConsolidationsAmountReported =
+        river.getLastConsensusLayerReport().totalExternalConsolidationsAmountReported;
         if (slashingContainment) {
             _setAllowSharePriceDecrease(true);
         }
         sim_oracleReport(rebalance, slashingContainment);
         _setAllowSharePriceDecrease(false);
-        // Snapshot post-report state for monotonicity invariants (I14-I17)
+        // Snapshot post-report state for monotonicity invariants (I15-I17)
+        IOracleManagerV1.StoredConsensusLayerReport memory report = river.getLastConsensusLayerReport();
+        ghost_lastSkimmedBalance = report.validatorsSkimmedBalance;
+        ghost_lastExitedBalance = report.validatorsExitedBalance;
+        ghost_lastExitedPerOp = operatorsRegistry.getExitedETHPerOperator();
+    }
+
+    /// @notice Delegates an external-consolidation report from the handler to the simulator. This is the only
+    ///         path that drives a non-zero, monotonically increasing totalExternalConsolidationsAmountReported,
+    ///         so it is what makes invariant I21 a live check rather than a constant-0 tautology.
+    ///         Credits the consolidation buffer off-chain (no on-chain increase path exists on this branch —
+    ///         this mirrors the LsETH mint for incoming external consolidation, accounting the credited
+    ///         principal in `_simTotalUserDeposited` so I2 conservation holds), then submits a report in which
+    ///         the same principal lands in validatorsBalance and is reported as consolidation. The on-chain
+    ///         logic draws the buffer back down by the delta, so the step is underlying-neutral (no rewards).
+    /// @param deltaSeed  Seed for the consolidation delta, bounded to [1 wei, 32 ETH].
+    function handler_consolidationReport(uint256 deltaSeed) external {
+        // Require an established baseline (validators activated and reported on-chain) so the report has a
+        // non-trivial underlying balance to net against. Skips until the fuzzer has produced a normal report.
+        if (river.getCLValidatorCount() == 0) return;
+        uint256 delta = bound(deltaSeed, 1, 32 ether);
+
+        // I21: snapshot the prior report's consolidation total BEFORE this report (see handler_oracleReport).
+        ghost_lastConsolidationsAmountReported =
+        river.getLastConsensusLayerReport().totalExternalConsolidationsAmountReported;
+
+        // Credit the consolidation buffer and account the credited principal (keeps I2 conservation intact once
+        // the principal lands in validatorsBalance via _buildReport). The buffer starts at 0 between reports, so
+        // crediting exactly `delta` lets the on-chain reduction draw it back to 0 (no coverage-fund pull).
+        _simConsolidatedBalance += delta;
+        _simTotalUserDeposited += delta;
+        uint256 oldBuffer = uint256(vm.load(address(river), CONSOLIDATION_BUFFER_SLOT));
+        vm.store(address(river), CONSOLIDATION_BUFFER_SLOT, bytes32(oldBuffer + delta));
+
+        sim_oracleReport(false, false);
+
+        // Snapshot post-report state for monotonicity invariants (I15-I17).
         IOracleManagerV1.StoredConsensusLayerReport memory report = river.getLastConsensusLayerReport();
         ghost_lastSkimmedBalance = report.validatorsSkimmedBalance;
         ghost_lastExitedBalance = report.validatorsExitedBalance;
@@ -281,5 +330,50 @@ contract AccountingInvariantTest is AccountingInvariants {
             simSum += _simValidators[i].depositedETH;
         }
         assertEq(river.getTotalDepositedETH(), simSum, "I20: TotalDepositedETH != exact sim sum");
+    }
+
+    /// @dev I21: Stored report totalExternalConsolidationsAmountReported is monotonically non-decreasing across
+    ///      reports — mirrors the OracleManager InvalidTotalConsolidationsAmountReportedDecrease guard.
+    ///      `ghost_lastConsolidationsAmountReported` is snapshotted at the START of each report (in
+    ///      handler_oracleReport / handler_consolidationReport), so this compares the post-report value against
+    ///      the previous report's value — a genuine report-over-report non-decrease check that would fire if a
+    ///      future change let the stored value drop. The handler_consolidationReport step drives real,
+    ///      increasing consolidation values, so this is exercised with non-zero data (not a constant-0 no-op).
+    function invariant_I21_consolidationsAmountNonDecreasing() public {
+        IOracleManagerV1.StoredConsensusLayerReport memory report = river.getLastConsensusLayerReport();
+        assertGe(
+            report.totalExternalConsolidationsAmountReported,
+            ghost_lastConsolidationsAmountReported,
+            "I21: totalExternalConsolidationsAmountReported decreased"
+        );
+    }
+
+    /// @dev Deterministic regression test backing I21: proves the consolidation-reporting step actually drives a
+    ///      strictly increasing on-chain totalExternalConsolidationsAmountReported and that the I21 non-decrease
+    ///      property holds report-over-report (so I21 is a live check on real data, not a constant-0 no-op).
+    function test_I21_consolidationReportsDriveMonotonicValue() public {
+        // Establish a baseline so getCLValidatorCount() > 0 (the precondition for consolidation reports).
+        // handler_* are external, so they are invoked via `this` (the same path the fuzzer's handler uses).
+        sim_deposit(operatorOneIndex, _amounts(3, DEPOSIT_SIZE));
+        sim_activateValidators(3);
+        this.handler_oracleReport(false, false);
+        assertGt(river.getCLValidatorCount(), 0, "baseline report did not activate validators");
+        assertEq(
+            river.getLastConsensusLayerReport().totalExternalConsolidationsAmountReported,
+            0,
+            "consolidation total should start at 0"
+        );
+
+        // Drive several consolidation reports; each must strictly increase the stored value while preserving
+        // the exact non-decrease property invariant_I21 guards.
+        uint256[3] memory deltas = [uint256(1 ether), 5 ether, 2 ether];
+        uint256 prev = 0;
+        for (uint256 i = 0; i < deltas.length; i++) {
+            this.handler_consolidationReport(deltas[i]);
+            uint256 cur = river.getLastConsensusLayerReport().totalExternalConsolidationsAmountReported;
+            assertEq(cur, prev + deltas[i], "consolidation total must rise by exactly the reported delta");
+            invariant_I21_consolidationsAmountNonDecreasing();
+            prev = cur;
+        }
     }
 }

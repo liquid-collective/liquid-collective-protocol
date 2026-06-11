@@ -27,6 +27,38 @@ interface IOperatorsRegistryV1 {
         uint256 ethAmount;
     }
 
+    /// @notice Structure representing an EL exit allocation for exits
+    /// @param operatorIndex The index of the operator
+    /// @param pubkeys The pubkeys through which the EL exits were requested
+    /// @param amounts The amounts (gwei) per pubkey that was requested for EL exits
+    /// @param isFullExit True if the EL exit is a full exit for each pubkey
+    struct ELExitETHAllocation {
+        uint256 operatorIndex;
+        bytes[] pubkeys; // 48 bytes
+        uint64[] amounts; // gwei, actual balance for full exits
+        bool[] isFullExit; // true if the EL exit is a full exit for each pubkey
+    }
+
+    /// @notice Structure representing a per-operator funded ETH update
+    /// @param operatorIndex The index of the operator receiving the funded ETH
+    /// @param fundedETH The amount of ETH(wei) being added to the operator's funded total
+    /// @param depositPubkeys The validator public keys funded with an initial deposit for this
+    ///                      operator in this batch. Top-up pubkeys are NOT included here so
+    ///                      indexers can treat each entry as a brand-new validator key.
+    /// @param depositAmounts The per-initial-deposit amount in ETH(wei), aligned 1:1 with
+    ///                       depositPubkeys.
+    /// @param topUpPubkeys The validator public keys that received a top-up for this operator
+    ///                        in this batch (pre-existing keys — not new validators).
+    /// @param topUpAmounts The per-top-up amount in ETH(wei), aligned 1:1 with topUpPubkeys.
+    struct OperatorFundingDelta {
+        uint256 operatorIndex;
+        uint256 fundedETH;
+        bytes[] depositPubkeys;
+        uint256[] depositAmounts;
+        bytes[] topUpPubkeys;
+        uint256[] topUpAmounts;
+    }
+
     /// @notice A new operator has been added to the registry
     /// @param index The operator index
     /// @param name The operator display name
@@ -52,10 +84,16 @@ interface IOperatorsRegistryV1 {
     /// @param river The new river address
     event SetRiver(address indexed river);
 
-    /// @notice The requested ETH amount has been updated
+    /// @notice The amount of ETH(wei) that has been requested to be exited via CL
     /// @param index The operator index
     /// @param amount The amount of requested exits in ETH(wei)
     event RequestedETHExits(uint256 indexed index, uint256 amount);
+
+    /// @notice The amount of ETH(gwei) that has been requested to be exited per pubkey via EL
+    /// @param index The operator index
+    /// @param pubkeys The pubkeys through which the EL exits were requested
+    /// @param amounts The amount per pubkey that was requested for EL exits (for full exits it is the actual balance)
+    event RequestedELETHExits(uint256 indexed index, bytes[] pubkeys, uint64[] amounts);
 
     /// @notice The exit request demand has been updated
     /// @param previousETHExitsDemand The previous exit request demand in ETH(wei)
@@ -88,16 +126,28 @@ interface IOperatorsRegistryV1 {
     /// @param activeCLETH The active ETH(wei) on CL per operator
     event UpdatedActiveCLETH(uint256[] activeCLETH);
 
-    /// @notice A validator key got funded on the deposit contract
-    /// @notice This event was introduced during a contract upgrade, in order to cover all possible public keys, this event
-    /// @notice will be replayed for past funded keys in order to have a complete coverage of all the funded public keys.
-    /// @notice In this particular scenario, the deferred value will be set to true, to indicate that we are not going to have
-    /// @notice the expected additional events and side effects in the same transaction (deposit to official DepositContract etc ...) because
-    /// @notice the event was synthetically crafted.
+    /// @notice One or more validator keys received an initial deposit in this batch.
+    /// @dev Post-Pectra: this event covers initial-deposit pubkeys only. Top-up pubkeys are
+    ///      not new validators and are emitted via the dedicated `TopUps` event instead, so
+    ///      indexers that treat each `pubkeys[]` entry as a new validator key do not
+    ///      over-count. The legacy `deferred` flag has been dropped — the
+    ///      `forceFundedValidatorKeysEventEmission` migration that produced replayed events
+    ///      completed on mainnet and was removed, so no synthetic emissions remain.
     /// @param index The operator index
-    /// @param publicKeys BLS Public key that got funded
-    /// @param deferred True if event has been replayed in the context of a migration
-    event FundedValidatorKeys(uint256 indexed index, bytes[] publicKeys, bool deferred);
+    /// @param pubkeys BLS public keys that received an initial deposit
+    /// @param amounts The per-key initial-deposit amount in ETH(wei), aligned 1:1 with pubkeys
+    event Deposits(uint256 indexed index, bytes[] pubkeys, uint256[] amounts);
+
+    /// @notice One or more existing validator keys received a top-up deposit in this batch.
+    /// @dev Additive event introduced post-Pectra. Top-ups credit additional ETH to an existing
+    ///      validator key (1–2048 ETH range), so they must not be reported via
+    ///      `Deposits` (which carries new-validator semantics). Amounts are included
+    ///      because under Pectra the deposit size is variable and consumers cannot derive it
+    ///      from the event alone.
+    /// @param index The operator index
+    /// @param pubkeys BLS public keys that received a top-up
+    /// @param amounts The per-key top-up amount in ETH(wei), aligned 1:1 with pubkeys
+    event TopUps(uint256 indexed index, bytes[] pubkeys, uint256[] amounts);
 
     /// @notice The calling operator is inactive
     /// @param index The operator index
@@ -115,9 +165,6 @@ interface IOperatorsRegistryV1 {
 
     /// @notice Thrown when the sum of exited ETH is invalid
     error ExitedETHSumMismatch();
-
-    /// @notice Thrown when the amount of exited ETH is too high compared to the total deposited ETH
-    error ExitedETHExceedsDepositedETH();
 
     /// @notice Thrown when the number of exited ETH is too high compared to operator count
     error ExitedETHArrayLengthExceedsOperatorCount();
@@ -137,17 +184,82 @@ interface IOperatorsRegistryV1 {
     /// @param available The available ETH(wei) amount
     error ExitsRequestedExceedAvailableFundedAmount(uint256 operatorIndex, uint256 requested, uint256 available);
 
+    /// @notice The provided exit requests exceed the available funded ETH amount of the operator
+    /// @param operatorIndex The operator index
+    /// @param requested The requested ETH(wei) amount
+    /// @param available The available ETH(wei) amount
+    error ELExitsRequestedExceedAvailableFundedAmount(uint256 operatorIndex, uint256 requested, uint256 available);
+
     /// @notice The provided exit requests exceed the current exit request demand
     /// @param requestedETHAmount The requested ETH(wei) amount
     /// @param currentETHExitsDemand The current ETH(wei) exits demand
     error ExitsRequestedExceedExitDemand(uint256 requestedETHAmount, uint256 currentETHExitsDemand);
 
+    /// @notice The provided exited ETH is above the funded ETH of the operator
+    /// @param operatorIndex The operator index
+    /// @param exitedETH The exited ETH(wei)
+    /// @param priorActiveCL The active ETH(wei) on CL of the operator in the previous oracle report
+    error ExitedETHExceedsPriorCLETH(uint256 operatorIndex, uint256 exitedETH, uint256 priorActiveCL);
+
     /// @notice Thrown when an allocation with an incorrect ETH amount is provided
     /// @param ethAmount The incorrect ETH(wei) amount
     error AllocationWithIncorrectAmount(uint256 ethAmount);
 
+    /// @notice Thrown when an EL exit allocation amount is invalid (e.g. zero or above the allowed cap)
+    /// @param operatorIndex The operator index
+    /// @param isFullExit True if the EL exit allocation is marked as a full exit for this pubkey
+    /// @param amount The EL exit accounting amount in gwei
+    error InvalidELExitETHAllocationAmount(uint256 operatorIndex, bool isFullExit, uint64 amount);
+
     /// @notice Thrown when the provided active CL ETH array length does not match the operator count
     error InvalidActiveCLETHArrayLength();
+
+    /// @notice Thrown when the operator state is invalid
+    /// @param index The operator index
+    /// @param funded The funded ETH(wei) amount
+    /// @param requestedExits The requested ETH(wei) amount
+    error InvalidOperatorState(uint256 index, uint256 funded, uint256 requestedExits);
+    /// @notice Thrown when a delta references an operator index outside the registered range
+    /// @param operatorIndex The offending operator index
+    /// @param operatorCount The current number of registered operators
+    error InvalidOperatorIndex(uint256 operatorIndex, uint256 operatorCount);
+
+    /// @notice Thrown when deltas are not provided in strictly ascending operator-index order
+    /// @param operatorIndex The offending operator index (equal to or below the previous index)
+    error OperatorIndicesUnsortedOrDuplicate(uint256 operatorIndex);
+
+    /// @notice Thrown when a funding delta's per-class pubkey and amount arrays disagree on length.
+    ///         Aligned arrays are an invariant of `LibFundingDeltas.build`; this check makes the
+    ///         invariant explicit at the registry boundary so a malformed delta cannot cause the
+    ///         registry to emit an event whose pubkeys and amounts do not line up.
+    /// @param operatorIndex The offending operator index
+    /// @param pubkeysLength The length of the pubkeys array
+    /// @param amountsLength The length of the amounts array
+    error MisalignedDeltaArrays(uint256 operatorIndex, uint256 pubkeysLength, uint256 amountsLength);
+
+    /// @notice Thrown when the excess fee is not refunded
+    /// @param sender The sender of the transaction
+    /// @param excess The excess fee
+    error UnsentRefund(address sender, uint256 excess);
+
+    /// @notice Thrown when an EL exit allocation has mismatched pubkeys/amounts/isFullExit lengths
+    error InvalidELExitETHAllocationLength();
+
+    /// @notice Thrown when the total EL exit amount requested is greater than the remaining exit demand
+    /// @param elExitAmount The total EL exit amount requested (sum of all EL allocations)
+    /// @param remainingETHExitsDemand The remaining exit demand
+    error ExitsGreaterThanExitDemand(uint256 elExitAmount, uint256 remainingETHExitsDemand);
+
+    /// @notice Thrown when the pre-Pectra range exceeds the funded validator count
+    /// @param operatorIndex The operator index
+    /// @param stopIndex The exclusive stop key index
+    error PrePectraRangeExceedsFunded(uint256 operatorIndex, uint256 stopIndex);
+
+    /// @notice Thrown when the pre-Pectra range is invalid
+    /// @param operatorIndex The operator index
+    /// @param startIndex The first key index
+    /// @param stopIndex The exclusive stop key index
+    error InvalidPrePectraRange(uint256 operatorIndex, uint256 startIndex, uint256 stopIndex);
 
     /// @notice Initializes the operators registry
     /// @param _admin Admin in charge of managing operators
@@ -158,7 +270,8 @@ interface IOperatorsRegistryV1 {
     // function initOperatorsRegistryV1_1() external;
 
     /// @notice Migrates operators from V2 to V3 storage, dropping key-management fields
-    function initOperatorsRegistryV1_2() external;
+    /// @param _withdrawAddress The address of the Withdrawal contract
+    function initOperatorsRegistryV1_2(address _withdrawAddress) external;
 
     /// @notice Retrieve the River address
     /// @return The address of River
@@ -196,10 +309,31 @@ interface IOperatorsRegistryV1 {
     /// @return The list of active operators and their details
     function listActiveOperators() external view returns (OperatorsV3.Operator[] memory);
 
-    /// @notice Updates the funded ETH for each node operator in the Operators Registry
-    /// @param _fundedETH The array of funded ETH(wei) amounts per operator
-    /// @param _publicKeys The array of public keys
-    function incrementFundedETH(uint256[] calldata _fundedETH, bytes[][] calldata _publicKeys) external;
+    /// @notice Retrieve the pre-Pectra funded validator count for an operator from legacy V2 storage.
+    /// @param operatorIndex The operator index
+    /// @return The legacy funded validator count
+    function getPrePectraFundedValidatorCount(uint256 operatorIndex) external view returns (uint256);
+
+    /// @notice Retrieve pre-Pectra validator pubkeys from legacy ValidatorKeys storage.
+    /// @dev `stopIndex` is exclusive; returns pubkeys for indexes [startIndex, stopIndex).
+    /// @param operatorIndex The operator index
+    /// @param startIndex The first key index to read
+    /// @param stopIndex The exclusive stop key index
+    /// @return publicKeys The legacy validator pubkeys in the requested range
+    function getPrePectraValidatorPubkeys(uint256 operatorIndex, uint256 startIndex, uint256 stopIndex)
+        external
+        view
+        returns (bytes[] memory publicKeys);
+
+    /// @notice Updates the funded ETH for the node operators referenced in the provided deltas
+    /// @dev Deltas must be sorted by operatorIndex in strictly ascending order with no duplicates
+    /// @dev Reverts with InvalidEmptyArray when the deltas array is empty
+    /// @dev Reverts with InvalidOperatorIndex when a delta references an operator outside the registered range
+    /// @dev Reverts with OperatorIndicesUnsortedOrDuplicate when deltas are not strictly ascending
+    /// @dev Reverts with InactiveOperator when a referenced operator is inactive
+    /// @dev Reverts with OperatorIgnoredExitRequests when a referenced operator has unfulfilled exit requests
+    /// @param _deltas The per-operator funded ETH updates
+    function incrementFundedETH(OperatorFundingDelta[] calldata _deltas) external;
 
     /// @notice Updates the active CL ETH for each node operator in the Operators Registry
     /// @dev We assume that the oracle would report the correct active CL ETH amounts for each operator.
@@ -210,8 +344,7 @@ interface IOperatorsRegistryV1 {
     /// @notice Allows river to override the exited ETH array
     /// @notice This actions happens during the Oracle report processing
     /// @param _exitedETH The new exited ETH(wei) array per operator
-    /// @param _totalDepositedETH The total deposited ETH(wei)
-    function reportExitedETH(uint256[] calldata _exitedETH, uint256 _totalDepositedETH) external;
+    function reportExitedETH(uint256[] calldata _exitedETH) external;
 
     /// @notice Adds an operator to the registry
     /// @dev Only callable by the administrator
@@ -251,7 +384,13 @@ interface IOperatorsRegistryV1 {
     /// @dev Reverts with ExitsRequestedExceedExitDemand if total exits requested exceed the current demand
     /// @dev Reverts with NoExitRequestsToPerform if there is no pending exit demand
     /// @param _allocations The proposed per-operator exit ETH allocations, sorted by operator index
-    function requestETHExits(ExitETHAllocation[] calldata _allocations) external;
+    /// @param _elAllocations The proposed per-operator per-pubkey EL exit ETH allocations, sorted by operator index
+    /// @param _maxFeePerWithdrawal The maximum fee for per withdrawal request
+    function requestETHExits(
+        ExitETHAllocation[] calldata _allocations,
+        ELExitETHAllocation[] calldata _elAllocations,
+        uint256 _maxFeePerWithdrawal
+    ) external payable;
 
     /// @notice Increases the exit request demand
     /// @dev This method is only callable by the river contract, and to actually forward the information to the node operators via event emission, the requestETHExits method must be called
