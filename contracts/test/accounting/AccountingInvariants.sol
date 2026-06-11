@@ -234,7 +234,7 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
 
     /// @notice I9: Verifies activeCLETH consistency — each operator's on-chain activeCLETH must match
     ///         the simulator's independently computed active CL balance (the sum of its Active/Exiting
-    ///         validator balances, which under autocunding legitimately exceed deposited principal
+    ///         validator balances, which under autocompounding legitimately exceed deposited principal
     ///         because rewards accrue on the CL). This per-operator equality fully pins activeCLETH to
     ///         the simulator's ground truth; no aggregate-vs-deposited bound is asserted because rewards
     ///         have no `<= depositedActivated - exited` upper bound.
