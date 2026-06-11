@@ -689,11 +689,13 @@ contract RiverV1 is
     ) internal override {
         IOperatorsRegistryV1(OperatorsRegistryAddress.get()).reportExitedETH(_exitedETH);
 
-        // When slashing containment mode is active we skip the rebalancing and exit-demand logic below
-        // to avoid forcing additional validator exits during a slashing event. The guards inside the
-        // redeem-demand branch emit SkippedExitRequestsDueToSlashingContainment and return before any
-        // state change, so the event only fires when exits would otherwise have been processed. The
-        // reward-pull pipeline is unaffected by this check.
+        // When slashing containment mode is active, skip exit demand logic to avoid forcing additional
+        // validator exits during a slashing event. The reward-pull pipeline is unaffected by this check.
+        if (_slashingContainmentModeEnabled) {
+            emit SkippedExitRequestsDueToSlashingContainment();
+            return;
+        }
+
         uint256 totalSupply = _totalSupply();
         if (totalSupply > 0) {
             uint256 availableBalanceToRedeem = BalanceToRedeem.get();
@@ -710,19 +712,10 @@ contract RiverV1 is
                         availableBalanceToDeposit, redeemManagerDemandInEth - _exitingBalance - availableBalanceToRedeem
                     );
                     if (rebalancingAmount > 0) {
-                        if (_slashingContainmentModeEnabled) {
-                            emit SkippedExitRequestsDueToSlashingContainment();
-                            return;
-                        }
                         availableBalanceToRedeem += rebalancingAmount;
                         _setBalanceToRedeem(availableBalanceToRedeem);
                         _setBalanceToDeposit(availableBalanceToDeposit - rebalancingAmount);
                     }
-                }
-
-                if (_slashingContainmentModeEnabled) {
-                    emit SkippedExitRequestsDueToSlashingContainment();
-                    return;
                 }
 
                 IOperatorsRegistryV1 or = IOperatorsRegistryV1(OperatorsRegistryAddress.get());
