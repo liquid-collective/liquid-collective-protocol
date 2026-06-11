@@ -1524,7 +1524,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         verifier.recordNewlyFundedPubkeys(pubkeys);
     }
 
-    function testRemoveExitedValidatorPubkeys_keeperClearsLookup() public {
+    function testRemoveExitedValidatorPubkeys_clearsLookup() public {
         bytes[] memory pubkeys = new bytes[](2);
         pubkeys[0] = _fakePubkey(0xE001);
         pubkeys[1] = _fakePubkey(0xE002);
@@ -1538,7 +1538,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         emit IAttestationVerifierV1.RemovedPectraValidatorPubkeys(pubkeys);
 
         vm.prank(keeper);
-        verifier.removeExitedValidatorPubkeys(pubkeys);
+        dm.removeExitedValidatorPubkeys(pubkeys);
 
         assertFalse(verifier.isPubkeyFunded(pubkeys[0]), "first exited pubkey should be cleared");
         assertFalse(verifier.isPubkeyFunded(pubkeys[1]), "second exited pubkey should be cleared");
@@ -1553,7 +1553,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(IAttestationVerifierV1.PectraValidatorPubkeyNotFunded.selector, pubkeys[0])
         );
-        verifier.removeExitedValidatorPubkeys(pubkeys);
+        dm.removeExitedValidatorPubkeys(pubkeys);
 
         assertFalse(verifier.isPubkeyFunded(pubkeys[0]), "absent pubkey should remain absent");
     }
@@ -1568,7 +1568,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(IAttestationVerifierV1.PectraValidatorPubkeyNotFunded.selector, pubkeys[1])
         );
-        verifier.removeExitedValidatorPubkeys(pubkeys);
+        dm.removeExitedValidatorPubkeys(pubkeys);
 
         assertTrue(verifier.isPubkeyFunded(pubkeys[0]), "revert should roll back earlier removal");
         assertFalse(verifier.isPubkeyFunded(pubkeys[1]), "missing pubkey should remain absent");
@@ -1583,7 +1583,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
         vm.prank(keeper);
         vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.PectraValidatorPubkeyNotFunded.selector, pubkey));
-        verifier.removeExitedValidatorPubkeys(pubkeys);
+        dm.removeExitedValidatorPubkeys(pubkeys);
 
         assertTrue(verifier.isPubkeyFunded(pubkey), "revert should roll back earlier removal");
     }
@@ -1597,7 +1597,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         pubkeys[0] = topUps[0].pubkey;
 
         vm.prank(keeper);
-        verifier.removeExitedValidatorPubkeys(pubkeys);
+        dm.removeExitedValidatorPubkeys(pubkeys);
 
         (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareTopUps(topUps);
 
@@ -1614,111 +1614,13 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         address stranger = address(0xC0FFEE);
         vm.prank(stranger);
         vm.expectRevert(abi.encodeWithSelector(IConsensusLayerDepositManagerV1.OnlyKeeper.selector));
-        verifier.removeExitedValidatorPubkeys(pubkeys);
+        dm.removeExitedValidatorPubkeys(pubkeys);
 
         assertTrue(verifier.isPubkeyFunded(pubkeys[0]), "non-keeper should not clear the pubkey");
     }
 
-    function testRevert_removeExitedValidatorPubkeys_riverIsNotKeeper() public {
-        bytes[] memory pubkeys = new bytes[](1);
-        pubkeys[0] = _fakePubkey(0xE006);
-        _seedFundedPubkey(pubkeys[0]);
-
-        vm.prank(address(dm));
-        vm.expectRevert(abi.encodeWithSelector(IConsensusLayerDepositManagerV1.OnlyKeeper.selector));
-        verifier.removeExitedValidatorPubkeys(pubkeys);
-
-        assertTrue(verifier.isPubkeyFunded(pubkeys[0]), "river should not clear the pubkey");
-    }
-
-    function testRevert_removeExitedValidatorPubkeys_emptyPubkeys() public {
-        bytes[] memory pubkeys = new bytes[](0);
-
-        vm.prank(keeper);
-        vm.expectRevert(IAttestationVerifierV1.InvalidPectraRemovalEmptyPubkeys.selector);
-        verifier.removeExitedValidatorPubkeys(pubkeys);
-    }
-
-    function testRevert_removeExitedValidatorPubkeys_invalidPubkeyLength() public {
-        bytes[] memory pubkeys = new bytes[](2);
-        pubkeys[0] = _fakePubkey(0xE009);
-        pubkeys[1] = new bytes(47);
-        _seedFundedPubkey(pubkeys[0]);
-
-        vm.prank(keeper);
-        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InvalidPubkeyLength.selector, 1, 47));
-        verifier.removeExitedValidatorPubkeys(pubkeys);
-
-        assertTrue(verifier.isPubkeyFunded(pubkeys[0]), "revert should roll back earlier removal");
-    }
-
-    function testRemoveExitedValidatorPubkeys_keeperClearsLookupThroughManager() public {
-        bytes[] memory pubkeys = new bytes[](2);
-        pubkeys[0] = _fakePubkey(0xE001);
-        pubkeys[1] = _fakePubkey(0xE002);
-        bytes memory untouchedPubkey = _fakePubkey(0xE003);
-
-        _seedFundedPubkey(pubkeys[0]);
-        _seedFundedPubkey(pubkeys[1]);
-        _seedFundedPubkey(untouchedPubkey);
-
-        vm.expectEmit(false, false, false, true, address(validator));
-        emit IAttestationVerifierV1.ExitedValidatorPubkeyRemoved(pubkeys[0]);
-        vm.expectEmit(false, false, false, true, address(validator));
-        emit IAttestationVerifierV1.ExitedValidatorPubkeyRemoved(pubkeys[1]);
-
-        vm.prank(keeper);
-        dm.removeExitedValidatorPubkeys(pubkeys);
-
-        assertFalse(validator.isPubkeyFunded(pubkeys[0]), "first exited pubkey should be cleared");
-        assertFalse(validator.isPubkeyFunded(pubkeys[1]), "second exited pubkey should be cleared");
-        assertTrue(validator.isPubkeyFunded(untouchedPubkey), "unlisted pubkey should remain funded");
-    }
-
-    function testRemoveExitedValidatorPubkeys_absentPubkeyIsNoOp() public {
-        bytes[] memory pubkeys = new bytes[](1);
-        pubkeys[0] = _fakePubkey(0xE004);
-
-        vm.recordLogs();
-        vm.prank(keeper);
-        dm.removeExitedValidatorPubkeys(pubkeys);
-
-        Vm.Log[] memory logs = vm.getRecordedLogs();
-        assertEq(logs.length, 0, "absent pubkey should not emit a removal event");
-        assertFalse(validator.isPubkeyFunded(pubkeys[0]), "absent pubkey should remain absent");
-    }
-
-    function testRemoveExitedValidatorPubkeys_removedPubkeyCannotTopUp() public {
-        IDepositDataBuffer.TopUp[] memory topUps = new IDepositDataBuffer.TopUp[](1);
-        topUps[0] = _makeTopUpDeposit(0, 175);
-        _seedFundedPubkey(topUps[0].pubkey);
-
-        bytes[] memory pubkeys = new bytes[](1);
-        pubkeys[0] = topUps[0].pubkey;
-
-        vm.prank(keeper);
-        dm.removeExitedValidatorPubkeys(pubkeys);
-
-        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareTopUps(topUps);
-
-        vm.prank(keeper);
-        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.TopUpPubkeyNotFunded.selector, topUps[0].pubkey));
-        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
-    }
-
-    function testRevert_removeExitedValidatorPubkeys_notKeeperThroughManager() public {
-        bytes[] memory pubkeys = new bytes[](1);
-        pubkeys[0] = _fakePubkey(0xE005);
-        _seedFundedPubkey(pubkeys[0]);
-
-        address stranger = address(0xC0FFEE);
-        vm.prank(stranger);
-        vm.expectRevert(abi.encodeWithSelector(IConsensusLayerDepositManagerV1.OnlyKeeper.selector));
-        dm.removeExitedValidatorPubkeys(pubkeys);
-
-        assertTrue(validator.isPubkeyFunded(pubkeys[0]), "non-keeper should not clear the pubkey");
-    }
-
+    /// @dev `verifier.removeExitedValidatorPubkeys` is gated by `onlyRiver`; any non-River
+    ///      caller (including the keeper) must be rejected before any pubkey-level logic.
     function testRevert_removeExitedValidatorPubkeys_notRiver() public {
         bytes[] memory pubkeys = new bytes[](1);
         pubkeys[0] = _fakePubkey(0xE006);
@@ -1726,7 +1628,15 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         address stranger = address(0xC0FFEE);
         vm.prank(stranger);
         vm.expectRevert(abi.encodeWithSelector(LibErrors.Unauthorized.selector, stranger));
-        validator.removeExitedValidatorPubkeys(pubkeys);
+        verifier.removeExitedValidatorPubkeys(pubkeys);
+    }
+
+    function testRevert_removeExitedValidatorPubkeys_emptyPubkeys() public {
+        bytes[] memory pubkeys = new bytes[](0);
+
+        vm.prank(keeper);
+        vm.expectRevert(IAttestationVerifierV1.InvalidPectraRemovalEmptyPubkeys.selector);
+        dm.removeExitedValidatorPubkeys(pubkeys);
     }
 
     function testRevert_removeExitedValidatorPubkeys_invalidPubkeyLength() public {
@@ -1734,7 +1644,9 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         pubkeys[0] = new bytes(47);
 
         vm.prank(keeper);
-        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InvalidPubkeyLength.selector, 0, 47));
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.PectraValidatorPubkeyNotFunded.selector, pubkeys[0])
+        );
         dm.removeExitedValidatorPubkeys(pubkeys);
     }
 
@@ -2045,25 +1957,25 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
     /// @dev Cannot init with an empty attester array.
     function testRevert_init_emptyAttesterArray() public {
-        AttestationVerifierV1 freshValidator = new AttestationVerifierV1();
-        LibImplementationUnbricker.unbrick(vm, address(freshValidator));
+        AttestationVerifierV1 freshVerifier = new AttestationVerifierV1();
+        LibImplementationUnbricker.unbrick(vm, address(freshVerifier));
         address[] memory empty = new address[](0);
         vm.expectRevert(LibErrors.InvalidArgument.selector);
-        freshValidator.initAttestationVerifierV1(address(dm), address(buffer), empty, 1, bytes4(0), empty, 1);
+        freshVerifier.initAttestationVerifierV1(address(dm), address(buffer), empty, 1, bytes4(0), empty, 1);
     }
 
     /// @dev Cannot init with a root quorum of zero. This is distinct from an empty
     ///      attester set: a populated committee with quorum=0 would make signatures optional.
     function testRevert_init_zeroRootQuorum() public {
-        AttestationVerifierV1 freshValidator = new AttestationVerifierV1();
-        LibImplementationUnbricker.unbrick(vm, address(freshValidator));
+        AttestationVerifierV1 freshVerifier = new AttestationVerifierV1();
+        LibImplementationUnbricker.unbrick(vm, address(freshVerifier));
         address[] memory rootAttesters = new address[](1);
         rootAttesters[0] = rootAttester1;
         address[] memory consolidationAttesters = new address[](1);
         consolidationAttesters[0] = makeAddr("consolidation-attester");
 
         vm.expectRevert(IAttestationVerifierV1.ZeroQuorum.selector);
-        freshValidator.initAttestationVerifierV1(
+        freshVerifier.initAttestationVerifierV1(
             address(dm), address(buffer), rootAttesters, 0, bytes4(0), consolidationAttesters, 1
         );
     }
@@ -2072,8 +1984,8 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     ///      case exercises the same top-level InvalidArgument revert but a different
     ///      production risk: unbounded storage growth and a larger quorum-dedup surface.
     function testRevert_init_tooManyRootAttesters() public {
-        AttestationVerifierV1 freshValidator = new AttestationVerifierV1();
-        LibImplementationUnbricker.unbrick(vm, address(freshValidator));
+        AttestationVerifierV1 freshVerifier = new AttestationVerifierV1();
+        LibImplementationUnbricker.unbrick(vm, address(freshVerifier));
         address[] memory tooManyRootAttesters = new address[](verifier.MAX_ROOT_ATTESTERS() + 1);
         for (uint256 i = 0; i < tooManyRootAttesters.length; i++) {
             tooManyRootAttesters[i] = address(uint160(0xB000 + i));
@@ -2082,20 +1994,20 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         consolidationAttesters[0] = makeAddr("consolidation-attester");
 
         vm.expectRevert(LibErrors.InvalidArgument.selector);
-        freshValidator.initAttestationVerifierV1(
+        freshVerifier.initAttestationVerifierV1(
             address(dm), address(buffer), tooManyRootAttesters, 1, bytes4(0), consolidationAttesters, 1
         );
     }
 
     /// @dev Cannot init with a quorum strictly greater than the attester count.
     function testRevert_init_quorumExceedsAttesterCount() public {
-        AttestationVerifierV1 freshValidator = new AttestationVerifierV1();
-        LibImplementationUnbricker.unbrick(vm, address(freshValidator));
+        AttestationVerifierV1 freshVerifier = new AttestationVerifierV1();
+        LibImplementationUnbricker.unbrick(vm, address(freshVerifier));
         address[] memory attesters = new address[](2);
         attesters[0] = rootAttester1;
         attesters[1] = rootAttester2;
         vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.QuorumExceedsRootAttesterCount.selector, 3, 2));
-        freshValidator.initAttestationVerifierV1(address(dm), address(buffer), attesters, 3, bytes4(0), attesters, 3);
+        freshVerifier.initAttestationVerifierV1(address(dm), address(buffer), attesters, 3, bytes4(0), attesters, 3);
     }
 
     /// @dev Cannot add an attester that would push the total past MAX_ROOT_ATTESTERS.

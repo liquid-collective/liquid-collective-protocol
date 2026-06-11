@@ -35,8 +35,14 @@ library PectraValidatorPubkeyLookup {
 
     /// @notice Clear the entry for a pubkey.
     /// @param pubkey The raw 48-byte BLS pubkey.
-    function remove(bytes memory pubkey) internal {
+    /// @return removed True if the pubkey was present and has been cleared; false if it
+    ///         was already absent (in which case no SSTORE is performed).
+    function remove(bytes memory pubkey) internal returns (bool removed) {
         bytes32 slot = keccak256(abi.encode(PECTRA_VALIDATOR_PUBKEY_LOOKUP_SLOT, pubkey));
+        if (!LibUnstructuredStorage.getStorageBool(slot)) {
+            return false;
+        }
         LibUnstructuredStorage.setStorageBool(slot, false);
+        return true;
     }
 }

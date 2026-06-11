@@ -84,15 +84,12 @@ interface IAttestationVerifierV1 {
     /// @param pubkeys The 48-byte BLS pubkeys that were added
     event AddedPectraValidatorPubkeys(bytes[] pubkeys);
 
-    /// @notice Emitted when validator pubkeys are removed from the post-Pectra lookup.
+    /// @notice Emitted once per `removeExitedValidatorPubkeys` call, with the full batch
+    ///         of pubkeys that were cleared from the post-Pectra lookup. The call reverts
+    ///         if any pubkey is absent, so this event implies every entry was funded
+    ///         immediately before removal.
     /// @param pubkeys The 48-byte BLS pubkeys that were removed
     event RemovedPectraValidatorPubkeys(bytes[] pubkeys);
-
-    /// @notice Emitted by `removeExitedValidatorPubkeys` for each pubkey that was actually
-    ///         present in the post-Pectra lookup and got cleared. Absent pubkeys are silently
-    ///         skipped and produce no event.
-    /// @param pubkey The 48-byte BLS pubkey that was removed
-    event ExitedValidatorPubkeyRemoved(bytes pubkey);
 
     // -----------------------------------------------------------------------
     // Errors
@@ -252,6 +249,15 @@ interface IAttestationVerifierV1 {
     /// @param pubkey The offending 48-byte BLS pubkey
     error PubkeyAlreadyFunded(bytes pubkey);
 
+    /// @notice removeExitedValidatorPubkeys was passed a pubkey that is not present in the
+    ///         post-Pectra lookup. The entire call reverts and any earlier removals in the
+    ///         same batch are rolled back.
+    /// @param pubkey The offending 48-byte BLS pubkey
+    error PectraValidatorPubkeyNotFunded(bytes pubkey);
+
+    /// @notice removeExitedValidatorPubkeys was called with an empty pubkeys array.
+    error InvalidPectraRemovalEmptyPubkeys();
+
     // -----------------------------------------------------------------------
     // Initialization
     // -----------------------------------------------------------------------
@@ -340,20 +346,6 @@ interface IAttestationVerifierV1 {
     /// @dev Once removed, the pubkeys no longer authorize top-up deposits through `fetchAndValidateDeposits()`.
     /// @param pubkeys The 48-byte BLS pubkeys to remove
     function removeExitedValidatorPubkeys(bytes[] calldata pubkeys) external;
-
-    /// @notice Migrate a chunk of pre-Pectra funded validator pubkeys into the verifier lookup.
-    /// @dev Only callable by River admin. `stopIndex` is exclusive and must be no greater than
-    ///      the operator's legacy funded validator count in OperatorsV2 storage.
-    /// @param operatorIndex The operator whose legacy keys should be migrated
-    /// @param startIndex The first legacy key index to migrate
-    /// @param stopIndex The exclusive stop legacy key index
-    function migratePrePectraValidatorPubkeys(uint256 operatorIndex, uint256 startIndex, uint256 stopIndex) external;
-
-    /// @notice Remove a chunk of pre-Pectra funded validator pubkeys from the verifier lookup.
-    /// @dev Only callable by River admin. Reverts if the batch is empty, any pubkey is not 48
-    ///      bytes, or any pubkey is not currently in the pre-Pectra lookup.
-    /// @param pubkeys The 48-byte BLS pubkeys to remove
-    function removePrePectraValidatorPubkeys(bytes[] calldata pubkeys) external;
 
     /// @notice Validate consolidation-committee attestations over a `ConsolidationObject` passed
     ///         in by the caller and mark the request as processed for replay protection.
