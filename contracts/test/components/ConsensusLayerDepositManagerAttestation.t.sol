@@ -196,6 +196,10 @@ contract AttestationDepositHarness is ConsensusLayerDepositManagerV1 {
         harnessOperatorCount = c;
     }
 
+    function onlyKeeperProtectedHarnessCall() external view onlyKeeper returns (bool) {
+        return true;
+    }
+
     receive() external payable {}
 }
 
@@ -1793,6 +1797,19 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         assertEq(dm.getTotalDepositedETH(), 0);
         assertEq(dm.getKeeper(), keeper);
         assertEq(dm.getAttestationVerifier(), address(validator));
+    }
+
+    function testCLDM_onlyKeeperModifierAllowsKeeper() public {
+        vm.prank(keeper);
+        assertTrue(dm.onlyKeeperProtectedHarnessCall());
+    }
+
+    function testCLDM_onlyKeeperModifierRejectsNonKeeper() public {
+        address notKeeper = makeAddr("notKeeper");
+
+        vm.prank(notKeeper);
+        vm.expectRevert(IConsensusLayerDepositManagerV1.OnlyKeeper.selector);
+        dm.onlyKeeperProtectedHarnessCall();
     }
 
     // -----------------------------------------------------------------------
