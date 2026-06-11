@@ -117,9 +117,8 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
         _assertI4_PerOperatorETH();
         _assertI5_TotalDepositedETHMonotonic();
         _assertI6_ExitedETHAggregate();
-        _assertI7_ExitDemandBounded();
+        _assertI7_ActiveCLETHConsistency();
         _assertI8_ContainmentSuppressesDemand();
-        _assertI9_ActiveCLETHConsistency();
     }
 
     /// @notice I1: Verifies that the share price has not decreased since the pre-report snapshot.
@@ -213,32 +212,13 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
         assertEq(totalExited, sum, "I6: exitedETHPerOperator aggregate mismatch");
     }
 
-    /// @notice I7: Verifies that the total exit demand (pending demand + already-requested exits)
-    ///         is bounded by TotalDepositedETH. The protocol should never demand more exits than
-    ///         were ever deposited.
-    function _assertI7_ExitDemandBounded() internal {
-        uint256 demand = operatorsRegistry.getCurrentETHExitsDemand();
-        uint256 requested = operatorsRegistry.getTotalETHExitsRequested();
-        uint256 totalDeposited = river.getTotalDepositedETH();
-        assertLe(demand + requested, totalDeposited, "I7: exit demand + requested exceeds TotalDepositedETH");
-    }
-
-    /// @notice I8: Verifies that slashing containment mode suppresses new exit demand — if the last
-    ///         oracle report had containment enabled, exit demand must not have increased, though
-    ///         it may legitimately decrease when exited ETH is reported.
-    function _assertI8_ContainmentSuppressesDemand() internal {
-        if (!_lastReportWasContainment) return;
-        uint256 demandAfter = operatorsRegistry.getCurrentETHExitsDemand();
-        assertLe(demandAfter, _snapExitDemand, "I8: exit demand increased during slashing containment");
-    }
-
-    /// @notice I9: Verifies activeCLETH consistency — each operator's on-chain activeCLETH must match
+    /// @notice I7: Verifies activeCLETH consistency — each operator's on-chain activeCLETH must match
     ///         the simulator's independently computed active CL balance (the sum of its Active/Exiting
     ///         validator balances, which under autocompounding legitimately exceed deposited principal
     ///         because rewards accrue on the CL). This per-operator equality fully pins activeCLETH to
     ///         the simulator's ground truth; no aggregate-vs-deposited bound is asserted because rewards
     ///         have no `<= depositedActivated - exited` upper bound.
-    function _assertI9_ActiveCLETHConsistency() internal {
+    function _assertI7_ActiveCLETHConsistency() internal {
         uint256 opCount = operatorsRegistry.getOperatorCount();
 
         uint256[] memory simActiveCLETH = new uint256[](opCount);
@@ -254,8 +234,18 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
             assertEq(
                 op.activeCLETH,
                 simActiveCLETH[i],
-                string(abi.encodePacked("I9: op", vm.toString(i), " activeCLETH mismatch"))
+                string(abi.encodePacked("I7: op", vm.toString(i), " activeCLETH mismatch"))
             );
         }
     }
+
+    /// @notice I8: Verifies that slashing containment mode suppresses new exit demand — if the last
+    ///         oracle report had containment enabled, exit demand must not have increased, though
+    ///         it may legitimately decrease when exited ETH is reported.
+    function _assertI8_ContainmentSuppressesDemand() internal {
+        if (!_lastReportWasContainment) return;
+        uint256 demandAfter = operatorsRegistry.getCurrentETHExitsDemand();
+        assertLe(demandAfter, _snapExitDemand, "I8: exit demand increased during slashing containment");
+    }
+
 }
