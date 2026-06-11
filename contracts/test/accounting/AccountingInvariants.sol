@@ -9,7 +9,9 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
     uint256 private _snapTotalUnderlying;
     uint256 private _snapTotalShares;
     uint256 private _snapTotalDepositedETH;
+    uint256 private _snapExitDemand;
     bool private _allowSharePriceDecrease;
+    bool private _lastReportWasContainment;
 
     /// @dev Snapshot of ReportBounds captured by `_pushRelaxedLowerBound`, restored by `_popBounds`.
     struct BoundsSnapshot {
@@ -66,6 +68,7 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
         report.epoch = reportEpoch;
 
         _snapshotPreReport();
+        _lastReportWasContainment = slashingContainment;
 
         vm.prank(oracleMember);
         oracle.reportConsensusLayerData(report);
@@ -95,6 +98,7 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
         _snapTotalUnderlying = river.totalUnderlyingSupply();
         _snapTotalShares = river.totalSupply();
         _snapTotalDepositedETH = river.getTotalDepositedETH();
+        _snapExitDemand = operatorsRegistry.getCurrentETHExitsDemand();
     }
 
     /// @notice Toggles the flag that permits a share price decrease in the next invariant check.
@@ -105,7 +109,7 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
         _allowSharePriceDecrease = allow;
     }
 
-    /// @notice Executes all six post-report invariant assertions (I1–I6) in sequence.
+    /// @notice Executes all post-report invariant assertions (I1–I8) in sequence.
     function _assertAllInvariants() internal {
         _assertI1_SharePriceNonDecrease();
         _assertI2_ETHConservation();
@@ -113,6 +117,8 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
         _assertI4_PerOperatorETH();
         _assertI5_TotalDepositedETHMonotonic();
         _assertI6_ExitedETHAggregate();
+        _assertI7_ActiveCLETHConsistency();
+        _assertI8_ContainmentSuppressesDemand();
     }
 
     /// @notice I1: Verifies that the share price has not decreased since the pre-report snapshot.
@@ -204,4 +210,41 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
         }
         assertEq(totalExited, sum, "I6: exitedETHPerOperator aggregate mismatch");
     }
+
+    /// @notice I7: Verifies activeCLETH consistency — each operator's on-chain activeCLETH must match
+    ///         the simulator's independently computed active CL balance (the sum of its Active/Exiting
+    ///         validator balances, which under autocompounding legitimately exceed deposited principal
+    ///         because rewards accrue on the CL). This per-operator equality fully pins activeCLETH to
+    ///         the simulator's ground truth; no aggregate-vs-deposited bound is asserted because rewards
+    ///         have no `<= depositedActivated - exited` upper bound.
+    function _assertI7_ActiveCLETHConsistency() internal {
+        uint256 opCount = operatorsRegistry.getOperatorCount();
+
+        uint256[] memory simActiveCLETH = new uint256[](opCount);
+        for (uint256 i = 0; i < _simValidators.length; i++) {
+            SimValidator memory v = _simValidators[i];
+            if (v.state == ValidatorState.Active || v.state == ValidatorState.Exiting) {
+                simActiveCLETH[v.operatorIndex] += v.currentBalance;
+            }
+        }
+
+        for (uint256 i = 0; i < opCount; i++) {
+            OperatorsV3.Operator memory op = operatorsRegistry.getOperator(i);
+            assertEq(
+                op.activeCLETH,
+                simActiveCLETH[i],
+                string(abi.encodePacked("I7: op", vm.toString(i), " activeCLETH mismatch"))
+            );
+        }
+    }
+
+    /// @notice I8: Verifies that slashing containment mode suppresses new exit demand — if the last
+    ///         oracle report had containment enabled, exit demand must not have increased, though
+    ///         it may legitimately decrease when exited ETH is reported.
+    function _assertI8_ContainmentSuppressesDemand() internal {
+        if (!_lastReportWasContainment) return;
+        uint256 demandAfter = operatorsRegistry.getCurrentETHExitsDemand();
+        assertLe(demandAfter, _snapExitDemand, "I8: exit demand increased during slashing containment");
+    }
+
 }
