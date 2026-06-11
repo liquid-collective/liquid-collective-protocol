@@ -119,7 +119,7 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
         _assertI4_PerOperatorETH();
         _assertI5_TotalDepositedETHMonotonic();
         _assertI6_ExitedETHAggregate();
-        _assertI7_AccountingIdentity();
+        _assertI7_DepositActivationDecomposition();
         _assertI8_RequestedExitsGeExited();
         _assertI9_TotalRequestedGeExited();
         _assertI10_ActivatedETHNonDecreasing();
@@ -218,10 +218,13 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
         assertEq(totalExited, sum, "I6: exitedETHPerOperator aggregate mismatch");
     }
 
-    /// @notice I7: The central accounting identity — every ETH sent to the deposit contract is
-    ///         either still in-flight or has activated:
-    ///         InFlightDeposit + totalDepositedActivatedETH == TotalDepositedETH
-    function _assertI7_AccountingIdentity() internal {
+    /// @notice I7: Deposit-activation decomposition — every ETH sent to the deposit contract is
+    ///         either still in-flight (pending CL activation) or has been activated:
+    ///         InFlightDeposit + totalDepositedActivatedETH == TotalDepositedETH.
+    ///         Scope: deposits only. Exits and consolidations are out of scope and do not
+    ///         affect TotalDepositedETH, so this identity holds regardless of exit or
+    ///         consolidation activity.
+    function _assertI7_DepositActivationDecomposition() internal {
         uint256 inFlight = river.getInFlightDeposit();
         uint256 activated = river.getLastConsensusLayerReport().totalDepositedActivatedETH;
         uint256 totalDeposited = river.getTotalDepositedETH();
