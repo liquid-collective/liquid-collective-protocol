@@ -207,12 +207,14 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
         assertEq(totalExited, sum, "I6: exitedETHPerOperator aggregate mismatch");
     }
 
-    /// @notice I7: Verifies activeCLETH consistency — per-operator on-chain activeCLETH must match
-    ///         the simulator's independently computed active CL balance, and the aggregate must be
-    ///         bounded by totalDepositedActivatedETH - totalExitedETH (with equality absent slashing).
+    /// @notice I7: Verifies activeCLETH consistency — each operator's on-chain activeCLETH must match
+    ///         the simulator's independently computed active CL balance (the sum of its Active/Exiting
+    ///         validator balances, which under autocunding legitimately exceed deposited principal
+    ///         because rewards accrue on the CL). This per-operator equality fully pins activeCLETH to
+    ///         the simulator's ground truth; no aggregate-vs-deposited bound is asserted because rewards
+    ///         have no `<= depositedActivated - exited` upper bound.
     function _assertI7_ActiveCLETHConsistency() internal {
         uint256 opCount = operatorsRegistry.getOperatorCount();
-        (uint256 totalExited,) = operatorsRegistry.getExitedETHAndRequestedExitAmounts();
 
         uint256[] memory simActiveCLETH = new uint256[](opCount);
         for (uint256 i = 0; i < _simValidators.length; i++) {
@@ -222,7 +224,6 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
             }
         }
 
-        uint256 aggregateActiveCLETH = 0;
         for (uint256 i = 0; i < opCount; i++) {
             OperatorsV3.Operator memory op = operatorsRegistry.getOperator(i);
             assertEq(
@@ -230,13 +231,6 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
                 simActiveCLETH[i],
                 string(abi.encodePacked("I7: op", vm.toString(i), " activeCLETH mismatch"))
             );
-            aggregateActiveCLETH += op.activeCLETH;
         }
-
-        assertLe(
-            aggregateActiveCLETH,
-            _simTotalDepositedActivatedETH - totalExited,
-            "I7: aggregate activeCLETH exceeds depositedActivated - exited"
-        );
     }
 }
