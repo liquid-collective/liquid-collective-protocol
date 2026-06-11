@@ -102,6 +102,12 @@ interface IAttestationVerifierV1 {
     /// @param pubkeys The 48-byte BLS pubkeys that were removed
     event RemovedPectraValidatorPubkeys(bytes[] pubkeys);
 
+    /// @notice Emitted by `removeExitedValidatorPubkeys` for each pubkey that was actually
+    ///         present in the post-Pectra lookup and got cleared. Absent pubkeys are silently
+    ///         skipped and produce no event.
+    /// @param pubkey The 48-byte BLS pubkey that was removed
+    event ExitedValidatorPubkeyRemoved(bytes pubkey);
+
     // -----------------------------------------------------------------------
     // Errors
     // -----------------------------------------------------------------------
