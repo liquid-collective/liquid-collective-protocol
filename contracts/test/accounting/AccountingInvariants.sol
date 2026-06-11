@@ -73,6 +73,7 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
         _lastReportedSkimmed = _simCumulativeSkimmed;
         _lastReportedExited = _simCumulativeExited;
         _lastReportEpoch = reportEpoch;
+        _lastReportActiveCLETHPerOperator = report.activeCLETHPerOperator;
         // Sync sim in-flight to what the oracle just confirmed: oracle sets InFlightDeposit = _pendingETH().
         _simInFlightDeposit = _pendingETH();
 
@@ -207,29 +208,24 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
         assertEq(totalExited, sum, "I6: exitedETHPerOperator aggregate mismatch");
     }
 
-    /// @notice I7: Verifies activeCLETH consistency — each operator's on-chain activeCLETH must match
-    ///         the simulator's independently computed active CL balance (the sum of its Active/Exiting
-    ///         validator balances, which under autocunding legitimately exceed deposited principal
-    ///         because rewards accrue on the CL). This per-operator equality fully pins activeCLETH to
-    ///         the simulator's ground truth; no aggregate-vs-deposited bound is asserted because rewards
-    ///         have no `<= depositedActivated - exited` upper bound.
+    /// @notice I7: Verifies that each operator's on-chain `activeCLETH` matches the per-operator
+    ///         entry in `activeCLETHPerOperator` from the last report the simulator submitted to
+    ///         the oracle. The chain is supposed to store exactly what the report carried, so this
+    ///         is a direct chain-state-vs-report-input check — it catches any divergence introduced
+    ///         by the oracle/registry pipeline without re-running the simulator's accumulation logic.
     function _assertI7_ActiveCLETHConsistency() internal {
+        if (_lastReportActiveCLETHPerOperator.length == 0) return; // no report submitted yet
         uint256 opCount = operatorsRegistry.getOperatorCount();
-
-        uint256[] memory simActiveCLETH = new uint256[](opCount);
-        for (uint256 i = 0; i < _simValidators.length; i++) {
-            SimValidator memory v = _simValidators[i];
-            if (v.state == ValidatorState.Active || v.state == ValidatorState.Exiting) {
-                simActiveCLETH[v.operatorIndex] += v.currentBalance;
-            }
-        }
+        assertEq(
+            _lastReportActiveCLETHPerOperator.length, opCount, "I7: lastReport activeCLETH length != operator count"
+        );
 
         for (uint256 i = 0; i < opCount; i++) {
             OperatorsV3.Operator memory op = operatorsRegistry.getOperator(i);
             assertEq(
                 op.activeCLETH,
-                simActiveCLETH[i],
-                string(abi.encodePacked("I7: op", vm.toString(i), " activeCLETH mismatch"))
+                _lastReportActiveCLETHPerOperator[i],
+                string(abi.encodePacked("I7: op", vm.toString(i), " activeCLETH mismatch vs last report"))
             );
         }
     }

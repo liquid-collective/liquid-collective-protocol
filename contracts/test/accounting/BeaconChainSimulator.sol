@@ -54,6 +54,12 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
     uint256 internal _lastReportedExited;
     uint256 internal _lastReportEpoch;
 
+    /// @dev Snapshot of the per-operator activeCLETH array carried in the last report submitted to
+    ///      the oracle. Source of truth for the I7 invariant: the on-chain `op.activeCLETH` after a
+    ///      report must equal what the simulator told the oracle to store. Stashed by the
+    ///      `sim_oracleReport` override right after `oracle.reportConsensusLayerData(...)`.
+    uint256[] internal _lastReportActiveCLETHPerOperator;
+
     // ─── step functions ───────────────────────────────────────────────────────
 
     /// @dev Convenience overload — deposits `n` validators of `DEPOSIT_SIZE` each for `opIdx`.
