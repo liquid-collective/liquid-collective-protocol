@@ -105,7 +105,7 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
         _allowSharePriceDecrease = allow;
     }
 
-    /// @notice Executes all six post-report invariant assertions (I1–I6) in sequence.
+    /// @notice Executes all post-report invariant assertions (I1–I7) in sequence.
     function _assertAllInvariants() internal {
         _assertI1_SharePriceNonDecrease();
         _assertI2_ETHConservation();
@@ -113,6 +113,7 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
         _assertI4_PerOperatorETH();
         _assertI5_TotalDepositedETHMonotonic();
         _assertI6_ExitedETHAggregate();
+        _assertI7_ActiveCLETHConsistency();
     }
 
     /// @notice I1: Verifies that the share price has not decreased since the pre-report snapshot.
@@ -204,5 +205,32 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
             sum += perOp[i];
         }
         assertEq(totalExited, sum, "I6: exitedETHPerOperator aggregate mismatch");
+    }
+
+    /// @notice I7: Verifies activeCLETH consistency — each operator's on-chain activeCLETH must match
+    ///         the simulator's independently computed active CL balance (the sum of its Active/Exiting
+    ///         validator balances, which under autocunding legitimately exceed deposited principal
+    ///         because rewards accrue on the CL). This per-operator equality fully pins activeCLETH to
+    ///         the simulator's ground truth; no aggregate-vs-deposited bound is asserted because rewards
+    ///         have no `<= depositedActivated - exited` upper bound.
+    function _assertI7_ActiveCLETHConsistency() internal {
+        uint256 opCount = operatorsRegistry.getOperatorCount();
+
+        uint256[] memory simActiveCLETH = new uint256[](opCount);
+        for (uint256 i = 0; i < _simValidators.length; i++) {
+            SimValidator memory v = _simValidators[i];
+            if (v.state == ValidatorState.Active || v.state == ValidatorState.Exiting) {
+                simActiveCLETH[v.operatorIndex] += v.currentBalance;
+            }
+        }
+
+        for (uint256 i = 0; i < opCount; i++) {
+            OperatorsV3.Operator memory op = operatorsRegistry.getOperator(i);
+            assertEq(
+                op.activeCLETH,
+                simActiveCLETH[i],
+                string(abi.encodePacked("I7: op", vm.toString(i), " activeCLETH mismatch"))
+            );
+        }
     }
 }
