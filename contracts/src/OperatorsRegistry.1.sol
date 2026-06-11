@@ -217,14 +217,10 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             // `LibFundingDeltas.build` already guarantees, so the registry never emits an event
             // whose pubkeys and amounts disagree on length (which would silently break indexers).
             if (delta.depositPubkeys.length != delta.depositAmounts.length) {
-                revert MisalignedDeltaArrays(
-                    operatorIndex, delta.depositPubkeys.length, delta.depositAmounts.length
-                );
+                revert MisalignedDeltaArrays(operatorIndex, delta.depositPubkeys.length, delta.depositAmounts.length);
             }
             if (delta.topUpPubkeys.length != delta.topUpAmounts.length) {
-                revert MisalignedDeltaArrays(
-                    operatorIndex, delta.topUpPubkeys.length, delta.topUpAmounts.length
-                );
+                revert MisalignedDeltaArrays(operatorIndex, delta.topUpPubkeys.length, delta.topUpAmounts.length);
             }
 
             operator.funded += delta.fundedETH;
