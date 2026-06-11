@@ -10,6 +10,7 @@ import "./interfaces/IProtocolVersion.sol";
 import "./interfaces/IELFeeRecipient.1.sol";
 import "./interfaces/IOperatorRegistry.1.sol";
 import "./interfaces/IAttestationVerifier.1.sol";
+import "./interfaces/IAttestationVerifierPectraMigration.1.sol";
 import "./interfaces/IExternalConsolidationRecipientMapping.1.sol";
 
 import "./components/SharesManager.1.sol";
@@ -373,7 +374,7 @@ contract RiverV1 is
         onlyConsolidator
     {
         IWithdrawV1.ConsolidationRequest[] memory requests =
-            IAttestationVerifierV1(AttestationVerifierAddress.get()).validateSelfConsolidation(pubkeys);
+            IAttestationVerifierPectraMigrationV1(AttestationVerifierAddress.get()).validateSelfConsolidation(pubkeys);
         address excessFeeRecipient = msg.sender;
         IWithdrawV1(payable(WithdrawalCredentials.getAddress())).consolidate{value: msg.value}(
             requests, maxFeePerConsolidation, excessFeeRecipient
