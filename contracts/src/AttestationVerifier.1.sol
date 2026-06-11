@@ -6,6 +6,7 @@ import {ECDSA} from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.s
 import "./Initializable.sol";
 import "./interfaces/IAdministrable.sol";
 import "./interfaces/IAttestationVerifier.1.sol";
+import "./interfaces/IAttestationVerifierPectraMigration.1.sol";
 import "./interfaces/IDepositContract.sol";
 import "./interfaces/IDepositDataBuffer.sol";
 import "./interfaces/components/IConsensusLayerDepositManager.1.sol";
@@ -52,7 +53,7 @@ import "./state/shared/RiverAddress.sol";
 ///            for replay protection. State-mutating.
 ///
 ///         Extracted from RiverV1 to keep River's deployed bytecode under EIP-170.
-contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
+contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttestationVerifierPectraMigrationV1 {
     // -----------------------------------------------------------------------
     // EIP-712
     // -----------------------------------------------------------------------
@@ -483,12 +484,12 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         return PectraValidatorPubkeyLookup.isPubkeyFunded(pubkey);
     }
 
-    /// @inheritdoc IAttestationVerifierV1
+    /// @inheritdoc IAttestationVerifierPectraMigrationV1
     function isPrePectraValidatorPubkeyFunded(bytes calldata pubkey) external view returns (bool) {
         return PrePectraValidatorPubkeyLookup.isPubkeyFunded(pubkey);
     }
 
-    /// @inheritdoc IAttestationVerifierV1
+    /// @inheritdoc IAttestationVerifierPectraMigrationV1
     function migratePrePectraValidatorPubkeys(uint256 operatorIndex, uint256 startIndex, uint256 stopIndex)
         external
         onlyRiverAdmin
@@ -509,7 +510,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         emit MigratedPrePectraValidatorPubkeys(operatorIndex, startIndex, stopIndex);
     }
 
-    /// @inheritdoc IAttestationVerifierV1
+    /// @inheritdoc IAttestationVerifierPectraMigrationV1
     function validateSelfConsolidation(bytes[] calldata pubkeys)
         external
         onlyRiver
@@ -542,7 +543,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         return requests;
     }
 
-    /// @inheritdoc IAttestationVerifierV1
+    /// @inheritdoc IAttestationVerifierPectraMigrationV1
     function removePrePectraValidatorPubkeys(bytes[] calldata pubkeys) external onlyRiverAdmin {
         uint256 len = pubkeys.length;
         if (len == 0) {

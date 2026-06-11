@@ -7,6 +7,7 @@ import "../../src/AttestationVerifier.1.sol";
 import "../../src/Initializable.sol";
 import "../../src/components/ConsensusLayerDepositManager.1.sol";
 import "../../src/interfaces/IAttestationVerifier.1.sol";
+import "../../src/interfaces/IAttestationVerifierPectraMigration.1.sol";
 import "../../src/interfaces/IDepositDataBuffer.sol";
 import "../../src/interfaces/IOperatorRegistry.1.sol";
 import "../../src/interfaces/IWithdraw.1.sol";
@@ -194,6 +195,10 @@ contract AttestationDepositHarness is ConsensusLayerDepositManagerV1 {
 
     function sudoSetOperatorCount(uint256 c) external {
         harnessOperatorCount = c;
+    }
+
+    function onlyKeeperProtectedHarnessCall() external view onlyKeeper returns (bool) {
+        return true;
     }
 
     receive() external payable {}
@@ -1141,7 +1146,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         vm.prank(admin);
         vm.expectRevert(
             abi.encodeWithSelector(
-                IAttestationVerifierV1.InvalidPrePectraMigrationPubkeyLength.selector, operatorIdx, 0, 2
+                IAttestationVerifierPectraMigrationV1.InvalidPrePectraMigrationPubkeyLength.selector, operatorIdx, 0, 2
             )
         );
         verifier.migratePrePectraValidatorPubkeys(operatorIdx, 0, 1);
@@ -1202,7 +1207,9 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         bytes[] memory pubkeys = new bytes[](0);
 
         vm.prank(address(dm));
-        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InvalidSelfConsolidationEmptyPubkeys.selector));
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierPectraMigrationV1.InvalidSelfConsolidationEmptyPubkeys.selector)
+        );
         verifier.validateSelfConsolidation(pubkeys);
     }
 
@@ -1213,7 +1220,9 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         vm.prank(address(dm));
         vm.expectRevert(
             abi.encodeWithSelector(
-                IAttestationVerifierV1.InvalidSelfConsolidationPubkeyLength.selector, uint256(0), uint256(2)
+                IAttestationVerifierPectraMigrationV1.InvalidSelfConsolidationPubkeyLength.selector,
+                uint256(0),
+                uint256(2)
             )
         );
         verifier.validateSelfConsolidation(pubkeys);
@@ -1226,7 +1235,9 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
         vm.prank(address(dm));
         vm.expectRevert(
-            abi.encodeWithSelector(IAttestationVerifierV1.PrePectraValidatorPubkeyNotFunded.selector, pubkey)
+            abi.encodeWithSelector(
+                IAttestationVerifierPectraMigrationV1.PrePectraValidatorPubkeyNotFunded.selector, pubkey
+            )
         );
         verifier.validateSelfConsolidation(pubkeys);
     }
@@ -1278,7 +1289,9 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         bytes[] memory pubkeys = new bytes[](0);
 
         vm.prank(admin);
-        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InvalidPrePectraRemovalEmptyPubkeys.selector));
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierPectraMigrationV1.InvalidPrePectraRemovalEmptyPubkeys.selector)
+        );
         verifier.removePrePectraValidatorPubkeys(pubkeys);
     }
 
@@ -1289,7 +1302,9 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         vm.prank(admin);
         vm.expectRevert(
             abi.encodeWithSelector(
-                IAttestationVerifierV1.InvalidPrePectraRemovalPubkeyLength.selector, uint256(0), uint256(2)
+                IAttestationVerifierPectraMigrationV1.InvalidPrePectraRemovalPubkeyLength.selector,
+                uint256(0),
+                uint256(2)
             )
         );
         verifier.removePrePectraValidatorPubkeys(pubkeys);
@@ -1302,7 +1317,9 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
         vm.prank(admin);
         vm.expectRevert(
-            abi.encodeWithSelector(IAttestationVerifierV1.PrePectraValidatorPubkeyNotFunded.selector, pubkey)
+            abi.encodeWithSelector(
+                IAttestationVerifierPectraMigrationV1.PrePectraValidatorPubkeyNotFunded.selector, pubkey
+            )
         );
         verifier.removePrePectraValidatorPubkeys(pubkeys);
     }
@@ -2007,6 +2024,19 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         assertEq(dm.getTotalDepositedETH(), 0);
         assertEq(dm.getKeeper(), keeper);
         assertEq(dm.getAttestationVerifier(), address(verifier));
+    }
+
+    function testCLDM_onlyKeeperModifierAllowsKeeper() public {
+        vm.prank(keeper);
+        assertTrue(dm.onlyKeeperProtectedHarnessCall());
+    }
+
+    function testCLDM_onlyKeeperModifierRejectsNonKeeper() public {
+        address notKeeper = makeAddr("notKeeper");
+
+        vm.prank(notKeeper);
+        vm.expectRevert(IConsensusLayerDepositManagerV1.OnlyKeeper.selector);
+        dm.onlyKeeperProtectedHarnessCall();
     }
 
     // -----------------------------------------------------------------------
