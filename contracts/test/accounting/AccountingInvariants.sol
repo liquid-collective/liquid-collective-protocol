@@ -111,7 +111,7 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
         _allowSharePriceDecrease = allow;
     }
 
-    /// @notice Executes all post-report invariant assertions (I1–I10) in sequence.
+    /// @notice Executes all post-report invariant assertions (I1–I12) in sequence.
     function _assertAllInvariants() internal {
         _assertI1_SharePriceNonDecrease();
         _assertI2_ETHConservation();
@@ -123,8 +123,8 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
         _assertI8_RequestedExitsGeExited();
         _assertI9_TotalRequestedGeExited();
         _assertI10_ActivatedETHNonDecreasing();
-        _assertI7_ActiveCLETHConsistency();
-        _assertI8_ContainmentSuppressesDemand();
+        _assertI11_ActiveCLETHConsistency();
+        _assertI12_ContainmentSuppressesDemand();
     }
 
     /// @notice I1: Verifies that the share price has not decreased since the pre-report snapshot.
@@ -261,13 +261,13 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
         assertGe(activated, _snapActivatedETH, "I10: totalDepositedActivatedETH decreased");
     }
 
-    /// @notice I7: Verifies activeCLETH consistency — each operator's on-chain activeCLETH must match
+    /// @notice I11: Verifies activeCLETH consistency — each operator's on-chain activeCLETH must match
     ///         the simulator's independently computed active CL balance (the sum of its Active/Exiting
     ///         validator balances, which under autocompounding legitimately exceed deposited principal
     ///         because rewards accrue on the CL). This per-operator equality fully pins activeCLETH to
     ///         the simulator's ground truth; no aggregate-vs-deposited bound is asserted because rewards
     ///         have no `<= depositedActivated - exited` upper bound.
-    function _assertI7_ActiveCLETHConsistency() internal {
+    function _assertI11_ActiveCLETHConsistency() internal {
         uint256 opCount = operatorsRegistry.getOperatorCount();
 
         uint256[] memory simActiveCLETH = new uint256[](opCount);
@@ -283,18 +283,18 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
             assertEq(
                 op.activeCLETH,
                 simActiveCLETH[i],
-                string(abi.encodePacked("I7: op", vm.toString(i), " activeCLETH mismatch"))
+                string(abi.encodePacked("I11: op", vm.toString(i), " activeCLETH mismatch"))
             );
         }
     }
 
-    /// @notice I8: Verifies that slashing containment mode suppresses new exit demand — if the last
+    /// @notice I12: Verifies that slashing containment mode suppresses new exit demand — if the last
     ///         oracle report had containment enabled, exit demand must not have increased, though
     ///         it may legitimately decrease when exited ETH is reported.
-    function _assertI8_ContainmentSuppressesDemand() internal {
+    function _assertI12_ContainmentSuppressesDemand() internal {
         if (!_lastReportWasContainment) return;
         uint256 demandAfter = operatorsRegistry.getCurrentETHExitsDemand();
-        assertLe(demandAfter, _snapExitDemand, "I8: exit demand increased during slashing containment");
+        assertLe(demandAfter, _snapExitDemand, "I12: exit demand increased during slashing containment");
     }
 
 }
