@@ -77,18 +77,17 @@ interface IAttestationVerifierV1 {
     /// @param consolidationHash The EIP-712 structHash of the consolidation request
     event ConsolidationProcessed(bytes32 indexed consolidationHash);
 
-    /// @notice Emitted when a batch of validator pubkeys is added to the post-Pectra lookup.
+    /// @notice Emitted when a batch of validator pubkeys is added to the Pectra lookup.
     /// @dev    Fires on every path that records membership in `PectraValidatorPubkeyLookup`:
     ///           - `recordNewlyFundedPubkeys` (initial-deposit callback from River),
     ///           - the migration interface's self-consolidation upgrade path.
     /// @param pubkeys The 48-byte BLS pubkeys that were added
     event AddedPectraValidatorPubkeys(bytes[] pubkeys);
 
-    /// @notice Emitted when a batch of validator pubkeys is removed from the post-Pectra lookup.
-    /// @dev    Reserved for future EL-withdrawal code that clears membership when a validator
-    ///         exits and is no longer controlled by the protocol. No on-chain path emits this
-    ///         today; the declaration is here so future callers stay consistent with the
-    ///         existing `Added` / `Removed` symmetry on the pre-Pectra side.
+    /// @notice Emitted once per `removeExitedValidatorPubkeys` call, with the full batch
+    ///         of pubkeys that were cleared from the Pectra lookup. The call reverts
+    ///         if any pubkey is absent, so this event implies every entry was funded
+    ///         immediately before removal.
     /// @param pubkeys The 48-byte BLS pubkeys that were removed
     event RemovedPectraValidatorPubkeys(bytes[] pubkeys);
 
@@ -250,6 +249,15 @@ interface IAttestationVerifierV1 {
     /// @param pubkey The offending 48-byte BLS pubkey
     error PubkeyAlreadyFunded(bytes pubkey);
 
+    /// @notice removeExitedValidatorPubkeys was passed a pubkey that is not present in the
+    ///         Pectra lookup. The entire call reverts and any earlier removals in the
+    ///         same batch are rolled back.
+    /// @param pubkey The offending 48-byte BLS pubkey
+    error PectraValidatorPubkeyNotFunded(bytes pubkey);
+
+    /// @notice removeExitedValidatorPubkeys was called with an empty pubkeys array.
+    error InvalidPectraRemovalEmptyPubkeys();
+
     // -----------------------------------------------------------------------
     // Initialization
     // -----------------------------------------------------------------------
@@ -333,6 +341,11 @@ interface IAttestationVerifierV1 {
     ///      (ConsensusLayerDepositManager's `PubkeyFunded` event), not here.
     /// @param pubkeys The 48-byte BLS pubkeys to record
     function recordNewlyFundedPubkeys(bytes[] calldata pubkeys) external;
+
+    /// @notice Remove exited validator pubkeys from the Pectra lookup. Only callable by River.
+    /// @dev Once removed, the pubkeys no longer authorize top-up deposits through `fetchAndValidateDeposits()`.
+    /// @param pubkeys The 48-byte BLS pubkeys to remove
+    function removeExitedValidatorPubkeys(bytes[] calldata pubkeys) external;
 
     /// @notice Validate consolidation-committee attestations over a `ConsolidationObject` passed
     ///         in by the caller and mark the request as processed for replay protection.
