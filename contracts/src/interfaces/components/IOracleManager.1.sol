@@ -137,10 +137,12 @@ interface IOracleManagerV1 {
         // - the epoch at which it happened is >= validator.withdrawableEpoch and in that case we only account for what would be above 32 eth as skimming
         // this value cannot decrease over reports
         uint256 validatorsSkimmedBalance;
-        // the sum of all the exits performed on the validators
+        // the sum of all the exits performed on the validators, includes full and partial exits
         // these values can be found in the execution layer block bodies under the withdrawals field
-        // a withdrawal is considered exit if
+        // a withdrawal is considered an exit if
         // - the epoch at which it happened is >= validator.withdrawableEpoch and in that case we only account for what would be <= 32 eth as exit
+        // a withdrawal is considered a partial exit if
+        // - the validator was present in the pending_partial_withdrawals list at the previous slot (slot - 1)
         // this value cannot decrease over reports
         uint256 validatorsExitedBalance;
         // the sum of all the exiting balance, which is all the validators on their way to get sweeped and exited
