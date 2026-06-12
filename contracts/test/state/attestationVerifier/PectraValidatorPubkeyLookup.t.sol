@@ -15,8 +15,8 @@ contract PectraValidatorPubkeyLookupInputs {
         PectraValidatorPubkeyLookup.add(pubkey);
     }
 
-    function remove(bytes calldata pubkey) external {
-        PectraValidatorPubkeyLookup.remove(pubkey);
+    function remove(bytes calldata pubkey) external returns (bool) {
+        return PectraValidatorPubkeyLookup.remove(pubkey);
     }
 }
 
@@ -62,13 +62,13 @@ contract PectraValidatorPubkeyLookupTest is Test {
         inputs.add(pk);
         assertTrue(inputs.isPubkeyFunded(pk));
 
-        inputs.remove(pk);
+        assertTrue(inputs.remove(pk), "remove should return true for a present key");
         assertFalse(inputs.isPubkeyFunded(pk));
     }
 
     function testRemoveAbsentIsNoOp() public {
         bytes memory pk = _pubkey(keccak256("pubkey-absent"));
-        inputs.remove(pk);
+        assertFalse(inputs.remove(pk), "remove should return false for an absent key");
         assertFalse(inputs.isPubkeyFunded(pk));
     }
 

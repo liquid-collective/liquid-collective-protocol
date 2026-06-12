@@ -77,7 +77,7 @@ interface IAttestationVerifierV1 {
     /// @param consolidationHash The EIP-712 structHash of the consolidation request
     event ConsolidationProcessed(bytes32 indexed consolidationHash);
 
-    /// @notice Emitted when a batch of validator pubkeys is added to the post-Pectra lookup.
+    /// @notice Emitted when a batch of validator pubkeys is added to the Pectra lookup.
     /// @dev    Fires on every path that records membership in `PectraValidatorPubkeyLookup`:
     ///           - `recordNewlyFundedPubkeys` (initial-deposit callback from River),
     ///           - the migration interface's self-consolidation upgrade path.
@@ -85,7 +85,7 @@ interface IAttestationVerifierV1 {
     event AddedPectraValidatorPubkeys(bytes[] pubkeys);
 
     /// @notice Emitted once per `removeExitedValidatorPubkeys` call, with the full batch
-    ///         of pubkeys that were cleared from the post-Pectra lookup. The call reverts
+    ///         of pubkeys that were cleared from the Pectra lookup. The call reverts
     ///         if any pubkey is absent, so this event implies every entry was funded
     ///         immediately before removal.
     /// @param pubkeys The 48-byte BLS pubkeys that were removed
@@ -250,7 +250,7 @@ interface IAttestationVerifierV1 {
     error PubkeyAlreadyFunded(bytes pubkey);
 
     /// @notice removeExitedValidatorPubkeys was passed a pubkey that is not present in the
-    ///         post-Pectra lookup. The entire call reverts and any earlier removals in the
+    ///         Pectra lookup. The entire call reverts and any earlier removals in the
     ///         same batch are rolled back.
     /// @param pubkey The offending 48-byte BLS pubkey
     error PectraValidatorPubkeyNotFunded(bytes pubkey);
@@ -342,7 +342,7 @@ interface IAttestationVerifierV1 {
     /// @param pubkeys The 48-byte BLS pubkeys to record
     function recordNewlyFundedPubkeys(bytes[] calldata pubkeys) external;
 
-    /// @notice Remove exited validator pubkeys from the initial-deposit lookup. Only callable by River.
+    /// @notice Remove exited validator pubkeys from the Pectra lookup. Only callable by River.
     /// @dev Once removed, the pubkeys no longer authorize top-up deposits through `fetchAndValidateDeposits()`.
     /// @param pubkeys The 48-byte BLS pubkeys to remove
     function removeExitedValidatorPubkeys(bytes[] calldata pubkeys) external;
