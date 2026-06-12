@@ -138,8 +138,10 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
         for (uint256 i = 0; i < _simValidators.length; i++) {
             SimValidator storage v = _simValidators[i];
             if (v.state != ValidatorState.Active && v.state != ValidatorState.Exiting) continue;
-            if ((v.isCompounding && v.currentBalance >= MAX_EFFECTIVE_BALANCE)
-                || (!v.isCompounding && v.currentBalance >= MIN_ACTIVATION_BALANCE)) {
+            if (
+                (v.isCompounding && v.currentBalance >= MAX_EFFECTIVE_BALANCE)
+                    || (!v.isCompounding && v.currentBalance >= MIN_ACTIVATION_BALANCE)
+            ) {
                 _simCumulativeSkimmed += rewardsPerValidator;
             }
         }
@@ -152,7 +154,10 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
         for (uint256 i = 0; i < _simValidators.length; i++) {
             SimValidator storage v = _simValidators[i];
             if (v.state != ValidatorState.Active && v.state != ValidatorState.Exiting) continue;
-            if (!v.isCompounding || v.currentBalance >= MAX_EFFECTIVE_BALANCE || v.currentBalance < MIN_ACTIVATION_BALANCE) continue;
+            if (
+                !v.isCompounding || v.currentBalance >= MAX_EFFECTIVE_BALANCE
+                    || v.currentBalance < MIN_ACTIVATION_BALANCE
+            ) continue;
 
             uint256 space = MAX_EFFECTIVE_BALANCE - v.currentBalance;
             uint256 compounded = rewardsPerValidator < space ? rewardsPerValidator : space;
