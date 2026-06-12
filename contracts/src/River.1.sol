@@ -373,8 +373,9 @@ contract RiverV1 is
         payable
         onlyConsolidator
     {
-        IWithdrawV1.ConsolidationRequest[] memory requests =
-            IAttestationVerifierPectraMigrationV1(AttestationVerifierAddress.get()).validateSelfConsolidation(pubkeys);
+        IWithdrawV1.ConsolidationRequest[] memory requests = IAttestationVerifierPectraMigrationV1(
+                AttestationVerifierAddress.get()
+            ).validateSelfConsolidation(pubkeys);
         address excessFeeRecipient = msg.sender;
         IWithdrawV1(payable(WithdrawalCredentials.getAddress())).consolidate{value: msg.value}(
             requests, maxFeePerConsolidation, excessFeeRecipient

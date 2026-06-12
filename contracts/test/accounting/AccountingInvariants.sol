@@ -246,5 +246,4 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
         uint256 demandAfter = operatorsRegistry.getCurrentETHExitsDemand();
         assertLe(demandAfter, _snapExitDemand, "I8: exit demand increased during slashing containment");
     }
-
 }
