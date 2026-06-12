@@ -38,9 +38,6 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
     uint256 internal _simCumulativeAutocompounded;
     /// @dev Cumulative exited ETH (monotonically increasing).
     uint256 internal _simCumulativeExited;
-    /// @dev Cumulative autocompounded rewards (Pectra 0x02). Increases validator CL balance
-    ///      rather than being skimmed, so exits can return more than the original deposit.
-    uint256 internal _simCumulativeAutocompounded;
     /// @dev Mirrors the contract's InFlightDeposit: ETH sent to the deposit contract
     ///      but not yet oracle-confirmed. Incremented in sim_deposit, reset after oracle report.
     uint256 internal _simInFlightDeposit;

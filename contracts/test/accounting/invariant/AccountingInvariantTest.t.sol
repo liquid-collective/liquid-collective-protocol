@@ -196,7 +196,7 @@ contract AccountingInvariantTest is AccountingInvariants {
     /// @dev I2: ETH conservation — totalUnderlying never exceeds user deposits + rewards.
     function invariant_I2_ethConservation() public {
         if (_simTotalUserDeposited == 0) return;
-        uint256 upperBound = _simTotalUserDeposited + _simCumulativeSkimmed;
+        uint256 upperBound = _simTotalUserDeposited + _simCumulativeSkimmed + _simCumulativeAutocompounded;
         assertLe(river.totalUnderlyingSupply(), upperBound, "I2: total underlying exceeds deposited + rewards");
         assertGt(river.totalUnderlyingSupply(), 0, "I2: total underlying is zero after deposits");
     }
