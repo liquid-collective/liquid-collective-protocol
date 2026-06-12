@@ -56,8 +56,8 @@ contract AccountingInvariantTest is AccountingInvariants {
 
     /// @notice Delegates an epoch advancement (with optional rewards) from the handler to the simulator.
     /// @param rewardsPerValidator  Per-validator reward amount in wei to sweep this epoch.
-    function handler_advanceEpoch(uint256 rewardsPerValidator) external {
-        sim_advanceEpoch(rewardsPerValidator);
+    function handler_accrueSkimmedRewards(uint256 rewardsPerValidator) external {
+        sim_accrueSkimmedRewards(rewardsPerValidator);
     }
 
     /// @notice Delegates a validator exit request from the handler to the simulator.

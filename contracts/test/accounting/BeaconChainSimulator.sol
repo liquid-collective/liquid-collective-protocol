@@ -25,9 +25,16 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
         ValidatorState state;
         uint256 exitingETH;
         uint256 exitedETH;
+        bool isCompounding; // false = 0x01 (Pre-Pectra), true = 0x02 (compounding)
     }
 
     // ─── simulator storage ────────────────────────────────────────────────────
+
+    /// @dev Max effective balance for 0x02 compounding validators (EIP-7251).
+    ///      Above this threshold rewards are skimmed rather than compounded.
+    uint256 internal constant MAX_EFFECTIVE_BALANCE = 2048 ether;
+    /// @dev Minimum activation balance for any validator type.
+    uint256 internal constant MIN_ACTIVATION_BALANCE = 32 ether;
 
     SimValidator[] internal _simValidators;
 
@@ -56,12 +63,14 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
 
     // ─── step functions ───────────────────────────────────────────────────────
 
-    /// @dev Convenience overload — deposits `n` validators of `DEPOSIT_SIZE` each for `opIdx`.
-    function sim_deposit(uint256 opIdx, uint256 n) internal {
-        sim_deposit(opIdx, _amounts(n, DEPOSIT_SIZE));
+    /// @dev Deposits validators with custom amounts, defaulting to 0x02 compounding.
+    function sim_deposit(uint256 opIdx, uint256[] memory amounts) internal {
+        sim_deposit(opIdx, amounts, true);
     }
 
-    function sim_deposit(uint256 opIdx, uint256[] memory amounts) internal {
+    /// @dev Deposits validators with custom amounts and an explicit withdrawal type.
+    ///      Pass `isCompounding = false` to create 0x01 (standard) validators for edge-case tests.
+    function sim_deposit(uint256 opIdx, uint256[] memory amounts, bool isCompounding) internal {
         uint256 needed = 0;
         for (uint256 i = 0; i < amounts.length; i++) {
             needed += amounts[i];
@@ -97,7 +106,8 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
                     currentBalance: amounts[i],
                     state: ValidatorState.Pending,
                     exitingETH: 0,
-                    exitedETH: 0
+                    exitedETH: 0,
+                    isCompounding: isCompounding
                 })
             );
         }
@@ -109,6 +119,10 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
         uint256 activated = 0;
         for (uint256 i = 0; i < _simValidators.length && activated < n; i++) {
             if (_simValidators[i].state == ValidatorState.Pending) {
+                require(
+                    _simValidators[i].currentBalance >= MIN_ACTIVATION_BALANCE,
+                    "sim_activateValidators: validator balance below 32 ETH activation threshold"
+                );
                 _simValidators[i].state = ValidatorState.Active;
                 _simTotalDepositedActivatedETH += _simValidators[i].depositedETH;
                 activated++;
@@ -117,24 +131,36 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
         assertEq(activated, n, "sim_activateValidators: insufficient pending validators");
     }
 
-    /// @dev Models 0x01 skimming: rewards are swept from CL to EL each epoch.
-    ///      Validator CL balances remain at principal after the sweep.
-    function sim_advanceEpoch(uint256 rewardsPerValidator) internal {
+    /// @dev Models reward skimming for 0x01 (standard) validators and for 0x02 (compounding)
+    ///      validators that have reached MAX_EFFECTIVE_BALANCE (2048 ETH). CL balances are
+    ///      unaffected — rewards are swept to the EL withdrawal address.
+    function sim_accrueSkimmedRewards(uint256 rewardsPerValidator) internal {
         for (uint256 i = 0; i < _simValidators.length; i++) {
-            if (_simValidators[i].state == ValidatorState.Active) {
+            SimValidator storage v = _simValidators[i];
+            if (v.state != ValidatorState.Active && v.state != ValidatorState.Exiting) continue;
+            if ((v.isCompounding && v.currentBalance >= MAX_EFFECTIVE_BALANCE)
+                || (!v.isCompounding && v.currentBalance >= MIN_ACTIVATION_BALANCE)) {
                 _simCumulativeSkimmed += rewardsPerValidator;
             }
         }
     }
 
-    /// @dev Models 0x02 autocompounding: rewards increase the validator's CL balance
-    ///      rather than being swept to the EL.
+    /// @dev Models 0x02 autocompounding for validators below MAX_EFFECTIVE_BALANCE (2048 ETH).
+    ///      Rewards compound into currentBalance up to the cap; any amount that would push the
+    ///      balance past 2048 ETH is skimmed instead, matching the Pectra beacon chain transition.
     function sim_autocompound(uint256 rewardsPerValidator) internal {
         for (uint256 i = 0; i < _simValidators.length; i++) {
-            if (_simValidators[i].state == ValidatorState.Active) {
-                _simValidators[i].currentBalance += rewardsPerValidator;
-                _simCumulativeAutocompounded += rewardsPerValidator;
-            }
+            SimValidator storage v = _simValidators[i];
+            if (v.state != ValidatorState.Active && v.state != ValidatorState.Exiting) continue;
+            if (!v.isCompounding || v.currentBalance >= MAX_EFFECTIVE_BALANCE || v.currentBalance < MIN_ACTIVATION_BALANCE) continue;
+
+            uint256 space = MAX_EFFECTIVE_BALANCE - v.currentBalance;
+            uint256 compounded = rewardsPerValidator < space ? rewardsPerValidator : space;
+            uint256 skimmed = rewardsPerValidator - compounded;
+
+            v.currentBalance += compounded;
+            _simCumulativeAutocompounded += compounded;
+            if (skimmed > 0) _simCumulativeSkimmed += skimmed;
         }
     }
 

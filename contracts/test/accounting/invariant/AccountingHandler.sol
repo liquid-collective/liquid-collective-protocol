@@ -7,7 +7,7 @@ import "forge-std/StdUtils.sol";
 interface IAccountingActions {
     function handler_deposit(uint256 opIdx, uint256 n, uint256 amountEach) external;
     function handler_activateValidators(uint256 n) external;
-    function handler_advanceEpoch(uint256 rewardsPerValidator) external;
+    function handler_accrueSkimmedRewards(uint256 rewardsPerValidator) external;
     function handler_requestExit(uint256 opIdx, uint256 ethAmount) external;
     function handler_completeExit(uint256 opIdx, uint256 ethAmount, uint256 penalty) external;
     function handler_slash(uint256 opIdx, uint256 penalty) external;
@@ -94,7 +94,7 @@ contract AccountingHandler is StdUtils {
         // Step 1: Bound the reward to the maximum allowed per-validator amount.
         uint256 reward = bound(rewardSeed, 0, 0.008 ether);
         // Step 2: Delegate the epoch advance to the test contract.
-        _test.handler_advanceEpoch(reward);
+        _test.handler_accrueSkimmedRewards(reward);
         calls_advanceEpoch++;
     }
 

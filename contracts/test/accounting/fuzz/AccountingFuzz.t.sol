@@ -37,8 +37,8 @@ contract AccountingFuzzTest is AccountingInvariants {
         // Step 2: Activate all validators and submit the initial oracle report.
         sim_activateValidators(n);
         sim_oracleReport();
-        // Step 3: Advance one epoch with the fuzzed per-validator reward and report again.
-        sim_advanceEpoch(rewardWei);
+        // Step 3: Accrue rewards and submit the oracle report.
+        sim_accrueSkimmedRewards(rewardWei);
         sim_oracleReport();
     }
 
@@ -84,7 +84,7 @@ contract AccountingFuzzTest is AccountingInvariants {
         if (s % 2 == 0) {
             uint256 reward = bound(s, 0, MAX_REWARD);
             s = _h(s);
-            sim_advanceEpoch(reward);
+            sim_accrueSkimmedRewards(reward);
             sim_oracleReport();
         }
         s = _h(s);
