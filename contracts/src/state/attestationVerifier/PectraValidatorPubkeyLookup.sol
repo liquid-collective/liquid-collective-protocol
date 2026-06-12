@@ -34,12 +34,15 @@ library PectraValidatorPubkeyLookup {
     }
 
     /// @notice Clear the entry for a pubkey.
-    /// @dev Plumbed for future EL-withdrawal code: when a validator exits and is no longer
-    ///      controlled by the protocol, its pubkey must stop authorizing top-ups. Not invoked
-    ///      from any external entry point in this version of the contract.
     /// @param pubkey The raw 48-byte BLS pubkey.
-    function remove(bytes memory pubkey) internal {
+    /// @return removed True if the pubkey was present and has been cleared; false if it
+    ///         was already absent (in which case no SSTORE is performed).
+    function remove(bytes memory pubkey) internal returns (bool removed) {
         bytes32 slot = keccak256(abi.encode(PECTRA_VALIDATOR_PUBKEY_LOOKUP_SLOT, pubkey));
+        if (!LibUnstructuredStorage.getStorageBool(slot)) {
+            return false;
+        }
         LibUnstructuredStorage.setStorageBool(slot, false);
+        return true;
     }
 }
