@@ -388,7 +388,7 @@ interface IOperatorsRegistryV1 {
     /// @notice Process explicit per-operator exit allocations and update operator requestedExits
     /// @dev Only callable by the keeper address returned by the River contract's getKeeper()
     /// @dev The allocations must be sorted by operator index in strictly ascending order with no duplicates
-    /// @dev Each allocation's ethAmount must be non-zero and not exceed the operator's available active CL ETH (active CL ETH minus pending exits)
+    /// @dev Each allocation's ethAmount must be at least 1 ether and not exceed the operator's available active CL ETH (active CL ETH minus pending exits)
     /// @dev The total requested exits across all allocations must not exceed the current ETH exit demand
     /// @dev Reverts with InvalidEmptyArray if _allocations is empty
     /// @dev Reverts with AllocationWithIncorrectAmount if any allocation has an ETH amount less than 1 ether
