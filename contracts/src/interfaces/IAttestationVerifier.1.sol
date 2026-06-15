@@ -142,15 +142,22 @@ interface IAttestationVerifierV1 {
     error InvalidSignatureLength(uint256 index, uint256 length);
 
     /// @notice An initial deposit's `amount` is outside the protocol-accepted range
-    ///         [1 ether, 2048 ether] or is not gwei-aligned. Enforced here in
-    ///         `fetchAndValidateDeposits()` so producer bugs fail before the heavy BLS path runs;
-    ///         downstream `_depositValidator` trusts this check.
+    ///         [MIN_INITIAL_DEPOSIT_AMOUNT (32 ether), 2048 ether] or is not gwei-aligned. Initial
+    ///         deposits require the full 32 ether so the validator actually activates on the consensus
+    ///         layer; a smaller amount would never activate yet would still inflate InFlightDeposit /
+    ///         `_assetBalance()` (see #441). This 32 ether floor is intentionally distinct from the
+    ///         top-up range, which allows down to 1 ether (see `InvalidTopUpAmount`) because top-ups
+    ///         credit already-activated validators. Enforced here in `fetchAndValidateDeposits()` so
+    ///         producer bugs fail before the heavy BLS path runs; downstream `_depositValidator`
+    ///         trusts this check.
     /// @param index Index into `batch.deposits`
     /// @param amount The offending amount in wei
     error InvalidDepositAmount(uint256 index, uint256 amount);
 
     /// @notice A top-up's `amount` is outside the protocol-accepted range
-    ///         [1 ether, 2048 ether] or is not gwei-aligned. Enforced here in
+    ///         [1 ether, 2048 ether] or is not gwei-aligned. Top-ups credit already-activated
+    ///         validators, so the lower bound is 1 ether — intentionally below the 32 ether floor
+    ///         that initial deposits require (see `InvalidDepositAmount`). Enforced here in
     ///         `fetchAndValidateDeposits()` so producer bugs fail before the heavy BLS path runs;
     ///         downstream `_depositValidator` trusts this check.
     /// @param index Index into `batch.topUps`

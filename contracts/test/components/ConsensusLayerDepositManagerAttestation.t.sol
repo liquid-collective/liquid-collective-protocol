@@ -1651,10 +1651,10 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     }
 
     /// @dev `fetchAndValidateDeposits()` must fail-fast on out-of-range or mis-aligned `amount` rather than
-    ///      deferring to the per-deposit check inside `_depositValidator`. Tests all three
-    ///      branches: below minimum (1 ether), above maximum (2048 ether), and non-gwei-aligned.
+    ///      deferring to the per-deposit check inside `_depositValidator`. Tests three branches:
+    ///      zero (absolute lower bound), above maximum (2048 ether), and non-gwei-aligned.
     function testRevert_validate_invalidDepositAmount() public {
-        // Below minimum (0 wei).
+        // Zero — always invalid (below the 32 ETH minimum).
         IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](1);
         deposits[0] = _makeDeposit(0, 400);
         deposits[0].amount = 0;
@@ -1679,6 +1679,75 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         (bufferId, rootHash, sigs) = _prepareDeposit(deposits);
         vm.prank(keeper);
         vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InvalidDepositAmount.selector, 0, 32 ether + 1));
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+    }
+
+    /// @dev An initial deposit below 32 ETH must revert with InvalidDepositAmount (issue #441/#309):
+    ///      a brand-new validator needs the full 32 ETH to activate on the CL, and a smaller initial
+    ///      deposit would never activate yet would permanently inflate InFlightDeposit / _assetBalance().
+    ///      Amounts in [1 ether, 32 ether) are gwei-aligned and within the legacy [1, 2048] range, so
+    ///      they passed before this guard — they must now revert. Top-ups below 32 ETH stay valid and
+    ///      are exercised by the separate top-up tests.
+    function testRevert_validate_initialDepositBelowMinimum() public {
+        // 1 ETH: smallest legacy-valid amount, must now revert.
+        IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](1);
+        deposits[0] = _makeDeposit(0, 410);
+        deposits[0].amount = 1 ether;
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits);
+        vm.prank(keeper);
+        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InvalidDepositAmount.selector, 0, 1 ether));
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+
+        // Just below the floor (32 ETH - 1 gwei, gwei-aligned), must revert.
+        deposits[0] = _makeDeposit(0, 411);
+        deposits[0].amount = 32 ether - 1 gwei;
+        (bufferId, rootHash, sigs) = _prepareDeposit(deposits);
+        vm.prank(keeper);
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.InvalidDepositAmount.selector, 0, 32 ether - 1 gwei)
+        );
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+    }
+
+    /// @dev The 32-ETH floor is the exact passing boundary: a single initial deposit at exactly
+    ///      32 ETH must succeed. This pins the minimum against future drift of MIN_INITIAL_DEPOSIT_AMOUNT.
+    function testDeposit_exactMinimum_32ETH_succeeds() public {
+        IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](1);
+        deposits[0] = _makeDeposit(0, 412); // _makeDeposit already sets amount = 32 ether
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits);
+        vm.prank(keeper);
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs); // must not revert
+    }
+
+    /// @dev When a batch has two initial deposits and the second is below 32 ETH, validation must
+    ///      revert with the correct index (1) and amount. Ensures the loop applies the floor to
+    ///      every element, not just index 0.
+    function testRevert_validate_initialDepositBelowMinimum_atNonZeroIndex() public {
+        IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](2);
+        deposits[0] = _makeDeposit(0, 413); // 32 ETH — valid
+        deposits[1] = _makeDeposit(0, 414);
+        deposits[1].amount = 16 ether; // sub-32 ETH at index 1
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits);
+        vm.prank(keeper);
+        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InvalidDepositAmount.selector, 1, 16 ether));
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+    }
+
+    /// @dev A batch with a sub-32-ETH initial deposit and a valid top-up must still revert on the
+    ///      initial deposit before the top-up loop runs. Confirms that validation ordering means
+    ///      the top-up never reaches execution when the deposit is invalid.
+    function testRevert_validate_initialDepositBelowMinimum_withTopUp() public {
+        IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](1);
+        deposits[0] = _makeDeposit(0, 415);
+        deposits[0].amount = 16 ether; // sub-32 ETH — invalid initial deposit
+
+        IDepositDataBuffer.TopUp[] memory topUps = new IDepositDataBuffer.TopUp[](1);
+        topUps[0] = _makeTopUpDeposit(0, 416);
+        _seedFundedPubkey(topUps[0].pubkey); // top-up is itself valid
+
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits, topUps);
+        vm.prank(keeper);
+        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InvalidDepositAmount.selector, 0, 16 ether));
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
     }
 
@@ -2337,6 +2406,16 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         (bufferId, rootHash, sigs) = _prepareTopUps(topUps);
         vm.prank(keeper);
         vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InvalidTopUpAmount.selector, 0, 32 ether + 1));
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+
+        // Above maximum (2048 ether + 1 gwei).
+        topUps[0] = _makeTopUpDeposit(0, 713);
+        topUps[0].amount = 2048 ether + 1 gwei;
+        (bufferId, rootHash, sigs) = _prepareTopUps(topUps);
+        vm.prank(keeper);
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.InvalidTopUpAmount.selector, 0, 2048 ether + 1 gwei)
+        );
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
     }
 
