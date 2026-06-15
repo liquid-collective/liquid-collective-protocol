@@ -48,10 +48,14 @@ contract ConsolidationCoverageFundV1 is Initializable, IConsolidationCoverageFun
         if (msg.value == 0) {
             revert EmptyDonation();
         }
-        BalanceForConsolidationCoverage.set(BalanceForConsolidationCoverage.get() + msg.value);
 
+        // Checks before effects: run the allowlist check before mutating state so an unauthorized
+        // call reverts before touching storage (cheaper fail-fast, and no state is ever written ahead
+        // of access control should an interaction be inserted here in future).
         IAllowlistV1 allowlist = IAllowlistV1(IRiverV1(payable(RiverAddress.get())).getAllowlist());
         allowlist.onlyAllowed(msg.sender, LibAllowlistMasks.DONATE_CONSOLIDATION_MASK);
+
+        BalanceForConsolidationCoverage.set(BalanceForConsolidationCoverage.get() + msg.value);
 
         emit Donate(msg.sender, msg.value);
     }
