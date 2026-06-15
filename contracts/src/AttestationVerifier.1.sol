@@ -93,6 +93,13 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
     uint256 internal constant DEPOSIT_PUBKEY_LENGTH = 48;
     uint256 internal constant DEPOSIT_SIGNATURE_LENGTH = 96;
 
+    /// @notice Minimum amount for an initial validator deposit. A brand-new validator requires the
+    ///         full 32 ETH to activate on the consensus layer; a smaller initial deposit would never
+    ///         activate yet would still be counted in InFlightDeposit / TotalDepositedETH, permanently
+    ///         inflating River's `_assetBalance()` (issue #441/#309). Top-ups are intentionally exempt —
+    ///         they credit already-activated validators and may be below this amount.
+    uint256 internal constant MIN_INITIAL_DEPOSIT_AMOUNT = 32 ether;
+
     /// @dev Expected length for BLS pubkeys in a ConsolidationObject (source or target).
     uint256 internal constant CONSOLIDATION_PUBKEY_LENGTH = 48;
 
@@ -401,8 +408,12 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
             if (d.signature.length != DEPOSIT_SIGNATURE_LENGTH) {
                 revert InvalidSignatureLength(i, d.signature.length);
             }
-            // Mirrors the bound check inside `_depositValidator` so we fail early
-            if (d.amount < 1 ether || d.amount > 2048 ether || d.amount % 1 gwei != 0) {
+            // Initial deposits must be >= 32 ETH so the validator actually activates on the CL.
+            // A sub-32-ETH initial deposit would never activate yet would still inflate
+            // InFlightDeposit / _assetBalance() (issue #441/#309). The upper bound and gwei-alignment
+            // mirror `_depositValidator`; the 32-ETH floor is stricter here because this loop only
+            // covers initial deposits (top-ups are validated separately below and stay >= 1 ETH).
+            if (d.amount < MIN_INITIAL_DEPOSIT_AMOUNT || d.amount > 2048 ether || d.amount % 1 gwei != 0) {
                 revert InvalidDepositAmount(i, d.amount);
             }
             totalAmount += d.amount;
