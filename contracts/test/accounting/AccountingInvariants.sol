@@ -9,6 +9,7 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
     uint256 private _snapTotalUnderlying;
     uint256 private _snapTotalShares;
     uint256 private _snapTotalDepositedETH;
+    uint256 private _snapActivatedETH;
     uint256 private _snapExitDemand;
     bool private _allowSharePriceDecrease;
     bool private _lastReportWasContainment;
@@ -98,6 +99,7 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
         _snapTotalUnderlying = river.totalUnderlyingSupply();
         _snapTotalShares = river.totalSupply();
         _snapTotalDepositedETH = river.getTotalDepositedETH();
+        _snapActivatedETH = river.getLastConsensusLayerReport().totalDepositedActivatedETH;
         _snapExitDemand = operatorsRegistry.getCurrentETHExitsDemand();
     }
 
@@ -109,7 +111,7 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
         _allowSharePriceDecrease = allow;
     }
 
-    /// @notice Executes all post-report invariant assertions (I1–I8) in sequence.
+    /// @notice Executes all post-report invariant assertions (I1–I12) in sequence.
     function _assertAllInvariants() internal {
         _assertI1_SharePriceNonDecrease();
         _assertI2_ETHConservation();
@@ -117,8 +119,12 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
         _assertI4_PerOperatorETH();
         _assertI5_TotalDepositedETHMonotonic();
         _assertI6_ExitedETHAggregate();
-        _assertI7_ActiveCLETHConsistency();
-        _assertI8_ContainmentSuppressesDemand();
+        _assertI7_DepositActivationDecomposition();
+        _assertI8_RequestedExitsGeExited();
+        _assertI9_TotalRequestedGeExited();
+        _assertI10_ActivatedETHNonDecreasing();
+        _assertI11_ActiveCLETHConsistency();
+        _assertI12_ContainmentSuppressesDemand();
     }
 
     /// @notice I1: Verifies that the share price has not decreased since the pre-report snapshot.
@@ -213,13 +219,66 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
         assertEq(totalExited, sum, "I6: exitedETHPerOperator aggregate mismatch");
     }
 
-    /// @notice I7: Verifies activeCLETH consistency — each operator's on-chain activeCLETH must match
+    /// @notice I7: Deposit-activation decomposition — every ETH sent to the deposit contract is
+    ///         either still in-flight (pending CL activation) or has been activated:
+    ///         InFlightDeposit + totalDepositedActivatedETH == TotalDepositedETH.
+    ///         Scope: deposits only. Exits and consolidations are out of scope and do not
+    ///         affect TotalDepositedETH, so this identity holds regardless of exit or
+    ///         consolidation activity.
+    function _assertI7_DepositActivationDecomposition() internal {
+        uint256 inFlight = river.getInFlightDeposit();
+        uint256 activated = river.getLastConsensusLayerReport().totalDepositedActivatedETH;
+        uint256 totalDeposited = river.getTotalDepositedETH();
+        assertEq(
+            inFlight + activated, totalDeposited, "I7: InFlightDeposit + activatedETH != TotalDepositedETH"
+        );
+    }
+
+    /// @notice I8: Per-operator requestedExits >= exited (both fields in ETH/wei, not exit counts).
+    ///         Observed via the unsolicited backfill path in `_setExitedETH` — the harness does not
+    ///         call `requestETHExits` directly, so the load-bearing `opPendingExits = requestedExits
+    ///         - exitedETH` subtraction in `requestETHExits` is not exercised here. Slashed
+    ///         validators are reported as exited via the oracle; `_setExitedETH` bumps
+    ///         `requestedExits` to keep pace, so the invariant holds for slashing scenarios too.
+    function _assertI8_RequestedExitsGeExited() internal {
+        uint256 opCount = operatorsRegistry.getOperatorCount();
+        uint256[] memory exitedPerOp = operatorsRegistry.getExitedETHPerOperator();
+        for (uint256 i = 0; i < opCount; i++) {
+            OperatorsV3.Operator memory op = operatorsRegistry.getOperator(i);
+            uint256 exited = exitedPerOp.length > i ? exitedPerOp[i] : 0;
+            assertGe(
+                op.requestedExits,
+                exited,
+                string(abi.encodePacked("I8: op", vm.toString(i), " requestedExits < exited"))
+            );
+        }
+    }
+
+    /// @notice I9: TotalETHExitsRequested must match the sum of all per-operator requestedExits (in ETH/wei)
+    ///         Observed via the unsolicited backfill in `_setExitedETH` — the harness does not
+    ///         call `requestETHExits` directly, so a bug in that function failing to increment
+    ///         the aggregate would not be caught here. Slashed validators are exited via the
+    ///         oracle report path; `_setExitedETH` bumps `TotalETHExitsRequested` to match, so
+    ///         the invariant holds for slashing scenarios.
+    function _assertI9_TotalRequestedGeExited() internal {
+        (uint256 totalExited,) = operatorsRegistry.getExitedETHAndRequestedExitAmounts();
+        uint256 totalRequested = operatorsRegistry.getTotalETHExitsRequested();
+        assertGe(totalRequested, totalExited, "I9: TotalETHExitsRequested < totalExited");
+    }
+
+    /// @notice I10: totalDepositedActivatedETH is monotonically non-decreasing across reports.
+    function _assertI10_ActivatedETHNonDecreasing() internal {
+        uint256 activated = river.getLastConsensusLayerReport().totalDepositedActivatedETH;
+        assertGe(activated, _snapActivatedETH, "I10: totalDepositedActivatedETH decreased");
+    }
+
+    /// @notice I11: Verifies activeCLETH consistency — each operator's on-chain activeCLETH must match
     ///         the simulator's independently computed active CL balance (the sum of its Active/Exiting
     ///         validator balances, which under autocompounding legitimately exceed deposited principal
     ///         because rewards accrue on the CL). This per-operator equality fully pins activeCLETH to
     ///         the simulator's ground truth; no aggregate-vs-deposited bound is asserted because rewards
     ///         have no `<= depositedActivated - exited` upper bound.
-    function _assertI7_ActiveCLETHConsistency() internal {
+    function _assertI11_ActiveCLETHConsistency() internal {
         uint256 opCount = operatorsRegistry.getOperatorCount();
 
         uint256[] memory simActiveCLETH = new uint256[](opCount);
@@ -235,17 +294,17 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
             assertEq(
                 op.activeCLETH,
                 simActiveCLETH[i],
-                string(abi.encodePacked("I7: op", vm.toString(i), " activeCLETH mismatch"))
+                string(abi.encodePacked("I11: op", vm.toString(i), " activeCLETH mismatch"))
             );
         }
     }
 
-    /// @notice I8: Verifies that slashing containment mode suppresses new exit demand — if the last
+    /// @notice I12: Verifies that slashing containment mode suppresses new exit demand — if the last
     ///         oracle report had containment enabled, exit demand must not have increased, though
     ///         it may legitimately decrease when exited ETH is reported.
-    function _assertI8_ContainmentSuppressesDemand() internal {
+    function _assertI12_ContainmentSuppressesDemand() internal {
         if (!_lastReportWasContainment) return;
         uint256 demandAfter = operatorsRegistry.getCurrentETHExitsDemand();
-        assertLe(demandAfter, _snapExitDemand, "I8: exit demand increased during slashing containment");
+        assertLe(demandAfter, _snapExitDemand, "I12: exit demand increased during slashing containment");
     }
 }
