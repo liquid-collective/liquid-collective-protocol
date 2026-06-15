@@ -233,9 +233,12 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
         );
     }
 
-    /// @notice I8: Per-operator requestedExits >= exited. This ordering is load-bearing —
-    ///         requestETHExits computes opPendingExits = requestedExits - exitedETH and relies
-    ///         on it being non-negative.
+    /// @notice I8: Per-operator requestedExits >= exited (both fields in ETH/wei, not exit counts).
+    ///         Observed via the unsolicited backfill path in `_setExitedETH` — the harness does not
+    ///         call `requestETHExits` directly, so the load-bearing `opPendingExits = requestedExits
+    ///         - exitedETH` subtraction in `requestETHExits` is not exercised here. Slashed
+    ///         validators are reported as exited via the oracle; `_setExitedETH` bumps
+    ///         `requestedExits` to keep pace, so the invariant holds for slashing scenarios too.
     function _assertI8_RequestedExitsGeExited() internal {
         uint256 opCount = operatorsRegistry.getOperatorCount();
         uint256[] memory exitedPerOp = operatorsRegistry.getExitedETHPerOperator();
@@ -250,8 +253,12 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
         }
     }
 
-    /// @notice I9: TotalETHExitsRequested >= totalExited. Every processed exit was either
-    ///         explicitly requested or bumped via the unsolicited path in _setExitedETH.
+    /// @notice I9: TotalETHExitsRequested >= totalExited (both in ETH/wei).
+    ///         Observed via the unsolicited backfill in `_setExitedETH` — the harness does not
+    ///         call `requestETHExits` directly, so a bug in that function failing to increment
+    ///         the aggregate would not be caught here. Slashed validators are exited via the
+    ///         oracle report path; `_setExitedETH` bumps `TotalETHExitsRequested` to match, so
+    ///         the invariant holds for slashing scenarios.
     function _assertI9_TotalRequestedGeExited() internal {
         (uint256 totalExited,) = operatorsRegistry.getExitedETHAndRequestedExitAmounts();
         uint256 totalRequested = operatorsRegistry.getTotalETHExitsRequested();
