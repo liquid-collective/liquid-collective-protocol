@@ -224,7 +224,7 @@ contract AccountingInvariantTest is AccountingInvariants {
 
     /// @dev I6: ExitedETH aggregate — sum of per-operator exited == reported total.
     function invariant_I6_exitedETHAggregate() public {
-        (uint256 totalExited,) = operatorsRegistry.getExitedETHAndRequestedExitAmounts();
+        (uint256 totalExited,) = operatorsRegistry.getExitedAndRequestedETHExits();
         uint256[] memory perOp = operatorsRegistry.getExitedETHPerOperator();
         uint256 sum = 0;
         for (uint256 i = 0; i < perOp.length; i++) {
@@ -282,7 +282,7 @@ contract AccountingInvariantTest is AccountingInvariants {
 
     /// @dev I12: Cumulative exited ETH never exceeds TotalDepositedETH.
     function invariant_I12_exitedBoundedByDeposited() public {
-        (uint256 totalExited,) = operatorsRegistry.getExitedETHAndRequestedExitAmounts();
+        (uint256 totalExited,) = operatorsRegistry.getExitedAndRequestedETHExits();
         assertLe(totalExited, river.getTotalDepositedETH(), "I12: total exited > TotalDepositedETH");
     }
 

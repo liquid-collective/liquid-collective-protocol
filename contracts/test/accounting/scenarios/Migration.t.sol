@@ -108,7 +108,7 @@ contract MigrationTest is Test {
         assertEq(exitedPerOp[1], uint256(op1Stopped) * 32 ether, "op1 exited ETH");
 
         // Validate aggregate exited ETH
-        (uint256 totalExited,) = registry.getExitedETHAndRequestedExitAmounts();
+        (uint256 totalExited,) = registry.getExitedAndRequestedETHExits();
         assertEq(totalExited, uint256(totalStopped) * 32 ether, "total exited ETH");
     }
 

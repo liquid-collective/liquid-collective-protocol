@@ -134,7 +134,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @inheritdoc IOperatorsRegistryV1
-    function getExitedETHAndRequestedExitAmounts() external view returns (uint256, uint256) {
+    function getExitedAndRequestedETHExits() external view returns (uint256, uint256) {
         return (_getTotalExitedETH(), TotalETHExitsRequested.get() + CurrentETHExitsDemand.get());
     }
 
