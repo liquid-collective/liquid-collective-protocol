@@ -1682,6 +1682,33 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
     }
 
+    /// @dev An initial deposit below 32 ETH must revert with InvalidDepositAmount (issue #441/#309):
+    ///      a brand-new validator needs the full 32 ETH to activate on the CL, and a smaller initial
+    ///      deposit would never activate yet would permanently inflate InFlightDeposit / _assetBalance().
+    ///      Amounts in [1 ether, 32 ether) are gwei-aligned and within the legacy [1, 2048] range, so
+    ///      they passed before this guard — they must now revert. Top-ups below 32 ETH stay valid and
+    ///      are exercised by the separate top-up tests.
+    function testRevert_validate_initialDepositBelowMinimum() public {
+        // 1 ETH: smallest legacy-valid amount, must now revert.
+        IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](1);
+        deposits[0] = _makeDeposit(0, 410);
+        deposits[0].amount = 1 ether;
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits);
+        vm.prank(keeper);
+        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InvalidDepositAmount.selector, 0, 1 ether));
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+
+        // Just below the floor (32 ETH - 1 gwei, gwei-aligned), must revert.
+        deposits[0] = _makeDeposit(0, 411);
+        deposits[0].amount = 32 ether - 1 gwei;
+        (bufferId, rootHash, sigs) = _prepareDeposit(deposits);
+        vm.prank(keeper);
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.InvalidDepositAmount.selector, 0, 32 ether - 1 gwei)
+        );
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+    }
+
     /// @dev Two top-ups for the same pubkey within one batch are Pectra-legal under 0x02
     ///      compounding withdrawal credentials. Both entries must succeed because the
     ///      in-batch duplicate scan only applies to initial deposits — top-ups are exempt.
