@@ -194,6 +194,12 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         }
 
         uint256 operatorCount = OperatorsV3.getCount();
+        // indices are strictly ascending and bounded by operatorCount, so there can be at
+        // most one delta per operator.
+        if (len > operatorCount) {
+            revert FundedETHArrayLengthExceedsOperatorCount();
+        }
+
         uint256 lastIndex;
         for (uint256 i = 0; i < len; ++i) {
             OperatorFundingDelta calldata delta = _deltas[i];
