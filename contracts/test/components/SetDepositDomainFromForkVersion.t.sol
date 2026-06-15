@@ -149,12 +149,19 @@ contract SetDepositDomainFromForkVersionTest is Test {
         assertEq(fresh.DEPOSIT_DOMAIN(), BLS12_381.computeDepositDomain(MAINNET_FORK_VERSION), "mainnet init domain");
     }
 
-    /// @dev init passes through on an unknown chain (the setUp verifier was init'd on 31337 with
-    ///      bytes4(0)); assert it stored that value rather than reverting.
+    /// @dev init passes through on an unknown chain: a fresh verifier on a not-mainnet/not-hoodi
+    ///      chain accepts an arbitrary (non-canonical) fork version and stores its domain rather than
+    ///      reverting. Self-contained — does not rely on setUp's chain/init state.
     function testInit_acceptsAnyForkVersion_unknownChain() public {
+        vm.chainId(11155111); // sepolia — not in the known table
+        bytes4 arbitrary = 0x12345678;
+        AttestationVerifierV1 fresh = _freshVerifier();
+
+        _init(fresh, arbitrary);
+
         assertEq(
-            verifier.DEPOSIT_DOMAIN(),
-            BLS12_381.computeDepositDomain(bytes4(0)),
+            fresh.DEPOSIT_DOMAIN(),
+            BLS12_381.computeDepositDomain(arbitrary),
             "unknown-chain init should store the supplied value"
         );
     }
