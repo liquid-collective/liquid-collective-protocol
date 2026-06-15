@@ -54,9 +54,9 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     function _migrateOperators_V2_3() internal {
         uint256 opCount = OperatorsV2.getCount();
         for (uint256 idx = 0; idx < opCount; ++idx) {
-            OperatorsV2.Operator memory operator = OperatorsV2.get(idx);
-            uint256 fundedETH = operator.funded * DEPOSIT_SIZE;
-            uint256 requestedExitsETH = operator.requestedExits * DEPOSIT_SIZE;
+            OperatorsV2.Operator memory operatorV2 = OperatorsV2.get(idx);
+            uint256 fundedETH = operatorV2.funded * DEPOSIT_SIZE;
+            uint256 requestedExitsETH = operatorV2.requestedExits * DEPOSIT_SIZE;
             if (fundedETH < requestedExitsETH) {
                 revert InvalidOperatorState(idx, fundedETH, requestedExitsETH);
             }
@@ -64,9 +64,9 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                 OperatorsV3.Operator({
                     funded: fundedETH,
                     requestedExits: requestedExitsETH,
-                    active: operator.active,
-                    name: operator.name,
-                    operator: operator.operator,
+                    active: operatorV2.active,
+                    name: operatorV2.name,
+                    operator: operatorV2.operator,
                     activeCLETH: 0 // This is ok to set 0 here because it will be updated via the oracle report before it gets used
                 })
             );
