@@ -78,12 +78,12 @@ struct SimValidator {
 
 | Function | Description |
 |---|---|
-| `sim_deposit(opIdx, n)` | Creates `n` `ValidatorDeposit` entries for `opIdx`, calls real `depositToConsensusLayerWithDepositRoot`, marks validators `Pending`, asserts `InFlightDeposit` increased |
+| `sim_deposit(opIdx, amounts)` | Creates validators for `opIdx` from a custom amounts array (defaults to 0x02 compounding); calls real `depositToConsensusLayerWithAttestation`, marks validators `Pending`, asserts `InFlightDeposit` increased |
 | `sim_activateValidators(n)` | Transitions `n` pending → active; increments `_simTotalDepositedActivatedETH` by `n × 32 ETH`; reflected in next oracle report as a `totalDepositedActivatedETH` increase, which causes `InFlightDeposit` to decrease |
-| `sim_advanceEpoch(rewardsPerValidator)` | Models 0x01 skimming: accrues rewards swept from CL to EL each epoch |
-| `sim_autocompound(rewardsPerValidator)` | Models 0x02 autocompounding: rewards increase validator CL balances rather than being swept |
+| `sim_accrueSkimmedRewards(rewardsPerValidator)` | Sweeps `rewardsPerValidator` to the EL for each eligible validator: always for 0x01 validators (balance ≥ 32 ETH), and for 0x02 validators only once they reach MAX_EFFECTIVE_BALANCE (2048 ETH). Models balance-level reward tracking rather than epoch advancement. |
+| `sim_autocompound(rewardsPerValidator)` | Increases each 0x02 validator's `currentBalance` by `rewardsPerValidator` up to MAX_EFFECTIVE_BALANCE (2048 ETH); any overflow is routed to `_simCumulativeSkimmed` |
 | `sim_requestExit(opIdx, ethAmount)` | Marks validators as exiting |
-| `sim_completeExit(opIdx, ethAmount, penalty)` | Marks validators as exited; `exitedETH = depositedETH - penalty` |
+| `sim_completeExit(opIdx, ethAmount, penalty)` | Completes exits for `ethAmount` of `opIdx`'s queued ETH; tracks `exitedETH` as the actually completed amount minus any penalty (`toComplete - penalty`), which may differ from `depositedETH` for partial exits or when `currentBalance` has grown above principal via autocompounding |
 | `sim_slash(opIdx, penalty)` | Applies balance penalty; optionally activates slashing containment in next report |
 | `sim_oracleReport(flags?)` | Builds `ConsensusLayerReport` from `SimBeaconState`, submits through real Oracle, runs **all invariants** |
 

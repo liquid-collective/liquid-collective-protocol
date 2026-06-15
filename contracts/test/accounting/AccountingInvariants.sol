@@ -135,9 +135,11 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
     }
 
     /// @notice I2: Verifies ETH conservation — `totalUnderlyingSupply` must never exceed
-    ///         total user deposits plus cumulative skimmed rewards plus autocompounded rewards.
-    ///         All values are tracked independently of contract storage, making this a
-    ///         non-tautological check. Also asserts non-zero whenever deposits have been made.
+    ///         tracked principal plus cumulative skimmed rewards plus autocompounded rewards.
+    ///         `_simTotalUserDeposited` captures all principal sources (user deposits and
+    ///         consolidation principal). All values are tracked independently of contract
+    ///         storage, making this a non-tautological check. Also asserts non-zero whenever
+    ///         principal has been deposited.
     function _assertI2_ETHConservation() internal {
         uint256 upperBound = _simTotalUserDeposited + _simCumulativeSkimmed + _simCumulativeAutocompounded;
         assertLe(river.totalUnderlyingSupply(), upperBound, "I2: total underlying exceeds deposited + rewards");
