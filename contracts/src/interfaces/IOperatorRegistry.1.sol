@@ -296,9 +296,9 @@ interface IOperatorsRegistryV1 {
     /// @return The current exit request demand in ETH(wei)
     function getCurrentETHExitsDemand() external view returns (uint256);
 
-    /// @notice Retrieve the total exited ETH and requested exit amount
+    /// @notice Retrieve the total exited ETH and total requested ETH exits
     /// @return The total exited ETH(wei)
-    /// @return The total requested exit amount (includes total requested exits and current exit demand)
+    /// @return The total requested ETH exits (includes total requested exits and current exit demand)
     function getExitedAndRequestedETHExits() external view returns (uint256, uint256);
 
     /// @notice Retrieve the raw exited ETH array from storage
