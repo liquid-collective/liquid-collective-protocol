@@ -253,7 +253,7 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
         }
     }
 
-    /// @notice I9: TotalETHExitsRequested >= totalExited (both in ETH/wei).
+    /// @notice I9: TotalETHExitsRequested must match the sum of all per-operator requestedExits (in ETH/wei)
     ///         Observed via the unsolicited backfill in `_setExitedETH` — the harness does not
     ///         call `requestETHExits` directly, so a bug in that function failing to increment
     ///         the aggregate would not be caught here. Slashed validators are exited via the
