@@ -123,7 +123,7 @@ contract SetDepositDomainFromForkVersionTest is Test {
         v.initAttestationVerifierV1(river, makeAddr("buffer"), rootAttesters, 1, forkVersion, consolidationAttesters, 1);
     }
 
-    /// @dev init reverts at deploy on a known chain when the fork version is wrong — the core M-03 fix.
+    /// @dev init reverts at deploy on a known chain when the fork version is wrong.
     function testInit_revertsOnWrongForkVersion_knownChain() public {
         vm.chainId(1); // mainnet — canonical is 0x00000000
         AttestationVerifierV1 fresh = _freshVerifier();

@@ -169,7 +169,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
         // Validate + store the BLS deposit domain. On a known chain (mainnet/hoodi) the supplied fork
         // version must match the canonical value, so a misconfigured domain — which would silently
         // brick the attestation deposit path — reverts at deploy. On unknown chains (e.g. local/test)
-        // the value is accepted as-is. Shared with the admin recovery setter. See #498.
+        // the value is accepted as-is. Shared with the admin recovery setter.
         _setDepositDomainFromForkVersion(_genesisForkVersion);
 
         for (uint256 i = 0; i < _rootAttesters.length; i++) {
