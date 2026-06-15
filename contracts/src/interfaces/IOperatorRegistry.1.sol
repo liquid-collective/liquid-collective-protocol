@@ -185,17 +185,17 @@ interface IOperatorsRegistryV1 {
     /// @notice Thrown when the exited ETH for an operator has decreased compared to the previous report
     error ExitedETHPerOperatorDecreased();
 
-    /// @notice The provided exit requests exceed the available funded ETH amount of the operator
+    /// @notice The provided exit requests exceed the operator's available active CL ETH (active CL ETH minus pending exits)
     /// @param operatorIndex The operator index
     /// @param requested The requested ETH(wei) amount
     /// @param available The available ETH(wei) amount
-    error ExitsRequestedExceedAvailableFundedAmount(uint256 operatorIndex, uint256 requested, uint256 available);
+    error ExitsRequestedExceedAvailableActiveCLAmount(uint256 operatorIndex, uint256 requested, uint256 available);
 
-    /// @notice The provided exit requests exceed the available funded ETH amount of the operator
+    /// @notice The provided EL exit requests exceed the operator's available active CL ETH (active CL ETH minus pending exits)
     /// @param operatorIndex The operator index
     /// @param requested The requested ETH(wei) amount
     /// @param available The available ETH(wei) amount
-    error ELExitsRequestedExceedAvailableFundedAmount(uint256 operatorIndex, uint256 requested, uint256 available);
+    error ELExitsRequestedExceedAvailableActiveCLAmount(uint256 operatorIndex, uint256 requested, uint256 available);
 
     /// @notice The provided exit requests exceed the current exit request demand
     /// @param requestedETHAmount The requested ETH(wei) amount
@@ -388,13 +388,13 @@ interface IOperatorsRegistryV1 {
     /// @notice Process explicit per-operator exit allocations and update operator requestedExits
     /// @dev Only callable by the keeper address returned by the River contract's getKeeper()
     /// @dev The allocations must be sorted by operator index in strictly ascending order with no duplicates
-    /// @dev Each allocation's ethAmount must be non-zero and not exceed the operator's available funded-but-not-yet-exited ETH amount
+    /// @dev Each allocation's ethAmount must be non-zero and not exceed the operator's available active CL ETH (active CL ETH minus pending exits)
     /// @dev The total requested exits across all allocations must not exceed the current ETH exit demand
     /// @dev Reverts with InvalidEmptyArray if _allocations is empty
     /// @dev Reverts with AllocationWithIncorrectAmount if any allocation has an ETH amount less than 1 ether
     /// @dev Reverts with UnorderedOperatorList if operator indexes are not strictly ascending
     /// @dev Reverts with InactiveOperator if a referenced operator is inactive
-    /// @dev Reverts with ExitsRequestedExceedAvailableFundedAmount if count exceeds funded minus requestedExits for an operator
+    /// @dev Reverts with ExitsRequestedExceedAvailableActiveCLAmount if an allocation's ETH amount exceeds the operator's active CL ETH minus pending exits (requestedExits - exitedETH)
     /// @dev Reverts with ExitsRequestedExceedExitDemand if total exits requested exceed the current demand
     /// @dev Reverts with NoExitRequestsToPerform if there is no pending exit demand
     /// @param _allocations The proposed per-operator exit ETH allocations, sorted by operator index
