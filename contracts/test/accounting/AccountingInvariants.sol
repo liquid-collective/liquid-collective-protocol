@@ -229,9 +229,7 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
         uint256 inFlight = river.getInFlightDeposit();
         uint256 activated = river.getLastConsensusLayerReport().totalDepositedActivatedETH;
         uint256 totalDeposited = river.getTotalDepositedETH();
-        assertEq(
-            inFlight + activated, totalDeposited, "I7: InFlightDeposit + activatedETH != TotalDepositedETH"
-        );
+        assertEq(inFlight + activated, totalDeposited, "I7: InFlightDeposit + activatedETH != TotalDepositedETH");
     }
 
     /// @notice I8: Per-operator requestedExits >= exited (both fields in ETH/wei, not exit counts).
