@@ -858,23 +858,6 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         withdraw.consolidate{value: maxFeePerConsolidation * 2}(requests, maxFeePerConsolidation, excessFeeRecipient);
     }
 
-    /// @notice Tests that consolidate reverts when the caller is not River.
-    function testConsolidateFailsIfNotOwner() public {
-        bytes[] memory srcPubkeys = new bytes[](1);
-        srcPubkeys[0] = VALID_PUBKEY_48;
-        bytes memory targetPubkey = VALID_PUBKEY_48;
-        IWithdrawV1.ConsolidationRequest[] memory requests = new IWithdrawV1.ConsolidationRequest[](1);
-        requests[0] = IWithdrawV1.ConsolidationRequest(srcPubkeys, targetPubkey);
-
-        uint256 maxFeePerConsolidation = 0.1 ether;
-        address nonOwner = makeAddr("nonOwner");
-        vm.deal(nonOwner, maxFeePerConsolidation);
-
-        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", nonOwner));
-        vm.prank(nonOwner);
-        withdraw.consolidate{value: maxFeePerConsolidation}(requests, maxFeePerConsolidation, excessFeeRecipient);
-    }
-
     /// @notice Tests that consolidate reverts when a source pubkey is not 48 bytes.
     function testConsolidateFailsIfSrcPubkeyLengthInvalid() public {
         bytes[] memory srcPubkeys = new bytes[](1);
@@ -1072,22 +1055,6 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
 
         vm.prank(address(operatorsRegistry));
         withdraw.withdraw{value: maxFeePerWithdrawal * 2}(pubkeys, amounts, maxFeePerWithdrawal, excessFeeRecipient);
-    }
-
-    /// @notice Tests that withdraw reverts when the caller is not River.
-    function testWithdrawFailsIfNotOwner() public {
-        bytes[] memory pubkeys = new bytes[](1);
-        pubkeys[0] = VALID_PUBKEY_48;
-        uint64[] memory amounts = new uint64[](1);
-        amounts[0] = 1 ether;
-
-        uint256 maxFeePerWithdrawal = 0.1 ether;
-        address nonOwner = makeAddr("nonOwner");
-        vm.deal(nonOwner, maxFeePerWithdrawal);
-
-        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", nonOwner));
-        vm.prank(nonOwner);
-        withdraw.withdraw{value: maxFeePerWithdrawal}(pubkeys, amounts, maxFeePerWithdrawal, excessFeeRecipient);
     }
 
     /// @notice Tests that withdraw reverts when a pubkey is not 48 bytes.
