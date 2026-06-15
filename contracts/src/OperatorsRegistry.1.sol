@@ -73,7 +73,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                     // allocation reverts with ExitsRequestedExceedAvailableFundedAmount — even though
                     // CurrentETHExitsDemand / TotalETHExitsRequested are carried over non-zero from V2.
                     // A fresh oracle report MUST land immediately after initOperatorsRegistryV1_2, with
-                    // the redemption queue paused to cover the gap. See issue #443.
+                    // the redemption queue paused to cover the gap.
                     activeCLETH: 0
                 })
             );

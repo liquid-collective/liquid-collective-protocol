@@ -283,7 +283,7 @@ interface IOperatorsRegistryV1 {
     ///         report — even though `CurrentETHExitsDemand` / `TotalETHExitsRequested` are already
     ///         non-zero (carried over from V2). OPERATIONAL REQUIREMENT: a fresh oracle report MUST
     ///         land immediately after this call, and the redemption queue MUST be paused over the
-    ///         gap. See issue #443.
+    ///         gap.
     /// @param _withdrawAddress The address of the Withdrawal contract
     function initOperatorsRegistryV1_2(address _withdrawAddress) external;
 
