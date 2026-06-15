@@ -93,7 +93,7 @@ contract OperatorsMigrationV1ToV2 is Test {
             );
         }
         {
-            (uint256 totalExitedETH,) = or.getExitedETHAndRequestedExitAmounts();
+            (uint256 totalExitedETH,) = or.getExitedAndRequestedETHExits();
             assertEq(totalExitedETH, 0);
         }
         {

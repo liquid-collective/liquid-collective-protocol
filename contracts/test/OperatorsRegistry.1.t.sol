@@ -1761,10 +1761,10 @@ contract OperatorsRegistryV1CoverageTests is OperatorsRegistryV1TestBase, Operat
         LibImplementationUnbricker.unbrick(vm, address(reg));
     }
 
-    /// Asserts that getExitedETHAndRequestedExitAmounts returns zeros when no exited ETH has been reported.
-    function testGetExitedETHAndRequestedExitAmountsWhenNoExitedETH() public {
+    /// Asserts that getExitedAndRequestedETHExits returns zeros when no exited ETH has been reported.
+    function testGetExitedAndRequestedETHExitsWhenNoExitedETH() public {
         reg.initOperatorsRegistryV1(admin, river);
-        (uint256 exited, uint256 requested) = reg.getExitedETHAndRequestedExitAmounts();
+        (uint256 exited, uint256 requested) = reg.getExitedAndRequestedETHExits();
         assertEq(exited, 0);
         assertEq(requested, 0);
     }

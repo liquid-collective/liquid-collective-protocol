@@ -50,7 +50,7 @@ contract ExitAccountingTest is AccountingInvariants {
         uint256[] memory exitedPerOp = operatorsRegistry.getExitedETHPerOperator();
         assertEq(exitedPerOp[operatorOneIndex], DEPOSIT_SIZE, "op1 exited");
         assertEq(exitedPerOp[operatorTwoIndex], 2 * DEPOSIT_SIZE, "op2 exited");
-        (uint256 totalExited,) = operatorsRegistry.getExitedETHAndRequestedExitAmounts();
+        (uint256 totalExited,) = operatorsRegistry.getExitedAndRequestedETHExits();
         assertEq(totalExited, 3 * DEPOSIT_SIZE, "total exited");
     }
 

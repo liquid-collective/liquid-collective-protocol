@@ -207,10 +207,10 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
         assertGe(river.getTotalDepositedETH(), _snapTotalDepositedETH, "I5: TotalDepositedETH decreased");
     }
 
-    /// @notice I6: Verifies that the aggregate exited ETH returned by `getExitedETHAndRequestedExitAmounts`
+    /// @notice I6: Verifies that the aggregate exited ETH returned by `getExitedAndRequestedETHExits`
     ///         equals the sum of all per-operator exited ETH values from `getExitedETHPerOperator`.
     function _assertI6_ExitedETHAggregate() internal {
-        (uint256 totalExited,) = operatorsRegistry.getExitedETHAndRequestedExitAmounts();
+        (uint256 totalExited,) = operatorsRegistry.getExitedAndRequestedETHExits();
         uint256[] memory perOp = operatorsRegistry.getExitedETHPerOperator();
         uint256 sum = 0;
         for (uint256 i = 0; i < perOp.length; i++) {
@@ -261,7 +261,7 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
     ///         oracle report path; `_setExitedETH` bumps `TotalETHExitsRequested` to match, so
     ///         the invariant holds for slashing scenarios.
     function _assertI9_TotalRequestedGeExited() internal {
-        (uint256 totalExited,) = operatorsRegistry.getExitedETHAndRequestedExitAmounts();
+        (uint256 totalExited,) = operatorsRegistry.getExitedAndRequestedETHExits();
         uint256 totalRequested = operatorsRegistry.getTotalETHExitsRequested();
         assertGe(totalRequested, totalExited, "I9: TotalETHExitsRequested < totalExited");
     }
