@@ -222,7 +222,7 @@ contract AttestationDepositHarness is ConsensusLayerDepositManagerV1 {
 
 contract ConsensusLayerDepositManagerAttestationTest is Test {
     AttestationDepositHarness internal dm;
-    AttestationVerifierV1 internal validator;
+    AttestationVerifierV1 internal verifier;
     MockDepositDataBuffer internal buffer;
     MockPrePectraOperatorsRegistry internal prePectraRegistry;
     DepositContractEnhancedMock internal depositContract;
@@ -293,7 +293,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     ///      boolean-membership scheme.
     function _seedFundedPubkey(bytes memory pubkey) internal {
         bytes32 slot = keccak256(abi.encode(PECTRA_VALIDATOR_PUBKEY_LOOKUP_SLOT, pubkey));
-        vm.store(address(validator), slot, bytes32(uint256(1)));
+        vm.store(address(verifier), slot, bytes32(uint256(1)));
     }
 
     function setUp() public {
@@ -312,7 +312,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         dm.sudoSetKeeper(keeper);
         dm.sudoSetOperatorsRegistry(address(prePectraRegistry));
 
-        // 2. Deploy and init the AttestationVerifier. The validator's EIP-712
+        // 2. Deploy and init the AttestationVerifier. The verifier's EIP-712
         //    domain separator binds verifyingContract to the harness's address
         //    so root attester signing tooling stays River-anchored.
         address[] memory rootAttesters = new address[](3);
@@ -323,23 +323,23 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         address[] memory consolidationCommitteeAttesters = new address[](1);
         consolidationCommitteeAttesters[0] = makeAddr("consolidationCommitteeAttesterStub");
 
-        validator = new AttestationVerifierV1();
-        LibImplementationUnbricker.unbrick(vm, address(validator));
-        validator.initAttestationVerifierV1(
+        verifier = new AttestationVerifierV1();
+        LibImplementationUnbricker.unbrick(vm, address(verifier));
+        verifier.initAttestationVerifierV1(
             address(dm), address(buffer), rootAttesters, 2, bytes4(0), consolidationCommitteeAttesters, 1
         );
 
-        // 3. Wire the validator address into the harness.
-        dm.sudoSetAttestationVerifier(address(validator));
+        // 3. Wire the verifier address into the harness.
+        dm.sudoSetAttestationVerifier(address(verifier));
 
         // 4. Fund the harness and set committed balance.
         vm.deal(address(dm), 128 ether);
         dm.sudoSetCommittedBalance(128 ether);
 
-        // 5. Mock BLS verification on the validator address (EIP-2537 precompiles are
+        // 5. Mock BLS verification on the verifier address (EIP-2537 precompiles are
         //    not enabled in Foundry's default EVM). verifyBLSDeposit is called via
         //    staticcall from validate; mocking returns success.
-        vm.mockCall(address(validator), abi.encodeWithSelector(validator.verifyBLSDeposit.selector), bytes(""));
+        vm.mockCall(address(verifier), abi.encodeWithSelector(verifier.verifyBLSDeposit.selector), bytes(""));
     }
 
     // -----------------------------------------------------------------------
@@ -412,7 +412,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     }
 
     /// @dev Sign an EIP-712 attestation digest with the given private key.
-    ///      Note: verifyingContract is the harness (River), NOT the validator.
+    ///      Note: verifyingContract is the harness (River), NOT the verifier.
     function _signAttestation(uint256 pk, bytes32 bufferId, bytes32 rootHash) internal view returns (bytes memory) {
         bytes32 domainSep =
             keccak256(abi.encode(EIP712_DOMAIN_TYPEHASH, NAME_HASH, VERSION_HASH, block.chainid, address(dm)));
@@ -704,7 +704,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
     // Regression test for the defense-in-depth bufferId check in fetchAndValidateDeposits().
     // A malicious or buggy DepositDataBuffer may store (id, deposits) where
-    // id != keccak256(abi.encode(deposits)). The on-chain validator must catch this
+    // id != keccak256(abi.encode(deposits)). The on-chain verifier must catch this
     // and revert with BufferIdMismatch so the root attesters' signed commitment is
     // always binding on the deposits that are actually executed.
     function testRevert_bufferIdDoesNotMatchDeposits() public {
@@ -734,8 +734,8 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     // An uninitialized cached EIP-712 domain separator must never be used — bytes32(0) would
     // let any signer produce a "valid" digest that ECDSA cannot tell apart from real ones.
     function testRevert_zeroDomainSeparator() public {
-        // Domain separator now lives on the validator's storage.
-        vm.store(address(validator), VALIDATOR_DOMAIN_SEPARATOR_SLOT, bytes32(0));
+        // Domain separator now lives on the verifier's storage.
+        vm.store(address(verifier), VALIDATOR_DOMAIN_SEPARATOR_SLOT, bytes32(0));
 
         IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](1);
         deposits[0] = _makeDeposit(0, 0);
@@ -750,7 +750,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     ///      against corrupted/uninitialized quorum storage. With a zero quorum, a batch
     ///      could otherwise pass with no meaningful root-attester approval.
     function testRevert_validate_zeroRootQuorumStorage() public {
-        vm.store(address(validator), VALIDATOR_ROOT_ATTESTATION_QUORUM_SLOT, bytes32(0));
+        vm.store(address(verifier), VALIDATOR_ROOT_ATTESTATION_QUORUM_SLOT, bytes32(0));
 
         IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](1);
         deposits[0] = _makeDeposit(0, 901);
@@ -781,7 +781,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         BLS12_381.DepositY memory dy = _emptyDepositY();
 
         vm.expectRevert(IAttestationVerifierV1.OnlySelfCall.selector);
-        validator.verifyBLSDeposit(pk, sig, 32 ether, dy, withdrawalCredentials);
+        verifier.verifyBLSDeposit(pk, sig, 32 ether, dy, withdrawalCredentials);
     }
 
     /// @dev Once the cheap checks and root-attester quorum pass, initial deposits must enter
@@ -812,12 +812,12 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     // -----------------------------------------------------------------------
 
     // Top-up entries must never enter the BLS verification path. Proven here by zeroing
-    // the cached deposit domain on the validator: if the path were entered, the real
+    // the cached deposit domain on the verifier: if the path were entered, the real
     // verifyBLSDeposit body would short-circuit with ZeroDepositDomain. The BLS success
     // mock is cleared first so the real code runs.
     function testTopUp_skipsBLSVerification() public {
         vm.clearMockedCalls();
-        vm.store(address(validator), VALIDATOR_DEPOSIT_DOMAIN_SLOT, bytes32(0));
+        vm.store(address(verifier), VALIDATOR_DEPOSIT_DOMAIN_SLOT, bytes32(0));
 
         IDepositDataBuffer.TopUp[] memory topUps = new IDepositDataBuffer.TopUp[](2);
         topUps[0] = _makeTopUpDeposit(0, 50);
@@ -844,7 +844,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     // default-deny on the depositY-encoded classification and that the BLS path is reached.
     function testInitial_blsPathReached_revertsOnZeroDepositDomain() public {
         vm.clearMockedCalls();
-        vm.store(address(validator), VALIDATOR_DEPOSIT_DOMAIN_SLOT, bytes32(0));
+        vm.store(address(verifier), VALIDATOR_DEPOSIT_DOMAIN_SLOT, bytes32(0));
 
         IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](1);
         deposits[0] = _makeDeposit(0, 60);
@@ -860,7 +860,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     // entire batch, even when paired with top-ups that would otherwise pass.
     function testMixed_initialFailure_rejectsWholeBatch() public {
         vm.clearMockedCalls();
-        vm.store(address(validator), VALIDATOR_DEPOSIT_DOMAIN_SLOT, bytes32(0));
+        vm.store(address(verifier), VALIDATOR_DEPOSIT_DOMAIN_SLOT, bytes32(0));
 
         IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](1);
         deposits[0] = _makeDeposit(1, 71); // initial — BLS path entered, reverts on zero domain
@@ -1067,7 +1067,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         vm.prank(keeper);
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
 
-        assertTrue(validator.isPubkeyFunded(deposits[0].pubkey), "pubkey should be in the lookup");
+        assertTrue(verifier.isPubkeyFunded(deposits[0].pubkey), "pubkey should be in the lookup");
     }
 
     /// @dev End-to-end: an initial deposit in batch A records the pubkey; a top-up for that
@@ -1080,7 +1080,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
         vm.prank(keeper);
         dm.depositToConsensusLayerWithAttestation(bidA, rootA, sigsA);
-        assertTrue(validator.isPubkeyFunded(batchA[0].pubkey));
+        assertTrue(verifier.isPubkeyFunded(batchA[0].pubkey));
 
         // Batch B — top-up for the same pubkey X. Must succeed.
         IDepositDataBuffer.TopUp[] memory batchB = new IDepositDataBuffer.TopUp[](1);
@@ -1107,27 +1107,27 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         bytes memory pk1 = _seedPrePectraValidator(operatorIdx, 1, 610);
         bytes memory pk2 = _seedPrePectraValidator(operatorIdx, 2, 611);
 
-        assertFalse(validator.isPubkeyFunded(pk1), "precondition key 1");
-        assertFalse(validator.isPubkeyFunded(pk2), "precondition key 2");
+        assertFalse(verifier.isPubkeyFunded(pk1), "precondition key 1");
+        assertFalse(verifier.isPubkeyFunded(pk2), "precondition key 2");
 
         vm.expectEmit(true, false, false, true);
         emit MigratedPrePectraValidatorPubkeys(operatorIdx, 1, 3);
 
         vm.prank(admin);
-        validator.migratePrePectraValidatorPubkeys(operatorIdx, 1, 3);
+        verifier.migratePrePectraValidatorPubkeys(operatorIdx, 1, 3);
 
-        assertTrue(validator.isPrePectraValidatorPubkeyFunded(pk1), "migrated pre-Pectra key 1");
-        assertTrue(validator.isPrePectraValidatorPubkeyFunded(pk2), "migrated pre-Pectra key 2");
-        assertFalse(validator.isPubkeyFunded(pk1), "migrated key 1 not runtime-funded");
-        assertFalse(validator.isPubkeyFunded(pk2), "migrated key 2 not runtime-funded");
+        assertTrue(verifier.isPrePectraValidatorPubkeyFunded(pk1), "migrated pre-Pectra key 1");
+        assertTrue(verifier.isPrePectraValidatorPubkeyFunded(pk2), "migrated pre-Pectra key 2");
+        assertFalse(verifier.isPubkeyFunded(pk1), "migrated key 1 not runtime-funded");
+        assertFalse(verifier.isPubkeyFunded(pk2), "migrated key 2 not runtime-funded");
 
         vm.prank(admin);
-        validator.migratePrePectraValidatorPubkeys(operatorIdx, 1, 3);
+        verifier.migratePrePectraValidatorPubkeys(operatorIdx, 1, 3);
 
-        assertTrue(validator.isPrePectraValidatorPubkeyFunded(pk1), "remigrated pre-Pectra key 1");
-        assertTrue(validator.isPrePectraValidatorPubkeyFunded(pk2), "remigrated pre-Pectra key 2");
-        assertFalse(validator.isPubkeyFunded(pk1), "remigrated key 1 not runtime-funded");
-        assertFalse(validator.isPubkeyFunded(pk2), "remigrated key 2 not runtime-funded");
+        assertTrue(verifier.isPrePectraValidatorPubkeyFunded(pk1), "remigrated pre-Pectra key 1");
+        assertTrue(verifier.isPrePectraValidatorPubkeyFunded(pk2), "remigrated pre-Pectra key 2");
+        assertFalse(verifier.isPubkeyFunded(pk1), "remigrated key 1 not runtime-funded");
+        assertFalse(verifier.isPubkeyFunded(pk2), "remigrated key 2 not runtime-funded");
     }
 
     function testMigratePrePectraValidatorPubkeys_revertsWhenUnauthorized() public {
@@ -1135,7 +1135,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
         vm.prank(stranger);
         vm.expectRevert(abi.encodeWithSelector(LibErrors.Unauthorized.selector, stranger));
-        validator.migratePrePectraValidatorPubkeys(0, 0, 1);
+        verifier.migratePrePectraValidatorPubkeys(0, 0, 1);
     }
 
     function testMigratePrePectraValidatorPubkeys_revertsWhenMigratedPubkeyLengthInvalid() public {
@@ -1149,7 +1149,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
                 IAttestationVerifierPectraMigrationV1.InvalidPrePectraMigrationPubkeyLength.selector, operatorIdx, 0, 2
             )
         );
-        validator.migratePrePectraValidatorPubkeys(operatorIdx, 0, 1);
+        verifier.migratePrePectraValidatorPubkeys(operatorIdx, 0, 1);
     }
 
     function testValidateSelfConsolidation_riverBuildsOneSelfRequestPerMigratedPubkey() public {
@@ -1159,7 +1159,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         bytes memory pk1 = _seedPrePectraValidator(operatorIdx, 1, 651);
 
         vm.prank(admin);
-        validator.migratePrePectraValidatorPubkeys(operatorIdx, 0, 2);
+        verifier.migratePrePectraValidatorPubkeys(operatorIdx, 0, 2);
 
         bytes[] memory pubkeys = new bytes[](2);
         pubkeys[0] = pk0;
@@ -1171,7 +1171,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         emit AddedPectraValidatorPubkeys(pubkeys);
 
         vm.prank(address(dm));
-        IWithdrawV1.ConsolidationRequest[] memory requests = validator.validateSelfConsolidation(pubkeys);
+        IWithdrawV1.ConsolidationRequest[] memory requests = verifier.validateSelfConsolidation(pubkeys);
 
         assertEq(requests.length, 2, "request count");
         assertEq(requests[0].srcPubkeys.length, 1, "request 0 source count");
@@ -1181,10 +1181,10 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         assertEq(requests[1].srcPubkeys[0], pk1, "request 1 source");
         assertEq(requests[1].targetPubkey, pk1, "request 1 target");
 
-        assertFalse(validator.isPrePectraValidatorPubkeyFunded(pk0), "pk0 cleared from pre-Pectra");
-        assertFalse(validator.isPrePectraValidatorPubkeyFunded(pk1), "pk1 cleared from pre-Pectra");
-        assertTrue(validator.isPubkeyFunded(pk0), "pk0 added to post-Pectra");
-        assertTrue(validator.isPubkeyFunded(pk1), "pk1 added to post-Pectra");
+        assertFalse(verifier.isPrePectraValidatorPubkeyFunded(pk0), "pk0 cleared from pre-Pectra");
+        assertFalse(verifier.isPrePectraValidatorPubkeyFunded(pk1), "pk1 cleared from pre-Pectra");
+        assertTrue(verifier.isPubkeyFunded(pk0), "pk0 added to post-Pectra");
+        assertTrue(verifier.isPubkeyFunded(pk1), "pk1 added to post-Pectra");
     }
 
     function testValidateSelfConsolidation_revertsWhenCallerNotRiver() public {
@@ -1193,14 +1193,14 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         bytes memory pubkey = _seedPrePectraValidator(operatorIdx, 0, 652);
 
         vm.prank(admin);
-        validator.migratePrePectraValidatorPubkeys(operatorIdx, 0, 1);
+        verifier.migratePrePectraValidatorPubkeys(operatorIdx, 0, 1);
 
         bytes[] memory pubkeys = new bytes[](1);
         pubkeys[0] = pubkey;
 
         vm.prank(admin);
         vm.expectRevert(abi.encodeWithSelector(LibErrors.Unauthorized.selector, admin));
-        validator.validateSelfConsolidation(pubkeys);
+        verifier.validateSelfConsolidation(pubkeys);
     }
 
     function testValidateSelfConsolidation_revertsWhenBatchEmpty() public {
@@ -1210,7 +1210,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(IAttestationVerifierPectraMigrationV1.InvalidSelfConsolidationEmptyPubkeys.selector)
         );
-        validator.validateSelfConsolidation(pubkeys);
+        verifier.validateSelfConsolidation(pubkeys);
     }
 
     function testValidateSelfConsolidation_revertsWhenPubkeyLengthInvalid() public {
@@ -1225,7 +1225,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
                 uint256(2)
             )
         );
-        validator.validateSelfConsolidation(pubkeys);
+        verifier.validateSelfConsolidation(pubkeys);
     }
 
     function testValidateSelfConsolidation_revertsWhenPubkeyNotFunded() public {
@@ -1239,7 +1239,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
                 IAttestationVerifierPectraMigrationV1.PrePectraValidatorPubkeyNotFunded.selector, pubkey
             )
         );
-        validator.validateSelfConsolidation(pubkeys);
+        verifier.validateSelfConsolidation(pubkeys);
     }
 
     function testRemovePrePectraValidatorPubkeys_adminRemovesSubsetAndEmits() public {
@@ -1250,11 +1250,11 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         bytes memory pk2 = _seedPrePectraValidator(operatorIdx, 2, 632);
 
         vm.prank(admin);
-        validator.migratePrePectraValidatorPubkeys(operatorIdx, 0, 3);
+        verifier.migratePrePectraValidatorPubkeys(operatorIdx, 0, 3);
 
-        assertTrue(validator.isPrePectraValidatorPubkeyFunded(pk0), "precondition key 0");
-        assertTrue(validator.isPrePectraValidatorPubkeyFunded(pk1), "precondition key 1");
-        assertTrue(validator.isPrePectraValidatorPubkeyFunded(pk2), "precondition key 2");
+        assertTrue(verifier.isPrePectraValidatorPubkeyFunded(pk0), "precondition key 0");
+        assertTrue(verifier.isPrePectraValidatorPubkeyFunded(pk1), "precondition key 1");
+        assertTrue(verifier.isPrePectraValidatorPubkeyFunded(pk2), "precondition key 2");
 
         bytes[] memory pubkeys = new bytes[](2);
         pubkeys[0] = pk0;
@@ -1266,11 +1266,11 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         emit RemovedPrePectraValidatorPubkeys(pubkeys);
 
         vm.prank(admin);
-        validator.removePrePectraValidatorPubkeys(pubkeys);
+        verifier.removePrePectraValidatorPubkeys(pubkeys);
 
-        assertFalse(validator.isPrePectraValidatorPubkeyFunded(pk0), "removed key 0");
-        assertTrue(validator.isPrePectraValidatorPubkeyFunded(pk1), "unremoved key 1");
-        assertFalse(validator.isPrePectraValidatorPubkeyFunded(pk2), "removed key 2");
+        assertFalse(verifier.isPrePectraValidatorPubkeyFunded(pk0), "removed key 0");
+        assertTrue(verifier.isPrePectraValidatorPubkeyFunded(pk1), "unremoved key 1");
+        assertFalse(verifier.isPrePectraValidatorPubkeyFunded(pk2), "removed key 2");
     }
 
     function testRemovePrePectraValidatorPubkeys_revertsWhenUnauthorized() public {
@@ -1282,7 +1282,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         // use the River admin check instead of allowing arbitrary callers to clear keys.
         vm.prank(stranger);
         vm.expectRevert(abi.encodeWithSelector(LibErrors.Unauthorized.selector, stranger));
-        validator.removePrePectraValidatorPubkeys(pubkeys);
+        verifier.removePrePectraValidatorPubkeys(pubkeys);
     }
 
     function testRemovePrePectraValidatorPubkeys_revertsWhenBatchEmpty() public {
@@ -1292,7 +1292,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(IAttestationVerifierPectraMigrationV1.InvalidPrePectraRemovalEmptyPubkeys.selector)
         );
-        validator.removePrePectraValidatorPubkeys(pubkeys);
+        verifier.removePrePectraValidatorPubkeys(pubkeys);
     }
 
     function testRemovePrePectraValidatorPubkeys_revertsWhenPubkeyLengthInvalid() public {
@@ -1307,7 +1307,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
                 uint256(2)
             )
         );
-        validator.removePrePectraValidatorPubkeys(pubkeys);
+        verifier.removePrePectraValidatorPubkeys(pubkeys);
     }
 
     function testRemovePrePectraValidatorPubkeys_revertsWhenPubkeyNotFunded() public {
@@ -1321,7 +1321,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
                 IAttestationVerifierPectraMigrationV1.PrePectraValidatorPubkeyNotFunded.selector, pubkey
             )
         );
-        validator.removePrePectraValidatorPubkeys(pubkeys);
+        verifier.removePrePectraValidatorPubkeys(pubkeys);
     }
 
     function testTopUp_migratedPrePectraPubkeyStillRevertsInValidate() public {
@@ -1331,9 +1331,9 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         bytes memory pubkey = _seedPrePectraValidator(operatorIdx, 0, seed);
 
         vm.prank(admin);
-        validator.migratePrePectraValidatorPubkeys(operatorIdx, 0, 1);
-        assertTrue(validator.isPrePectraValidatorPubkeyFunded(pubkey), "pre-Pectra lookup migration");
-        assertFalse(validator.isPubkeyFunded(pubkey), "runtime lookup still empty");
+        verifier.migratePrePectraValidatorPubkeys(operatorIdx, 0, 1);
+        assertTrue(verifier.isPrePectraValidatorPubkeyFunded(pubkey), "pre-Pectra lookup migration");
+        assertFalse(verifier.isPubkeyFunded(pubkey), "runtime lookup still empty");
 
         IDepositDataBuffer.TopUp[] memory topUps = new IDepositDataBuffer.TopUp[](1);
         topUps[0] = _makeTopUpDeposit(operatorIdx, seed);
@@ -1354,7 +1354,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
         vm.prank(keeper);
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
-        assertTrue(validator.isDepositDataBufferIdProcessed(bufferId), "id should be marked processed");
+        assertTrue(verifier.isDepositDataBufferIdProcessed(bufferId), "id should be marked processed");
 
         uint256 depositCountBefore = depositContract.deposit_count();
         vm.prank(keeper);
@@ -1377,7 +1377,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
         vm.prank(keeper);
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
-        assertTrue(validator.isDepositDataBufferIdProcessed(bufferId), "id should be marked processed");
+        assertTrue(verifier.isDepositDataBufferIdProcessed(bufferId), "id should be marked processed");
 
         uint256 depositCountBefore = depositContract.deposit_count();
         vm.prank(keeper);
@@ -1404,7 +1404,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
         vm.prank(keeper);
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
-        assertTrue(validator.isDepositDataBufferIdProcessed(bufferId), "id should be marked processed");
+        assertTrue(verifier.isDepositDataBufferIdProcessed(bufferId), "id should be marked processed");
 
         uint256 depositCountBefore = depositContract.deposit_count();
         vm.prank(keeper);
@@ -1429,7 +1429,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
         vm.prank(keeper);
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
-        assertTrue(validator.isDepositDataBufferIdProcessed(bufferId), "id should be marked processed");
+        assertTrue(verifier.isDepositDataBufferIdProcessed(bufferId), "id should be marked processed");
 
         bytes32 attackerRootHash = keccak256("attacker-chosen-root");
         bytes[] memory attackerSigs = new bytes[](2);
@@ -1453,7 +1453,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         address stranger = address(0xC0FFEE);
         vm.prank(stranger);
         vm.expectRevert(abi.encodeWithSelector(LibErrors.Unauthorized.selector, stranger));
-        validator.markDepositDataBufferIdProcessed(bufferId);
+        verifier.markDepositDataBufferIdProcessed(bufferId);
     }
 
     /// @dev Same-batch initial + top-up for the SAME pubkey must revert. The top-up check
@@ -1521,7 +1521,133 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         address stranger = address(0xC0FFEE);
         vm.prank(stranger);
         vm.expectRevert(abi.encodeWithSelector(LibErrors.Unauthorized.selector, stranger));
-        validator.recordNewlyFundedPubkeys(pubkeys);
+        verifier.recordNewlyFundedPubkeys(pubkeys);
+    }
+
+    function testRemoveExitedValidatorPubkeys_clearsLookup() public {
+        bytes[] memory pubkeys = new bytes[](2);
+        pubkeys[0] = _fakePubkey(0xE001);
+        pubkeys[1] = _fakePubkey(0xE002);
+        bytes memory untouchedPubkey = _fakePubkey(0xE003);
+
+        _seedFundedPubkey(pubkeys[0]);
+        _seedFundedPubkey(pubkeys[1]);
+        _seedFundedPubkey(untouchedPubkey);
+
+        vm.expectEmit(false, false, false, true, address(verifier));
+        emit IAttestationVerifierV1.RemovedPectraValidatorPubkeys(pubkeys);
+
+        vm.prank(keeper);
+        dm.removeExitedValidatorPubkeys(pubkeys);
+
+        assertFalse(verifier.isPubkeyFunded(pubkeys[0]), "first exited pubkey should be cleared");
+        assertFalse(verifier.isPubkeyFunded(pubkeys[1]), "second exited pubkey should be cleared");
+        assertTrue(verifier.isPubkeyFunded(untouchedPubkey), "unlisted pubkey should remain funded");
+    }
+
+    function testRevert_removeExitedValidatorPubkeys_absentPubkey() public {
+        bytes[] memory pubkeys = new bytes[](1);
+        pubkeys[0] = _fakePubkey(0xE004);
+
+        vm.prank(keeper);
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.PectraValidatorPubkeyNotFunded.selector, pubkeys[0])
+        );
+        dm.removeExitedValidatorPubkeys(pubkeys);
+
+        assertFalse(verifier.isPubkeyFunded(pubkeys[0]), "absent pubkey should remain absent");
+    }
+
+    function testRevert_removeExitedValidatorPubkeys_missingPubkeyRollsBackBatch() public {
+        bytes[] memory pubkeys = new bytes[](2);
+        pubkeys[0] = _fakePubkey(0xE007);
+        pubkeys[1] = _fakePubkey(0xE008);
+        _seedFundedPubkey(pubkeys[0]);
+
+        vm.prank(keeper);
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.PectraValidatorPubkeyNotFunded.selector, pubkeys[1])
+        );
+        dm.removeExitedValidatorPubkeys(pubkeys);
+
+        assertTrue(verifier.isPubkeyFunded(pubkeys[0]), "revert should roll back earlier removal");
+        assertFalse(verifier.isPubkeyFunded(pubkeys[1]), "missing pubkey should remain absent");
+    }
+
+    function testRevert_removeExitedValidatorPubkeys_duplicatePubkeyRollsBackBatch() public {
+        bytes memory pubkey = _fakePubkey(0xE00A);
+        bytes[] memory pubkeys = new bytes[](2);
+        pubkeys[0] = pubkey;
+        pubkeys[1] = pubkey;
+        _seedFundedPubkey(pubkey);
+
+        vm.prank(keeper);
+        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.PectraValidatorPubkeyNotFunded.selector, pubkey));
+        dm.removeExitedValidatorPubkeys(pubkeys);
+
+        assertTrue(verifier.isPubkeyFunded(pubkey), "revert should roll back earlier removal");
+    }
+
+    function testRemoveExitedValidatorPubkeys_removedPubkeyCannotTopUp() public {
+        IDepositDataBuffer.TopUp[] memory topUps = new IDepositDataBuffer.TopUp[](1);
+        topUps[0] = _makeTopUpDeposit(0, 175);
+        _seedFundedPubkey(topUps[0].pubkey);
+
+        bytes[] memory pubkeys = new bytes[](1);
+        pubkeys[0] = topUps[0].pubkey;
+
+        vm.prank(keeper);
+        dm.removeExitedValidatorPubkeys(pubkeys);
+
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareTopUps(topUps);
+
+        vm.prank(keeper);
+        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.TopUpPubkeyNotFunded.selector, topUps[0].pubkey));
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+    }
+
+    function testRevert_removeExitedValidatorPubkeys_notKeeper() public {
+        bytes[] memory pubkeys = new bytes[](1);
+        pubkeys[0] = _fakePubkey(0xE005);
+        _seedFundedPubkey(pubkeys[0]);
+
+        address stranger = address(0xC0FFEE);
+        vm.prank(stranger);
+        vm.expectRevert(abi.encodeWithSelector(IConsensusLayerDepositManagerV1.OnlyKeeper.selector));
+        dm.removeExitedValidatorPubkeys(pubkeys);
+
+        assertTrue(verifier.isPubkeyFunded(pubkeys[0]), "non-keeper should not clear the pubkey");
+    }
+
+    /// @dev `verifier.removeExitedValidatorPubkeys` is gated by `onlyRiver`; any non-River
+    ///      caller (including the keeper) must be rejected before any pubkey-level logic.
+    function testRevert_removeExitedValidatorPubkeys_notRiver() public {
+        bytes[] memory pubkeys = new bytes[](1);
+        pubkeys[0] = _fakePubkey(0xE006);
+
+        address stranger = address(0xC0FFEE);
+        vm.prank(stranger);
+        vm.expectRevert(abi.encodeWithSelector(LibErrors.Unauthorized.selector, stranger));
+        verifier.removeExitedValidatorPubkeys(pubkeys);
+    }
+
+    function testRevert_removeExitedValidatorPubkeys_emptyPubkeys() public {
+        bytes[] memory pubkeys = new bytes[](0);
+
+        vm.prank(keeper);
+        vm.expectRevert(IAttestationVerifierV1.InvalidPectraRemovalEmptyPubkeys.selector);
+        dm.removeExitedValidatorPubkeys(pubkeys);
+    }
+
+    function testRevert_removeExitedValidatorPubkeys_invalidPubkeyLength() public {
+        bytes[] memory pubkeys = new bytes[](1);
+        pubkeys[0] = new bytes(47);
+
+        vm.prank(keeper);
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.PectraValidatorPubkeyNotFunded.selector, pubkeys[0])
+        );
+        dm.removeExitedValidatorPubkeys(pubkeys);
     }
 
     /// @dev `fetchAndValidateDeposits()` must fail-fast on out-of-range or mis-aligned `amount` rather than
@@ -1608,7 +1734,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
         vm.prank(admin);
         vm.expectRevert(abi.encodeWithSelector(LibErrors.Unauthorized.selector, admin));
-        validator.recordNewlyFundedPubkeys(pubkeys);
+        verifier.recordNewlyFundedPubkeys(pubkeys);
     }
 
     /// @dev A successful top-up must emit `TopUp` with both indexed topics (bufferId,
@@ -1638,7 +1764,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(IAttestationVerifierV1.RootAttesterStatusUnchanged.selector, rootAttester1, true)
         );
-        validator.setRootAttester(rootAttester1, true);
+        verifier.setRootAttester(rootAttester1, true);
 
         // an unregistered address being removed must also revert
         address stranger = address(0xC0FFEE);
@@ -1646,7 +1772,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(IAttestationVerifierV1.RootAttesterStatusUnchanged.selector, stranger, false)
         );
-        validator.setRootAttester(stranger, false);
+        verifier.setRootAttester(stranger, false);
     }
 
     // -----------------------------------------------------------------------
@@ -1655,22 +1781,22 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
     /// @dev Test every external view on the verifier returns the value configured at init.
     function testViews_returnConfiguredValues() public {
-        assertEq(validator.getRiver(), address(dm));
-        assertEq(validator.getDepositDataBuffer(), address(buffer));
-        assertEq(validator.getRootAttesterCount(), 3);
-        assertEq(validator.getRootAttestationQuorum(), 2);
-        assertTrue(validator.isRootAttester(rootAttester1));
-        assertTrue(validator.isRootAttester(rootAttester2));
-        assertTrue(validator.isRootAttester(rootAttester3));
-        assertFalse(validator.isRootAttester(address(0xDEAD)));
+        assertEq(verifier.getRiver(), address(dm));
+        assertEq(verifier.getDepositDataBuffer(), address(buffer));
+        assertEq(verifier.getRootAttesterCount(), 3);
+        assertEq(verifier.getRootAttestationQuorum(), 2);
+        assertTrue(verifier.isRootAttester(rootAttester1));
+        assertTrue(verifier.isRootAttester(rootAttester2));
+        assertTrue(verifier.isRootAttester(rootAttester3));
+        assertFalse(verifier.isRootAttester(address(0xDEAD)));
         // Cross-check the domain separator against an independently-recomputed value rather
         // than just !=0, so a future drift in NAME_HASH / VERSION_HASH / TYPEHASH wording
         // breaks the test instead of silently agreeing with the contract.
         bytes32 expectedDomainSeparator =
             keccak256(abi.encode(EIP712_DOMAIN_TYPEHASH, NAME_HASH, VERSION_HASH, block.chainid, address(dm)));
-        assertEq(validator.getDomainSeparator(), expectedDomainSeparator, "domain separator drift");
+        assertEq(verifier.getDomainSeparator(), expectedDomainSeparator, "domain separator drift");
         // DEPOSIT_DOMAIN was set at init from a zero genesis fork version; just check it was set.
-        assertTrue(validator.DEPOSIT_DOMAIN() != bytes32(0));
+        assertTrue(verifier.DEPOSIT_DOMAIN() != bytes32(0));
     }
 
     // -----------------------------------------------------------------------
@@ -1720,18 +1846,18 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     /// @dev Admin can register a new attester; count increments; the attester becomes recognised.
     function testSetRootAttester_addAndRemove() public {
         address newAttester = address(0xFEED);
-        assertFalse(validator.isRootAttester(newAttester));
+        assertFalse(verifier.isRootAttester(newAttester));
 
         vm.prank(admin);
-        validator.setRootAttester(newAttester, true);
-        assertTrue(validator.isRootAttester(newAttester));
-        assertEq(validator.getRootAttesterCount(), 4);
+        verifier.setRootAttester(newAttester, true);
+        assertTrue(verifier.isRootAttester(newAttester));
+        assertEq(verifier.getRootAttesterCount(), 4);
 
         // Removing brings us back to 3.
         vm.prank(admin);
-        validator.setRootAttester(newAttester, false);
-        assertFalse(validator.isRootAttester(newAttester));
-        assertEq(validator.getRootAttesterCount(), 3);
+        verifier.setRootAttester(newAttester, false);
+        assertFalse(verifier.isRootAttester(newAttester));
+        assertEq(verifier.getRootAttesterCount(), 3);
     }
 
     /// @dev Non-admin caller must be rejected by onlyRiverAdmin.
@@ -1739,63 +1865,63 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         address stranger = address(0xC0FFEE);
         vm.prank(stranger);
         vm.expectRevert(abi.encodeWithSelector(LibErrors.Unauthorized.selector, stranger));
-        validator.setRootAttester(address(0xFEED), true);
+        verifier.setRootAttester(address(0xFEED), true);
     }
 
     /// @dev Cannot remove an attester if doing so would leave fewer attesters than the configured quorum.
     function testRevert_setRootAttester_wouldUnderQuorum() public {
         // quorum=2, 3 attesters; remove one → 2 (still ok), remove another → 1 < 2 (rejects).
         vm.prank(admin);
-        validator.setRootAttester(rootAttester3, false);
+        verifier.setRootAttester(rootAttester3, false);
         vm.prank(admin);
         vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.QuorumExceedsRootAttesterCount.selector, 2, 1));
-        validator.setRootAttester(rootAttester2, false);
+        verifier.setRootAttester(rootAttester2, false);
     }
 
     /// @dev setRootAttestationQuorum happy path: drop quorum to 1, then back to 2.
     function testSetRootAttestationQuorum_happyPath() public {
         vm.prank(admin);
-        validator.setRootAttestationQuorum(1);
-        assertEq(validator.getRootAttestationQuorum(), 1);
+        verifier.setRootAttestationQuorum(1);
+        assertEq(verifier.getRootAttestationQuorum(), 1);
 
         vm.prank(admin);
-        validator.setRootAttestationQuorum(2);
-        assertEq(validator.getRootAttestationQuorum(), 2);
+        verifier.setRootAttestationQuorum(2);
+        assertEq(verifier.getRootAttestationQuorum(), 2);
     }
 
     function testRevert_setRootAttestationQuorum_zero() public {
         vm.prank(admin);
         vm.expectRevert(IAttestationVerifierV1.ZeroQuorum.selector);
-        validator.setRootAttestationQuorum(0);
+        verifier.setRootAttestationQuorum(0);
     }
 
     function testRevert_setRootAttestationQuorum_exceedsAttesterCount() public {
         // 3 attesters; quorum > 3 is rejected.
         vm.prank(admin);
         vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.QuorumExceedsRootAttesterCount.selector, 4, 3));
-        validator.setRootAttestationQuorum(4);
+        verifier.setRootAttestationQuorum(4);
     }
 
     function testRevert_setRootAttestationQuorum_unauthorized() public {
         address stranger = address(0xC0FFEE);
         vm.prank(stranger);
         vm.expectRevert(abi.encodeWithSelector(LibErrors.Unauthorized.selector, stranger));
-        validator.setRootAttestationQuorum(1);
+        verifier.setRootAttestationQuorum(1);
     }
 
     /// @dev Admin can rotate the DepositDataBuffer address.
     function testSetDepositDataBuffer_happyPath() public {
         address newBuffer = address(0xBABE);
         vm.prank(admin);
-        validator.setDepositDataBuffer(newBuffer);
-        assertEq(validator.getDepositDataBuffer(), newBuffer);
+        verifier.setDepositDataBuffer(newBuffer);
+        assertEq(verifier.getDepositDataBuffer(), newBuffer);
     }
 
     function testRevert_setDepositDataBuffer_unauthorized() public {
         address stranger = address(0xC0FFEE);
         vm.prank(stranger);
         vm.expectRevert(abi.encodeWithSelector(LibErrors.Unauthorized.selector, stranger));
-        validator.setDepositDataBuffer(address(0xBABE));
+        verifier.setDepositDataBuffer(address(0xBABE));
     }
 
     // -----------------------------------------------------------------------
@@ -1809,7 +1935,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         assertEq(dm.getWithdrawalCredentials(), withdrawalCredentials);
         assertEq(dm.getTotalDepositedETH(), 0);
         assertEq(dm.getKeeper(), keeper);
-        assertEq(dm.getAttestationVerifier(), address(validator));
+        assertEq(dm.getAttestationVerifier(), address(verifier));
     }
 
     function testCLDM_onlyKeeperModifierAllowsKeeper() public {
@@ -1831,25 +1957,25 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
     /// @dev Cannot init with an empty attester array.
     function testRevert_init_emptyAttesterArray() public {
-        AttestationVerifierV1 freshValidator = new AttestationVerifierV1();
-        LibImplementationUnbricker.unbrick(vm, address(freshValidator));
+        AttestationVerifierV1 freshVerifier = new AttestationVerifierV1();
+        LibImplementationUnbricker.unbrick(vm, address(freshVerifier));
         address[] memory empty = new address[](0);
         vm.expectRevert(LibErrors.InvalidArgument.selector);
-        freshValidator.initAttestationVerifierV1(address(dm), address(buffer), empty, 1, bytes4(0), empty, 1);
+        freshVerifier.initAttestationVerifierV1(address(dm), address(buffer), empty, 1, bytes4(0), empty, 1);
     }
 
     /// @dev Cannot init with a root quorum of zero. This is distinct from an empty
     ///      attester set: a populated committee with quorum=0 would make signatures optional.
     function testRevert_init_zeroRootQuorum() public {
-        AttestationVerifierV1 freshValidator = new AttestationVerifierV1();
-        LibImplementationUnbricker.unbrick(vm, address(freshValidator));
+        AttestationVerifierV1 freshVerifier = new AttestationVerifierV1();
+        LibImplementationUnbricker.unbrick(vm, address(freshVerifier));
         address[] memory rootAttesters = new address[](1);
         rootAttesters[0] = rootAttester1;
         address[] memory consolidationAttesters = new address[](1);
         consolidationAttesters[0] = makeAddr("consolidation-attester");
 
         vm.expectRevert(IAttestationVerifierV1.ZeroQuorum.selector);
-        freshValidator.initAttestationVerifierV1(
+        freshVerifier.initAttestationVerifierV1(
             address(dm), address(buffer), rootAttesters, 0, bytes4(0), consolidationAttesters, 1
         );
     }
@@ -1858,9 +1984,9 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     ///      case exercises the same top-level InvalidArgument revert but a different
     ///      production risk: unbounded storage growth and a larger quorum-dedup surface.
     function testRevert_init_tooManyRootAttesters() public {
-        AttestationVerifierV1 freshValidator = new AttestationVerifierV1();
-        LibImplementationUnbricker.unbrick(vm, address(freshValidator));
-        address[] memory tooManyRootAttesters = new address[](validator.MAX_ROOT_ATTESTERS() + 1);
+        AttestationVerifierV1 freshVerifier = new AttestationVerifierV1();
+        LibImplementationUnbricker.unbrick(vm, address(freshVerifier));
+        address[] memory tooManyRootAttesters = new address[](verifier.MAX_ROOT_ATTESTERS() + 1);
         for (uint256 i = 0; i < tooManyRootAttesters.length; i++) {
             tooManyRootAttesters[i] = address(uint160(0xB000 + i));
         }
@@ -1868,35 +1994,35 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         consolidationAttesters[0] = makeAddr("consolidation-attester");
 
         vm.expectRevert(LibErrors.InvalidArgument.selector);
-        freshValidator.initAttestationVerifierV1(
+        freshVerifier.initAttestationVerifierV1(
             address(dm), address(buffer), tooManyRootAttesters, 1, bytes4(0), consolidationAttesters, 1
         );
     }
 
     /// @dev Cannot init with a quorum strictly greater than the attester count.
     function testRevert_init_quorumExceedsAttesterCount() public {
-        AttestationVerifierV1 freshValidator = new AttestationVerifierV1();
-        LibImplementationUnbricker.unbrick(vm, address(freshValidator));
+        AttestationVerifierV1 freshVerifier = new AttestationVerifierV1();
+        LibImplementationUnbricker.unbrick(vm, address(freshVerifier));
         address[] memory attesters = new address[](2);
         attesters[0] = rootAttester1;
         attesters[1] = rootAttester2;
         vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.QuorumExceedsRootAttesterCount.selector, 3, 2));
-        freshValidator.initAttestationVerifierV1(address(dm), address(buffer), attesters, 3, bytes4(0), attesters, 3);
+        freshVerifier.initAttestationVerifierV1(address(dm), address(buffer), attesters, 3, bytes4(0), attesters, 3);
     }
 
     /// @dev Cannot add an attester that would push the total past MAX_ROOT_ATTESTERS.
     ///      Fills the registry to the cap (32), then tries to add one more.
     function testRevert_setRootAttester_exceedsMax() public {
-        uint256 max = validator.MAX_ROOT_ATTESTERS();
+        uint256 max = verifier.MAX_ROOT_ATTESTERS();
         // setUp already registered 3 attesters; add up to the cap.
         for (uint256 i = 3; i < max; ++i) {
             vm.prank(admin);
-            validator.setRootAttester(address(uint160(0x1000 + i)), true);
+            verifier.setRootAttester(address(uint160(0x1000 + i)), true);
         }
-        assertEq(validator.getRootAttesterCount(), max);
+        assertEq(verifier.getRootAttesterCount(), max);
         vm.prank(admin);
         vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.TooManyRootAttesters.selector, max + 1, max));
-        validator.setRootAttester(address(uint160(0x9999)), true);
+        verifier.setRootAttester(address(uint160(0x9999)), true);
     }
 
     // -----------------------------------------------------------------------
@@ -1911,7 +2037,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         deposits[0] = _makeDeposit(0, 800);
         (bytes32 bufferId, bytes32 rootHash,) = _prepareDeposit(deposits);
 
-        uint256 max = validator.MAX_SIGNATURES();
+        uint256 max = verifier.MAX_SIGNATURES();
         bytes[] memory tooMany = new bytes[](max + 1);
         for (uint256 i = 0; i < max + 1; i++) {
             tooMany[i] = new bytes(65); // any 65-byte blob; length check fires before recovery
@@ -1931,7 +2057,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         AttestationVerifierV1 fresh = new AttestationVerifierV1();
         LibImplementationUnbricker.unbrick(vm, address(fresh));
         // Need attesterCount > MAX_SIGNATURES so the attester-count check doesn't fire first.
-        uint256 max = validator.MAX_SIGNATURES();
+        uint256 max = verifier.MAX_SIGNATURES();
         address[] memory atts = new address[](max + 5);
         for (uint256 i = 0; i < max + 5; i++) {
             atts[i] = address(uint160(0x9000 + i));
@@ -1946,16 +2072,16 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     ///      path from the init-time check above.
     function testRevert_setRootAttestationQuorum_exceedsMaxSignatures() public {
         // Grow attester count past MAX_SIGNATURES so the attester-count check doesn't fire first.
-        uint256 max = validator.MAX_SIGNATURES();
+        uint256 max = verifier.MAX_SIGNATURES();
         for (uint256 i = 3; i <= max; i++) {
             vm.prank(admin);
-            validator.setRootAttester(address(uint160(0xA000 + i)), true);
+            verifier.setRootAttester(address(uint160(0xA000 + i)), true);
         }
         vm.prank(admin);
         vm.expectRevert(
             abi.encodeWithSelector(IAttestationVerifierV1.QuorumExceedsMaxSignatures.selector, max + 1, max)
         );
-        validator.setRootAttestationQuorum(max + 1);
+        verifier.setRootAttestationQuorum(max + 1);
     }
 
     // -----------------------------------------------------------------------
@@ -1971,7 +2097,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     function testRecover_silentlySkipsBadSigs() public {
         // Raise quorum above the number of valid sigs we'll provide so the assertion is tight.
         vm.prank(admin);
-        validator.setRootAttestationQuorum(3);
+        verifier.setRootAttestationQuorum(3);
 
         IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](1);
         deposits[0] = _makeDeposit(0, 850);
@@ -2000,7 +2126,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     ///      address(0), skip it, and continue counting only valid unique root attesters.
     function testRecover_skipsTryRecoverErrors() public {
         vm.prank(admin);
-        validator.setRootAttestationQuorum(3);
+        verifier.setRootAttestationQuorum(3);
 
         IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](1);
         deposits[0] = _makeDeposit(0, 852);
@@ -2066,7 +2192,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         atts[0] = makeAddr("a");
         atts[1] = makeAddr("b");
         vm.expectRevert(abi.encodeWithSelector(Initializable.InvalidInitialization.selector, 0, 1));
-        validator.initAttestationVerifierV1(address(dm), address(buffer), atts, 1, bytes4(0), atts, 1);
+        verifier.initAttestationVerifierV1(address(dm), address(buffer), atts, 1, bytes4(0), atts, 1);
     }
 
     // -----------------------------------------------------------------------
@@ -2120,19 +2246,19 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         expectedPubkeys[0] = deposits[0].pubkey;
         expectedPubkeys[1] = deposits[1].pubkey;
         vm.expectCall(
-            address(validator), abi.encodeCall(IAttestationVerifierV1.recordNewlyFundedPubkeys, (expectedPubkeys))
+            address(verifier), abi.encodeCall(IAttestationVerifierV1.recordNewlyFundedPubkeys, (expectedPubkeys))
         );
 
         (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits, topUps);
 
-        vm.expectEmit(false, false, false, true, address(validator));
+        vm.expectEmit(false, false, false, true, address(verifier));
         emit AddedPectraValidatorPubkeys(expectedPubkeys);
 
         vm.prank(keeper);
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
 
-        assertTrue(validator.isPubkeyFunded(deposits[0].pubkey), "deposit 0 pubkey recorded in post-Pectra lookup");
-        assertTrue(validator.isPubkeyFunded(deposits[1].pubkey), "deposit 1 pubkey recorded in post-Pectra lookup");
+        assertTrue(verifier.isPubkeyFunded(deposits[0].pubkey), "deposit 0 pubkey recorded in post-Pectra lookup");
+        assertTrue(verifier.isPubkeyFunded(deposits[1].pubkey), "deposit 1 pubkey recorded in post-Pectra lookup");
     }
 
     /// @dev `LibFundingDeltas.build` aggregates fundedETH across BOTH the deposits[] and
