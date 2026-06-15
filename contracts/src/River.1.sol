@@ -726,13 +726,13 @@ contract RiverV1 is
 
                 IOperatorsRegistryV1 or = IOperatorsRegistryV1(OperatorsRegistryAddress.get());
 
-                (uint256 totalExitedETH, uint256 totalRequestedExitAmounts) = or.getExitedETHAndRequestedExitAmounts();
+                (uint256 totalExitedETH, uint256 totalRequestedETHExits) = or.getExitedAndRequestedETHExits();
 
                 // what we are calling pre-exiting balance is the amount of eth that should soon enter the exiting balance
                 // because exit requests have been made and operators might have a lag to process them
                 // we take them into account to not exit too many validators
                 uint256 preExitingBalance =
-                    totalRequestedExitAmounts > totalExitedETH ? (totalRequestedExitAmounts - totalExitedETH) : 0;
+                    totalRequestedETHExits > totalExitedETH ? (totalRequestedETHExits - totalExitedETH) : 0;
 
                 if (availableBalanceToRedeem + _exitingBalance + preExitingBalance < redeemManagerDemandInEth) {
                     uint256 exitAmountToRequest = LibUint256.max(
