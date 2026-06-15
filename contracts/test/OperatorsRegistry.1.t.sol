@@ -1762,7 +1762,7 @@ contract OperatorsRegistryV1CoverageTests is OperatorsRegistryV1TestBase, Operat
     }
 
     /// Asserts that getExitedAndRequestedETHExits returns zeros when no exited ETH has been reported.
-    function testGetExitedETHAndRequestedExitAmountsWhenNoExitedETH() public {
+    function testGetExitedAndRequestedETHExitsWhenNoExitedETH() public {
         reg.initOperatorsRegistryV1(admin, river);
         (uint256 exited, uint256 requested) = reg.getExitedAndRequestedETHExits();
         assertEq(exited, 0);
