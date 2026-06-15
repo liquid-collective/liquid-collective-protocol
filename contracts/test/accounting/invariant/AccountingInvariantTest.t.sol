@@ -54,10 +54,16 @@ contract AccountingInvariantTest is AccountingInvariants {
         sim_activateValidators(n);
     }
 
-    /// @notice Delegates an epoch advancement (with optional rewards) from the handler to the simulator.
+    /// @notice Delegates skimmed reward accrual from the handler to the simulator.
     /// @param rewardsPerValidator  Per-validator reward amount in wei to sweep this epoch.
     function handler_accrueSkimmedRewards(uint256 rewardsPerValidator) external {
         sim_accrueSkimmedRewards(rewardsPerValidator);
+    }
+
+    /// @notice Delegates 0x02 autocompounding from the handler to the simulator.
+    /// @param rewardsPerValidator  Per-validator reward amount in wei to compound into CL balances.
+    function handler_autocompound(uint256 rewardsPerValidator) external {
+        sim_autocompound(rewardsPerValidator);
     }
 
     /// @notice Delegates a validator exit request from the handler to the simulator.

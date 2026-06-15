@@ -8,6 +8,7 @@ interface IAccountingActions {
     function handler_deposit(uint256 opIdx, uint256 n, uint256 amountEach) external;
     function handler_activateValidators(uint256 n) external;
     function handler_accrueSkimmedRewards(uint256 rewardsPerValidator) external;
+    function handler_autocompound(uint256 rewardsPerValidator) external;
     function handler_requestExit(uint256 opIdx, uint256 ethAmount) external;
     function handler_completeExit(uint256 opIdx, uint256 ethAmount, uint256 penalty) external;
     function handler_slash(uint256 opIdx, uint256 penalty) external;
@@ -87,15 +88,22 @@ contract AccountingHandler is StdUtils {
         calls_activate++;
     }
 
-    /// @notice Fuzzer entry point: advances a single epoch with a per-validator reward bounded
-    ///         to [0, 0.008 ETH] to stay within realistic APR limits.
+    /// @notice Fuzzer entry point: accrues skimmed rewards for 0x01 validators and 0x02 validators
+    ///         at MAX_EFFECTIVE_BALANCE, bounded to [0, 0.008 ETH] per validator.
     /// @param rewardSeed  Seed used to derive the per-validator reward amount in wei.
     function advanceEpoch(uint256 rewardSeed) external {
-        // Step 1: Bound the reward to the maximum allowed per-validator amount.
         uint256 reward = bound(rewardSeed, 0, 0.008 ether);
-        // Step 2: Delegate the epoch advance to the test contract.
         _test.handler_accrueSkimmedRewards(reward);
         calls_advanceEpoch++;
+    }
+
+    /// @notice Fuzzer entry point: autocompounds rewards for 0x02 validators below MAX_EFFECTIVE_BALANCE,
+    ///         bounded to [0, 0.008 ETH] per validator. Exercises the _simCumulativeAutocompounded
+    ///         path and the autocompound term in the I2 upper bound.
+    /// @param rewardSeed  Seed used to derive the per-validator reward amount in wei.
+    function autocompound(uint256 rewardSeed) external {
+        uint256 reward = bound(rewardSeed, 0, 0.008 ether);
+        _test.handler_autocompound(reward);
     }
 
     /// @notice Fuzzer entry point: requests a fuzzed ETH amount to exit for a pseudo-randomly
