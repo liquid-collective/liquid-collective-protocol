@@ -169,6 +169,10 @@ interface IOperatorsRegistryV1 {
     /// @notice Thrown when the number of exited ETH is too high compared to operator count
     error ExitedETHArrayLengthExceedsOperatorCount();
 
+    /// @notice Thrown when the funding-delta array is longer than the operator count, which is
+    ///         impossible for a well-formed input (one delta per operator, strictly ascending)
+    error FundedETHArrayLengthExceedsOperatorCount();
+
     /// @notice Thrown when no exit requests can be performed
     error NoExitRequestsToPerform();
 

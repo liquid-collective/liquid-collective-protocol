@@ -1576,6 +1576,25 @@ contract OperatorsRegistryV1FlattenAndAllocationTests is OperatorAllocationTestB
         assertEq(operatorsRegistry.getOperator(9).funded, 0, "op9 untouched");
     }
 
+    /// @notice Asserts incrementFundedETH fails fast with FundedETHArrayLengthExceedsOperatorCount when
+    ///         the delta array is longer than the operator count (issue #411). The guard fires before
+    ///         the per-element loop: with 3 deltas against 2 operators it reverts on length, not on the
+    ///         out-of-range index 2 (which would otherwise be the first per-element failure).
+    function testIncrementFundedRevertsArrayLengthExceedsOperatorCount() external {
+        _setupOperators(2, 10);
+
+        IOperatorsRegistryV1.OperatorFundingDelta[] memory deltas = new IOperatorsRegistryV1.OperatorFundingDelta[](3);
+        for (uint256 i = 0; i < 3; i++) {
+            deltas[i].operatorIndex = i; // strictly ascending, so only the length is malformed
+            deltas[i].fundedETH = 32 ether;
+            deltas[i].depositPubkeys = new bytes[](1);
+            deltas[i].depositAmounts = new uint256[](1);
+        }
+        vm.prank(river);
+        vm.expectRevert(IOperatorsRegistryV1.FundedETHArrayLengthExceedsOperatorCount.selector);
+        operatorsRegistry.incrementFundedETH(deltas);
+    }
+
     /// @notice Asserts incrementFundedETH reverts InvalidOperatorIndex when a delta references an
     ///         operator beyond the registered range.
     function testIncrementFundedRevertsInvalidOperatorIndex() external {
