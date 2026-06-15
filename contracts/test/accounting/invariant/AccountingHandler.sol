@@ -25,7 +25,7 @@ interface IAccountingActions {
 /// @notice Foundry invariant-test handler that bounds fuzzed inputs and delegates to sim_* step functions
 ///         on the test contract. Each public function is a target for Foundry's stateful fuzzer.
 contract AccountingHandler is StdUtils {
-    uint256 private constant MIN_DEPOSIT = 1 ether;
+    uint256 private constant MIN_DEPOSIT = 32 ether;
     uint256 private constant MAX_DEPOSIT = 2048 ether;
 
     IAccountingActions private _test;
@@ -59,11 +59,11 @@ contract AccountingHandler is StdUtils {
     // ─── bounded handler functions ──────────────────────────────────────────────
 
     /// @notice Fuzzer entry point: deposits 1–4 validators for a pseudo-randomly selected operator,
-    ///         each with a fuzzed amount in [1, 2048] ETH.
+    ///         each with a fuzzed amount in [32, 2048] ETH.
     ///         Updates `ghost_depositCount` so that `oracleReport` knows at least one deposit exists.
     /// @param opSeed     Seed used to select the target operator (even → operator one, odd → operator two).
     /// @param nSeed      Seed used to derive the number of validators to deposit, bounded to [1, 4].
-    /// @param amountSeed Seed used to derive the per-validator deposit amount, bounded to [1, 2048] ETH.
+    /// @param amountSeed Seed used to derive the per-validator deposit amount, bounded to [32, 2048] ETH.
     function deposit(uint256 opSeed, uint256 nSeed, uint256 amountSeed) external {
         // Step 1: Select operator and bound the validator count and deposit amount to safe ranges.
         uint256 opIdx = (opSeed % 2 == 0) ? _opOne : _opTwo;
