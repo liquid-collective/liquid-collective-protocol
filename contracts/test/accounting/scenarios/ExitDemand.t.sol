@@ -63,8 +63,7 @@ contract ExitDemandTest is AccountingInvariants {
 
         sim_oracleReport();
         uint256 demandAfterSecond = operatorsRegistry.getCurrentETHExitsDemand();
-        (uint256 totalExitedETH, uint256 totalRequestedETHExits) =
-            operatorsRegistry.getExitedAndRequestedETHExits();
+        (uint256 totalExitedETH, uint256 totalRequestedETHExits) = operatorsRegistry.getExitedAndRequestedETHExits();
 
         assertGt(totalRequestedETHExits, totalExitedETH, "preExitingBalance should be non-zero");
         assertEq(demandAfterSecond, demandAfterRequest, "preExiting should prevent new demand");

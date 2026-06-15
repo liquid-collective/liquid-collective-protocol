@@ -166,9 +166,11 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
         DepositDataBufferAddress.set(_depositDataBuffer);
         emit SetDepositDataBuffer(_depositDataBuffer);
 
-        bytes32 depositDomain = BLS12_381.computeDepositDomain(_genesisForkVersion);
-        DepositDomainValue.set(depositDomain);
-        emit SetDepositDomain(depositDomain);
+        // Validate + store the BLS deposit domain. On a known chain (mainnet/hoodi) the supplied fork
+        // version must match the canonical value, so a misconfigured domain — which would silently
+        // brick the attestation deposit path — reverts at deploy. On unknown chains (e.g. local/test)
+        // the value is accepted as-is. Shared with the admin recovery setter.
+        _setDepositDomainFromForkVersion(_genesisForkVersion);
 
         for (uint256 i = 0; i < _rootAttesters.length; i++) {
             if (!RootAttesters.isRootAttester(_rootAttesters[i])) {
@@ -232,6 +234,37 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
     function setDepositDataBuffer(address _depositDataBuffer) external onlyRiverAdmin {
         DepositDataBufferAddress.set(_depositDataBuffer);
         emit SetDepositDataBuffer(_depositDataBuffer);
+    }
+
+    /// @inheritdoc IAttestationVerifierV1
+    function setDepositDomainFromForkVersion(bytes4 genesisForkVersion) external onlyRiverAdmin {
+        _setDepositDomainFromForkVersion(genesisForkVersion);
+    }
+
+    /// @notice The canonical beacon-chain GENESIS_FORK_VERSION for the chain this contract runs on.
+    /// @dev Only mainnet and hoodi are known. On any other chain `known` is false and the supplied
+    ///      fork version is accepted as-is (no canonical value to validate against).
+    /// @return known True if the current chain has a known fork version
+    /// @return expected The expected GENESIS_FORK_VERSION for the current chain (zero if unknown)
+    function _expectedForkVersion() internal view returns (bool known, bytes4 expected) {
+        if (block.chainid == 1) return (true, 0x00000000); // mainnet
+        if (block.chainid == 560048) return (true, 0x10000910); // hoodi
+        return (false, bytes4(0));
+    }
+
+    /// @notice Validate `genesisForkVersion` against the chain's canonical value (where known),
+    ///         compute the BLS deposit domain from it, and store it. On unknown chains the value is
+    ///         accepted as-is. Shared by `initAttestationVerifierV1` and the admin recovery setter.
+    /// @dev Reverts `InvalidGenesisForkVersion` only on a known chain (mainnet/hoodi) when the value
+    ///      does not match; on any other chain it passes through.
+    function _setDepositDomainFromForkVersion(bytes4 genesisForkVersion) internal {
+        (bool known, bytes4 expected) = _expectedForkVersion();
+        if (known && genesisForkVersion != expected) {
+            revert InvalidGenesisForkVersion(genesisForkVersion);
+        }
+        bytes32 depositDomain = BLS12_381.computeDepositDomain(genesisForkVersion);
+        DepositDomainValue.set(depositDomain);
+        emit SetDepositDomain(depositDomain);
     }
 
     /// @inheritdoc IAttestationVerifierV1

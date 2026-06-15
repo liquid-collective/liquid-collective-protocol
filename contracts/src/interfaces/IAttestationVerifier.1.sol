@@ -186,6 +186,10 @@ interface IAttestationVerifierV1 {
     /// @param max The MAX_SIGNATURES bound
     error QuorumExceedsMaxSignatures(uint256 quorum, uint256 max);
 
+    /// @notice The provided genesis fork version does not match the expected value for this chain.
+    /// @param provided The supplied genesis fork version
+    error InvalidGenesisForkVersion(bytes4 provided);
+
     /// @notice Adding a root attester would exceed MAX_ROOT_ATTESTERS
     /// @param count The would-be root attester count
     /// @param max The MAX_ROOT_ATTESTERS bound
@@ -398,6 +402,16 @@ interface IAttestationVerifierV1 {
     /// @notice Update the DepositDataBuffer address. Only callable by River's admin.
     /// @param _depositDataBuffer The new buffer address
     function setDepositDataBuffer(address _depositDataBuffer) external;
+
+    /// @notice Recompute and store the BLS deposit domain from a genesis fork version. Admin recovery
+    ///         path for a misconfigured deposit domain (e.g. a wrong fork version at init), which would
+    ///         otherwise brick the attestation deposit path until a full redeploy. Only callable by
+    ///         River's admin.
+    /// @dev On a known chain (mainnet or hoodi) reverts `InvalidGenesisForkVersion` unless
+    ///      `genesisForkVersion` exactly matches that chain's canonical value; on any other chain the
+    ///      value is accepted as-is (no canonical value to validate against). Same validation as init.
+    /// @param genesisForkVersion The beacon-chain GENESIS_FORK_VERSION for the current chain
+    function setDepositDomainFromForkVersion(bytes4 genesisForkVersion) external;
 
     /// @notice Add or remove a consolidation-committee attester. Only callable by River's admin.
     /// @param consolidationCommitteeAttester The consolidation-committee attester address to update
