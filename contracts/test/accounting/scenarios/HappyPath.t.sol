@@ -30,16 +30,17 @@ contract HappyPathTest is AccountingInvariants {
         // Step 1: Fund river with enough ETH for 10 validator deposits (10 × 32 ETH).
         _fundRiver(10 * DEPOSIT_SIZE);
         // Step 2: Split deposits across two operators — 6 for operator one, 4 for operator two.
-        sim_deposit(operatorOneIndex, _amounts(6, DEPOSIT_SIZE));
-        sim_deposit(operatorTwoIndex, _amounts(4, DEPOSIT_SIZE));
+        //         Use 0x01 (non-compounding) validators so rewards are swept (skimmed) to the EL.
+        sim_deposit(operatorOneIndex, _amounts(6, DEPOSIT_SIZE), false);
+        sim_deposit(operatorTwoIndex, _amounts(4, DEPOSIT_SIZE), false);
         // Step 3: Activate all 10 validators and submit the initial oracle report.
         sim_activateValidators(10);
         sim_oracleReport();
-        // Step 4: Advance one epoch with per-validator rewards and report again.
-        sim_advanceEpoch(0.008 ether);
+        // Step 4: Advance one epoch worth of rewards specifying the per-validator rewards
+        sim_accrueSkimmedRewards(0.008 ether);
         sim_oracleReport();
-        // Step 5: Advance a second epoch with per-validator rewards and report again.
-        sim_advanceEpoch(0.008 ether);
+        // Step 5: Advance a second epoch worth of rewards specifying the per-validator rewards
+        sim_accrueSkimmedRewards(0.008 ether);
         sim_oracleReport();
         // Step 6: Total underlying supply must be greater than the original principal,
         //         confirming that skimmed rewards have been accounted for.
