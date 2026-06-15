@@ -277,6 +277,13 @@ interface IOperatorsRegistryV1 {
     // function initOperatorsRegistryV1_1() external;
 
     /// @notice Migrates operators from V2 to V3 storage, dropping key-management fields
+    /// @dev    Migrated operators start with `activeCLETH == 0`, which is only populated by the first
+    ///         post-upgrade oracle report. Since `requestETHExits` caps each operator's allocation by
+    ///         `activeCLETH`, no validator exits can be requested between this call and that first
+    ///         report — even though `CurrentETHExitsDemand` / `TotalETHExitsRequested` are already
+    ///         non-zero (carried over from V2). OPERATIONAL REQUIREMENT: a fresh oracle report MUST
+    ///         land immediately after this call, and the redemption queue MUST be paused over the
+    ///         gap.
     /// @param _withdrawAddress The address of the Withdrawal contract
     function initOperatorsRegistryV1_2(address _withdrawAddress) external;
 
