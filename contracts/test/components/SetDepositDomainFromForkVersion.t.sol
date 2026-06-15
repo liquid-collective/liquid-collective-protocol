@@ -104,7 +104,7 @@ contract SetDepositDomainFromForkVersionTest is Test {
     }
 
     // -----------------------------------------------------------------------
-    // initAttestationVerifierV1 path — the deploy-time M-03 prevention. These exercise the same
+    // initAttestationVerifierV1 path — the deploy-time prevention. These exercise the same
     // shared validation reached through init (not just the recovery setter), so a future refactor
     // that stopped routing init through the check would fail here.
     // -----------------------------------------------------------------------
