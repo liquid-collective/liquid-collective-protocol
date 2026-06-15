@@ -66,7 +66,8 @@ struct SimValidator {
 
 // State tracked as individual variables in BeaconChainSimulator (no struct in actual impl):
 //   SimValidator[] _simValidators
-//   uint256 _simCumulativeSkimmed        -- monotonically increasing cumulative skimmed rewards
+//   uint256 _simCumulativeSkimmed        -- monotonically increasing cumulative skimmed rewards (0x01)
+//   uint256 _simCumulativeAutocompounded -- monotonically increasing cumulative autocompounded rewards (0x02)
 //   uint256 _simCumulativeExited         -- monotonically increasing cumulative exited ETH
 //   uint256 _simInFlightDeposit          -- ETH sent to deposit contract, not yet oracle-confirmed
 //   uint256 _simTotalDepositedActivatedETH -- cumulative ETH activated on the CL (incremented in sim_activateValidators)
@@ -77,11 +78,12 @@ struct SimValidator {
 
 | Function | Description |
 |---|---|
-| `sim_deposit(opIdx, n)` | Creates `n` `ValidatorDeposit` entries for `opIdx`, calls real `depositToConsensusLayerWithDepositRoot`, marks validators `Pending`, asserts `InFlightDeposit` increased |
+| `sim_deposit(opIdx, amounts)` | Creates validators for `opIdx` from a custom amounts array (defaults to 0x02 compounding); calls real `depositToConsensusLayerWithAttestation`, marks validators `Pending`, asserts `InFlightDeposit` increased |
 | `sim_activateValidators(n)` | Transitions `n` pending → active; increments `_simTotalDepositedActivatedETH` by `n × 32 ETH`; reflected in next oracle report as a `totalDepositedActivatedETH` increase, which causes `InFlightDeposit` to decrease |
-| `sim_advanceEpoch(rewardsPerValidator)` | Advances epoch, accrues rewards to active validators as skimming |
+| `sim_accrueSkimmedRewards(rewardsPerValidator)` | Sweeps `rewardsPerValidator` to the EL for each eligible validator: always for 0x01 validators (balance ≥ 32 ETH), and for 0x02 validators only once they reach MAX_EFFECTIVE_BALANCE (2048 ETH). Models balance-level reward tracking rather than epoch advancement. |
+| `sim_autocompound(rewardsPerValidator)` | Increases each 0x02 validator's `currentBalance` by `rewardsPerValidator` up to MAX_EFFECTIVE_BALANCE (2048 ETH); any overflow is routed to `_simCumulativeSkimmed` |
 | `sim_requestExit(opIdx, ethAmount)` | Marks validators as exiting |
-| `sim_completeExit(opIdx, ethAmount, penalty)` | Marks validators as exited; `exitedETH = depositedETH - penalty` |
+| `sim_completeExit(opIdx, ethAmount, penalty)` | Completes exits for `ethAmount` of `opIdx`'s queued ETH; tracks `exitedETH` as the actually completed amount minus any penalty (`toComplete - penalty`), which may differ from `depositedETH` for partial exits or when `currentBalance` has grown above principal via autocompounding |
 | `sim_slash(opIdx, penalty)` | Applies balance penalty; optionally activates slashing containment in next report |
 | `sim_oracleReport(flags?)` | Builds `ConsensusLayerReport` from `SimBeaconState`, submits through real Oracle, runs **all invariants** |
 
@@ -94,7 +96,7 @@ All invariants are checked after every `sim_oracleReport` call (and after deposi
 (skipped in explicit slashing scenarios)
 
 **I2 — ETH conservation**
-`river.totalUnderlyingSupply() <= _simTotalUserDeposited + _simCumulativeSkimmed`
+`river.totalUnderlyingSupply() <= _simTotalUserDeposited + _simCumulativeSkimmed + _simCumulativeAutocompounded`
 (upper bound check using externally tracked values, making it non-tautological; also asserts `> 0` when deposits have been made)
 
 **I3 — InFlightDeposit consistency**

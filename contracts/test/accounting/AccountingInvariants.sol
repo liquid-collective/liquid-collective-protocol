@@ -134,11 +134,12 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
         assertGe(lhs, rhs, "I1: share price decreased unexpectedly");
     }
 
-    /// @notice I2: ETH conservation — totalUnderlyingSupply ≤ user deposits + CL rewards.
-    ///         NOTE: upper bound does not include EL fees, coverage fund top-ups, or direct
-    ///         donations. Will false-fail if any scenario introduces those ETH sources.
-    ///         Both values are tracked independently of contract storage (non-tautological).
-    ///         Also asserts that underlying supply is non-zero whenever deposits have been made.
+    /// @notice I2: Verifies ETH conservation — `totalUnderlyingSupply` must never exceed
+    ///         tracked principal plus cumulative skimmed rewards plus autocompounded rewards.
+    ///         `_simTotalUserDeposited` captures all principal sources (user deposits and
+    ///         consolidation principal). All values are tracked independently of contract
+    ///         storage, making this a non-tautological check. Also asserts non-zero whenever
+    ///         principal has been deposited.
     function _assertI2_ETHConservation() internal {
         uint256 upperBound = _simTotalUserDeposited + _simCumulativeSkimmed + _simCumulativeAutocompounded;
         assertLe(river.totalUnderlyingSupply(), upperBound, "I2: total underlying exceeds deposited + rewards");
@@ -247,5 +248,4 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
         uint256 demandAfter = operatorsRegistry.getCurrentETHExitsDemand();
         assertLe(demandAfter, _snapExitDemand, "I8: exit demand increased during slashing containment");
     }
-
 }
