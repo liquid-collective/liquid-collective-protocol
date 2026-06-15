@@ -67,7 +67,14 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                     active: operatorV2.active,
                     name: operatorV2.name,
                     operator: operatorV2.operator,
-                    activeCLETH: 0 // This is ok to set 0 here because it will be updated via the oracle report before it gets used
+                    // activeCLETH starts at 0 and is only populated by the first post-upgrade oracle
+                    // report (OracleManager._reportCLETH). UNTIL that report lands, requestETHExits caps
+                    // each operator's allocation by activeCLETH, so `available == 0` and any non-zero exit
+                    // allocation reverts with ExitsRequestedExceedAvailableFundedAmount — even though
+                    // CurrentETHExitsDemand / TotalETHExitsRequested are carried over non-zero from V2.
+                    // A fresh oracle report MUST land immediately after initOperatorsRegistryV1_2, with
+                    // the redemption queue paused to cover the gap.
+                    activeCLETH: 0
                 })
             );
         }
