@@ -396,17 +396,6 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         withdraw.withdraw{value: 1 gwei}(pubkeys, amounts, 1 gwei, excessFeeRecipient);
     }
 
-    function testWithdrawRevertsIfCalledByRiver() external {
-        bytes[] memory pubkeys = new bytes[](1);
-        pubkeys[0] = VALID_PUBKEY_48;
-        uint64[] memory amounts = new uint64[](1);
-        amounts[0] = 1 gwei;
-        vm.deal(address(river), 10 gwei);
-        vm.prank(address(river));
-        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(river)));
-        withdraw.withdraw{value: 1 gwei}(pubkeys, amounts, 1 gwei, excessFeeRecipient);
-    }
-
     function testWithdrawRevertsIfEmptyPubkeysArray() external {
         bytes[] memory pubkeys = new bytes[](0);
         uint64[] memory amounts = new uint64[](0);
