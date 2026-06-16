@@ -1980,7 +1980,7 @@ contract OperatorsRegistryV1CoverageTests is OperatorsRegistryV1TestBase, Operat
         vm.prank(keeper);
         vm.expectRevert(
             abi.encodeWithSignature(
-                "ExitsRequestedExceedAvailableFundedAmount(uint256,uint256,uint256)", 0, 2 * 32 ether, 1 * 32 ether
+                "ExitsRequestedExceedAvailableActiveCLAmount(uint256,uint256,uint256)", 0, 2 * 32 ether, 1 * 32 ether
             )
         );
         reg.requestETHExits(
@@ -2347,7 +2347,7 @@ contract OperatorsRegistryV1ELExitTests is Test {
         vm.prank(keeper);
         vm.expectRevert(
             abi.encodeWithSignature(
-                "ELExitsRequestedExceedAvailableFundedAmount(uint256,uint256,uint256)", 0, 16 ether, 8 ether
+                "ELExitsRequestedExceedAvailableActiveCLAmount(uint256,uint256,uint256)", 0, 16 ether, 8 ether
             )
         );
         reg.requestETHExits(empty, allocs, 0);
