@@ -28,6 +28,7 @@ import "./state/attestationVerifier/DomainSeparator.sol";
 import "./state/attestationVerifier/ProcessedDepositDataBufferIds.sol";
 import "./state/attestationVerifier/PectraValidatorPubkeyLookup.sol";
 import "./state/attestationVerifier/PrePectraValidatorPubkeyLookup.sol";
+import "./state/river/ConsolidationManagerAddress.sol";
 import "./state/shared/RiverAddress.sol";
 
 /// @title AttestationVerifier (v1)
@@ -121,6 +122,13 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
     ///      River-initiated deposit flow (e.g. `recordNewlyFundedPubkeys`).
     modifier onlyRiver() {
         if (msg.sender != RiverAddress.get()) {
+            revert LibErrors.Unauthorized(msg.sender);
+        }
+        _;
+    }
+
+    modifier onlyRiverOrConsolidationManager() {
+        if (msg.sender != RiverAddress.get() && msg.sender != ConsolidationManagerAddress.get()) {
             revert LibErrors.Unauthorized(msg.sender);
         }
         _;
@@ -334,6 +342,12 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
         if (newQuorum > MAX_SIGNATURES) revert QuorumExceedsMaxSignatures(newQuorum, MAX_SIGNATURES);
         ConsolidationCommitteeAttestationQuorum.set(newQuorum);
         emit SetConsolidationCommitteeAttestationQuorum(newQuorum);
+    }
+
+    /// @inheritdoc IAttestationVerifierV1
+    function setConsolidationManager(address consolidationManager) external onlyRiverAdmin {
+        ConsolidationManagerAddress.set(consolidationManager);
+        emit SetConsolidationManager(consolidationManager);
     }
 
     // -----------------------------------------------------------------------
@@ -553,7 +567,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
     /// @inheritdoc IAttestationVerifierPectraMigrationV1
     function validateSelfConsolidation(bytes[] calldata pubkeys)
         external
-        onlyRiver
+        onlyRiverOrConsolidationManager
         returns (IWithdrawV1.ConsolidationRequest[] memory)
     {
         uint256 len = pubkeys.length;
@@ -630,7 +644,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
     ///      additional financial caps on `totalAmount`.
     function validateConsolidation(IAttestationVerifierV1.ConsolidationObject calldata consolidation)
         external
-        onlyRiver
+        onlyRiverOrConsolidationManager
         returns (bool)
     {
         // 1. Structural checks (cheapest first — fail fast)

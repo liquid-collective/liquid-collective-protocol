@@ -69,6 +69,9 @@ interface IAttestationVerifierV1 {
     /// @notice Emitted when the consolidation-committee attestation quorum is updated
     event SetConsolidationCommitteeAttestationQuorum(uint256 quorum);
 
+    /// @notice Emitted when the authorized consolidation manager is updated
+    event SetConsolidationManager(address indexed consolidationManager);
+
     /// @notice Emitted when the EIP-712 consolidation domain separator is (re)cached
     event SetConsolidationDomainSeparator(bytes32 consolidationDomainSeparator);
 
@@ -421,6 +424,10 @@ interface IAttestationVerifierV1 {
     /// @notice Update the consolidation-committee attestation quorum. Only callable by River's admin.
     /// @param newQuorum The new quorum (1 ≤ newQuorum ≤ consolidationCommitteeAttesterCount, ≤ MAX_SIGNATURES)
     function setConsolidationCommitteeAttestationQuorum(uint256 newQuorum) external;
+
+    /// @notice Update the consolidation manager authorized to validate consolidation flows.
+    /// @param consolidationManager The consolidation manager address
+    function setConsolidationManager(address consolidationManager) external;
 
     // -----------------------------------------------------------------------
     // Views

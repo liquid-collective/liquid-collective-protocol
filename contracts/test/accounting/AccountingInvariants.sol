@@ -93,7 +93,7 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
         // in-flight value (_simInFlightDeposit), which mirrors what the contract should hold:
         // cumulative ETH sent to the deposit contract minus what the oracle has already confirmed.
         assertEq(
-            river.getInFlightDeposit(), _simInFlightDeposit, "I3 (pre-report): InFlightDeposit != sim in-flight deposit"
+            _riverInFlightDeposit(), _simInFlightDeposit, "I3 (pre-report): InFlightDeposit != sim in-flight deposit"
         );
 
         _snapTotalUnderlying = river.totalUnderlyingSupply();
@@ -226,7 +226,7 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
     ///         affect TotalDepositedETH, so this identity holds regardless of exit or
     ///         consolidation activity.
     function _assertI7_DepositActivationDecomposition() internal {
-        uint256 inFlight = river.getInFlightDeposit();
+        uint256 inFlight = _riverInFlightDeposit();
         uint256 activated = river.getLastConsensusLayerReport().totalDepositedActivatedETH;
         uint256 totalDeposited = river.getTotalDepositedETH();
         assertEq(inFlight + activated, totalDeposited, "I7: InFlightDeposit + activatedETH != TotalDepositedETH");

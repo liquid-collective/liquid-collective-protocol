@@ -9,7 +9,7 @@ import "./components/ISharesManager.1.sol";
 import "./components/IUserDepositManager.1.sol";
 
 import "./IWithdraw.1.sol";
-import "./IAttestationVerifier.1.sol";
+import "./IRiverV1_3Migration.1.sol";
 
 /// @title River Interface (v1)
 /// @author Alluvial Finance Inc.
@@ -48,6 +48,10 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @param consolidationCoverageFund The new Consolidation Coverage Fund (address(0) to disable)
     event SetConsolidationCoverageFund(address indexed consolidationCoverageFund);
 
+    /// @notice The stored ConsolidationManager has been changed
+    /// @param consolidationManager The new ConsolidationManager address
+    event SetConsolidationManager(address indexed consolidationManager);
+
     /// @notice The stored Collector has been changed
     /// @param collector The new Collector
     event SetCollector(address indexed collector);
@@ -55,10 +59,6 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @notice The stored Allowlist has been changed
     /// @param allowlist The new Allowlist
     event SetAllowlist(address indexed allowlist);
-
-    /// @notice The stored Consolidator has been changed
-    /// @param consolidator The new Consolidator
-    event SetConsolidator(address indexed consolidator);
 
     /// @notice The stored Global Fee has been changed
     /// @param fee The new Global Fee
@@ -105,12 +105,6 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @param newAmount The new balance to redeem
     event SetBalanceToRedeem(uint256 oldAmount, uint256 newAmount);
 
-    /// @notice Emitted when LsETH is minted for consolidation
-    /// @param recipient The address that received the minted LsETH
-    /// @param amountEth The amount of ETH(wei) attributed to consolidation
-    /// @param sharesMinted The amount of LsETH shares minted
-    event LsETHMintedForConsolidation(address indexed recipient, uint256 amountEth, uint256 sharesMinted);
-
     /// @notice Emitted when the balance committed to deposit
     /// @param oldAmount The old balance committed to deposit
     /// @param newAmount The new balance committed to deposit
@@ -120,10 +114,6 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @param oldAmount The old consolidation buffer
     /// @param newAmount The new consolidation buffer
     event SetConsolidationBuffer(uint256 oldAmount, uint256 newAmount);
-
-    /// @notice Emitted when the external consolidation recipient mapping address is changed
-    /// @param externalConsolidationRecipientMapping The new external consolidation recipient mapping address
-    event SetExternalConsolidationRecipientMapping(address indexed externalConsolidationRecipientMapping);
 
     /// @notice Emitted when the redeem manager received a withdraw event report
     /// @param redeemManagerDemand The total demand in LsETH of the redeem manager
@@ -137,18 +127,6 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     event SkippedExitRequestsDueToSlashingContainment();
     /// @notice Emitted when balance commitment to deposit is skipped because slashing containment mode is active
     event SkippedCommitToDepositDueToSlashingContainment();
-
-    /// @notice Emitted when River forwards a Pectra consolidation request to the Withdraw contract
-    /// @param requests Consolidation requests
-    /// @param maxFeePerConsolidation Maximum fee per consolidation
-    /// @param excessFeeRecipient Address to receive any excess msg.value
-    /// @param valueSent ETH sent with the call for fees
-    event PectraConsolidationRequested(
-        IWithdrawV1.ConsolidationRequest[] requests,
-        uint256 maxFeePerConsolidation,
-        address excessFeeRecipient,
-        uint256 valueSent
-    );
 
     /// @notice Thrown when the amount received from the Withdraw contract doe not match the requested amount
     /// @param requested The amount that was requested
@@ -165,8 +143,8 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @notice Thrown when the attestation verifier supplied to initRiverV1_3 is not bound to this River
     error InvalidAttestationVerifier();
 
-    /// @notice Thrown when the consolidator address is not authorized
-    error OnlyConsolidator();
+    /// @notice Thrown when the supplied migration helper is not the pinned helper bytecode
+    error InvalidMigrationHelper();
 
     /// @notice Initializes version 1.3 of the River System. Performs the Pectra accounting migration,
     ///         updates the withdrawal credentials, and wires the AttestationVerifier sibling contract
@@ -175,14 +153,18 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @param _withdrawalCredentials The withdrawal credentials to apply to all deposits
     /// @param _consolidationCoverageFund The address of the consolidation coverage fund
     /// @param _attestationVerifier The pre-initialized AttestationVerifier contract address
-    /// @param _externalConsolidationRecipientMapping The pre-initialized External Consolidation Recipient Mapping contract address
-    /// @param _consolidator The address authorized to perform consolidator-only operations (EOA or contract)
+    /// @param _consolidationManager The pre-initialized ConsolidationManager contract address
+    /// @param _fundingDeltasBuilder The pre-deployed FundingDeltasBuilder contract address
+    /// @param _depositExecutor The pre-deployed DepositExecutor contract address
+    /// @param _migrationHelper The pinned migration helper contract address
     function initRiverV1_3(
         bytes32 _withdrawalCredentials,
         address _consolidationCoverageFund,
         address _attestationVerifier,
-        address _externalConsolidationRecipientMapping,
-        address _consolidator
+        address _consolidationManager,
+        address _fundingDeltasBuilder,
+        address _depositExecutor,
+        IRiverV1_3Migration _migrationHelper
     ) external;
 
     /// @notice Get the current global fee
@@ -216,10 +198,6 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @notice Retrieve the operators registry
     /// @return The operators registry address
     function getOperatorsRegistry() external view returns (address);
-
-    /// @notice Retrieve the consolidator address
-    /// @return The consolidator address
-    function getConsolidator() external view returns (address);
 
     /// @notice Retrieve the metadata uri string value
     /// @return The metadata uri string value
@@ -256,9 +234,11 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @return The current balance to consolidate
     function getBalanceToConsolidate() external view returns (uint256);
 
-    /// @notice Mints LsETH to a recipient for consolidated ETH (consolidator only)
-    /// @param consolidation The consolidation object
-    function mintLsETHForConsolidation(IAttestationVerifierV1.ConsolidationObject calldata consolidation) external;
+    /// @notice Finalizes a consolidation mint requested by the ConsolidationManager
+    /// @param recipient The account receiving minted LsETH
+    /// @param amount The amount of ETH(wei) attributed to consolidation
+    /// @return sharesMinted The amount of LsETH shares minted
+    function mintLsETHForConsolidation(address recipient, uint256 amount) external returns (uint256 sharesMinted);
 
     /// @notice Performs a redeem request on the redeem manager
     /// @param _lsETHAmount The amount of LsETH to redeem
@@ -302,10 +282,6 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @param _newConsolidationCoverageFund New address for the fund
     function setConsolidationCoverageFund(address _newConsolidationCoverageFund) external;
 
-    /// @notice Changes the consolidator address
-    /// @param _newConsolidator New address for the consolidator
-    function setConsolidator(address _newConsolidator) external;
-
     /// @notice Sets the metadata uri string value
     /// @param _metadataURI The new metadata uri string value
     function setMetadataURI(string memory _metadataURI) external;
@@ -325,17 +301,14 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @notice Input for the redeem manager funds
     function sendRedeemManagerExceedingFunds() external payable;
 
-    /// @notice Request self consolidation of pre-Pectra validator pubkeys. Only callable by the keeper
-    /// @param pubkeys The 48-byte BLS pubkeys to consolidate
-    /// @param maxFeePerConsolidation The maximum fee per consolidation to accept
-    function selfConsolidation(bytes[] calldata pubkeys, uint256 maxFeePerConsolidation) external payable;
-
-    /// @notice Request Pectra consolidations via the Withdraw contract. fee ETH sent as msg.value.
-    /// @dev Only callable by the consolidator
-    /// @dev Since we consolidate to validators we own there is no need to track the consolidation buffer
+    /// @notice Requests Pectra consolidations from the Withdraw contract
+    /// @dev Only callable by the ConsolidationManager
     /// @param requests Consolidation requests (each: src pubkeys[] -> target pubkey)
     /// @param maxFeePerConsolidation Maximum fee per consolidation to accept
-    function consolidate(IWithdrawV1.ConsolidationRequest[] calldata requests, uint256 maxFeePerConsolidation)
-        external
-        payable;
+    /// @param excessFeeRecipient Address to receive any excess msg.value
+    function requestConsolidation(
+        IWithdrawV1.ConsolidationRequest[] calldata requests,
+        uint256 maxFeePerConsolidation,
+        address excessFeeRecipient
+    ) external payable;
 }

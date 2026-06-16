@@ -9,7 +9,6 @@ import "../mocks/DepositContractMock.sol";
 
 import "../../src/River.1.sol";
 import "../../src/AttestationVerifier.1.sol";
-import "../utils/RiverV1WithLegacyInit.sol";
 import "../../src/Oracle.1.sol";
 import "../../src/OperatorsRegistry.1.sol";
 import "../../src/Allowlist.1.sol";
@@ -17,16 +16,20 @@ import "../../src/ELFeeRecipient.1.sol";
 import "../../src/CoverageFund.1.sol";
 import "../../src/RedeemManager.1.sol";
 import "../../src/Withdraw.1.sol";
+import "../../src/ConsolidationManager.1.sol";
+import "../../src/DepositExecutor.sol";
+import "../../src/FundingDeltasBuilder.sol";
 import "../../src/ExternalConsolidationRecipientMapping.sol";
+import "../../src/RiverV1_3Migration.sol";
 
 import "../../src/interfaces/IOperatorRegistry.1.sol";
 import "../../src/interfaces/IDepositDataBuffer.sol";
 import "../../src/interfaces/components/IOracleManager.1.sol";
 import "../../src/libraries/BLS12_381.sol";
 import "../../src/libraries/LibAllowlistMasks.sol";
-import "../../src/state/river/InFlightDeposit.sol";
-import "../../src/state/river/CommittedBalance.sol";
-import "../../src/state/river/BalanceToDeposit.sol";
+import "../../src/state/river/CLSpec.sol";
+import "../../src/state/river/DailyCommittableLimits.sol";
+import "../../src/state/river/ReportBounds.sol";
 import "../../src/state/operatorsRegistry/Operators.3.sol";
 
 // -----------------------------------------------------------------------
@@ -71,18 +74,6 @@ contract AccountingTestOperatorsRegistry is OperatorsRegistryV1 {
     }
 }
 
-/// @dev Test-only River subclass exposing InFlightDeposit and debug helpers.
-contract AccountingRiverV1 is RiverV1WithLegacyInit {
-    function getInFlightDeposit() external view returns (uint256) {
-        return InFlightDeposit.get();
-    }
-
-    function debug_moveDepositToCommitted() external {
-        _setCommittedBalance(CommittedBalance.get() + BalanceToDeposit.get());
-        _setBalanceToDeposit(0);
-    }
-}
-
 abstract contract AccountingHarnessBase is Test, BytesGenerator {
     // ─── protocol constants ───────────────────────────────────────────────────
     uint64 internal constant EPOCHS_PER_FRAME = 225;
@@ -92,9 +83,21 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
     uint256 internal constant DEPOSIT_SIZE = 32 ether;
     uint128 internal constant MAX_DAILY_NET = 3200 ether;
     uint128 internal constant MAX_DAILY_REL = 2000;
+    bytes32 internal constant VERSION_SLOT = bytes32(uint256(keccak256("river.state.version")) - 1);
+    bytes32 internal constant ADMINISTRATOR_ADDRESS_SLOT =
+        bytes32(uint256(keccak256("river.state.administratorAddress")) - 1);
+    bytes32 internal constant BALANCE_TO_DEPOSIT_SLOT = bytes32(uint256(keccak256("river.state.balanceToDeposit")) - 1);
+    bytes32 internal constant COMMITTED_BALANCE_SLOT = bytes32(uint256(keccak256("river.state.committedBalance")) - 1);
+    bytes32 internal constant DEPOSIT_CONTRACT_ADDRESS_SLOT =
+        bytes32(uint256(keccak256("river.state.depositContractAddress")) - 1);
+    bytes32 internal constant IN_FLIGHT_DEPOSIT_SLOT = bytes32(uint256(keccak256("river.state.inFlightDeposit")) - 1);
+    bytes32 internal constant OPERATORS_REGISTRY_ADDRESS_SLOT =
+        bytes32(uint256(keccak256("river.state.operatorsRegistryAddress")) - 1);
+    bytes32 internal constant REDEEM_MANAGER_ADDRESS_SLOT =
+        bytes32(uint256(keccak256("river.state.redeemManagerAddress")) - 1);
 
     // ─── contracts ────────────────────────────────────────────────────────────
-    AccountingRiverV1 internal river;
+    RiverV1 internal river;
     OracleV1 internal oracle;
     AccountingTestOperatorsRegistry internal operatorsRegistry;
     AllowlistV1 internal allowlist;
@@ -105,6 +108,10 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
     IDepositContract internal depositContract;
     AccountingMockDepositDataBuffer internal depositBuffer;
     AttestationVerifierV1 internal attestationVerifier;
+    ConsolidationManagerV1 internal consolidationManager;
+    DepositExecutor internal depositExecutor;
+    FundingDeltasBuilder internal fundingDeltasBuilder;
+    RiverV1_3Migration internal migrationHelper;
     ExternalConsolidationRecipientMappingV1 internal externalConsolidationRecipientMapping;
 
     /// @dev Monotonic counter mixed into pubkey/signature generation in `_makeDepositObjects`.
@@ -170,8 +177,12 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
         redeemManager = new RedeemManagerV1();
         elFeeRecipient = new ELFeeRecipientV1();
         coverageFund = new CoverageFundV1();
+        consolidationManager = new ConsolidationManagerV1();
+        depositExecutor = new DepositExecutor();
+        fundingDeltasBuilder = new FundingDeltasBuilder();
         externalConsolidationRecipientMapping = new ExternalConsolidationRecipientMappingV1();
-        river = new AccountingRiverV1();
+        migrationHelper = new RiverV1_3Migration();
+        river = new RiverV1();
         operatorsRegistry = new AccountingTestOperatorsRegistry();
 
         LibImplementationUnbricker.unbrick(vm, address(withdraw));
@@ -180,6 +191,7 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
         LibImplementationUnbricker.unbrick(vm, address(redeemManager));
         LibImplementationUnbricker.unbrick(vm, address(elFeeRecipient));
         LibImplementationUnbricker.unbrick(vm, address(coverageFund));
+        LibImplementationUnbricker.unbrick(vm, address(consolidationManager));
         LibImplementationUnbricker.unbrick(vm, address(externalConsolidationRecipientMapping));
         LibImplementationUnbricker.unbrick(vm, address(river));
         LibImplementationUnbricker.unbrick(vm, address(operatorsRegistry));
@@ -191,30 +203,7 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
 
         redeemManager.initializeRedeemManagerV1(address(river));
 
-        river.initRiverV1(
-            address(depositContract),
-            address(elFeeRecipient),
-            withdraw.getCredentials(),
-            address(oracle),
-            admin,
-            address(allowlist),
-            address(operatorsRegistry),
-            makeAddr("collector"),
-            500
-        );
-        river.initRiverV1_1(
-            address(redeemManager),
-            EPOCHS_PER_FRAME,
-            SLOTS_PER_EPOCH,
-            SECONDS_PER_SLOT,
-            0,
-            EPOCHS_UNTIL_FINAL,
-            1000,
-            500,
-            MAX_DAILY_NET,
-            MAX_DAILY_REL
-        );
-        river.initRiverV1_2();
+        _bootstrapLegacyRiverState();
 
         // 3 root attesters with quorum=2 (quorum must be ≤ attester count and ≤ MAX_SIGNATURES)
         address[] memory _initRootAttesters = new address[](3);
@@ -242,13 +231,18 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
         bytes32 _initWc = withdraw.getCredentials();
         address _initConsolidationCoverageFund = makeAddr("consolidationCoverageFund");
         externalConsolidationRecipientMapping.initExternalConsolidationRecipientMappingV1(address(river));
+        consolidationManager.initConsolidationManagerV1(
+            address(river), address(externalConsolidationRecipientMapping), consolidator
+        );
         vm.prank(admin);
         river.initRiverV1_3(
             _initWc,
             _initConsolidationCoverageFund,
             address(attestationVerifier),
-            address(externalConsolidationRecipientMapping),
-            consolidator
+            address(consolidationManager),
+            address(fundingDeltasBuilder),
+            address(depositExecutor),
+            migrationHelper
         );
         // Mock BLS verification: EIP-2537 precompiles are unavailable in Foundry.
         vm.mockCall(
@@ -280,6 +274,57 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
 
     // ─── helpers ──────────────────────────────────────────────────────────────
 
+    function _bootstrapLegacyRiverState() internal {
+        _storeRiverAddress(ADMINISTRATOR_ADDRESS_SLOT, admin);
+
+        vm.startPrank(admin);
+        river.setCollector(makeAddr("collector"));
+        river.setGlobalFee(500);
+        river.setELFeeRecipient(address(elFeeRecipient));
+        river.setAllowlist(address(allowlist));
+        river.setDailyCommittableLimits(
+            DailyCommittableLimits.DailyCommittableLimitsStruct({
+                minDailyNetCommittableAmount: MAX_DAILY_NET, maxDailyRelativeCommittableAmount: MAX_DAILY_REL
+            })
+        );
+        river.setOracle(address(oracle));
+        river.setCLSpec(
+            CLSpec.CLSpecStruct({
+                epochsPerFrame: EPOCHS_PER_FRAME,
+                slotsPerEpoch: SLOTS_PER_EPOCH,
+                secondsPerSlot: SECONDS_PER_SLOT,
+                genesisTime: 0,
+                epochsToAssumedFinality: EPOCHS_UNTIL_FINAL
+            })
+        );
+        river.setReportBounds(ReportBounds.ReportBoundsStruct({annualAprUpperBound: 1000, relativeLowerBound: 500}));
+        vm.stopPrank();
+
+        _storeRiverAddress(DEPOSIT_CONTRACT_ADDRESS_SLOT, address(depositContract));
+        _storeRiverAddress(OPERATORS_REGISTRY_ADDRESS_SLOT, address(operatorsRegistry));
+        _storeRiverAddress(REDEEM_MANAGER_ADDRESS_SLOT, address(redeemManager));
+
+        vm.prank(address(river));
+        river.approve(address(redeemManager), type(uint256).max);
+
+        vm.store(address(river), VERSION_SLOT, bytes32(uint256(3)));
+    }
+
+    function _storeRiverAddress(bytes32 slot, address value) internal {
+        vm.store(address(river), slot, bytes32(uint256(uint160(value))));
+    }
+
+    function _riverInFlightDeposit() internal view returns (uint256) {
+        return uint256(vm.load(address(river), IN_FLIGHT_DEPOSIT_SLOT));
+    }
+
+    function _debugMoveDepositToCommitted() internal {
+        uint256 committedBalance = uint256(vm.load(address(river), COMMITTED_BALANCE_SLOT));
+        uint256 balanceToDeposit = uint256(vm.load(address(river), BALANCE_TO_DEPOSIT_SLOT));
+        vm.store(address(river), COMMITTED_BALANCE_SLOT, bytes32(committedBalance + balanceToDeposit));
+        vm.store(address(river), BALANCE_TO_DEPOSIT_SLOT, bytes32(0));
+    }
+
     function _fundRiver(uint256 ethAmount) internal {
         require(ethAmount > 0, "fundRiver: zero amount");
         _simTotalUserDeposited += ethAmount;
@@ -288,7 +333,7 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
         vm.deal(user, ethAmount);
         vm.prank(user);
         river.deposit{value: ethAmount}();
-        river.debug_moveDepositToCommitted();
+        _debugMoveDepositToCommitted();
     }
 
     function _allowUser(address user) internal {

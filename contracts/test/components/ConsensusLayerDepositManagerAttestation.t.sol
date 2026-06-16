@@ -4,6 +4,7 @@ pragma solidity 0.8.34;
 import "forge-std/Test.sol";
 
 import "../../src/AttestationVerifier.1.sol";
+import "../../src/DepositExecutor.sol";
 import "../../src/Initializable.sol";
 import "../../src/components/ConsensusLayerDepositManager.1.sol";
 import "../../src/interfaces/IAttestationVerifier.1.sol";
@@ -15,6 +16,7 @@ import "../../src/libraries/LibErrors.sol";
 import "../../src/libraries/LibFundingDeltas.sol";
 import "../../src/libraries/BLS12_381.sol";
 import "../../src/state/river/DepositContractAddress.sol";
+import "../../src/state/river/DepositExecutorAddress.sol";
 import "../../src/state/shared/AttestationVerifierAddress.sol";
 import "../utils/LibImplementationUnbricker.sol";
 import "../mocks/DepositContractEnhancedMock.sol";
@@ -185,6 +187,10 @@ contract AttestationDepositHarness is ConsensusLayerDepositManagerV1 {
         DepositContractAddress.set(v);
     }
 
+    function sudoSetDepositExecutor(address v) external {
+        DepositExecutorAddress.set(v);
+    }
+
     function sudoSetAttestationVerifier(address v) external {
         AttestationVerifierAddress.set(v);
     }
@@ -223,6 +229,7 @@ contract AttestationDepositHarness is ConsensusLayerDepositManagerV1 {
 contract ConsensusLayerDepositManagerAttestationTest is Test {
     AttestationDepositHarness internal dm;
     AttestationVerifierV1 internal verifier;
+    DepositExecutor internal depositExecutor;
     MockDepositDataBuffer internal buffer;
     MockPrePectraOperatorsRegistry internal prePectraRegistry;
     DepositContractEnhancedMock internal depositContract;
@@ -302,6 +309,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         rootAttester3 = vm.addr(rootAttesterPk3);
 
         depositContract = new DepositContractEnhancedMock();
+        depositExecutor = new DepositExecutor();
         buffer = new MockDepositDataBuffer();
         prePectraRegistry = new MockPrePectraOperatorsRegistry();
 
@@ -310,6 +318,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         LibImplementationUnbricker.unbrick(vm, address(dm));
         dm.initialize(address(depositContract), withdrawalCredentials);
         dm.sudoSetKeeper(keeper);
+        dm.sudoSetDepositExecutor(address(depositExecutor));
         dm.sudoSetOperatorsRegistry(address(prePectraRegistry));
 
         // 2. Deploy and init the AttestationVerifier. The verifier's EIP-712

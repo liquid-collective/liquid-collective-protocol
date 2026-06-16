@@ -78,7 +78,7 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
         if (river.getCommittedBalance() < needed) {
             _fundRiver(needed - river.getCommittedBalance());
         }
-        uint256 prevInFlight = river.getInFlightDeposit();
+        uint256 prevInFlight = _riverInFlightDeposit();
 
         // Build DepositObjects for the attestation-based deposit path.
         uint256[] memory opIndices = new uint256[](amounts.length);
@@ -112,7 +112,7 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
             );
         }
         _simInFlightDeposit += needed;
-        assertEq(river.getInFlightDeposit(), prevInFlight + needed, "sim_deposit: InFlightDeposit mismatch");
+        assertEq(_riverInFlightDeposit(), prevInFlight + needed, "sim_deposit: InFlightDeposit mismatch");
     }
 
     function sim_activateValidators(uint256 n) internal {

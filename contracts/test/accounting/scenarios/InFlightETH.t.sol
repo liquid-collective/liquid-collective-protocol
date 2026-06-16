@@ -16,7 +16,7 @@ contract InFlightETHTest is AccountingInvariants {
         //         Validators remain in Pending state, so in-flight ETH must be preserved.
         sim_oracleReport();
         // Step 3: Assert in-flight deposit is still 96 ETH — the oracle confirmed the value.
-        assertEq(river.getInFlightDeposit(), 96 ether, "inFlight preserved after report with pending");
+        assertEq(_riverInFlightDeposit(), 96 ether, "inFlight preserved after report with pending");
     }
 
     /// @notice Verifies that partial validator activation across two oracle reports correctly
@@ -31,12 +31,12 @@ contract InFlightETHTest is AccountingInvariants {
         sim_activateValidators(2);
         // Step 3: Submit first oracle report; 1 validator's deposit should still be in-flight.
         sim_oracleReport();
-        assertEq(river.getInFlightDeposit(), DEPOSIT_SIZE, "1 validator still pending");
+        assertEq(_riverInFlightDeposit(), DEPOSIT_SIZE, "1 validator still pending");
         // Step 4: Activate the remaining validator.
         sim_activateValidators(1);
         // Step 5: Submit second oracle report; all validators are now active, in-flight clears.
         sim_oracleReport();
-        assertEq(river.getInFlightDeposit(), 0, "all activated");
+        assertEq(_riverInFlightDeposit(), 0, "all activated");
     }
 
     /// @notice Verifies that deposits made between oracle reports are correctly tracked as
@@ -50,15 +50,15 @@ contract InFlightETHTest is AccountingInvariants {
         //         In-flight deposit should be zero after the report.
         sim_activateValidators(2);
         sim_oracleReport();
-        assertEq(river.getInFlightDeposit(), 0);
+        assertEq(_riverInFlightDeposit(), 0);
         // Step 3: Deposit a second batch of 3 validators; 3 × 32 ETH should now be in-flight.
         sim_deposit(operatorOneIndex, _amounts(3, DEPOSIT_SIZE));
-        assertEq(river.getInFlightDeposit(), 3 * DEPOSIT_SIZE, "inFlight after second deposit");
+        assertEq(_riverInFlightDeposit(), 3 * DEPOSIT_SIZE, "inFlight after second deposit");
         // Step 4: Activate the second batch and submit the second oracle report.
         //         In-flight deposit must clear to zero again.
         sim_activateValidators(3);
         sim_oracleReport();
-        assertEq(river.getInFlightDeposit(), 0);
+        assertEq(_riverInFlightDeposit(), 0);
     }
 
     /// @notice Verifies that an oracle report attempting to increase `totalDepositedActivatedETH`

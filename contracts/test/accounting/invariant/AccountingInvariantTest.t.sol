@@ -209,7 +209,7 @@ contract AccountingInvariantTest is AccountingInvariants {
 
     /// @dev I3: InFlightDeposit consistency — contract value matches simulator tracking.
     function invariant_I3_inFlightConsistency() public {
-        assertEq(river.getInFlightDeposit(), _simInFlightDeposit, "I3: InFlightDeposit != sim in-flight");
+        assertEq(_riverInFlightDeposit(), _simInFlightDeposit, "I3: InFlightDeposit != sim in-flight");
     }
 
     /// @dev I5: TotalDepositedETH is monotonically non-decreasing.
@@ -239,7 +239,7 @@ contract AccountingInvariantTest is AccountingInvariants {
     ///      The difference is storedReport.validatorsBalance which must be >= 0.
     function invariant_I7_assetBalanceDecomposition() public {
         uint256 elComponents = river.getCommittedBalance() + river.getBalanceToDeposit() + river.getBalanceToRedeem()
-            + river.getInFlightDeposit();
+            + _riverInFlightDeposit();
         assertGe(
             river.totalUnderlyingSupply(),
             elComponents,
@@ -261,7 +261,7 @@ contract AccountingInvariantTest is AccountingInvariants {
 
     /// @dev I9: InFlightDeposit bounded by TotalDepositedETH.
     function invariant_I9_inFlightBoundedByDeposited() public {
-        assertLe(river.getInFlightDeposit(), river.getTotalDepositedETH(), "I9: InFlightDeposit > TotalDepositedETH");
+        assertLe(_riverInFlightDeposit(), river.getTotalDepositedETH(), "I9: InFlightDeposit > TotalDepositedETH");
     }
 
     /// @dev I10: EL solvency — River's ETH balance covers tracked EL amounts.

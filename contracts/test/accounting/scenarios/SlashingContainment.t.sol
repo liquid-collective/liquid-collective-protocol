@@ -76,7 +76,7 @@ contract SlashingContainmentTest is AccountingInvariants {
         vm.deal(redeemer, 4 * DEPOSIT_SIZE);
         vm.prank(redeemer);
         river.deposit{value: 4 * DEPOSIT_SIZE}();
-        river.debug_moveDepositToCommitted();
+        _debugMoveDepositToCommitted();
         sim_deposit(operatorOneIndex, _amounts(4, DEPOSIT_SIZE));
         // Step 2: Activate all 4 validators and submit the initial oracle report.
         sim_activateValidators(4);

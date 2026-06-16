@@ -13,13 +13,13 @@ contract HappyPathTest is AccountingInvariants {
         _fundRiver(3 * DEPOSIT_SIZE);
         // Step 2: Deposit 3 validators for operator one; 96 ETH (3 × 32) should be in-flight.
         sim_deposit(operatorOneIndex, _amounts(3, DEPOSIT_SIZE));
-        assertEq(river.getInFlightDeposit(), 96 ether, "inFlight after deposit");
+        assertEq(_riverInFlightDeposit(), 96 ether, "inFlight after deposit");
         // Step 3: Activate all 3 pending validators on the beacon chain simulator.
         sim_activateValidators(3);
         // Step 4: Submit an oracle report; in-flight deposit must clear to zero once the oracle
         //         confirms that all pending validators have transitioned to active.
         sim_oracleReport();
-        assertEq(river.getInFlightDeposit(), 0, "inFlight after report");
+        assertEq(_riverInFlightDeposit(), 0, "inFlight after report");
     }
 
     /// @notice Verifies that rewards accumulate correctly across multiple oracle epochs
@@ -59,14 +59,14 @@ contract HappyPathTest is AccountingInvariants {
         _fundRiver(5 * DEPOSIT_SIZE);
         // Step 2: First deposit batch — 2 validators; expect 64 ETH (2 × 32) in-flight.
         sim_deposit(operatorOneIndex, _amounts(2, DEPOSIT_SIZE));
-        assertEq(river.getInFlightDeposit(), 64 ether, "after first batch");
+        assertEq(_riverInFlightDeposit(), 64 ether, "after first batch");
         // Step 3: Second deposit batch — 3 more validators; expect 160 ETH (5 × 32) in-flight.
         sim_deposit(operatorOneIndex, _amounts(3, DEPOSIT_SIZE));
-        assertEq(river.getInFlightDeposit(), 160 ether, "after second batch");
+        assertEq(_riverInFlightDeposit(), 160 ether, "after second batch");
         // Step 4: Activate all 5 validators.
         sim_activateValidators(5);
         // Step 5: Submit oracle report; in-flight deposit must drop to zero.
         sim_oracleReport();
-        assertEq(river.getInFlightDeposit(), 0, "after report");
+        assertEq(_riverInFlightDeposit(), 0, "after report");
     }
 }
