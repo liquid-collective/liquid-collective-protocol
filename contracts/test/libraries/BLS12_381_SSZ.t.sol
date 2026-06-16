@@ -57,6 +57,20 @@ contract BLS12_381_SSZTest is Test {
         assertEq(actualDomain, expectedDomain, "computeDepositDomain holesky does not match spec");
     }
 
+    // Anchors computeDepositDomain to an external published value rather than to a
+    // re-derivation in this test. For mainnet (genesis fork version 0x00000000 and a
+    // zero genesis_validators_root), the ForkData root is the canonical SSZ zero hash
+    // z1 = sha256(64 zero bytes) = f5a5fd42...2759fb4b, so the deposit domain is
+    // DOMAIN_DEPOSIT (0x03000000) followed by z1's first 28 bytes.
+    function test_computeDepositDomain_mainnetVector() public {
+        bytes32 expectedMainnetDomain = 0x03000000f5a5fd42d16a20302798ef6ed309979b43003d2320d9f0e8ea9831a9;
+        assertEq(
+            harness.computeDepositDomain(0x00000000),
+            expectedMainnetDomain,
+            "computeDepositDomain(mainnet) does not match the published deposit domain"
+        );
+    }
+
     // -----------------------------------------------------------------------
     // _computeSigningRoot amount node must hash 64 bytes.
     //
