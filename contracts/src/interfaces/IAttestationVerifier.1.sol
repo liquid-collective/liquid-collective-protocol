@@ -383,8 +383,8 @@ interface IAttestationVerifierV1 {
     ///           - Financial caps (e.g. against committed/in-flight balances)
     /// @param consolidation The consolidation request to validate (withdrawal address,
     ///                      source/target pubkeys, totalAmount, signatures).
-    /// @return Always `true` if the call returns; reverts otherwise.
-    function validateConsolidation(ConsolidationObject calldata consolidation) external returns (bool);
+    /// @dev Reverts on any validation failure; returns normally on success.
+    function validateConsolidation(ConsolidationObject calldata consolidation) external;
 
     // -----------------------------------------------------------------------
     // Admin setters
