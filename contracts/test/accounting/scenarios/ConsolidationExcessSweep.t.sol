@@ -96,14 +96,13 @@ contract ConsolidationExcessSweepScenarioTest is AccountingInvariants {
         _submitReport(report);
 
         IOracleManagerV1.StoredConsensusLayerReport memory stored = river.getLastConsensusLayerReport();
-        (uint256 totalExited, uint256 totalRequestedExitAmounts) =
-            operatorsRegistry.getExitedETHAndRequestedExitAmounts();
+        (uint256 totalExited, uint256 totalRequestedETHExits) = operatorsRegistry.getExitedAndRequestedETHExits();
         OperatorsV3.Operator memory operator = operatorsRegistry.getOperator(operatorOneIndex);
 
         assertEq(stored.validatorsSkimmedBalance, 0, "sweep should not be classified as skimmed");
         assertEq(stored.validatorsExitedBalance, sweep, "sweep was classified as exited");
         assertEq(totalExited, sweep, "aggregate exited ETH polluted");
-        assertEq(totalRequestedExitAmounts, sweep, "requested exits bumped as unsolicited exit");
+        assertEq(totalRequestedETHExits, sweep, "requested exits bumped as unsolicited exit");
         assertEq(operator.requestedExits, sweep, "operator requested exits bumped");
         assertEq(river.totalUnderlyingSupply(), underlyingBefore, "underlying unchanged");
         assertEq(river.totalSupply(), sharesBefore, "no fee shares minted");
