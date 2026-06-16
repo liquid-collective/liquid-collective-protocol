@@ -57,11 +57,19 @@ contract PrePectraValidatorPubkeyLookupTest is Test {
         assertFalse(inputs.isPubkeyFunded(pkB));
     }
 
+    // Verifies add is idempotent: adding the same pubkey twice then removing it once
+    // leaves it unfunded, proving the second add created no extra reference to clear.
     function testAddIsIdempotent() public {
         bytes memory pk = _pubkey(keccak256("pre-pectra-pubkey-C"));
         inputs.add(pk);
         inputs.add(pk);
         assertTrue(inputs.isPubkeyFunded(pk));
+
+        // one remove must fully clear it: proves the second add added no extra reference
+        bytes[] memory pubkeys = new bytes[](1);
+        pubkeys[0] = pk;
+        inputs.remove(pubkeys);
+        assertFalse(inputs.isPubkeyFunded(pk));
     }
 
     function testRemoveClearsOnlyRequestedKeys() public {
