@@ -272,10 +272,10 @@ Explicit deposit method to mint on msg.sender and transfer to _recipient
 ### depositToConsensusLayerWithDepositRoot
 
 ```solidity
-function depositToConsensusLayerWithDepositRoot(uint256 _maxCount, bytes32 _depositRoot) external nonpayable
+function depositToConsensusLayerWithDepositRoot(IOperatorsRegistryV1.OperatorAllocation[] _allocations, bytes32 _depositRoot) external nonpayable
 ```
 
-Deposits current balance to the Consensus Layer by batches of 32 ETH
+
 
 
 
@@ -283,8 +283,8 @@ Deposits current balance to the Consensus Layer by batches of 32 ETH
 
 | Name | Type | Description |
 |---|---|---|
-| _maxCount | uint256 | The maximum amount of validator keys to fund |
-| _depositRoot | bytes32 | The root of the deposit tree |
+| _allocations | IOperatorsRegistryV1.OperatorAllocation[] | undefined |
+| _depositRoot | bytes32 | undefined |
 
 ### getAdmin
 
@@ -752,6 +752,23 @@ Retrieve the report bounds
 |---|---|---|
 | _0 | ReportBounds.ReportBoundsStruct | The report bounds |
 
+### getSlashingContainmentMode
+
+```solidity
+function getSlashingContainmentMode() external view returns (bool)
+```
+
+Returns whether slashing containment mode is currently active
+
+
+
+
+#### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| _0 | bool | True if slashing containment mode is active |
+
 ### getTime
 
 ```solidity
@@ -1147,7 +1164,7 @@ Changes the global fee parameter
 function setKeeper(address _keeper) external nonpayable
 ```
 
-
+Changes the keeper address
 
 
 
@@ -1155,7 +1172,7 @@ function setKeeper(address _keeper) external nonpayable
 
 | Name | Type | Description |
 |---|---|---|
-| _keeper | address | undefined |
+| _keeper | address | New address for the keeper |
 
 ### setMetadataURI
 
@@ -1738,6 +1755,22 @@ The stored Global Fee has been changed
 |---|---|---|
 | fee  | uint256 | The new Global Fee |
 
+### SetKeeper
+
+```solidity
+event SetKeeper(address indexed keeper)
+```
+
+Emitted when the keeper address is updated
+
+
+
+#### Parameters
+
+| Name | Type | Description |
+|---|---|---|
+| keeper `indexed` | address | The new keeper address |
+
 ### SetMaxDailyCommittableAmounts
 
 ```solidity
@@ -2167,17 +2200,6 @@ Thrown when the amount received from the Withdraw contract doe not match the req
 | requested | uint256 | The amount that was requested |
 | received | uint256 | The amount that was received |
 
-### InvalidSignatureCount
-
-```solidity
-error InvalidSignatureCount()
-```
-
-The received count of signatures to deposit is invalid
-
-
-
-
 ### InvalidValidatorCountReport
 
 ```solidity
@@ -2258,6 +2280,39 @@ error OnlyKeeper()
 ```
 
 
+
+
+
+
+### OperatorAllocationsExceedCommittedBalance
+
+```solidity
+error OperatorAllocationsExceedCommittedBalance()
+```
+
+The operator allocations exceed the committed balance
+
+
+
+
+### RecipientIsDenied
+
+```solidity
+error RecipientIsDenied()
+```
+
+Thrown when the recipient of redeemRequest is denied
+
+
+
+
+### SlashingContainmentModeEnabled
+
+```solidity
+error SlashingContainmentModeEnabled()
+```
+
+Deposits are blocked while slashing containment mode is active
 
 
 
