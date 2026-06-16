@@ -56,9 +56,6 @@ contract CoverageFundV1 is Initializable, ICoverageFundV1, IProtocolVersion {
             revert EmptyDonation();
         }
 
-        // Checks before effects: run the allowlist check before mutating BalanceForCoverage so an
-        // unauthorized call fails before the balance SLOAD/SSTORE (cheaper fail-fast, and prevents
-        // state being written ahead of access control if an interaction is inserted here in future).
         IAllowlistV1 allowlist = IAllowlistV1(IRiverV1(payable(RiverAddress.get())).getAllowlist());
         allowlist.onlyAllowed(msg.sender, LibAllowlistMasks.DONATE_MASK);
 
