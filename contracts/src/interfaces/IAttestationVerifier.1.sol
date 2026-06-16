@@ -371,9 +371,6 @@ interface IAttestationVerifierV1 {
     ///         `ConsolidationAlreadyProcessed`. Note that this makes the function
     ///         state-mutating (not `view`) and callable only by River.
     ///
-    ///         The function reverts on any validation failure and returns `true` on success.
-    ///         The boolean is a positive signal for off-chain `eth_call` style invocations.
-    ///
     ///         Trust boundary: this function only validates structural shape and the attestation
     ///         quorum. The following are intentionally NOT checked here and are delegated to the
     ///         caller (off-chain pipeline / consolidation committee) or to the eventual River
