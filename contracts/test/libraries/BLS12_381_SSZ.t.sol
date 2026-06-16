@@ -111,4 +111,45 @@ contract BLS12_381_SSZTest is Test {
         bytes32 actualSigningRoot = harness.computeSigningRoot(pubkey, amount, wc, domain);
         assertEq(actualSigningRoot, expectedSigningRoot, "signing root does not match spec for 1 ETH deposit");
     }
+
+    // Verifies depositMessageSigningRoot reverts with InvalidDepositAmount when the
+    // deposit amount is not a whole number of gwei (BLS12_381.sol:584). Uses
+    // 1 gwei + 1 wei; the aligned-amount happy path is covered by the tests above.
+    function test_computeSigningRoot_revertsOnNonGweiAlignedAmount() public {
+        bytes memory pubkey = new bytes(48);
+        bytes32 wc = bytes32(uint256(1));
+        bytes32 domain = bytes32(uint256(0xdeadbeef));
+        uint256 amount = 1 gwei + 1;
+
+        vm.expectRevert(BLS12_381.InvalidDepositAmount.selector);
+        harness.computeSigningRoot(pubkey, amount, wc, domain);
+    }
+
+    // Verifies the signing root for a fully non-zero 48-byte pubkey (bytes 0x01..0x30).
+    // The other tests use pubkeys that are zero in bytes 1..47, so this is the only test
+    // that exercises pubkeyRoot's assembly copy/zero-padding across the whole pubkey; the
+    // expected pubkey leaf is computed independently via the sha256 builtin.
+    function test_computeSigningRoot_fullNonZeroPubkey() public {
+        bytes memory pubkey = new bytes(48);
+        for (uint256 i = 0; i < 48; i++) {
+            pubkey[i] = bytes1(uint8(i + 1));
+        }
+        bytes32 wc = keccak256("full_pubkey_wc");
+        bytes32 domain = keccak256("full_pubkey_domain");
+        uint256 amount = 32 ether;
+        uint256 amountGwei = amount / 1 gwei;
+
+        // expected pubkey root via sha256 builtin, independent of the library
+        bytes32 pubkeyRoot = sha256(abi.encodePacked(pubkey, bytes16(0)));
+        bytes32 amountChunk = bytes32(LibUint256.toLittleEndian64(amountGwei));
+        bytes32 specDepositMessageRoot = sha256(
+            abi.encodePacked(
+                sha256(abi.encodePacked(pubkeyRoot, wc)), sha256(abi.encodePacked(amountChunk, bytes32(0)))
+            )
+        );
+        bytes32 expectedSigningRoot = sha256(abi.encodePacked(specDepositMessageRoot, domain));
+
+        bytes32 actualSigningRoot = harness.computeSigningRoot(pubkey, amount, wc, domain);
+        assertEq(actualSigningRoot, expectedSigningRoot, "signing root mismatch for full non-zero pubkey");
+    }
 }
