@@ -10,6 +10,7 @@ import "./interfaces/IProtocolVersion.sol";
 import "./interfaces/IELFeeRecipient.1.sol";
 import "./interfaces/IOperatorRegistry.1.sol";
 import "./interfaces/IAttestationVerifier.1.sol";
+import "./interfaces/IAttestationVerifierPectraMigration.1.sol";
 import "./interfaces/IExternalConsolidationRecipientMapping.1.sol";
 
 import "./components/SharesManager.1.sol";
@@ -367,9 +368,14 @@ contract RiverV1 is
     }
 
     /// @inheritdoc IRiverV1
-    function selfConsolidation(bytes[] calldata pubkeys, uint256 maxFeePerConsolidation) external payable onlyKeeper {
-        IWithdrawV1.ConsolidationRequest[] memory requests =
-            IAttestationVerifierV1(AttestationVerifierAddress.get()).validateSelfConsolidation(pubkeys);
+    function selfConsolidation(bytes[] calldata pubkeys, uint256 maxFeePerConsolidation)
+        external
+        payable
+        onlyConsolidator
+    {
+        IWithdrawV1.ConsolidationRequest[] memory requests = IAttestationVerifierPectraMigrationV1(
+                AttestationVerifierAddress.get()
+            ).validateSelfConsolidation(pubkeys);
         address excessFeeRecipient = msg.sender;
         IWithdrawV1(payable(WithdrawalCredentials.getAddress())).consolidate{value: msg.value}(
             requests, maxFeePerConsolidation, excessFeeRecipient
@@ -692,6 +698,7 @@ contract RiverV1 is
         // When slashing containment mode is active, skip exit demand logic to avoid forcing additional
         // validator exits during a slashing event. The reward-pull pipeline is unaffected by this check.
         if (_slashingContainmentModeEnabled) {
+            emit SkippedExitRequestsDueToSlashingContainment();
             return;
         }
 
@@ -719,13 +726,13 @@ contract RiverV1 is
 
                 IOperatorsRegistryV1 or = IOperatorsRegistryV1(OperatorsRegistryAddress.get());
 
-                (uint256 totalExitedETH, uint256 totalRequestedExitAmounts) = or.getExitedETHAndRequestedExitAmounts();
+                (uint256 totalExitedETH, uint256 totalRequestedETHExits) = or.getExitedAndRequestedETHExits();
 
                 // what we are calling pre-exiting balance is the amount of eth that should soon enter the exiting balance
                 // because exit requests have been made and operators might have a lag to process them
                 // we take them into account to not exit too many validators
                 uint256 preExitingBalance =
-                    totalRequestedExitAmounts > totalExitedETH ? (totalRequestedExitAmounts - totalExitedETH) : 0;
+                    totalRequestedETHExits > totalExitedETH ? (totalRequestedETHExits - totalExitedETH) : 0;
 
                 if (availableBalanceToRedeem + _exitingBalance + preExitingBalance < redeemManagerDemandInEth) {
                     uint256 exitAmountToRequest = LibUint256.max(

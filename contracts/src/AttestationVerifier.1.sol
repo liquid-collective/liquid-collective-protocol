@@ -6,6 +6,7 @@ import {ECDSA} from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.s
 import "./Initializable.sol";
 import "./interfaces/IAdministrable.sol";
 import "./interfaces/IAttestationVerifier.1.sol";
+import "./interfaces/IAttestationVerifierPectraMigration.1.sol";
 import "./interfaces/IDepositContract.sol";
 import "./interfaces/IDepositDataBuffer.sol";
 import "./interfaces/IOperatorRegistry.1.sol";
@@ -51,7 +52,7 @@ import "./state/shared/RiverAddress.sol";
 ///            for replay protection. State-mutating.
 ///
 ///         Extracted from RiverV1 to keep River's deployed bytecode under EIP-170.
-contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
+contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttestationVerifierPectraMigrationV1 {
     // -----------------------------------------------------------------------
     // EIP-712
     // -----------------------------------------------------------------------
@@ -91,6 +92,13 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     /// @dev Expected lengths for fixed BLS-related fields in a DepositObject.
     uint256 internal constant DEPOSIT_PUBKEY_LENGTH = 48;
     uint256 internal constant DEPOSIT_SIGNATURE_LENGTH = 96;
+
+    /// @notice Minimum amount for an initial validator deposit. A brand-new validator requires the
+    ///         full 32 ETH to activate on the consensus layer; a smaller initial deposit would never
+    ///         activate yet would still be counted in InFlightDeposit / TotalDepositedETH, permanently
+    ///         inflating River's `_assetBalance()` (issue #441/#309). Top-ups are intentionally exempt —
+    ///         they credit already-activated validators and may be below this amount.
+    uint256 internal constant MIN_INITIAL_DEPOSIT_AMOUNT = 32 ether;
 
     /// @dev Expected length for BLS pubkeys in a ConsolidationObject (source or target).
     uint256 internal constant CONSOLIDATION_PUBKEY_LENGTH = 48;
@@ -158,9 +166,11 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         DepositDataBufferAddress.set(_depositDataBuffer);
         emit SetDepositDataBuffer(_depositDataBuffer);
 
-        bytes32 depositDomain = BLS12_381.computeDepositDomain(_genesisForkVersion);
-        DepositDomainValue.set(depositDomain);
-        emit SetDepositDomain(depositDomain);
+        // Validate + store the BLS deposit domain. On a known chain (mainnet/hoodi) the supplied fork
+        // version must match the canonical value, so a misconfigured domain — which would silently
+        // brick the attestation deposit path — reverts at deploy. On unknown chains (e.g. local/test)
+        // the value is accepted as-is. Shared with the admin recovery setter.
+        _setDepositDomainFromForkVersion(_genesisForkVersion);
 
         for (uint256 i = 0; i < _rootAttesters.length; i++) {
             if (!RootAttesters.isRootAttester(_rootAttesters[i])) {
@@ -224,6 +234,37 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     function setDepositDataBuffer(address _depositDataBuffer) external onlyRiverAdmin {
         DepositDataBufferAddress.set(_depositDataBuffer);
         emit SetDepositDataBuffer(_depositDataBuffer);
+    }
+
+    /// @inheritdoc IAttestationVerifierV1
+    function setDepositDomainFromForkVersion(bytes4 genesisForkVersion) external onlyRiverAdmin {
+        _setDepositDomainFromForkVersion(genesisForkVersion);
+    }
+
+    /// @notice The canonical beacon-chain GENESIS_FORK_VERSION for the chain this contract runs on.
+    /// @dev Only mainnet and hoodi are known. On any other chain `known` is false and the supplied
+    ///      fork version is accepted as-is (no canonical value to validate against).
+    /// @return known True if the current chain has a known fork version
+    /// @return expected The expected GENESIS_FORK_VERSION for the current chain (zero if unknown)
+    function _expectedForkVersion() internal view returns (bool known, bytes4 expected) {
+        if (block.chainid == 1) return (true, 0x00000000); // mainnet
+        if (block.chainid == 560048) return (true, 0x10000910); // hoodi
+        return (false, bytes4(0));
+    }
+
+    /// @notice Validate `genesisForkVersion` against the chain's canonical value (where known),
+    ///         compute the BLS deposit domain from it, and store it. On unknown chains the value is
+    ///         accepted as-is. Shared by `initAttestationVerifierV1` and the admin recovery setter.
+    /// @dev Reverts `InvalidGenesisForkVersion` only on a known chain (mainnet/hoodi) when the value
+    ///      does not match; on any other chain it passes through.
+    function _setDepositDomainFromForkVersion(bytes4 genesisForkVersion) internal {
+        (bool known, bytes4 expected) = _expectedForkVersion();
+        if (known && genesisForkVersion != expected) {
+            revert InvalidGenesisForkVersion(genesisForkVersion);
+        }
+        bytes32 depositDomain = BLS12_381.computeDepositDomain(genesisForkVersion);
+        DepositDomainValue.set(depositDomain);
+        emit SetDepositDomain(depositDomain);
     }
 
     /// @inheritdoc IAttestationVerifierV1
@@ -400,8 +441,12 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
             if (d.signature.length != DEPOSIT_SIGNATURE_LENGTH) {
                 revert InvalidSignatureLength(i, d.signature.length);
             }
-            // Mirrors the bound check inside `_depositValidator` so we fail early
-            if (d.amount < 1 ether || d.amount > 2048 ether || d.amount % 1 gwei != 0) {
+            // Initial deposits must be >= 32 ETH so the validator actually activates on the CL.
+            // A sub-32-ETH initial deposit would never activate yet would still inflate
+            // InFlightDeposit / _assetBalance() (issue #441/#309). The upper bound and gwei-alignment
+            // mirror `_depositValidator`; the 32-ETH floor is stricter here because this loop only
+            // covers initial deposits (top-ups are validated separately below and stay >= 1 ETH).
+            if (d.amount < MIN_INITIAL_DEPOSIT_AMOUNT || d.amount > 2048 ether || d.amount % 1 gwei != 0) {
                 revert InvalidDepositAmount(i, d.amount);
             }
             totalAmount += d.amount;
@@ -460,16 +505,31 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
     }
 
     /// @inheritdoc IAttestationVerifierV1
+    function removeExitedValidatorPubkeys(bytes[] calldata pubkeys) external onlyRiver {
+        uint256 len = pubkeys.length;
+        if (len == 0) {
+            revert InvalidPectraRemovalEmptyPubkeys();
+        }
+        for (uint256 i = 0; i < len; ++i) {
+            bytes calldata pubkey = pubkeys[i];
+            if (!PectraValidatorPubkeyLookup.remove(pubkey)) {
+                revert PectraValidatorPubkeyNotFunded(pubkey);
+            }
+        }
+        emit RemovedPectraValidatorPubkeys(pubkeys);
+    }
+
+    /// @inheritdoc IAttestationVerifierV1
     function isPubkeyFunded(bytes calldata pubkey) external view returns (bool) {
         return PectraValidatorPubkeyLookup.isPubkeyFunded(pubkey);
     }
 
-    /// @inheritdoc IAttestationVerifierV1
+    /// @inheritdoc IAttestationVerifierPectraMigrationV1
     function isPrePectraValidatorPubkeyFunded(bytes calldata pubkey) external view returns (bool) {
         return PrePectraValidatorPubkeyLookup.isPubkeyFunded(pubkey);
     }
 
-    /// @inheritdoc IAttestationVerifierV1
+    /// @inheritdoc IAttestationVerifierPectraMigrationV1
     function migratePrePectraValidatorPubkeys(uint256 operatorIndex, uint256 startIndex, uint256 stopIndex)
         external
         onlyRiverAdmin
@@ -490,7 +550,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         emit MigratedPrePectraValidatorPubkeys(operatorIndex, startIndex, stopIndex);
     }
 
-    /// @inheritdoc IAttestationVerifierV1
+    /// @inheritdoc IAttestationVerifierPectraMigrationV1
     function validateSelfConsolidation(bytes[] calldata pubkeys)
         external
         onlyRiver
@@ -523,7 +583,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1 {
         return requests;
     }
 
-    /// @inheritdoc IAttestationVerifierV1
+    /// @inheritdoc IAttestationVerifierPectraMigrationV1
     function removePrePectraValidatorPubkeys(bytes[] calldata pubkeys) external onlyRiverAdmin {
         uint256 len = pubkeys.length;
         if (len == 0) {

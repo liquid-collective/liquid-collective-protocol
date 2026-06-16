@@ -3649,7 +3649,7 @@ contract RiverV1PectraTests is RiverV1TestBase {
         assertEq(consolidator.balance, valueSent - 1 gwei);
     }
 
-    function testRiverSelfConsolidationAsKeeperValidatesAndForwardsPrePectraPubkeys() public {
+    function testRiverSelfConsolidationAsConsolidatorValidatesAndForwardsPrePectraPubkeys() public {
         bytes memory pk0 = _consolidationPubkey(60);
         bytes memory pk1 = _consolidationPubkey(61);
         _seedPrePectraPubkey(pk0);
@@ -3666,17 +3666,17 @@ contract RiverV1PectraTests is RiverV1TestBase {
         requests[1].srcPubkeys[0] = pk1;
 
         uint256 valueSent = 5 gwei;
-        vm.deal(keeper, valueSent);
+        vm.deal(consolidator, valueSent);
 
         vm.expectCall(address(mockConsolidation), 1 gwei, bytes.concat(pk0, pk0));
         vm.expectCall(address(mockConsolidation), 1 gwei, bytes.concat(pk1, pk1));
-        vm.prank(keeper);
+        vm.prank(consolidator);
         vm.expectEmit(true, true, true, true);
-        emit PectraConsolidationRequested(requests, 1 gwei, keeper, valueSent);
+        emit PectraConsolidationRequested(requests, 1 gwei, consolidator, valueSent);
         river.selfConsolidation{value: valueSent}(pubkeys, 1 gwei);
 
         assertEq(address(mockConsolidation).balance, 2 gwei);
-        assertEq(keeper.balance, valueSent - 2 gwei);
+        assertEq(consolidator.balance, valueSent - 2 gwei);
     }
 
     function testRiverConsolidateNonConsolidatorReverts() public {
@@ -3703,12 +3703,21 @@ contract RiverV1PectraTests is RiverV1TestBase {
         river.consolidate{value: 1 gwei}(requests, 1 gwei);
     }
 
-    function testRiverSelfConsolidationNonKeeperReverts() public {
+    function testRiverSelfConsolidationNonConsolidatorReverts() public {
         bytes[] memory pubkeys = new bytes[](1);
         pubkeys[0] = VALID_PUBKEY_48;
 
         vm.prank(bob);
-        vm.expectRevert(abi.encodeWithSignature("OnlyKeeper()"));
+        vm.expectRevert(abi.encodeWithSignature("OnlyConsolidator()"));
+        river.selfConsolidation(pubkeys, 1 gwei);
+    }
+
+    function testRiverSelfConsolidationKeeperRevertsWhenNotConsolidator() public {
+        bytes[] memory pubkeys = new bytes[](1);
+        pubkeys[0] = VALID_PUBKEY_48;
+
+        vm.prank(keeper);
+        vm.expectRevert(abi.encodeWithSignature("OnlyConsolidator()"));
         river.selfConsolidation(pubkeys, 1 gwei);
     }
 

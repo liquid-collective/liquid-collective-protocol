@@ -108,7 +108,7 @@ contract MigrationTest is Test {
         assertEq(exitedPerOp[1], uint256(op1Stopped) * 32 ether, "op1 exited ETH");
 
         // Validate aggregate exited ETH
-        (uint256 totalExited,) = registry.getExitedETHAndRequestedExitAmounts();
+        (uint256 totalExited,) = registry.getExitedAndRequestedETHExits();
         assertEq(totalExited, uint256(totalStopped) * 32 ether, "total exited ETH");
     }
 
@@ -147,22 +147,40 @@ contract MigrationTest is Test {
     }
 
     /// @notice Verifies that the V2 → V3 migration reverts with `InvalidOperatorState` when an
-    ///         operator has more requested exits than funded validators — an inconsistent state
-    ///         that would otherwise produce an underflow during downstream accounting.
+    ///         operator has more requested exit ETH than funded ETH after scaling the legacy V2
+    ///         validator counts.
     function testMigrationRevertsOnInvalidOperatorState() public {
-        uint32 op0Funded = 2;
-        uint32 op0RequestedExits = 2;
-        uint32 op1Funded = 1;
-        uint32 op1RequestedExits = 3; // funded < requestedExits → invalid
+        uint32 op0FundedValidatorCount = 2;
+        uint32 op0RequestedExitCount = 2;
+        uint32 op1FundedValidatorCount = 1;
+        uint32 op1RequestedExitCount = 3;
 
-        // Op0 is valid; Op1 triggers the revert. Index 1 is reported in the error.
-        registry.sudoPushV2Operator("OpAlpha", op1Addr, op0Funded, op0RequestedExits, op0Funded, op0Funded);
-        registry.sudoPushV2Operator("OpBeta", op2Addr, op1Funded, op1RequestedExits, op1Funded, op1Funded);
+        // Op0 is valid; Op1 triggers the revert. The error reports ETH values, not V2 counts.
+        registry.sudoPushV2Operator(
+            "OpAlpha",
+            op1Addr,
+            op0FundedValidatorCount,
+            op0RequestedExitCount,
+            op0FundedValidatorCount,
+            op0FundedValidatorCount
+        );
+        registry.sudoPushV2Operator(
+            "OpBeta",
+            op2Addr,
+            op1FundedValidatorCount,
+            op1RequestedExitCount,
+            op1FundedValidatorCount,
+            op1FundedValidatorCount
+        );
 
         registry.sudoInitV1_1();
 
+        uint256 op1FundedETH = uint256(op1FundedValidatorCount) * 32 ether;
+        uint256 op1RequestedExitETH = uint256(op1RequestedExitCount) * 32 ether;
         vm.expectRevert(
-            abi.encodeWithSelector(IOperatorsRegistryV1.InvalidOperatorState.selector, 1, op1Funded, op1RequestedExits)
+            abi.encodeWithSelector(
+                IOperatorsRegistryV1.InvalidOperatorState.selector, 1, op1FundedETH, op1RequestedExitETH
+            )
         );
         registry.initOperatorsRegistryV1_2(makeAddr("withdraw"));
     }

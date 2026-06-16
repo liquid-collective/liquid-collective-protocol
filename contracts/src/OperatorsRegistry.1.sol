@@ -54,18 +54,27 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     function _migrateOperators_V2_3() internal {
         uint256 opCount = OperatorsV2.getCount();
         for (uint256 idx = 0; idx < opCount; ++idx) {
-            OperatorsV2.Operator memory operator = OperatorsV2.get(idx);
-            if (operator.funded < operator.requestedExits) {
-                revert InvalidOperatorState(idx, operator.funded, operator.requestedExits);
+            OperatorsV2.Operator memory operatorV2 = OperatorsV2.get(idx);
+            uint256 fundedETH = operatorV2.funded * DEPOSIT_SIZE;
+            uint256 requestedExitsETH = operatorV2.requestedExits * DEPOSIT_SIZE;
+            if (fundedETH < requestedExitsETH) {
+                revert InvalidOperatorState(idx, fundedETH, requestedExitsETH);
             }
             OperatorsV3.push(
                 OperatorsV3.Operator({
-                    funded: operator.funded * DEPOSIT_SIZE,
-                    requestedExits: operator.requestedExits * DEPOSIT_SIZE,
-                    active: operator.active,
-                    name: operator.name,
-                    operator: operator.operator,
-                    activeCLETH: 0 // This is ok to set 0 here because it will be updated via the oracle report before it gets used
+                    funded: fundedETH,
+                    requestedExits: requestedExitsETH,
+                    active: operatorV2.active,
+                    name: operatorV2.name,
+                    operator: operatorV2.operator,
+                    // activeCLETH starts at 0 and is only populated by the first post-upgrade oracle
+                    // report (OracleManager._reportCLETH). UNTIL that report lands, requestETHExits caps
+                    // each operator's allocation by activeCLETH, so `available == 0` and any non-zero exit
+                    // allocation reverts with ExitsRequestedExceedAvailableFundedAmount — even though
+                    // CurrentETHExitsDemand / TotalETHExitsRequested are carried over non-zero from V2.
+                    // A fresh oracle report MUST land immediately after initOperatorsRegistryV1_2, with
+                    // the redemption queue paused to cover the gap.
+                    activeCLETH: 0
                 })
             );
         }
@@ -132,7 +141,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @inheritdoc IOperatorsRegistryV1
-    function getExitedETHAndRequestedExitAmounts() external view returns (uint256, uint256) {
+    function getExitedAndRequestedETHExits() external view returns (uint256, uint256) {
         return (_getTotalExitedETH(), TotalETHExitsRequested.get() + CurrentETHExitsDemand.get());
     }
 
@@ -192,6 +201,12 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         }
 
         uint256 operatorCount = OperatorsV3.getCount();
+        // indices are strictly ascending and bounded by operatorCount, so there can be at
+        // most one delta per operator.
+        if (len > operatorCount) {
+            revert FundedETHArrayLengthExceedsOperatorCount();
+        }
+
         uint256 lastIndex;
         for (uint256 i = 0; i < len; ++i) {
             OperatorFundingDelta calldata delta = _deltas[i];
@@ -217,14 +232,10 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             // `LibFundingDeltas.build` already guarantees, so the registry never emits an event
             // whose pubkeys and amounts disagree on length (which would silently break indexers).
             if (delta.depositPubkeys.length != delta.depositAmounts.length) {
-                revert MisalignedDeltaArrays(
-                    operatorIndex, delta.depositPubkeys.length, delta.depositAmounts.length
-                );
+                revert MisalignedDeltaArrays(operatorIndex, delta.depositPubkeys.length, delta.depositAmounts.length);
             }
             if (delta.topUpPubkeys.length != delta.topUpAmounts.length) {
-                revert MisalignedDeltaArrays(
-                    operatorIndex, delta.topUpPubkeys.length, delta.topUpAmounts.length
-                );
+                revert MisalignedDeltaArrays(operatorIndex, delta.topUpPubkeys.length, delta.topUpAmounts.length);
             }
 
             operator.funded += delta.fundedETH;

@@ -169,6 +169,13 @@ interface IOperatorsRegistryV1 {
     /// @notice Thrown when the number of exited ETH is too high compared to operator count
     error ExitedETHArrayLengthExceedsOperatorCount();
 
+    /// @notice Thrown when the funding-delta array is longer than the operator count, which is
+    ///         impossible for a well-formed input: operator indices are unique and strictly ascending,
+    ///         so there is at most one delta per operator. The array is sparse — operators with no
+    ///         deposits or top-ups in the batch are omitted — so its length can never exceed the
+    ///         operator count.
+    error FundedETHArrayLengthExceedsOperatorCount();
+
     /// @notice Thrown when no exit requests can be performed
     error NoExitRequestsToPerform();
 
@@ -270,6 +277,13 @@ interface IOperatorsRegistryV1 {
     // function initOperatorsRegistryV1_1() external;
 
     /// @notice Migrates operators from V2 to V3 storage, dropping key-management fields
+    /// @dev    Migrated operators start with `activeCLETH == 0`, which is only populated by the first
+    ///         post-upgrade oracle report. Since `requestETHExits` caps each operator's allocation by
+    ///         `activeCLETH`, no validator exits can be requested between this call and that first
+    ///         report — even though `CurrentETHExitsDemand` / `TotalETHExitsRequested` are already
+    ///         non-zero (carried over from V2). OPERATIONAL REQUIREMENT: a fresh oracle report MUST
+    ///         land immediately after this call, and the redemption queue MUST be paused over the
+    ///         gap.
     /// @param _withdrawAddress The address of the Withdrawal contract
     function initOperatorsRegistryV1_2(address _withdrawAddress) external;
 
@@ -296,10 +310,10 @@ interface IOperatorsRegistryV1 {
     /// @return The current exit request demand in ETH(wei)
     function getCurrentETHExitsDemand() external view returns (uint256);
 
-    /// @notice Retrieve the total exited ETH and requested exit amount
+    /// @notice Retrieve the total exited ETH and total requested ETH exits
     /// @return The total exited ETH(wei)
-    /// @return The total requested exit amount (includes total requested exits and current exit demand)
-    function getExitedETHAndRequestedExitAmounts() external view returns (uint256, uint256);
+    /// @return The total requested ETH exits (includes total requested exits and current exit demand)
+    function getExitedAndRequestedETHExits() external view returns (uint256, uint256);
 
     /// @notice Retrieve the raw exited ETH array from storage
     /// @return The exited ETH(wei) array per operator

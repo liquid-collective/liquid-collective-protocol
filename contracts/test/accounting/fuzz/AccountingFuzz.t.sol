@@ -33,12 +33,12 @@ contract AccountingFuzzTest is AccountingInvariants {
         // Step 1: Bound inputs and deposit validators for operator one.
         n = uint8(bound(n, 1, MAX_VALIDATORS));
         rewardWei = uint64(bound(rewardWei, 0, MAX_REWARD));
-        sim_deposit(operatorOneIndex, _amounts(n, DEPOSIT_SIZE));
+        sim_deposit(operatorOneIndex, _amounts(n, DEPOSIT_SIZE), false);
         // Step 2: Activate all validators and submit the initial oracle report.
         sim_activateValidators(n);
         sim_oracleReport();
-        // Step 3: Advance one epoch with the fuzzed per-validator reward and report again.
-        sim_advanceEpoch(rewardWei);
+        // Step 3: Accrue rewards and submit the oracle report.
+        sim_accrueSkimmedRewards(rewardWei);
         sim_oracleReport();
     }
 
@@ -75,8 +75,8 @@ contract AccountingFuzzTest is AccountingInvariants {
         uint256 n2 = bound(s, 1, 4);
         s = _h(s);
         // Step 2: Deposit for both operators, activate all validators, and report.
-        sim_deposit(operatorOneIndex, _amounts(n1, DEPOSIT_SIZE));
-        sim_deposit(operatorTwoIndex, _amounts(n2, DEPOSIT_SIZE));
+        sim_deposit(operatorOneIndex, _amounts(n1, DEPOSIT_SIZE), false);
+        sim_deposit(operatorTwoIndex, _amounts(n2, DEPOSIT_SIZE), false);
         sim_activateValidators(n1 + n2);
         sim_oracleReport();
 
@@ -84,7 +84,7 @@ contract AccountingFuzzTest is AccountingInvariants {
         if (s % 2 == 0) {
             uint256 reward = bound(s, 0, MAX_REWARD);
             s = _h(s);
-            sim_advanceEpoch(reward);
+            sim_accrueSkimmedRewards(reward);
             sim_oracleReport();
         }
         s = _h(s);

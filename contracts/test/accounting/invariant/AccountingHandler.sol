@@ -7,7 +7,8 @@ import "forge-std/StdUtils.sol";
 interface IAccountingActions {
     function handler_deposit(uint256 opIdx, uint256 n, uint256 amountEach) external;
     function handler_activateValidators(uint256 n) external;
-    function handler_advanceEpoch(uint256 rewardsPerValidator) external;
+    function handler_accrueSkimmedRewards(uint256 rewardsPerValidator) external;
+    function handler_autocompound(uint256 rewardsPerValidator) external;
     function handler_requestExit(uint256 opIdx, uint256 ethAmount) external;
     function handler_completeExit(uint256 opIdx, uint256 ethAmount, uint256 penalty) external;
     function handler_slash(uint256 opIdx, uint256 penalty) external;
@@ -24,7 +25,7 @@ interface IAccountingActions {
 /// @notice Foundry invariant-test handler that bounds fuzzed inputs and delegates to sim_* step functions
 ///         on the test contract. Each public function is a target for Foundry's stateful fuzzer.
 contract AccountingHandler is StdUtils {
-    uint256 private constant MIN_DEPOSIT = 1 ether;
+    uint256 private constant MIN_DEPOSIT = 32 ether;
     uint256 private constant MAX_DEPOSIT = 2048 ether;
 
     IAccountingActions private _test;
@@ -58,11 +59,11 @@ contract AccountingHandler is StdUtils {
     // ─── bounded handler functions ──────────────────────────────────────────────
 
     /// @notice Fuzzer entry point: deposits 1–4 validators for a pseudo-randomly selected operator,
-    ///         each with a fuzzed amount in [1, 2048] ETH.
+    ///         each with a fuzzed amount in [32, 2048] ETH.
     ///         Updates `ghost_depositCount` so that `oracleReport` knows at least one deposit exists.
     /// @param opSeed     Seed used to select the target operator (even → operator one, odd → operator two).
     /// @param nSeed      Seed used to derive the number of validators to deposit, bounded to [1, 4].
-    /// @param amountSeed Seed used to derive the per-validator deposit amount, bounded to [1, 2048] ETH.
+    /// @param amountSeed Seed used to derive the per-validator deposit amount, bounded to [32, 2048] ETH.
     function deposit(uint256 opSeed, uint256 nSeed, uint256 amountSeed) external {
         // Step 1: Select operator and bound the validator count and deposit amount to safe ranges.
         uint256 opIdx = (opSeed % 2 == 0) ? _opOne : _opTwo;
@@ -87,15 +88,22 @@ contract AccountingHandler is StdUtils {
         calls_activate++;
     }
 
-    /// @notice Fuzzer entry point: advances a single epoch with a per-validator reward bounded
-    ///         to [0, 0.008 ETH] to stay within realistic APR limits.
+    /// @notice Fuzzer entry point: accrues skimmed rewards for 0x01 validators and 0x02 validators
+    ///         at MAX_EFFECTIVE_BALANCE, bounded to [0, 0.008 ETH] per validator.
     /// @param rewardSeed  Seed used to derive the per-validator reward amount in wei.
     function advanceEpoch(uint256 rewardSeed) external {
-        // Step 1: Bound the reward to the maximum allowed per-validator amount.
         uint256 reward = bound(rewardSeed, 0, 0.008 ether);
-        // Step 2: Delegate the epoch advance to the test contract.
-        _test.handler_advanceEpoch(reward);
+        _test.handler_accrueSkimmedRewards(reward);
         calls_advanceEpoch++;
+    }
+
+    /// @notice Fuzzer entry point: autocompounds rewards for 0x02 validators below MAX_EFFECTIVE_BALANCE,
+    ///         bounded to [0, 0.008 ETH] per validator. Exercises the _simCumulativeAutocompounded
+    ///         path and the autocompound term in the I2 upper bound.
+    /// @param rewardSeed  Seed used to derive the per-validator reward amount in wei.
+    function autocompound(uint256 rewardSeed) external {
+        uint256 reward = bound(rewardSeed, 0, 0.008 ether);
+        _test.handler_autocompound(reward);
     }
 
     /// @notice Fuzzer entry point: requests a fuzzed ETH amount to exit for a pseudo-randomly

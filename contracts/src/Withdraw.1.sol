@@ -8,6 +8,7 @@ import "./interfaces/IRiver.1.sol";
 import "./interfaces/IWithdraw.1.sol";
 import "./interfaces/IProtocolVersion.sol";
 import "./interfaces/IAttestationVerifier.1.sol";
+import "./interfaces/IAttestationVerifierPectraMigration.1.sol";
 import "./libraries/LibErrors.sol";
 import "./libraries/LibUint256.sol";
 
@@ -212,8 +213,10 @@ contract WithdrawV1 is IWithdrawV1, Initializable, ReentrancyGuard, IProtocolVer
         view
         returns (bool)
     {
-        return
-            attestationVerifier.isPubkeyFunded(pubkey) || attestationVerifier.isPrePectraValidatorPubkeyFunded(pubkey);
+        IAttestationVerifierPectraMigrationV1 pectraMigration =
+            IAttestationVerifierPectraMigrationV1(address(attestationVerifier));
+
+        return attestationVerifier.isPubkeyFunded(pubkey) || pectraMigration.isPrePectraValidatorPubkeyFunded(pubkey);
     }
 
     /// @notice Internal: refund excess fee to recipient

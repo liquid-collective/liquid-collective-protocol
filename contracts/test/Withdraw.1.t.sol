@@ -121,7 +121,7 @@ contract MockELWithdrawalFeeReadFails {
 /// @notice Mock predeploy whose fee read (staticcall) succeeds but returns fewer than
 ///         32 bytes of raw returndata. Used to exercise the strict `abi.decode(feeData,
 ///         (uint256))` path in `_validateAndReturnFee`, which must revert on short
-///         returndata (documents the divergence from the TVS `bytes32` cast).
+///         returndata.
 contract MockELShortReturn {
     /// @dev Returns raw returndata of a configurable length (< 32 bytes) using assembly,
     ///      bypassing Solidity's ABI return encoding so the returndata is genuinely short.
@@ -393,17 +393,6 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         vm.deal(random, 10 gwei);
         vm.prank(random);
         vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", random));
-        withdraw.withdraw{value: 1 gwei}(pubkeys, amounts, 1 gwei, excessFeeRecipient);
-    }
-
-    function testWithdrawRevertsIfCalledByRiver() external {
-        bytes[] memory pubkeys = new bytes[](1);
-        pubkeys[0] = VALID_PUBKEY_48;
-        uint64[] memory amounts = new uint64[](1);
-        amounts[0] = 1 gwei;
-        vm.deal(address(river), 10 gwei);
-        vm.prank(address(river));
-        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(river)));
         withdraw.withdraw{value: 1 gwei}(pubkeys, amounts, 1 gwei, excessFeeRecipient);
     }
 
@@ -858,23 +847,6 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         withdraw.consolidate{value: maxFeePerConsolidation * 2}(requests, maxFeePerConsolidation, excessFeeRecipient);
     }
 
-    /// @notice Tests that consolidate reverts when the caller is not River.
-    function testConsolidateFailsIfNotOwner() public {
-        bytes[] memory srcPubkeys = new bytes[](1);
-        srcPubkeys[0] = VALID_PUBKEY_48;
-        bytes memory targetPubkey = VALID_PUBKEY_48;
-        IWithdrawV1.ConsolidationRequest[] memory requests = new IWithdrawV1.ConsolidationRequest[](1);
-        requests[0] = IWithdrawV1.ConsolidationRequest(srcPubkeys, targetPubkey);
-
-        uint256 maxFeePerConsolidation = 0.1 ether;
-        address nonOwner = makeAddr("nonOwner");
-        vm.deal(nonOwner, maxFeePerConsolidation);
-
-        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", nonOwner));
-        vm.prank(nonOwner);
-        withdraw.consolidate{value: maxFeePerConsolidation}(requests, maxFeePerConsolidation, excessFeeRecipient);
-    }
-
     /// @notice Tests that consolidate reverts when a source pubkey is not 48 bytes.
     function testConsolidateFailsIfSrcPubkeyLengthInvalid() public {
         bytes[] memory srcPubkeys = new bytes[](1);
@@ -1074,22 +1046,6 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         withdraw.withdraw{value: maxFeePerWithdrawal * 2}(pubkeys, amounts, maxFeePerWithdrawal, excessFeeRecipient);
     }
 
-    /// @notice Tests that withdraw reverts when the caller is not River.
-    function testWithdrawFailsIfNotOwner() public {
-        bytes[] memory pubkeys = new bytes[](1);
-        pubkeys[0] = VALID_PUBKEY_48;
-        uint64[] memory amounts = new uint64[](1);
-        amounts[0] = 1 ether;
-
-        uint256 maxFeePerWithdrawal = 0.1 ether;
-        address nonOwner = makeAddr("nonOwner");
-        vm.deal(nonOwner, maxFeePerWithdrawal);
-
-        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", nonOwner));
-        vm.prank(nonOwner);
-        withdraw.withdraw{value: maxFeePerWithdrawal}(pubkeys, amounts, maxFeePerWithdrawal, excessFeeRecipient);
-    }
-
     /// @notice Tests that withdraw reverts when a pubkey is not 48 bytes.
     function testWithdrawFailsIfPubkeyLengthInvalid() public {
         bytes[] memory pubkeys = new bytes[](1);
@@ -1205,11 +1161,11 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         withdraw.consolidate{value: valueSent}(requests, maxFeePerConsolidation, address(0));
     }
 
-    // --- Fee-decode robustness (issue #526, gap 1) ---
+    // --- Fee-decode robustness ---
     // `_validateAndReturnFee` uses `abi.decode(feeData, (uint256))`. When the predeploy
     // returns malformed/short returndata (< 32 bytes) the staticcall still succeeds, so the
     // strictness lives entirely in `abi.decode`, which must revert. These tests lock in that
-    // behavior and document the divergence from the TVS `bytes32` cast (liquid-collective/tvs#86).
+    // behavior.
 
     /// @notice withdraw reverts when the withdrawal predeploy returns fewer than 32 bytes for the fee.
     function testWithdrawRevertsOnShortFeeReturndata() public {
@@ -1218,10 +1174,7 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         LibImplementationUnbricker.unbrick(vm, address(w));
         w.initializeWithdrawV1(address(river));
         w.initWithdrawV1_1(
-            address(shortMock),
-            address(mockConsolidation),
-            address(operatorsRegistry),
-            address(attestationVerifier)
+            address(shortMock), address(mockConsolidation), address(operatorsRegistry), address(attestationVerifier)
         );
 
         bytes[] memory pubkeys = new bytes[](1);
@@ -1245,10 +1198,7 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         LibImplementationUnbricker.unbrick(vm, address(w));
         w.initializeWithdrawV1(address(river));
         w.initWithdrawV1_1(
-            address(mockWithdrawal),
-            address(shortMock),
-            address(operatorsRegistry),
-            address(attestationVerifier)
+            address(mockWithdrawal), address(shortMock), address(operatorsRegistry), address(attestationVerifier)
         );
 
         bytes[] memory srcPubkeys = new bytes[](1);
@@ -1271,10 +1221,7 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         LibImplementationUnbricker.unbrick(vm, address(w));
         w.initializeWithdrawV1(address(river));
         w.initWithdrawV1_1(
-            address(shortMock),
-            address(mockConsolidation),
-            address(operatorsRegistry),
-            address(attestationVerifier)
+            address(shortMock), address(mockConsolidation), address(operatorsRegistry), address(attestationVerifier)
         );
 
         bytes[] memory pubkeys = new bytes[](1);
@@ -1290,7 +1237,7 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         w.withdraw{value: maxFeePerWithdrawal}(pubkeys, amounts, maxFeePerWithdrawal, excessFeeRecipient);
     }
 
-    // --- Overflow boundary (issue #526, gap 3) ---
+    // --- Overflow boundary ---
     // `withdraw` computes `maxFeePerWithdrawal * pubkeys.length` and `consolidate` computes
     // `fee * totalNumOfConsolidationOperations`. Under Solidity 0.8 checked arithmetic these
     // must revert with a Panic(0x11) on overflow rather than silently wrapping.
@@ -1332,7 +1279,7 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         withdraw.consolidate{value: 0}(requests, hugeFee, excessFeeRecipient);
     }
 
-    // --- Fuzzing (issue #526, gap 2) ---
+    // --- Fuzzing ---
     // `withdraw`/`consolidate` were only exercised with fixed inputs. These fuzz over array
     // lengths, fee/maxFee, and excess-refund amounts, asserting the fee-accounting and refund
     // invariants hold across the input space.

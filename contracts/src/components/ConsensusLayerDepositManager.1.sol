@@ -131,6 +131,11 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         return AttestationVerifierAddress.get();
     }
 
+    /// @inheritdoc IConsensusLayerDepositManagerV1
+    function removeExitedValidatorPubkeys(bytes[] calldata pubkeys) external onlyKeeper {
+        IAttestationVerifierV1(AttestationVerifierAddress.get()).removeExitedValidatorPubkeys(pubkeys);
+    }
+
     // -----------------------------------------------------------------------
     // Attestation-gated deposit entry point
     // -----------------------------------------------------------------------
@@ -241,9 +246,19 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     ) internal {
         // `_depositAmount` bounds are enforced upstream in `AttestationVerifier.fetchAndValidateDeposits()`
         // (revert: InvalidDepositAmount / InvalidTopUpAmount). The attestation flow is the only caller.
+        // The beacon deposit contract works in gwei, so convert from wei here.
         uint256 depositAmount = _depositAmount / 1 gwei;
 
+        // Recompute the SSZ hash-tree-root of the DepositData container exactly as the beacon deposit
+        // contract does, so the deposit is accepted. The container has four leaves —
+        // [pubkey, withdrawal_credentials, amount, signature] — each reduced to one 32-byte node and
+        // then Merkleized as a 4-leaf binary tree.
+
+        // pubkey: 48 bytes padded to 64 (two chunks) and hashed into a single node.
         bytes32 pubkeyRoot = sha256(bytes.concat(_publicKey, bytes16(0)));
+
+        // signature: 96 bytes = three 32-byte chunks. Hash the first 64 bytes (two chunks) and the
+        // last 32 bytes padded to 64, then hash those two nodes together into the signature node.
         bytes32 signatureRoot = sha256(
             bytes.concat(
                 sha256(LibBytes.slice(_signature, 0, 64)),
@@ -251,6 +266,9 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
             )
         );
 
+        // Final root: hash the left subtree (pubkeyRoot, withdrawal_credentials) with the right
+        // subtree (amount, signatureRoot), where amount is the little-endian uint64 zero-padded to
+        // 32 bytes — matching the deposit contract's leaf ordering.
         bytes32 depositDataRoot = sha256(
             bytes.concat(
                 sha256(bytes.concat(pubkeyRoot, _withdrawalCredentials)),
@@ -258,6 +276,8 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
             )
         );
 
+        // Snapshot the expected post-deposit balance and assert exactly `_depositAmount` left this
+        // contract on the call — a defensive check against a misbehaving/incorrect deposit contract.
         uint256 targetBalance = address(this).balance - _depositAmount;
 
         IDepositContract(_depositContract).deposit{value: _depositAmount}(
