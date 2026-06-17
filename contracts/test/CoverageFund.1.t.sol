@@ -171,6 +171,76 @@ contract CoverageFundTestV1 is CoverageFundV1TestBase {
         vm.stopPrank();
     }
 
+    // ---- CEI-ordering regression guards --------------------------------------------------------
+    // donate() runs the allowlist check before writing BalanceForCoverage. These assert that a
+    // donate() rejected by access control never mutates the stored coverage balance — the guarantee
+    // that would break if the state write were ever (re)ordered ahead of the check, or the check were
+    // made non-reverting. We seed a prior authorized donation so "unchanged" is a non-trivial value.
+
+    bytes32 internal constant BALANCE_FOR_COVERAGE_SLOT =
+        bytes32(uint256(keccak256("river.state.balanceForCoverage")) - 1);
+
+    function _storedCoverageBalance() internal view returns (uint256) {
+        return uint256(vm.load(address(coverageFund), BALANCE_FOR_COVERAGE_SLOT));
+    }
+
+    function _allow(address _account, uint256 _mask) internal {
+        address[] memory accounts = new address[](1);
+        accounts[0] = _account;
+        uint256[] memory permissions = new uint256[](1);
+        permissions[0] = _mask;
+        vm.prank(admin);
+        allowlist.setAllowPermissions(accounts, permissions);
+    }
+
+    function _deny(address _account) internal {
+        address[] memory accounts = new address[](1);
+        accounts[0] = _account;
+        uint256[] memory permissions = new uint256[](1);
+        permissions[0] = LibAllowlistMasks.DENY_MASK;
+        vm.prank(admin);
+        allowlist.setDenyPermissions(accounts, permissions);
+    }
+
+    function testDonateRejectedDoesNotMutateBalance(uint256 _seedSalt, uint256 _amount) external {
+        _amount = bound(_amount, 1, 1e24);
+
+        // Seed a prior authorized donation so the stored balance is non-zero.
+        address donor = uf._new(_seedSalt);
+        vm.deal(donor, _amount);
+        _allow(donor, LibAllowlistMasks.DONATE_MASK);
+        vm.prank(donor);
+        coverageFund.donate{value: _amount}();
+        uint256 balanceBefore = _storedCoverageBalance();
+        assertEq(balanceBefore, _amount, "seed donation should be stored");
+
+        // (a) Unknown caller (no permissions) -> Unauthorized; stored balance untouched.
+        address stranger = makeAddr("stranger");
+        vm.deal(stranger, _amount);
+        vm.prank(stranger);
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", stranger));
+        coverageFund.donate{value: _amount}();
+        assertEq(_storedCoverageBalance(), balanceBefore, "unknown-caller revert must not mutate balance");
+
+        // (b) Known but lacks DONATE_MASK (allowlisted for DEPOSIT only) -> Unauthorized; untouched.
+        address wrongMask = makeAddr("wrongMask");
+        vm.deal(wrongMask, _amount);
+        _allow(wrongMask, LibAllowlistMasks.DEPOSIT_MASK);
+        vm.prank(wrongMask);
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", wrongMask));
+        coverageFund.donate{value: _amount}();
+        assertEq(_storedCoverageBalance(), balanceBefore, "wrong-mask revert must not mutate balance");
+
+        // (c) Denylisted caller -> Denied; stored balance untouched.
+        address denied = makeAddr("denied");
+        vm.deal(denied, _amount);
+        _deny(denied);
+        vm.prank(denied);
+        vm.expectRevert(abi.encodeWithSignature("Denied(address)", denied));
+        coverageFund.donate{value: _amount}();
+        assertEq(_storedCoverageBalance(), balanceBefore, "denylisted revert must not mutate balance");
+    }
+
     function testDonateZero(uint256 _senderSalt) external {
         address sender = uf._new(_senderSalt);
 

@@ -70,7 +70,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                     // activeCLETH starts at 0 and is only populated by the first post-upgrade oracle
                     // report (OracleManager._reportCLETH). UNTIL that report lands, requestETHExits caps
                     // each operator's allocation by activeCLETH, so `available == 0` and any non-zero exit
-                    // allocation reverts with ExitsRequestedExceedAvailableFundedAmount — even though
+                    // allocation reverts with ExitsRequestedExceedAvailableActiveCLAmount — even though
                     // CurrentETHExitsDemand / TotalETHExitsRequested are carried over non-zero from V2.
                     // A fresh oracle report MUST land immediately after initOperatorsRegistryV1_2, with
                     // the redemption queue paused to cover the gap.
@@ -457,9 +457,9 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         uint256 available = _getOperatorAvailableExitETH(_operator, _operatorIndex);
         if (_amount > available) {
             if (_isEL) {
-                revert ELExitsRequestedExceedAvailableFundedAmount(_operatorIndex, _amount, available);
+                revert ELExitsRequestedExceedAvailableActiveCLAmount(_operatorIndex, _amount, available);
             }
-            revert ExitsRequestedExceedAvailableFundedAmount(_operatorIndex, _amount, available);
+            revert ExitsRequestedExceedAvailableActiveCLAmount(_operatorIndex, _amount, available);
         }
         _operator.requestedExits += _amount;
     }
