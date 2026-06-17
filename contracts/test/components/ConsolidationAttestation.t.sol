@@ -196,12 +196,9 @@ contract ConsolidationAttestationTest is Test {
         });
     }
 
-    function _validateConsolidationAsRiver(IAttestationVerifierV1.ConsolidationObject memory consolidation)
-        internal
-        returns (bool)
-    {
+    function _validateConsolidationAsRiver(IAttestationVerifierV1.ConsolidationObject memory consolidation) internal {
         vm.prank(address(river));
-        return verifier.validateConsolidation(consolidation);
+        verifier.validateConsolidation(consolidation);
     }
 
     // -----------------------------------------------------------------------
@@ -211,7 +208,7 @@ contract ConsolidationAttestationTest is Test {
     function testValidateConsolidation_singlePair_quorumMet() public {
         address user = address(0xBEEF);
         IAttestationVerifierV1.ConsolidationObject memory c = _validConsolidation(user, 1);
-        assertTrue(_validateConsolidationAsRiver(c));
+        _validateConsolidationAsRiver(c);
     }
 
     function testValidateConsolidation_multiplePairs_succeeds() public {
@@ -237,14 +234,14 @@ contract ConsolidationAttestationTest is Test {
             totalAmount: totalAmount,
             signatures: sigs
         });
-        assertTrue(_validateConsolidationAsRiver(c));
+        _validateConsolidationAsRiver(c);
     }
 
     function testValidateConsolidation_exactlyQuorumSignatures() public {
         // Quorum is 2; supplying exactly 2 valid signatures should pass.
         address user = address(0x11);
         IAttestationVerifierV1.ConsolidationObject memory c = _validConsolidation(user, 7);
-        assertTrue(_validateConsolidationAsRiver(c));
+        _validateConsolidationAsRiver(c);
     }
 
     function testRevert_validateConsolidation_onlyRiver() public {
@@ -511,16 +508,15 @@ contract ConsolidationAttestationTest is Test {
         bytes[] memory sigsA = new bytes[](2);
         sigsA[0] = _sign(pk1, expectedDigest);
         sigsA[1] = _sign(pk2, expectedDigest);
-        assertTrue(
-            _validateConsolidationAsRiver(
-                IAttestationVerifierV1.ConsolidationObject({
-                    withdrawalAddress: user,
-                    sourcePubkeys: sources,
-                    targetPubkeys: targets,
-                    totalAmount: totalAmount,
-                    signatures: sigsA
-                })
-            )
+        // Succeeds (does not revert): correct signatures over the same request fields.
+        _validateConsolidationAsRiver(
+            IAttestationVerifierV1.ConsolidationObject({
+                withdrawalAddress: user,
+                sourcePubkeys: sources,
+                targetPubkeys: targets,
+                totalAmount: totalAmount,
+                signatures: sigsA
+            })
         );
     }
 
@@ -529,7 +525,7 @@ contract ConsolidationAttestationTest is Test {
         // call with the same payload (even with the same valid signatures) must revert.
         address user = address(0xBEEF);
         IAttestationVerifierV1.ConsolidationObject memory c = _validConsolidation(user, 1);
-        assertTrue(_validateConsolidationAsRiver(c));
+        _validateConsolidationAsRiver(c);
 
         // The expected key is the EIP-712 structHash over the four request fields.
         bytes32 structHash = keccak256(
