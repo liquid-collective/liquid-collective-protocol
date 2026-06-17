@@ -631,7 +631,6 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
     function validateConsolidation(IAttestationVerifierV1.ConsolidationObject calldata consolidation)
         external
         onlyRiver
-        returns (bool)
     {
         // 1. Structural checks (cheapest first — fail fast)
         uint256 sourceLen = consolidation.sourcePubkeys.length;
@@ -682,8 +681,6 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
         // 6. Mark as processed and emit
         ProcessedConsolidations.markProcessed(structHash);
         emit ConsolidationProcessed(structHash);
-
-        return true;
     }
 
     // -----------------------------------------------------------------------
