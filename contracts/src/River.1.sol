@@ -72,7 +72,7 @@ contract RiverV1 is
         address _attestationVerifier,
         address _externalConsolidationRecipientMapping,
         address _consolidator
-    ) external init(3) onlyAdmin {
+    ) external init(3) {
         if (_withdrawalCredentials == bytes32(0)) {
             revert InvalidWithdrawalCredentials();
         }
