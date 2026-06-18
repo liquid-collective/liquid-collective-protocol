@@ -1493,6 +1493,27 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         assertEq(depositContract.deposit_count(), depositCountBefore, "no deposit should reach the beacon contract");
     }
 
+    /// @dev Same-batch duplicate initial deposits are not caught by the lookup table because
+    ///      `fetchAndValidateDeposits()` only checks the pre-existing lookup state. The lookup
+    ///      is updated after both deposit-contract calls execute, so this regression test pins
+    ///      the intended Keeper-input-invariant behavior.
+    function testSameBatch_duplicateInitialDeposits_executesBoth() public {
+        IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](2);
+        deposits[0] = _makeDeposit(0, 150);
+        deposits[1] = _makeDeposit(0, 150);
+
+        assertFalse(verifier.isPubkeyFunded(deposits[0].pubkey), "duplicate pubkey starts unfunded");
+
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits);
+
+        uint256 depositCountBefore = depositContract.deposit_count();
+        vm.prank(keeper);
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+
+        assertEq(depositContract.deposit_count(), depositCountBefore + 2, "both duplicate initials should execute");
+        assertTrue(verifier.isPubkeyFunded(deposits[0].pubkey), "duplicate pubkey recorded after execution");
+    }
+
     /// @dev `recordNewlyFundedPubkeys` is gated by `onlyRiver` (msg.sender == RiverAddress.get()).
     ///      Any other caller must revert with LibErrors.Unauthorized.
     function testRevert_recordNewlyFundedPubkeys_notRiver() public {
