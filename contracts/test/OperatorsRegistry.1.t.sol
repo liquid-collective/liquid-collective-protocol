@@ -7,6 +7,7 @@ import "forge-std/Test.sol";
 import "./OperatorAllocationTestBase.sol";
 import "../src/libraries/LibBytes.sol";
 import "./mocks/RejectEtherMock.sol";
+import "./mocks/ReentrancyExitAttackMock.sol";
 import "./utils/UserFactory.sol";
 import "./utils/BytesGenerator.sol";
 import "./utils/LibImplementationUnbricker.sol";
@@ -1459,6 +1460,45 @@ contract OperatorsRegistryV1ExitCorrectnessTests is OperatorAllocationTestBase {
     //         assertEq(operatorsRegistry.getTotalValidatorExitsRequested(), 5, "Total exits = unsolicited 5");
     //         assertEq(operatorsRegistry.getCurrentValidatorExitsDemand(), 5, "Demand reduced by unsolicited 5");
     //     }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // Reentrancy protection on requestETHExits
+    // ──────────────────────────────────────────────────────────────────────
+
+    /// @notice requestETHExits refunds any excess msg.value to the keeper via a raw call.
+    ///         A malicious keeper contract can use that callback to re-enter the function.
+    ///         This test registers such a contract as the keeper, drives a CL exit with
+    ///         excess ETH attached (so the refund fires mid-execution), and asserts the
+    ///         re-entrant call is rejected.
+    ///         Without nonReentrant: the re-entrant call succeeds (reentrancySucceeded = true).
+    ///         With nonReentrant:    the re-entrant call is blocked  (reentrancySucceeded = false).
+    function testRequestETHExitsBlocksReentrancy() external {
+        _fundAllOperators();
+
+        vm.prank(river);
+        operatorsRegistry.demandETHExits(100 * 32 ether, 250 * 32 ether);
+
+        // Deploy the attacker and register it as the keeper (the address that receives refunds).
+        ReentrancyExitAttackMock attacker = new ReentrancyExitAttackMock(address(operatorsRegistry));
+        RiverMock(river).setKeeper(address(attacker));
+
+        // Single CL exit of 1 validator (32 ETH) from operator 0; re-used by the re-entrant call.
+        uint256[] memory ops = new uint256[](1);
+        ops[0] = 0;
+        uint32[] memory counts = new uint32[](1);
+        counts[0] = 1;
+        attacker.setAttackAllocation(_createExitAllocation(ops, counts));
+
+        // Attach excess ETH: a CL-only exit pays no withdrawal fee, so the whole amount is
+        // refunded to the keeper, invoking its receive() and the re-entrant requestETHExits.
+        vm.deal(address(this), 1 ether);
+        attacker.attack{value: 1 ether}();
+
+        assertFalse(attacker.reentrancySucceeded(), "re-entrant call to requestETHExits must be blocked");
+        // The outer (legitimate) call must still settle normally despite the blocked re-entry.
+        assertEq(operatorsRegistry.getOperator(0).requestedExits, 32 ether, "outer CL exit must still settle");
+        assertEq(operatorsRegistry.getCurrentETHExitsDemand(), 100 * 32 ether - 32 ether, "demand decremented once");
+    }
 }
 
 // ══════════════════════════════════════════════════════════════════════════

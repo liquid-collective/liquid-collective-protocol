@@ -11,6 +11,8 @@ import "./libraries/LibUint256.sol";
 import "./Initializable.sol";
 import "./Administrable.sol";
 
+import "openzeppelin-contracts/contracts/security/ReentrancyGuard.sol";
+
 import "./state/operatorsRegistry/Operators.2.sol";
 import "./state/operatorsRegistry/Operators.3.sol";
 import "./state/operatorsRegistry/ValidatorKeys.sol";
@@ -27,7 +29,7 @@ import "./state/shared/RiverAddress.sol";
 /// @dev Operator index is the position in the operators array. Operators are only
 /// @dev added, never removed, so the operator at index i is always the one at
 /// @dev array position i and indices are stable over time.
-contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrable, IProtocolVersion {
+contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrable, ReentrancyGuard, IProtocolVersion {
     uint256 private constant DEPOSIT_SIZE = 32 ether;
 
     uint256 private constant MIN_ETH_AMOUNT = 1 ether;
@@ -317,7 +319,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         ExitETHAllocation[] calldata _allocations,
         ELExitETHAllocation[] calldata _elAllocations,
         uint256 _maxFeePerWithdrawal
-    ) external payable {
+    ) external payable nonReentrant {
         if (msg.sender != IConsensusLayerDepositManagerV1(RiverAddress.get()).getKeeper()) {
             revert IConsensusLayerDepositManagerV1.OnlyKeeper();
         }
