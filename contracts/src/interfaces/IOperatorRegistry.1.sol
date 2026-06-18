@@ -244,6 +244,12 @@ interface IOperatorsRegistryV1 {
     /// @param amountsLength The length of the amounts array
     error MisalignedDeltaArrays(uint256 operatorIndex, uint256 pubkeysLength, uint256 amountsLength);
 
+    /// @notice Thrown when the sum of per-key amounts in a delta does not equal its fundedETH field.
+    /// @param operatorIndex The operator whose delta failed the invariant
+    /// @param declared fundedETH as declared in the delta
+    /// @param computed sum(depositAmounts) + sum(topUpAmounts) actually computed
+    error FundedETHMismatch(uint256 operatorIndex, uint256 declared, uint256 computed);
+
     /// @notice Thrown when the excess fee is not refunded
     /// @param sender The sender of the transaction
     /// @param excess The excess fee

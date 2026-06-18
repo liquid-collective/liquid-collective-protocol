@@ -1655,30 +1655,35 @@ contract OperatorsRegistryV1FlattenAndAllocationTests is OperatorAllocationTestB
     function testIncrementFundedRevertsUnsortedOrDuplicate() external {
         _setupOperators(5, 10);
 
-        // Duplicate index
+        // Duplicate index — first delta must be internally consistent so the FundedETHMismatch
+        // check passes and the duplicate is caught when the second delta is processed.
         IOperatorsRegistryV1.OperatorFundingDelta[] memory dup = new IOperatorsRegistryV1.OperatorFundingDelta[](2);
         dup[0].operatorIndex = 2;
         dup[0].fundedETH = 32 ether;
         dup[0].depositPubkeys = new bytes[](1);
         dup[0].depositAmounts = new uint256[](1);
+        dup[0].depositAmounts[0] = 32 ether;
         dup[1].operatorIndex = 2;
         dup[1].fundedETH = 32 ether;
         dup[1].depositPubkeys = new bytes[](1);
         dup[1].depositAmounts = new uint256[](1);
+        dup[1].depositAmounts[0] = 32 ether;
         vm.prank(river);
         vm.expectRevert(abi.encodeWithSelector(IOperatorsRegistryV1.OperatorIndicesUnsortedOrDuplicate.selector, 2));
         operatorsRegistry.incrementFundedETH(dup);
 
-        // Descending order
+        // Descending order — same: first delta must be internally consistent.
         IOperatorsRegistryV1.OperatorFundingDelta[] memory desc = new IOperatorsRegistryV1.OperatorFundingDelta[](2);
         desc[0].operatorIndex = 3;
         desc[0].fundedETH = 32 ether;
         desc[0].depositPubkeys = new bytes[](1);
         desc[0].depositAmounts = new uint256[](1);
+        desc[0].depositAmounts[0] = 32 ether;
         desc[1].operatorIndex = 1;
         desc[1].fundedETH = 32 ether;
         desc[1].depositPubkeys = new bytes[](1);
         desc[1].depositAmounts = new uint256[](1);
+        desc[1].depositAmounts[0] = 32 ether;
         vm.prank(river);
         vm.expectRevert(abi.encodeWithSelector(IOperatorsRegistryV1.OperatorIndicesUnsortedOrDuplicate.selector, 1));
         operatorsRegistry.incrementFundedETH(desc);

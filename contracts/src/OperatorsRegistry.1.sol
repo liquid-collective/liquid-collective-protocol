@@ -240,6 +240,21 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                 revert MisalignedDeltaArrays(operatorIndex, delta.topUpPubkeys.length, delta.topUpAmounts.length);
             }
 
+            // Defense-in-depth: verify fundedETH equals the element-wise sum of per-key amounts
+            // so that operator.funded and emitted event amounts remain consistent.
+            uint256 computedFundedETH;
+            uint256 dLen = delta.depositAmounts.length;
+            for (uint256 j = 0; j < dLen; ++j) {
+                computedFundedETH += delta.depositAmounts[j];
+            }
+            uint256 tLen = delta.topUpAmounts.length;
+            for (uint256 j = 0; j < tLen; ++j) {
+                computedFundedETH += delta.topUpAmounts[j];
+            }
+            if (computedFundedETH != delta.fundedETH) {
+                revert FundedETHMismatch(operatorIndex, delta.fundedETH, computedFundedETH);
+            }
+
             operator.funded += delta.fundedETH;
             // Emit initial-deposit pubkeys and top-up pubkeys on separate events so off-chain
             // indexers do not conflate a top-up (existing key, additional ETH) with a brand-new
