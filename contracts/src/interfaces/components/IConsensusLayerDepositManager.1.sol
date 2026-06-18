@@ -110,6 +110,8 @@ interface IConsensusLayerDepositManagerV1 {
     ///      `IDepositDataBuffer.DepositObject` (`deposits[]` and `topUps[]`). Initial deposits
     ///      go through BLS verification; top-ups skip BLS and require their pubkey to already
     ///      be in `PectraValidatorPubkeyLookup`.
+    /// @dev Same-batch duplicate pubkeys are not deduplicated on-chain; Keeper is trusted not
+    ///      to submit duplicate pubkeys within the same batch.
     /// @param depositDataBufferId  Batch identifier in the DepositDataBuffer
     /// @param depositRootHash      Current deposit contract root hash co-signed by root attesters
     /// @param signatures           EIP-712 signatures from root attesters

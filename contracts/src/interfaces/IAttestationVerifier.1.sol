@@ -256,7 +256,7 @@ interface IAttestationVerifierV1 {
     /// @param pubkey The offending 48-byte BLS pubkey
     error TopUpPubkeyNotFunded(bytes pubkey);
 
-    /// @notice recordNewlyFundedPubkeys was passed a pubkey already in the initial-deposit set.
+    /// @notice An initial deposit referenced a pubkey already in the initial-deposit set.
     /// @param pubkey The offending 48-byte BLS pubkey
     error PubkeyAlreadyFunded(bytes pubkey);
 
@@ -308,10 +308,11 @@ interface IAttestationVerifierV1 {
     ///         the validated batch + total amount for River to execute.
     /// @dev Per-deposit pubkey-state checks fire eagerly inside this call — top-ups must
     ///      reference a pubkey already in the initial-deposit lookup, and initial deposits
-    ///      must not duplicate any already-recorded or in-batch pubkey. The buffer's
-    ///      `operatorIdx` is NOT verified against any on-chain record (the lookup tracks
-    ///      membership only — see PectraValidatorPubkeyLookup natspec). A failure reverts here,
-    ///      before River runs any `_depositValidator`.
+    ///      must not duplicate any already-recorded pubkey. Same-batch duplicate pubkeys are
+    ///      not deduplicated on-chain; Keeper is trusted not to submit duplicate pubkeys within
+    ///      the same batch. The buffer's `operatorIdx` is NOT verified against any on-chain record
+    ///      (the lookup tracks membership only — see PectraValidatorPubkeyLookup natspec).
+    ///      A failure reverts here, before River runs any `_depositValidator`.
     /// @dev `depositContract` is supplied by the caller (River) rather than read from the
     ///      verifier's own storage so we avoid an additional cold SLOAD per call. The same
     ///      address is used both for the front-run-resistant `get_deposit_root()` check here
@@ -346,10 +347,11 @@ interface IAttestationVerifierV1 {
     /// @notice Record one or more pubkeys as initial-deposited. Only callable by River.
     /// @dev Called by River after the deposit-execution loop. The recorded set is consulted
     ///      by the top-up branch of `fetchAndValidateDeposits()` to require that top-ups reference a pubkey
-    ///      River has previously initial-deposited. Assumes `pubkeys` is already deduplicated
-    ///      against the lookup and against itself; `fetchAndValidateDeposits()` enforces both invariants
-    ///      earlier in the same transaction. Per-pubkey logging is emitted on the caller
-    ///      (ConsensusLayerDepositManager's `PubkeyFunded` event), not here.
+    ///      River has previously initial-deposited. Assumes `pubkeys` was already checked against
+    ///      the lookup by `fetchAndValidateDeposits()` earlier in the same transaction. Same-batch
+    ///      duplicate pubkeys are not deduplicated here; Keeper is trusted not to include them.
+    ///      Per-pubkey logging is emitted on the caller (ConsensusLayerDepositManager's
+    ///      `PubkeyFunded` event), not here.
     /// @param pubkeys The 48-byte BLS pubkeys to record
     function recordNewlyFundedPubkeys(bytes[] calldata pubkeys) external;
 

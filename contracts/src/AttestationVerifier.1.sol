@@ -427,12 +427,11 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
         bytes32 computedId = keccak256(abi.encode(batch));
         if (computedId != depositDataBufferId) revert BufferIdMismatch(depositDataBufferId, computedId);
 
-        // 4. Validate initial deposits: field lengths, amount bounds, pubkey-not-already-funded
-        //    and no in-batch duplicates. The cross-array "pubkey in both deposits and topUps"
-        //    case is implicitly forbidden: an initial deposit reverts PubkeyAlreadyFunded if
-        //    the pubkey is in the lookup, and a top-up reverts TopUpPubkeyNotFunded if it
-        //    isn't — so no pubkey can pass both branches in one batch.
-        bytes32[] memory pubkeyHashes = new bytes32[](depositCount);
+        // 4. Validate initial deposits: field lengths, amount bounds, and pubkey-not-already-funded.
+        //    Same-batch duplicate pubkeys are a Keeper input invariant, not deduplicated on-chain.
+        //    The cross-array "pubkey in both deposits and topUps" case is still implicitly forbidden:
+        //    an initial deposit reverts PubkeyAlreadyFunded if the pubkey is already in the lookup,
+        //    and a top-up reverts TopUpPubkeyNotFunded if it is not.
         for (uint256 i = 0; i < depositCount; i++) {
             IDepositDataBuffer.Deposit memory d = batch.deposits[i];
             if (d.pubkey.length != DEPOSIT_PUBKEY_LENGTH) {
@@ -451,21 +450,13 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
             }
             totalAmount += d.amount;
 
-            bytes32 pkHash = keccak256(d.pubkey);
-            pubkeyHashes[i] = pkHash;
-
             if (PectraValidatorPubkeyLookup.isPubkeyFunded(d.pubkey)) {
                 revert PubkeyAlreadyFunded(d.pubkey);
-            }
-            for (uint256 j = 0; j < i; j++) {
-                if (pubkeyHashes[j] == pkHash) {
-                    revert PubkeyAlreadyFunded(d.pubkey);
-                }
             }
         }
 
         // 5. Validate top-ups: field length on pubkey, amount bounds, pubkey-must-be-funded.
-        //    Per-batch duplicate top-up pubkeys are allowed.
+        //    Same-batch duplicate pubkeys are a Keeper input invariant, not deduplicated on-chain.
         for (uint256 i = 0; i < topUpCount; i++) {
             IDepositDataBuffer.TopUp memory t = batch.topUps[i];
             if (t.pubkey.length != DEPOSIT_PUBKEY_LENGTH) {
@@ -491,11 +482,9 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
     // -----------------------------------------------------------------------
 
     /// @inheritdoc IAttestationVerifierV1
-    /// @dev Assumes `pubkeys` is already deduplicated against the lookup and against itself —
-    ///      `fetchAndValidateDeposits()` enforces both invariants (initial-deposit branch at the top of
-    ///      `fetchAndValidateDeposits()`) and runs in the same transaction. Re-checking here would only fire
-    ///      on a `fetchAndValidateDeposits()` regression and would cost a cold SLOAD per pubkey for a
-    ///      condition that cannot occur in production.
+    /// @dev Assumes `pubkeys` was already checked against the lookup by `fetchAndValidateDeposits()`,
+    ///      which runs in the same transaction. Same-batch duplicate pubkeys are a Keeper input
+    ///      invariant, not deduplicated here.
     function recordNewlyFundedPubkeys(bytes[] calldata pubkeys) external onlyRiver {
         uint256 len = pubkeys.length;
         for (uint256 i = 0; i < len; ++i) {

@@ -1493,25 +1493,6 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         assertEq(depositContract.deposit_count(), depositCountBefore, "no deposit should reach the beacon contract");
     }
 
-    /// @dev Same-batch duplicate-initial (two entries with the same pubkey, both flagged as
-    ///      initials via non-zero depositY) must revert in `fetchAndValidateDeposits()` with PubkeyAlreadyFunded
-    ///      before any deposit is sent to the beacon contract. Catches the producer-bug class where
-    ///      the dup is intra-batch and not yet recorded on-chain — the on-chain lookup is empty for
-    ///      this pubkey at validate-time, so the inner per-batch scan is what fires.
-    function testRevert_sameBatch_duplicateInitial_failsBeforeDeposit() public {
-        IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](2);
-        deposits[0] = _makeDeposit(0, 150);
-        deposits[1] = _makeDeposit(0, 150); // same operator + same seed → same pubkey, both initials
-
-        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits);
-
-        uint256 depositCountBefore = depositContract.deposit_count();
-        vm.prank(keeper);
-        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.PubkeyAlreadyFunded.selector, deposits[1].pubkey));
-        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
-        assertEq(depositContract.deposit_count(), depositCountBefore, "no deposit should reach the beacon contract");
-    }
-
     /// @dev `recordNewlyFundedPubkeys` is gated by `onlyRiver` (msg.sender == RiverAddress.get()).
     ///      Any other caller must revert with LibErrors.Unauthorized.
     function testRevert_recordNewlyFundedPubkeys_notRiver() public {
@@ -1752,8 +1733,8 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     }
 
     /// @dev Two top-ups for the same pubkey within one batch are Pectra-legal under 0x02
-    ///      compounding withdrawal credentials. Both entries must succeed because the
-    ///      in-batch duplicate scan only applies to initial deposits — top-ups are exempt.
+    ///      compounding withdrawal credentials. Both entries must succeed because validation
+    ///      does not deduplicate same-batch pubkeys.
     function testTopUp_sameBatch_twoTopUpsForSamePubkey_succeeds() public {
         IDepositDataBuffer.TopUp[] memory topUps = new IDepositDataBuffer.TopUp[](2);
         topUps[0] = _makeTopUpDeposit(0, 300);
