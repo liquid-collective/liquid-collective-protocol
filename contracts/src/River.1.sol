@@ -728,9 +728,9 @@ contract RiverV1 is
 
                 (uint256 totalExitedETH, uint256 totalRequestedETHExits) = or.getExitedAndRequestedETHExits();
 
-                // what we are calling pre-exiting balance is the amount of eth the protocol has committed to exit                                                                                                                                                                         
-                // but not yet received — covering both dispatched exit requests and demand not yet sent to operators                                                                                                                                                                        
-                // we take them into account to not over-request exits across oracle cycles     
+                // what we are calling pre-exiting balance is the amount of ETH (wei) the protocol has committed to exit
+                // but not yet received — covering both dispatched exit requests and demand not yet sent to operators
+                // we take them into account to not over-request exits across oracle cycles
                 uint256 preExitingBalance =
                     totalRequestedETHExits > totalExitedETH ? (totalRequestedETHExits - totalExitedETH) : 0;
 
