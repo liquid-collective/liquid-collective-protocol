@@ -338,6 +338,10 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
                 );
             }
 
+            // totalExternalConsolidationsAmountReported MUST be increased in the same report in which the corresponding consolidated
+            // principal first appears in validatorsBalance. The buffer reduction nets against that same report's validatorsBalance increase;
+            // any increase beyond the available ConsolidationBuffer is treated as ordinary rewards subject to annualAprUpperBound and will be charged treasury fees.
+            // Reporting the consolidation amount and the landed principal in different reports will cause accounting issues.
             if (
                 _report.totalExternalConsolidationsAmountReported
                     > lastStoredReport.totalExternalConsolidationsAmountReported

@@ -155,7 +155,8 @@ interface IOracleManagerV1 {
         uint256 totalDepositedActivatedETH;
         // the sum of all external consolidation funds that were reported
         // this will only include the consolidations that happened due to external validators merging into LC
-        // this value cannot decrease over reports
+        // this value cannot decrease over reports and must increase in the same report in which the corresponding
+        // consolidated principal first appears in validatorsBalance.
         uint256 totalExternalConsolidationsAmountReported;
         // the count of activated validators
         // even validators that are exited are still accounted
