@@ -397,58 +397,72 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         IWithdrawV1 withdraw = IWithdrawV1(WithdrawAddress.get());
 
         for (uint256 i = 0; i < _elAllocations.length; ++i) {
-            uint256 operatorIndex = _elAllocations[i].operatorIndex;
-
-            if (i > 0 && operatorIndex <= _elAllocations[i - 1].operatorIndex) {
+            if (i > 0 && _elAllocations[i].operatorIndex <= _elAllocations[i - 1].operatorIndex) {
                 revert UnorderedOperatorList();
             }
 
-            if (
-                _elAllocations[i].pubkeys.length != _elAllocations[i].withdrawalAmounts.length
-                    || _elAllocations[i].pubkeys.length != _elAllocations[i].reservedExitAmounts.length
-            ) {
-                revert InvalidELExitETHAllocationLength();
-            }
-
-            OperatorsV3.Operator storage operator = OperatorsV3.get(operatorIndex);
-            if (!operator.active) {
-                revert InactiveOperator(operatorIndex);
-            }
-
-            uint256 elExitAmount;
-            for (uint256 j = 0; j < _elAllocations[i].reservedExitAmounts.length; ++j) {
-                uint64 withdrawalAmount = _elAllocations[i].withdrawalAmounts[j];
-                uint64 reservedExitAmount = _elAllocations[i].reservedExitAmounts[j];
-                // The reserved amount feeds the per-operator headroom cap, so it must always be a positive
-                // value within the allowed bound — for both partial and full exits.
-                if (reservedExitAmount == 0 || reservedExitAmount > MAX_EL_EXIT_AMOUNT_GWEI) {
-                    revert InvalidELExitETHAllocationAmount(operatorIndex, withdrawalAmount, reservedExitAmount);
-                }
-                // A non-zero wire amount denotes a partial exit, which must withdraw exactly what it reserves.
-                // A zero wire amount denotes a full exit, whose reserved value is the projected balance.
-                if (withdrawalAmount != 0 && withdrawalAmount != reservedExitAmount) {
-                    revert ELExitReservedWithdrawalMismatch(operatorIndex, withdrawalAmount, reservedExitAmount);
-                }
-                elExitAmount += uint256(reservedExitAmount) * 1 gwei;
-            }
-
-            _reserveOperatorExit(operator, operatorIndex, elExitAmount, true);
+            (uint256 elExitAmount, uint256 feePaid) =
+                _requestSingleELETHExit(withdraw, _elAllocations[i], _maxFeePerWithdrawal);
             requestedETHAmount += elExitAmount;
-
-            withdraw.withdraw{value: _maxFeePerWithdrawal * _elAllocations[i].pubkeys.length}(
-                _elAllocations[i].pubkeys, _elAllocations[i].withdrawalAmounts, _maxFeePerWithdrawal, msg.sender
-            );
-            totalFeePaid += _maxFeePerWithdrawal * _elAllocations[i].pubkeys.length;
-            emit RequestedELETHExits(
-                operatorIndex,
-                _elAllocations[i].pubkeys,
-                _elAllocations[i].withdrawalAmounts,
-                _elAllocations[i].reservedExitAmounts
-            );
+            totalFeePaid += feePaid;
         }
         if (requestedETHAmount > _remainingETHExitsDemand) {
             revert ExitsGreaterThanExitDemand(requestedETHAmount, _remainingETHExitsDemand);
         }
+    }
+
+    /// @notice Validates a single operator's EL exit allocation, reserves it, triggers the withdrawal and emits.
+    /// @dev Split out of `_requestELETHExits` to keep the per-operator locals off the caller's stack (the loop
+    ///      otherwise hits "stack too deep" when compiled without `viaIR`, e.g. under `forge coverage`).
+    /// @return elExitAmount The total reserved exit amount (wei) for this operator
+    /// @return feePaid The withdrawal fee paid for this operator
+    function _requestSingleELETHExit(
+        IWithdrawV1 _withdraw,
+        ELExitETHAllocation calldata _operatorAllocation,
+        uint256 _maxFeePerWithdrawal
+    ) private returns (uint256 elExitAmount, uint256 feePaid) {
+        uint256 operatorIndex = _operatorAllocation.operatorIndex;
+
+        if (
+            _operatorAllocation.pubkeys.length != _operatorAllocation.withdrawalAmounts.length
+                || _operatorAllocation.pubkeys.length != _operatorAllocation.reservedExitAmounts.length
+        ) {
+            revert InvalidELExitETHAllocationLength();
+        }
+
+        OperatorsV3.Operator storage operator = OperatorsV3.get(operatorIndex);
+        if (!operator.active) {
+            revert InactiveOperator(operatorIndex);
+        }
+
+        for (uint256 j = 0; j < _operatorAllocation.reservedExitAmounts.length; ++j) {
+            uint64 withdrawalAmount = _operatorAllocation.withdrawalAmounts[j];
+            uint64 reservedExitAmount = _operatorAllocation.reservedExitAmounts[j];
+            // The reserved amount feeds the per-operator headroom cap, so it must always be a positive
+            // value within the allowed bound — for both partial and full exits.
+            if (reservedExitAmount == 0 || reservedExitAmount > MAX_EL_EXIT_AMOUNT_GWEI) {
+                revert InvalidELExitETHAllocationAmount(operatorIndex, withdrawalAmount, reservedExitAmount);
+            }
+            // A non-zero wire amount denotes a partial exit, which must withdraw exactly what it reserves.
+            // A zero wire amount denotes a full exit, whose reserved value is the projected balance.
+            if (withdrawalAmount != 0 && withdrawalAmount != reservedExitAmount) {
+                revert ELExitReservedWithdrawalMismatch(operatorIndex, withdrawalAmount, reservedExitAmount);
+            }
+            elExitAmount += uint256(reservedExitAmount) * 1 gwei;
+        }
+
+        _reserveOperatorExit(operator, operatorIndex, elExitAmount, true);
+
+        feePaid = _maxFeePerWithdrawal * _operatorAllocation.pubkeys.length;
+        _withdraw.withdraw{value: feePaid}(
+            _operatorAllocation.pubkeys, _operatorAllocation.withdrawalAmounts, _maxFeePerWithdrawal, msg.sender
+        );
+        emit RequestedELETHExits(
+            operatorIndex,
+            _operatorAllocation.pubkeys,
+            _operatorAllocation.withdrawalAmounts,
+            _operatorAllocation.reservedExitAmounts
+        );
     }
 
     /// @notice Internal utility to reserve an exit against an operator's available ETH.

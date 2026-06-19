@@ -2811,4 +2811,55 @@ contract OperatorsRegistryV1ELExitTests is Test {
         assertEq(reg.getCurrentETHExitsDemand(), 0, "demand satisfied by the reserved projected balance");
         assertEq(mockWithdraw.lastAmounts(0), 0, "wire amount forwarded for a full exit should be 0");
     }
+
+    /// Two operators exited in a single call exercise the per-operator loop: the reserved amounts
+    /// and forwarded fees must accumulate correctly across iterations (one withdrawal per operator).
+    function testELExitAccumulatesReservesAndFeesAcrossMultipleOperators() public {
+        uint256 actualFee = 1 gwei;
+        uint256 maxFee = 5 gwei;
+        _useWithdrawContract(actualFee);
+
+        vm.startPrank(admin);
+        reg.addOperator("Op0", makeAddr("op0addr"));
+        reg.addOperator("Op1", makeAddr("op1addr"));
+        vm.stopPrank();
+        reg.sudoSetFundedV3(0, 32 ether);
+        reg.sudoSetFundedV3(1, 32 ether);
+        reg.sudoSetActiveCLETH(0, 32 ether);
+        reg.sudoSetActiveCLETH(1, 32 ether);
+        vm.prank(river);
+        reg.demandETHExits(16 ether, 64 ether);
+
+        IOperatorsRegistryV1.ExitETHAllocation[] memory empty = new IOperatorsRegistryV1.ExitETHAllocation[](0);
+        // Ordered, single-pubkey partial exits for two distinct operators.
+        IOperatorsRegistryV1.ELExitETHAllocation[] memory allocs = new IOperatorsRegistryV1.ELExitETHAllocation[](2);
+        allocs[0] = _makeELAlloc(0, EIGHT_ETH_IN_GWEI)[0];
+        allocs[1] = _makeELAlloc(1, EIGHT_ETH_IN_GWEI)[0];
+
+        // totalFeePaid = maxFee * (pubkeys0 + pubkeys1); send extra so the registry-level refund also runs.
+        uint256 totalPubkeys = 2;
+        uint256 valueSent = maxFee * totalPubkeys + 3 gwei;
+        vm.deal(keeper, valueSent);
+        uint256 keeperBalanceBefore = keeper.balance;
+
+        vm.prank(keeper);
+        reg.requestETHExits{value: valueSent}(empty, allocs, maxFee);
+
+        // requestedETHAmount accumulated across both operators.
+        assertEq(reg.getOperator(0).requestedExits, 8 ether, "op0 reserves its EL amount");
+        assertEq(reg.getOperator(1).requestedExits, 8 ether, "op1 reserves its EL amount");
+        assertEq(reg.getCurrentETHExitsDemand(), 0, "combined exits satisfy the 16 ETH demand");
+        assertEq(reg.getTotalETHExitsRequested(), 16 ether, "total requested is the sum of both operators");
+
+        // totalFeePaid accumulated across both operators: only the actual per-withdrawal fee is spent;
+        // each withdrawal's excess and the registry-level excess are refunded to the keeper.
+        assertEq(pectraWithdrawal.balance, actualFee * totalPubkeys, "actual fee paid for each withdrawal");
+        assertEq(address(withdrawContract).balance, 0, "withdraw retains no excess");
+        assertEq(address(reg).balance, 0, "registry retains no excess");
+        assertEq(
+            keeper.balance,
+            keeperBalanceBefore - actualFee * totalPubkeys,
+            "keeper only spends the actual fees after all refunds"
+        );
+    }
 }
