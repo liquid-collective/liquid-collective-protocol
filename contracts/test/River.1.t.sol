@@ -1262,6 +1262,7 @@ contract RiverV1Tests is RiverV1TestBase {
         river.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
 
         assertEq(river.getTotalDepositedETH(), 32 ether);
+        assertEq(operatorsRegistry.getOperator(operatorOneIndex).funded, 32 ether);
         assertEq(operatorsRegistry.getOperator(operatorOneIndex).requestedExits, 32 ether);
     }
 
