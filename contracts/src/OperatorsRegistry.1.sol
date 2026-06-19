@@ -455,7 +455,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @notice Interactions phase of the EL exit path: forwards the staged withdrawal requests to the withdrawal
-    ///         contract, paying the fee from `msg.value` and refunding any excess fee to the keeper.
+    ///         contract, paying the fee from `msg.value`.
     /// @dev Must run only AFTER the global aggregates have been written, so external calls cannot observe or act on
     ///      stale `CurrentETHExitsDemand` / `TotalETHExitsRequested` values.
     /// @param _elAllocations The EL exit allocations (pubkeys are read directly from calldata)
