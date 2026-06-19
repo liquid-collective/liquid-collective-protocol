@@ -41,13 +41,17 @@ contract WithdrawV1 is IWithdrawV1, Initializable, ReentrancyGuard, IProtocolVer
     function initWithdrawV1_1(
         address _pectraWithdrawalContractAddress,
         address _pectraConsolidationContractAddress,
-        address _operatorsRegistry,
-        address _attestationVerifier
+        address _operatorsRegistry
     ) external init(1) {
         PectraWithdrawalContractAddress.set(_pectraWithdrawalContractAddress);
         PectraConsolidationContractAddress.set(_pectraConsolidationContractAddress);
         OperatorsRegistryAddress.set(_operatorsRegistry);
+    }
+
+    /// @inheritdoc IWithdrawV1
+    function initWithdrawV1_2(address _attestationVerifier) external init(2) {
         AttestationVerifierAddress.set(_attestationVerifier);
+        emit SetAttestationVerifier(_attestationVerifier);
     }
 
     /// @inheritdoc IWithdrawV1
@@ -131,7 +135,11 @@ contract WithdrawV1 is IWithdrawV1, Initializable, ReentrancyGuard, IProtocolVer
         uint256 totalFeeRequired = fee * totalNumOfConsolidationOperations;
         _validateSufficientValueForFee(msg.value, totalFeeRequired);
 
-        IAttestationVerifierV1 attestationVerifier = IAttestationVerifierV1(AttestationVerifierAddress.get());
+        address attestationVerifierAddress = AttestationVerifierAddress.get();
+        if (attestationVerifierAddress == address(0)) {
+            revert AttestationVerifierNotSet();
+        }
+        IAttestationVerifierV1 attestationVerifier = IAttestationVerifierV1(attestationVerifierAddress);
         for (uint256 i = 0; i < requests.length; i++) {
             _processConsolidationRequest(requests[i], consolidationContract, attestationVerifier, fee);
         }

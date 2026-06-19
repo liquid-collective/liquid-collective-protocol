@@ -17,6 +17,10 @@ interface IWithdrawV1 {
     /// @param river The new River address
     event SetRiver(address river);
 
+    /// @notice Emitted when the linked AttestationVerifier address is set
+    /// @param attestationVerifier The new AttestationVerifier address
+    event SetAttestationVerifier(address indexed attestationVerifier);
+
     /// @notice Emitted when a Pectra withdrawal is requested for a validator
     /// @param pubkey Validator pubkey (48 bytes)
     /// @param amount Amount to withdraw (gwei)
@@ -70,6 +74,9 @@ interface IWithdrawV1 {
     /// @param pubkey The offending 48-byte BLS pubkey
     error SourcePubkeyNotFunded(bytes pubkey);
 
+    /// @notice Thrown when consolidation is attempted before the AttestationVerifier address has been wired
+    error AttestationVerifierNotSet();
+
     /// @param _river The address of the River contract
     function initializeWithdrawV1(address _river) external;
 
@@ -77,13 +84,18 @@ interface IWithdrawV1 {
     /// @param _pectraWithdrawalContractAddress The Pectra EL withdrawal contract address
     /// @param _pectraConsolidationContractAddress The Pectra EL consolidation contract address
     /// @param _operatorsRegistry The OperatorsRegistry address
-    /// @param _attestationVerifier The AttestationVerifier address
     function initWithdrawV1_1(
         address _pectraWithdrawalContractAddress,
         address _pectraConsolidationContractAddress,
-        address _operatorsRegistry,
-        address _attestationVerifier
+        address _operatorsRegistry
     ) external;
+
+    /// @notice Wire the AttestationVerifier address (callable once after initWithdrawV1_1).
+    /// @dev Added as a separate reinitializer rather than extending initWithdrawV1_1, so deployments
+    ///      that already consumed the 3-arg initWithdrawV1_1 (version == 2) can still wire the verifier
+    ///      without reverting on the already-consumed reinitializer.
+    /// @param _attestationVerifier The AttestationVerifier address
+    function initWithdrawV1_2(address _attestationVerifier) external;
 
     /// @notice Retrieve the withdrawal credentials to use
     /// @return The withdrawal credentials

@@ -2266,9 +2266,8 @@ contract OperatorsRegistryV1ELExitTests is Test {
         withdrawContract = new WithdrawV1();
         LibImplementationUnbricker.unbrick(vm, address(withdrawContract));
         withdrawContract.initializeWithdrawV1(river);
-        withdrawContract.initWithdrawV1_1(
-            pectraWithdrawal, makeAddr("pectraConsolidation"), address(reg), makeAddr("attestationVerifier")
-        );
+        withdrawContract.initWithdrawV1_1(pectraWithdrawal, makeAddr("pectraConsolidation"), address(reg));
+        withdrawContract.initWithdrawV1_2(makeAddr("attestationVerifier"));
         reg.sudoSetWithdrawAddress(address(withdrawContract));
     }
 
