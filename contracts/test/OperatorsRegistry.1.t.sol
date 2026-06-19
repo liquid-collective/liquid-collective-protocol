@@ -1550,23 +1550,28 @@ contract OperatorsRegistryV1FlattenAndAllocationTests is OperatorAllocationTestB
         vm.stopPrank();
     }
 
-    function testIncrementFundedRevertsOperatorIgnoredExitRequests() external {
+    function testIncrementFundedAllowsOperatorWithPendingExitRequests() external {
         _setupOperators(1, 10);
 
         // Give the operator some funded ETH then request exits for all of it.
         // Both fields are wei-denominated under the Pectra accounting model.
         OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoSetFunded(0, 5 * 32 ether);
         OperatorsRegistryInitializableV1(address(operatorsRegistry)).sudoExitRequests(0, 5 * 32 ether);
-        // stoppedCount remains 0, so operator has not fulfilled any exits
+        // exitedETH remains 0, so the operator still has unfulfilled exit requests.
 
         IOperatorsRegistryV1.OperatorFundingDelta[] memory deltas = new IOperatorsRegistryV1.OperatorFundingDelta[](1);
         deltas[0].operatorIndex = 0;
         deltas[0].fundedETH = 32 ether;
         deltas[0].depositPubkeys = new bytes[](1);
+        deltas[0].depositPubkeys[0] = bytes("op0-key");
         deltas[0].depositAmounts = new uint256[](1);
+        deltas[0].depositAmounts[0] = 32 ether;
+
         vm.prank(river);
-        vm.expectRevert(abi.encodeWithSignature("OperatorIgnoredExitRequests(uint256)", 0));
         operatorsRegistry.incrementFundedETH(deltas);
+
+        assertEq(operatorsRegistry.getOperator(0).funded, 6 * 32 ether, "funded ETH");
+        assertEq(operatorsRegistry.getOperator(0).requestedExits, 5 * 32 ether, "requested exits");
     }
 
     /// @notice Asserts incrementFundedETH credits exactly the operators referenced in a sparse

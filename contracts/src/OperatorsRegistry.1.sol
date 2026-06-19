@@ -226,9 +226,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             if (!operator.active) {
                 revert InactiveOperator(operatorIndex);
             }
-            if (operator.requestedExits > OperatorsV3.getExitedETH(operatorIndex)) {
-                revert OperatorIgnoredExitRequests(operatorIndex);
-            }
 
             // Defense-in-depth: enforce the per-class pubkey/amount alignment that
             // `LibFundingDeltas.build` already guarantees, so the registry never emits an event

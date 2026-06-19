@@ -159,10 +159,6 @@ interface IOperatorsRegistryV1 {
     /// @notice The provided list of operators is not in increasing order
     error UnorderedOperatorList();
 
-    /// @notice Thrown when an operator ignored the required number of requested exits
-    /// @param operatorIndex The operator index
-    error OperatorIgnoredExitRequests(uint256 operatorIndex);
-
     /// @notice Thrown when the sum of exited ETH is invalid
     error ExitedETHSumMismatch();
 
@@ -345,7 +341,6 @@ interface IOperatorsRegistryV1 {
     /// @dev Reverts with InvalidOperatorIndex when a delta references an operator outside the registered range
     /// @dev Reverts with OperatorIndicesUnsortedOrDuplicate when deltas are not strictly ascending
     /// @dev Reverts with InactiveOperator when a referenced operator is inactive
-    /// @dev Reverts with OperatorIgnoredExitRequests when a referenced operator has unfulfilled exit requests
     /// @param _deltas The per-operator funded ETH updates
     function incrementFundedETH(OperatorFundingDelta[] calldata _deltas) external;
 
