@@ -2217,22 +2217,26 @@ contract RejectingRefundRecipient {
     }
 }
 
-// Records the registry's global exit aggregates at the moment it is paid the excess-fee refund,
-// so a test can assert the decrement was already applied before any value left the contract (CEI).
+// Records the registry's global exit aggregates the FIRST time it is handed any value, so a test can assert
+// the decrement was already applied before the earliest external interaction (CEI). As the keeper, this
+// contract is the excessFeeRecipient: with a non-zero fee it is re-entered during the withdrawal call (the
+// first value transfer), and also on the trailing excess-fee refund. Only the first receipt is captured.
 contract StateProbingRefundRecipient {
     IOperatorsRegistryV1 internal immutable REGISTRY;
-    uint256 public demandAtRefund;
-    uint256 public totalRequestedAtRefund;
-    bool public probed;
+    uint256 public demandAtFirstInteraction;
+    uint256 public totalRequestedAtFirstInteraction;
+    uint256 public interactionCount;
 
     constructor(address _registry) {
         REGISTRY = IOperatorsRegistryV1(_registry);
     }
 
     receive() external payable {
-        demandAtRefund = REGISTRY.getCurrentETHExitsDemand();
-        totalRequestedAtRefund = REGISTRY.getTotalETHExitsRequested();
-        probed = true;
+        if (interactionCount == 0) {
+            demandAtFirstInteraction = REGISTRY.getCurrentETHExitsDemand();
+            totalRequestedAtFirstInteraction = REGISTRY.getTotalETHExitsRequested();
+        }
+        ++interactionCount;
     }
 }
 
@@ -2645,7 +2649,7 @@ contract OperatorsRegistryV1ELExitTests is Test {
     }
 
     /// When the requested EL exits are within the operator's available CL ETH but exceed the
-    /// remaining exit demand, the aggregate ExitsGreaterThanExitDemand guard must revert.
+    /// current exit demand, the combined ExitsRequestedExceedExitDemand guard must revert.
     function testELExitRevertsWhenExceedsRemainingDemand() public {
         vm.prank(admin);
         reg.addOperator("Op0", makeAddr("op0addr"));
@@ -2655,12 +2659,12 @@ contract OperatorsRegistryV1ELExitTests is Test {
         reg.demandETHExits(4 ether, 32 ether); // but demand is only 4 ETH
 
         IOperatorsRegistryV1.ExitETHAllocation[] memory empty = new IOperatorsRegistryV1.ExitETHAllocation[](0);
-        // Request an 8 ETH EL exit: below available (32) but above remaining demand (4).
+        // Request an 8 ETH EL exit: below available (32) but above current demand (4).
         IOperatorsRegistryV1.ELExitETHAllocation[] memory allocs = _makeELAlloc(0, EIGHT_ETH_IN_GWEI);
 
         vm.prank(keeper);
         vm.expectRevert(
-            abi.encodeWithSelector(IOperatorsRegistryV1.ExitsGreaterThanExitDemand.selector, 8 ether, 4 ether)
+            abi.encodeWithSelector(IOperatorsRegistryV1.ExitsRequestedExceedExitDemand.selector, 8 ether, 4 ether)
         );
         reg.requestETHExits(empty, allocs, 0);
     }
@@ -2782,8 +2786,9 @@ contract OperatorsRegistryV1ELExitTests is Test {
         reg.requestETHExits(empty, allocs, 0);
     }
 
-    // CEI: the global aggregates must already reflect the decrement at the point the refund recipient
-    // (the keeper) is handed control, i.e. before any value leaves the contract.
+    // CEI: the global aggregates must already reflect the decrement at the point of the FIRST external
+    // interaction. With a non-zero fee the keeper is re-entered during the withdrawal call (the earliest
+    // value transfer, ahead of the trailing excess-fee refund), so the probe asserts CEI at that first point.
     function testRequestETHExitsFinalisesAggregatesBeforeSendingValue() public {
         StateProbingRefundRecipient probe = new StateProbingRefundRecipient(address(reg));
         keeper = address(probe);
@@ -2794,12 +2799,20 @@ contract OperatorsRegistryV1ELExitTests is Test {
         IOperatorsRegistryV1.ExitETHAllocation[] memory empty = new IOperatorsRegistryV1.ExitETHAllocation[](0);
         IOperatorsRegistryV1.ELExitETHAllocation[] memory allocs = _makeELAlloc(0, EIGHT_ETH_IN_GWEI);
 
+        // Non-zero fee: the mock withdrawal forwards the fee value back to the keeper (excessFeeRecipient),
+        // and the extra wei triggers the trailing excess-fee refund — so the keeper is re-entered twice.
+        uint256 maxFee = 1 gwei;
         vm.deal(keeper, 1 ether);
         vm.prank(keeper);
-        reg.requestETHExits{value: 1 wei}(empty, allocs, 0);
+        reg.requestETHExits{value: maxFee + 1 wei}(empty, allocs, maxFee);
 
-        assertTrue(probe.probed(), "refund recipient should have been called");
-        assertEq(probe.demandAtRefund(), 0, "demand decrement must be applied before value is sent out");
-        assertEq(probe.totalRequestedAtRefund(), 8 ether, "total requested must be applied before value is sent out");
+        assertEq(mockWithdraw.withdrawCallCount(), 1, "the withdrawal interaction must have executed");
+        assertGt(probe.interactionCount(), 1, "keeper re-entered during withdrawal AND excess refund");
+        assertEq(probe.demandAtFirstInteraction(), 0, "demand decrement must be applied before the first interaction");
+        assertEq(
+            probe.totalRequestedAtFirstInteraction(),
+            8 ether,
+            "total requested must be applied before the first interaction"
+        );
     }
 }

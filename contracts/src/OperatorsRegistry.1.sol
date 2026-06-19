@@ -335,13 +335,11 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
         // --- effects: reserve exits and compute amounts; performs no external calls ---
         uint256 requestedETHAmount = _requestCLETHExits(_allocations);
-        uint256 remainingETHExitsDemand =
-            requestedETHAmount >= currentETHExitsDemand ? 0 : currentETHExitsDemand - requestedETHAmount;
         (uint256 elRequestedETHAmount, uint256 totalFeePaid, uint64[][] memory stagedAmounts) =
-            _reserveELETHExits(_elAllocations, _maxFeePerWithdrawal, remainingETHExitsDemand);
+            _reserveELETHExits(_elAllocations, _maxFeePerWithdrawal);
         requestedETHAmount += elRequestedETHAmount;
 
-        // Check that the exits requested do not exceed the current ETH exits demand
+        // Check that the combined CL + EL exits requested do not exceed the current ETH exits demand
         if (requestedETHAmount > currentETHExitsDemand) {
             revert ExitsRequestedExceedExitDemand(requestedETHAmount, currentETHExitsDemand);
         }
@@ -395,15 +393,13 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     ///      (full-exit entries zeroed) are consumed by `_executeELWithdrawals` during the interactions phase.
     /// @param _elAllocations The EL exit allocations to reserve
     /// @param _maxFeePerWithdrawal Maximum fee per withdrawal, used to accumulate the total fee
-    /// @param _remainingETHExitsDemand The exit demand still available to the EL path after CL exits
     /// @return requestedETHAmount The total EL ETH(wei) reserved across all allocations
     /// @return totalFeePaid The total fee that will be forwarded to the withdrawal contract
     /// @return stagedAmounts The per-allocation withdrawal amounts (full exits zeroed) to pass to the withdraw calls
-    function _reserveELETHExits(
-        ELExitETHAllocation[] calldata _elAllocations,
-        uint256 _maxFeePerWithdrawal,
-        uint256 _remainingETHExitsDemand
-    ) private returns (uint256 requestedETHAmount, uint256 totalFeePaid, uint64[][] memory stagedAmounts) {
+    function _reserveELETHExits(ELExitETHAllocation[] calldata _elAllocations, uint256 _maxFeePerWithdrawal)
+        private
+        returns (uint256 requestedETHAmount, uint256 totalFeePaid, uint64[][] memory stagedAmounts)
+    {
         if (_elAllocations.length == 0) {
             return (0, 0, stagedAmounts);
         }
@@ -449,9 +445,8 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             stagedAmounts[i] = cachedAmounts;
             emit RequestedELETHExits(operatorIndex, _elAllocations[i].pubkeys, _elAllocations[i].amounts);
         }
-        if (requestedETHAmount > _remainingETHExitsDemand) {
-            revert ExitsGreaterThanExitDemand(requestedETHAmount, _remainingETHExitsDemand);
-        }
+        // No EL-only demand check here: the combined CL + EL check in requestETHExits subsumes it (and
+        // reverts with the more informative ExitsRequestedExceedExitDemand) before any external call.
     }
 
     /// @notice Interactions phase of the EL exit path: forwards the staged withdrawal requests to the withdrawal
