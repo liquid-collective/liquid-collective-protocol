@@ -404,8 +404,8 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             }
 
             if (
-                _elAllocations[i].pubkeys.length != _elAllocations[i].isFullExit.length
-                    || _elAllocations[i].pubkeys.length != _elAllocations[i].amounts.length
+                _elAllocations[i].pubkeys.length != _elAllocations[i].withdrawalAmounts.length
+                    || _elAllocations[i].pubkeys.length != _elAllocations[i].reservedExitAmounts.length
             ) {
                 revert InvalidELExitETHAllocationLength();
             }
@@ -416,27 +416,35 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             }
 
             uint256 elExitAmount;
-            uint64[] memory cachedAmounts = _elAllocations[i].amounts;
-            for (uint256 j = 0; j < _elAllocations[i].amounts.length; ++j) {
-                uint64 amount = _elAllocations[i].amounts[j];
-                bool isFullExit = _elAllocations[i].isFullExit[j];
-                if (amount == 0 || amount > MAX_EL_EXIT_AMOUNT_GWEI) {
-                    revert InvalidELExitETHAllocationAmount(operatorIndex, isFullExit, amount);
+            for (uint256 j = 0; j < _elAllocations[i].reservedExitAmounts.length; ++j) {
+                uint64 withdrawalAmount = _elAllocations[i].withdrawalAmounts[j];
+                uint64 reservedExitAmount = _elAllocations[i].reservedExitAmounts[j];
+                // The reserved amount feeds the per-operator headroom cap, so it must always be a positive
+                // value within the allowed bound — for both partial and full exits.
+                if (reservedExitAmount == 0 || reservedExitAmount > MAX_EL_EXIT_AMOUNT_GWEI) {
+                    revert InvalidELExitETHAllocationAmount(operatorIndex, withdrawalAmount, reservedExitAmount);
                 }
-                elExitAmount += uint256(amount) * 1 gwei;
-                if (isFullExit) {
-                    cachedAmounts[j] = 0;
+                // A non-zero wire amount denotes a partial exit, which must withdraw exactly what it reserves.
+                // A zero wire amount denotes a full exit, whose reserved value is the projected balance.
+                if (withdrawalAmount != 0 && withdrawalAmount != reservedExitAmount) {
+                    revert ELExitReservedWithdrawalMismatch(operatorIndex, withdrawalAmount, reservedExitAmount);
                 }
+                elExitAmount += uint256(reservedExitAmount) * 1 gwei;
             }
 
             _reserveOperatorExit(operator, operatorIndex, elExitAmount, true);
             requestedETHAmount += elExitAmount;
 
             withdraw.withdraw{value: _maxFeePerWithdrawal * _elAllocations[i].pubkeys.length}(
-                _elAllocations[i].pubkeys, cachedAmounts, _maxFeePerWithdrawal, msg.sender
+                _elAllocations[i].pubkeys, _elAllocations[i].withdrawalAmounts, _maxFeePerWithdrawal, msg.sender
             );
             totalFeePaid += _maxFeePerWithdrawal * _elAllocations[i].pubkeys.length;
-            emit RequestedELETHExits(operatorIndex, _elAllocations[i].pubkeys, _elAllocations[i].amounts);
+            emit RequestedELETHExits(
+                operatorIndex,
+                _elAllocations[i].pubkeys,
+                _elAllocations[i].withdrawalAmounts,
+                _elAllocations[i].reservedExitAmounts
+            );
         }
         if (requestedETHAmount > _remainingETHExitsDemand) {
             revert ExitsGreaterThanExitDemand(requestedETHAmount, _remainingETHExitsDemand);
