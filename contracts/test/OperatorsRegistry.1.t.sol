@@ -2217,6 +2217,25 @@ contract RejectingRefundRecipient {
     }
 }
 
+// Records the registry's global exit aggregates at the moment it is paid the excess-fee refund,
+// so a test can assert the decrement was already applied before any value left the contract (CEI).
+contract StateProbingRefundRecipient {
+    IOperatorsRegistryV1 internal immutable REGISTRY;
+    uint256 public demandAtRefund;
+    uint256 public totalRequestedAtRefund;
+    bool public probed;
+
+    constructor(address _registry) {
+        REGISTRY = IOperatorsRegistryV1(_registry);
+    }
+
+    receive() external payable {
+        demandAtRefund = REGISTRY.getCurrentETHExitsDemand();
+        totalRequestedAtRefund = REGISTRY.getTotalETHExitsRequested();
+        probed = true;
+    }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Partial-exit unit tests for requestETHExits (H-05)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2761,5 +2780,26 @@ contract OperatorsRegistryV1ELExitTests is Test {
 
         vm.prank(keeper);
         reg.requestETHExits(empty, allocs, 0);
+    }
+
+    // CEI: the global aggregates must already reflect the decrement at the point the refund recipient
+    // (the keeper) is handed control, i.e. before any value leaves the contract.
+    function testRequestETHExitsFinalisesAggregatesBeforeSendingValue() public {
+        StateProbingRefundRecipient probe = new StateProbingRefundRecipient(address(reg));
+        keeper = address(probe);
+        RiverMock(river).setKeeper(keeper);
+
+        _setupSingleOperator(32 ether, 32 ether, 8 ether);
+
+        IOperatorsRegistryV1.ExitETHAllocation[] memory empty = new IOperatorsRegistryV1.ExitETHAllocation[](0);
+        IOperatorsRegistryV1.ELExitETHAllocation[] memory allocs = _makeELAlloc(0, EIGHT_ETH_IN_GWEI);
+
+        vm.deal(keeper, 1 ether);
+        vm.prank(keeper);
+        reg.requestETHExits{value: 1 wei}(empty, allocs, 0);
+
+        assertTrue(probe.probed(), "refund recipient should have been called");
+        assertEq(probe.demandAtRefund(), 0, "demand decrement must be applied before value is sent out");
+        assertEq(probe.totalRequestedAtRefund(), 8 ether, "total requested must be applied before value is sent out");
     }
 }

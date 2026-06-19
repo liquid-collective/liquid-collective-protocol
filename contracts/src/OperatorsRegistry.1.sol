@@ -333,17 +333,26 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             revert InvalidEmptyArray();
         }
 
+        // --- effects: reserve exits and compute amounts; performs no external calls ---
         uint256 requestedETHAmount = _requestCLETHExits(_allocations);
         uint256 remainingETHExitsDemand =
             requestedETHAmount >= currentETHExitsDemand ? 0 : currentETHExitsDemand - requestedETHAmount;
-        (uint256 elRequestedETHAmount, uint256 totalFeePaid) =
-            _requestELETHExits(_elAllocations, _maxFeePerWithdrawal, remainingETHExitsDemand);
+        (uint256 elRequestedETHAmount, uint256 totalFeePaid, uint64[][] memory stagedAmounts) =
+            _reserveELETHExits(_elAllocations, _maxFeePerWithdrawal, remainingETHExitsDemand);
         requestedETHAmount += elRequestedETHAmount;
 
         // Check that the exits requested do not exceed the current ETH exits demand
         if (requestedETHAmount > currentETHExitsDemand) {
             revert ExitsRequestedExceedExitDemand(requestedETHAmount, currentETHExitsDemand);
         }
+
+        // --- effects: finalise the global aggregates before any value leaves the contract (CEI) ---
+        uint256 totalETHExitsRequested = TotalETHExitsRequested.get();
+        _setTotalETHExitsRequested(totalETHExitsRequested, totalETHExitsRequested + requestedETHAmount);
+        _setCurrentETHExitsDemand(currentETHExitsDemand, currentETHExitsDemand - requestedETHAmount);
+
+        // --- interactions: execute the staged EL withdrawals, then refund any excess fee ---
+        _executeELWithdrawals(_elAllocations, stagedAmounts, _maxFeePerWithdrawal);
         if (totalFeePaid < msg.value) {
             uint256 excess = msg.value - totalFeePaid;
             (bool ok,) = msg.sender.call{value: excess}("");
@@ -351,10 +360,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                 revert UnsentRefund(msg.sender, excess);
             }
         }
-
-        uint256 totalETHExitsRequested = TotalETHExitsRequested.get();
-        _setTotalETHExitsRequested(totalETHExitsRequested, totalETHExitsRequested + requestedETHAmount);
-        _setCurrentETHExitsDemand(currentETHExitsDemand, currentETHExitsDemand - requestedETHAmount);
     }
 
     /// @notice Reserves full ETH exits per operator via CL and returns the total requested amount.
@@ -384,17 +389,26 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         }
     }
 
-    /// @notice Requests partial/full ETH exits through Withdrawal Contract and returns the total requested amount.
-    function _requestELETHExits(
+    /// @notice Effects phase of the EL exit path: validates input, reserves each operator's exit, accumulates the
+    ///         total requested amount and fee, and stages the per-allocation withdrawal amounts in memory.
+    /// @dev Performs NO external calls so it can run before the global aggregates are written. The staged amounts
+    ///      (full-exit entries zeroed) are consumed by `_executeELWithdrawals` during the interactions phase.
+    /// @param _elAllocations The EL exit allocations to reserve
+    /// @param _maxFeePerWithdrawal Maximum fee per withdrawal, used to accumulate the total fee
+    /// @param _remainingETHExitsDemand The exit demand still available to the EL path after CL exits
+    /// @return requestedETHAmount The total EL ETH(wei) reserved across all allocations
+    /// @return totalFeePaid The total fee that will be forwarded to the withdrawal contract
+    /// @return stagedAmounts The per-allocation withdrawal amounts (full exits zeroed) to pass to the withdraw calls
+    function _reserveELETHExits(
         ELExitETHAllocation[] calldata _elAllocations,
         uint256 _maxFeePerWithdrawal,
         uint256 _remainingETHExitsDemand
-    ) private returns (uint256 requestedETHAmount, uint256 totalFeePaid) {
+    ) private returns (uint256 requestedETHAmount, uint256 totalFeePaid, uint64[][] memory stagedAmounts) {
         if (_elAllocations.length == 0) {
-            return (0, 0);
+            return (0, 0, stagedAmounts);
         }
 
-        IWithdrawV1 withdraw = IWithdrawV1(WithdrawAddress.get());
+        stagedAmounts = new uint64[][](_elAllocations.length);
 
         for (uint256 i = 0; i < _elAllocations.length; ++i) {
             uint256 operatorIndex = _elAllocations[i].operatorIndex;
@@ -431,15 +445,37 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
             _reserveOperatorExit(operator, operatorIndex, elExitAmount, true);
             requestedETHAmount += elExitAmount;
-
-            withdraw.withdraw{value: _maxFeePerWithdrawal * _elAllocations[i].pubkeys.length}(
-                _elAllocations[i].pubkeys, cachedAmounts, _maxFeePerWithdrawal, msg.sender
-            );
             totalFeePaid += _maxFeePerWithdrawal * _elAllocations[i].pubkeys.length;
+            stagedAmounts[i] = cachedAmounts;
             emit RequestedELETHExits(operatorIndex, _elAllocations[i].pubkeys, _elAllocations[i].amounts);
         }
         if (requestedETHAmount > _remainingETHExitsDemand) {
             revert ExitsGreaterThanExitDemand(requestedETHAmount, _remainingETHExitsDemand);
+        }
+    }
+
+    /// @notice Interactions phase of the EL exit path: forwards the staged withdrawal requests to the withdrawal
+    ///         contract, paying the fee from `msg.value` and refunding any excess fee to the keeper.
+    /// @dev Must run only AFTER the global aggregates have been written, so external calls cannot observe or act on
+    ///      stale `CurrentETHExitsDemand` / `TotalETHExitsRequested` values.
+    /// @param _elAllocations The EL exit allocations (pubkeys are read directly from calldata)
+    /// @param _stagedAmounts The per-allocation withdrawal amounts staged by `_reserveELETHExits`
+    /// @param _maxFeePerWithdrawal Maximum fee per withdrawal forwarded with each call
+    function _executeELWithdrawals(
+        ELExitETHAllocation[] calldata _elAllocations,
+        uint64[][] memory _stagedAmounts,
+        uint256 _maxFeePerWithdrawal
+    ) private {
+        if (_elAllocations.length == 0) {
+            return;
+        }
+
+        IWithdrawV1 withdraw = IWithdrawV1(WithdrawAddress.get());
+
+        for (uint256 i = 0; i < _elAllocations.length; ++i) {
+            withdraw.withdraw{value: _maxFeePerWithdrawal * _elAllocations[i].pubkeys.length}(
+                _elAllocations[i].pubkeys, _stagedAmounts[i], _maxFeePerWithdrawal, msg.sender
+            );
         }
     }
 
