@@ -30,6 +30,9 @@ jobs:
           - { file: OperatorsRegistry.1.sol, name: OperatorsRegistryV1 }
           - { file: CoverageFund.1.sol, name: CoverageFundV1 }
           - { file: TLC.1.sol, name: TLCV1 }
+          - { file: AttestationVerifier.1.sol, name: AttestationVerifierV1 }
+          - { file: ConsolidationCoverageFund.1.sol, name: ConsolidationCoverageFundV1 }
+          - { file: ExternalConsolidationRecipientMapping.sol, name: ExternalConsolidationRecipientMappingV1 }
     steps:
       - uses: actions/checkout@v6
         with:
