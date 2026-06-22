@@ -218,7 +218,9 @@ interface IOperatorsRegistryV1 {
     /// @param ethAmount The incorrect ETH(wei) amount
     error AllocationWithIncorrectAmount(uint256 ethAmount);
 
-    /// @notice Thrown when an EL exit allocation's reserved amount is invalid (zero or above the allowed cap)
+    /// @notice Thrown when an EL exit allocation's reserved amount falls outside the bounds for its exit kind.
+    ///         Full exits (withdrawalAmount == 0) must reserve within [32 ETH, 2048 ETH]; partial exits
+    ///         (withdrawalAmount != 0) must reserve within (0, 2016 ETH] (MaxEB minus the 32 ETH floor).
     /// @param operatorIndex The operator index
     /// @param withdrawalAmount The wire amount (gwei) for this pubkey (0 for full exits)
     /// @param reservedExitAmount The reserved accounting amount (gwei) for this pubkey

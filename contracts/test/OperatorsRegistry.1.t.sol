@@ -2232,6 +2232,11 @@ contract OperatorsRegistryV1ELExitTests is Test {
 
     // 8 ETH expressed in gwei — must be a multiple of 1 gwei (1e9) to pass the % check
     uint64 internal constant EIGHT_ETH_IN_GWEI = 8_000_000_000;
+    // 32 ETH expressed in gwei — the activation floor / minimum reserved amount for a full exit
+    uint64 internal constant THIRTY_TWO_ETH_IN_GWEI = 32_000_000_000;
+    // 2048 ETH (MaxEB) and 2016 ETH (MaxEB - 32 ETH floor) expressed in gwei — the full / partial reserved caps
+    uint64 internal constant MAX_EL_EXIT_AMOUNT_GWEI = 2_048_000_000_000;
+    uint64 internal constant MAX_PARTIAL_EL_EXIT_AMOUNT_GWEI = 2_016_000_000_000;
     // 48-byte placeholder pubkey
     bytes internal constant PUBKEY_48 =
         hex"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
@@ -2436,17 +2441,18 @@ contract OperatorsRegistryV1ELExitTests is Test {
         reg.sudoSetFundedV3(0, 32 ether);
         reg.sudoSetActiveCLETH(0, 32 ether);
         vm.prank(river);
-        reg.demandETHExits(8 ether, 32 ether);
+        reg.demandETHExits(32 ether, 32 ether);
 
         IOperatorsRegistryV1.ExitETHAllocation[] memory empty = new IOperatorsRegistryV1.ExitETHAllocation[](0);
-        IOperatorsRegistryV1.ELExitETHAllocation[] memory allocs = _makeFullELAlloc(0, EIGHT_ETH_IN_GWEI);
+        // Full exit reserving the 32 ETH activation-floor projected balance (the minimum allowed for a full exit).
+        IOperatorsRegistryV1.ELExitETHAllocation[] memory allocs = _makeFullELAlloc(0, THIRTY_TWO_ETH_IN_GWEI);
 
         vm.prank(keeper);
         reg.requestETHExits(empty, allocs, 0);
 
-        assertEq(reg.getOperator(0).requestedExits, 8 ether, "full exit reserves outstanding demand");
+        assertEq(reg.getOperator(0).requestedExits, 32 ether, "full exit reserves outstanding demand");
         assertEq(reg.getCurrentETHExitsDemand(), 0, "demand satisfied for full exit");
-        assertEq(reg.getTotalETHExitsRequested(), 8 ether, "total exits updated for full exit");
+        assertEq(reg.getTotalETHExitsRequested(), 32 ether, "total exits updated for full exit");
         assertEq(mockWithdraw.withdrawCallCount(), 1, "withdraw should be called once");
         assertEq(mockWithdraw.lastAmountsLength(), 1, "one amount forwarded");
         assertEq(mockWithdraw.lastAmounts(0), 0, "forwarded amount should be 0 (full exit)");
@@ -2574,17 +2580,17 @@ contract OperatorsRegistryV1ELExitTests is Test {
         reg.sudoSetFundedV3(0, 32 ether);
         reg.sudoSetActiveCLETH(0, 32 ether);
         vm.prank(river);
-        reg.demandETHExits(8 ether, 32 ether);
+        reg.demandETHExits(32 ether, 32 ether);
 
         IOperatorsRegistryV1.ExitETHAllocation[] memory empty = new IOperatorsRegistryV1.ExitETHAllocation[](0);
-        IOperatorsRegistryV1.ELExitETHAllocation[] memory allocs = _makeFullELAlloc(0, EIGHT_ETH_IN_GWEI);
+        IOperatorsRegistryV1.ELExitETHAllocation[] memory allocs = _makeFullELAlloc(0, THIRTY_TWO_ETH_IN_GWEI);
 
         vm.prank(keeper);
         reg.requestETHExits(empty, allocs, 0);
 
-        assertEq(reg.getOperator(0).requestedExits, 8 ether, "full exit should reserve the demanded ETH");
+        assertEq(reg.getOperator(0).requestedExits, 32 ether, "full exit should reserve the demanded ETH");
         assertEq(reg.getCurrentETHExitsDemand(), 0, "full exit should satisfy outstanding exit demand");
-        assertEq(reg.getTotalETHExitsRequested(), 8 ether, "full exit should update total requested exits");
+        assertEq(reg.getTotalETHExitsRequested(), 32 ether, "full exit should update total requested exits");
     }
 
     /// An allocation whose pubkeys/withdrawalAmounts/reservedExitAmounts arrays have mismatched lengths must revert.
@@ -2799,15 +2805,15 @@ contract OperatorsRegistryV1ELExitTests is Test {
     /// A full exit (wire amount 0) reserves its projected balance and forwards 0 to the predeploy,
     /// even when the reserved projected balance differs from any partial wire value.
     function testELExitFullExitReservesProjectedAndForwardsZero() public {
-        _setupSingleOperator(32 ether, 32 ether, 8 ether);
+        _setupSingleOperator(32 ether, 32 ether, 32 ether);
 
         IOperatorsRegistryV1.ExitETHAllocation[] memory empty = new IOperatorsRegistryV1.ExitETHAllocation[](0);
-        IOperatorsRegistryV1.ELExitETHAllocation[] memory allocs = _makeFullELAlloc(0, EIGHT_ETH_IN_GWEI);
+        IOperatorsRegistryV1.ELExitETHAllocation[] memory allocs = _makeFullELAlloc(0, THIRTY_TWO_ETH_IN_GWEI);
 
         vm.prank(keeper);
         reg.requestETHExits(empty, allocs, 0);
 
-        assertEq(reg.getOperator(0).requestedExits, 8 ether, "full exit reserves the projected balance");
+        assertEq(reg.getOperator(0).requestedExits, 32 ether, "full exit reserves the projected balance");
         assertEq(reg.getCurrentETHExitsDemand(), 0, "demand satisfied by the reserved projected balance");
         assertEq(mockWithdraw.lastAmounts(0), 0, "wire amount forwarded for a full exit should be 0");
     }
@@ -2861,5 +2867,87 @@ contract OperatorsRegistryV1ELExitTests is Test {
             keeperBalanceBefore - actualFee * totalPubkeys,
             "keeper only spends the actual fees after all refunds"
         );
+    }
+
+    /// A full exit (wire 0) whose reserved projected balance is below the 32 ETH activation floor must revert.
+    function testELExitRevertsWhenFullExitBelowActivationFloor() public {
+        _setupSingleOperator(32 ether, 32 ether, 8 ether);
+
+        IOperatorsRegistryV1.ExitETHAllocation[] memory empty = new IOperatorsRegistryV1.ExitETHAllocation[](0);
+        uint64 belowFloor = THIRTY_TWO_ETH_IN_GWEI - 1; // one gwei under the 32 ETH floor
+        IOperatorsRegistryV1.ELExitETHAllocation[] memory allocs = _makeFullELAlloc(0, belowFloor);
+
+        vm.prank(keeper);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IOperatorsRegistryV1.InvalidELExitETHAllocationAmount.selector, uint256(0), uint64(0), belowFloor
+            )
+        );
+        reg.requestETHExits(empty, allocs, 0);
+    }
+
+    /// A full exit reserving exactly the 2048 ETH MaxEB is the upper boundary and must be accepted.
+    function testELExitAcceptsFullExitAtMaxEffectiveBalance() public {
+        _setupSingleOperator(2048 ether, 2048 ether, 2048 ether);
+
+        IOperatorsRegistryV1.ExitETHAllocation[] memory empty = new IOperatorsRegistryV1.ExitETHAllocation[](0);
+        IOperatorsRegistryV1.ELExitETHAllocation[] memory allocs = _makeFullELAlloc(0, MAX_EL_EXIT_AMOUNT_GWEI);
+
+        vm.prank(keeper);
+        reg.requestETHExits(empty, allocs, 0);
+
+        assertEq(reg.getOperator(0).requestedExits, 2048 ether, "full exit reserves the MaxEB projected balance");
+        assertEq(reg.getCurrentETHExitsDemand(), 0, "demand satisfied at the MaxEB boundary");
+    }
+
+    /// A full exit reserving one gwei above the 2048 ETH MaxEB must revert.
+    function testELExitRevertsWhenFullExitExceedsMaxEffectiveBalance() public {
+        _setupSingleOperator(2048 ether, 2048 ether, 2048 ether);
+
+        IOperatorsRegistryV1.ExitETHAllocation[] memory empty = new IOperatorsRegistryV1.ExitETHAllocation[](0);
+        uint64 overMaxEB = MAX_EL_EXIT_AMOUNT_GWEI + 1;
+        IOperatorsRegistryV1.ELExitETHAllocation[] memory allocs = _makeFullELAlloc(0, overMaxEB);
+
+        vm.prank(keeper);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IOperatorsRegistryV1.InvalidELExitETHAllocationAmount.selector, uint256(0), uint64(0), overMaxEB
+            )
+        );
+        reg.requestETHExits(empty, allocs, 0);
+    }
+
+    /// A partial exit reserving exactly MaxEB - 32 ETH (2016 ETH) is the upper boundary and must be accepted.
+    function testELExitAcceptsPartialAtMaxPartialCap() public {
+        _setupSingleOperator(2048 ether, 2048 ether, 2016 ether);
+
+        IOperatorsRegistryV1.ExitETHAllocation[] memory empty = new IOperatorsRegistryV1.ExitETHAllocation[](0);
+        IOperatorsRegistryV1.ELExitETHAllocation[] memory allocs = _makeELAlloc(0, MAX_PARTIAL_EL_EXIT_AMOUNT_GWEI);
+
+        vm.prank(keeper);
+        reg.requestETHExits(empty, allocs, 0);
+
+        assertEq(reg.getOperator(0).requestedExits, 2016 ether, "partial exit reserves up to the 2016 ETH cap");
+        assertEq(mockWithdraw.lastAmounts(0), MAX_PARTIAL_EL_EXIT_AMOUNT_GWEI, "wire amount forwarded at the cap");
+    }
+
+    /// A partial exit reserving one gwei above MaxEB - 32 ETH (2016 ETH) must revert.
+    function testELExitRevertsWhenPartialExceedsMaxPartialCap() public {
+        _setupSingleOperator(2048 ether, 2048 ether, 2048 ether);
+
+        IOperatorsRegistryV1.ExitETHAllocation[] memory empty = new IOperatorsRegistryV1.ExitETHAllocation[](0);
+        uint64 overPartialCap = MAX_PARTIAL_EL_EXIT_AMOUNT_GWEI + 1;
+        IOperatorsRegistryV1.ELExitETHAllocation[] memory allocs = _makeELAlloc(0, overPartialCap);
+
+        vm.prank(keeper);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IOperatorsRegistryV1.InvalidELExitETHAllocationAmount.selector,
+                uint256(0),
+                overPartialCap,
+                overPartialCap
+            )
+        );
+        reg.requestETHExits(empty, allocs, 0);
     }
 }

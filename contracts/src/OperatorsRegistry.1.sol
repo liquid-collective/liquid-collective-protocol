@@ -34,7 +34,17 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
     uint256 private constant MIN_ETH_AMOUNT = 1 ether;
 
+    // The maximum effective validator balance (MaxEB) under EIP-7251. A full exit's reserved amount
+    // (the projected total balance) cannot exceed this.
     uint64 private constant MAX_EL_EXIT_AMOUNT_GWEI = 2_048_000_000_000; // 2048 ETH
+
+    // The minimum balance an active validator must retain (the activation floor). A full exit's reserved
+    // projected balance cannot realistically be below this for an active validator.
+    uint64 private constant MIN_VALIDATOR_BALANCE_GWEI = 32_000_000_000; // 32 ETH
+
+    // A partial withdrawal cannot drop a validator below the activation floor, so the most it can wire
+    // (and reserve) is MaxEB minus the 32 ETH floor.
+    uint64 private constant MAX_PARTIAL_EL_EXIT_AMOUNT_GWEI = 2_016_000_000_000; // 2048 - 32 ETH
 
     /// @inheritdoc IOperatorsRegistryV1
     function initOperatorsRegistryV1(address _admin, address _river) external init(0) {
@@ -438,16 +448,25 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         for (uint256 j = 0; j < _operatorAllocation.reservedExitAmounts.length; ++j) {
             uint64 withdrawalAmount = _operatorAllocation.withdrawalAmounts[j];
             uint64 reservedExitAmount = _operatorAllocation.reservedExitAmounts[j];
-            // The reserved amount feeds the per-operator headroom cap, so it must always be a positive
-            // value within the allowed bound — for both partial and full exits.
-            if (reservedExitAmount == 0 || reservedExitAmount > MAX_EL_EXIT_AMOUNT_GWEI) {
-                revert InvalidELExitETHAllocationAmount(operatorIndex, withdrawalAmount, reservedExitAmount);
-            }
-            // A non-zero wire amount denotes a partial exit, which must withdraw exactly what it reserves.
-            // A zero wire amount denotes a full exit. In that case the reserved value is keeper-supplied
-            // accounting data (typically the projected balance) and is not validated on-chain.
-            if (withdrawalAmount != 0 && withdrawalAmount != reservedExitAmount) {
-                revert ELExitReservedWithdrawalMismatch(operatorIndex, withdrawalAmount, reservedExitAmount);
+            // The reserved amount feeds the per-operator headroom cap, so it must always sit within the
+            // bound that matches the kind of exit. The bound differs for full vs partial exits.
+            if (withdrawalAmount == 0) {
+                // A zero wire amount denotes a full exit. Its reserved value is keeper-supplied accounting
+                // data (typically the projected balance) and is not validated against the real balance here,
+                // but for an active validator it lies within [32 ETH activation floor, 2048 ETH MaxEB].
+                if (reservedExitAmount < MIN_VALIDATOR_BALANCE_GWEI || reservedExitAmount > MAX_EL_EXIT_AMOUNT_GWEI) {
+                    revert InvalidELExitETHAllocationAmount(operatorIndex, withdrawalAmount, reservedExitAmount);
+                }
+            } else {
+                // A non-zero wire amount denotes a partial exit. It cannot drop the validator below the
+                // 32 ETH activation floor, so the wire value is bounded by MaxEB - 32 ETH, and it must
+                // reserve exactly what it withdraws.
+                if (reservedExitAmount == 0 || reservedExitAmount > MAX_PARTIAL_EL_EXIT_AMOUNT_GWEI) {
+                    revert InvalidELExitETHAllocationAmount(operatorIndex, withdrawalAmount, reservedExitAmount);
+                }
+                if (withdrawalAmount != reservedExitAmount) {
+                    revert ELExitReservedWithdrawalMismatch(operatorIndex, withdrawalAmount, reservedExitAmount);
+                }
             }
             elExitAmount += uint256(reservedExitAmount) * 1 gwei;
         }
