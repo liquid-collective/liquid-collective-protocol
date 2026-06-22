@@ -446,6 +446,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             // A non-zero wire amount denotes a partial exit, which must withdraw exactly what it reserves.
             // A zero wire amount denotes a full exit. In that case the reserved value is keeper-supplied
             // accounting data (typically the projected balance) and is not validated on-chain.
+            if (withdrawalAmount != 0 && withdrawalAmount != reservedExitAmount) {
                 revert ELExitReservedWithdrawalMismatch(operatorIndex, withdrawalAmount, reservedExitAmount);
             }
             elExitAmount += uint256(reservedExitAmount) * 1 gwei;
