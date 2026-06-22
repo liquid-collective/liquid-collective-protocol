@@ -226,7 +226,7 @@ interface IOperatorsRegistryV1 {
 
     /// @notice Thrown when a partial EL exit's wire amount does not match its reserved accounting amount.
     ///         Partial exits (withdrawalAmount != 0) must wire exactly what they reserve; only full exits
-    ///         (withdrawalAmount == 0) are allowed to differ from the reserved projected balance.
+    ///         (withdrawalAmount == 0) are allowed to differ from the reserved (keeper-supplied) accounting amount.
     /// @param operatorIndex The operator index
     /// @param withdrawalAmount The wire amount (gwei) for this pubkey
     /// @param reservedExitAmount The reserved accounting amount (gwei) for this pubkey
