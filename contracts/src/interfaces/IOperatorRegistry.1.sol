@@ -34,7 +34,7 @@ interface IOperatorsRegistryV1 {
     ///                          0 signals a full exit; any non-zero value is a partial withdrawal.
     /// @param reservedExitAmounts The accounting amount (gwei) reserved against the operator's exit headroom
     ///                            per pubkey. Always set: for partial exits it equals the matching
-    ///                            withdrawalAmount; for full exits it is the keeper-supplied projected balance.
+    ///                            withdrawalAmounts[i]; for full exits it should be the keeper-supplied projected balance (not validated on-chain).
     struct ELExitETHAllocation {
         uint256 operatorIndex;
         bytes[] pubkeys; // 48 bytes
