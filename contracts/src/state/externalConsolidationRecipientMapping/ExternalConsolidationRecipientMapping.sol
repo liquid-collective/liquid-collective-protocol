@@ -2,9 +2,9 @@
 pragma solidity 0.8.34;
 
 /// @title External Consolidation Recipient Mapping Storage
-/// @notice Utility to manage withdrawal credential recipient mapping storage
+/// @notice Utility to manage withdrawal-credential-address recipient mapping storage
 library ExternalConsolidationRecipientMapping {
-    /// @notice Storage slot of the withdrawal credential recipient mapping
+    /// @notice Storage slot of the withdrawal-credential-address recipient mapping
     bytes32 internal constant EXTERNAL_CONSOLIDATION_RECIPIENT_MAPPING_SLOT =
         bytes32(uint256(keccak256("river.state.externalConsolidationRecipientMapping")) - 1);
 
@@ -15,9 +15,9 @@ library ExternalConsolidationRecipientMapping {
     }
 
     /// @notice Retrieve the recipient mapped to a withdrawal credential address
-    /// @param _withdrawalCredential The withdrawal credential address to query
+    /// @param _withdrawalCredentialAddress The withdrawal credential address to query
     /// @return The mapped recipient address
-    function get(address _withdrawalCredential) internal view returns (address) {
+    function get(address _withdrawalCredentialAddress) internal view returns (address) {
         bytes32 slot = EXTERNAL_CONSOLIDATION_RECIPIENT_MAPPING_SLOT;
 
         Slot storage r;
@@ -27,13 +27,13 @@ library ExternalConsolidationRecipientMapping {
             r.slot := slot
         }
 
-        return r.value[_withdrawalCredential];
+        return r.value[_withdrawalCredentialAddress];
     }
 
     /// @notice Set the recipient mapped to a withdrawal credential address
-    /// @param _withdrawalCredential The withdrawal credential address to update
+    /// @param _withdrawalCredentialAddress The withdrawal credential address to update
     /// @param _recipient The recipient address to set
-    function set(address _withdrawalCredential, address _recipient) internal {
+    function set(address _withdrawalCredentialAddress, address _recipient) internal {
         bytes32 slot = EXTERNAL_CONSOLIDATION_RECIPIENT_MAPPING_SLOT;
 
         Slot storage r;
@@ -43,6 +43,6 @@ library ExternalConsolidationRecipientMapping {
             r.slot := slot
         }
 
-        r.value[_withdrawalCredential] = _recipient;
+        r.value[_withdrawalCredentialAddress] = _recipient;
     }
 }
