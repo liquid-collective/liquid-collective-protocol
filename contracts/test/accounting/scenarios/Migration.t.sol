@@ -96,10 +96,14 @@ contract MigrationTest is Test {
         OperatorsV3.Operator memory v3Op0 = registry.getOperator(0);
         assertEq(v3Op0.funded, uint256(op0Funded) * 32 ether, "op0 funded ETH");
         assertEq(v3Op0.active, true, "op0 active");
+        // activeCLETH MUST be 0 post-migration until the first oracle report (see migration source);
+        // a non-zero value would let exits be allocated against unconfirmed CL balance.
+        assertEq(v3Op0.activeCLETH, 0, "op0 activeCLETH must be zero post-migration");
 
         OperatorsV3.Operator memory v3Op1 = registry.getOperator(1);
         assertEq(v3Op1.funded, uint256(op1Funded) * 32 ether, "op1 funded ETH");
         assertEq(v3Op1.active, true, "op1 active");
+        assertEq(v3Op1.activeCLETH, 0, "op1 activeCLETH must be zero post-migration");
 
         // Validate exited ETH per operator
         uint256[] memory exitedPerOp = registry.getExitedETHPerOperator();
@@ -140,6 +144,7 @@ contract MigrationTest is Test {
         assertEq(registry.getOperatorCount(), 1, "one operator");
         OperatorsV3.Operator memory op = registry.getOperator(0);
         assertEq(op.funded, uint256(funded) * 32 ether, "funded scaled");
+        assertEq(op.activeCLETH, 0, "activeCLETH must be zero post-migration");
 
         uint256[] memory exitedPerOp = registry.getExitedETHPerOperator();
         assertEq(exitedPerOp.length, 1, "one entry");
