@@ -73,7 +73,7 @@ const config: HardhatUserConfig = {
     },
     tenderly: {
       url: process.env.TENDERLY_RPC_URL || "",
-      chainId: 999560048,
+      chainId: 9991,
       gas: 5000000,
     },
     hoodi: {
