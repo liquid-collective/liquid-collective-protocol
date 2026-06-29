@@ -96,8 +96,6 @@ contract MigrationTest is Test {
         OperatorsV3.Operator memory v3Op0 = registry.getOperator(0);
         assertEq(v3Op0.funded, uint256(op0Funded) * 32 ether, "op0 funded ETH");
         assertEq(v3Op0.active, true, "op0 active");
-        // activeCLETH MUST be 0 post-migration until the first oracle report (see migration source);
-        // a non-zero value would let exits be allocated against unconfirmed CL balance.
         assertEq(v3Op0.activeCLETH, 0, "op0 activeCLETH must be zero post-migration");
 
         OperatorsV3.Operator memory v3Op1 = registry.getOperator(1);
