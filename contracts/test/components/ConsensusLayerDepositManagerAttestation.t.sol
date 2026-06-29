@@ -954,7 +954,6 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         assertEq(dm.lastFundedETH(0), 64 ether, "both initial and top-up bump fundedETH");
         assertEq(depositContract.deposit_count(), 2);
 
-        // assert the change from the batch, not fixture-seeded absolute values
         assertEq(committedBefore - dm.getCommittedBalance(), 64 ether, "committed balance should decrease by 64 ETH");
         assertEq(balanceBefore - address(dm).balance, 64 ether, "contract ETH balance should decrease by 64 ETH");
         assertEq(
@@ -1729,7 +1728,6 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         vm.prank(keeper);
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs); // must not revert
 
-        // deposit must be recorded, not just non-reverting
         assertEq(depositContract.deposit_count(), 1, "exact-minimum deposit must reach the deposit contract");
         assertEq(dm.getTotalDepositedETH(), 32 ether, "total deposited must reflect the 32 ETH deposit");
     }
