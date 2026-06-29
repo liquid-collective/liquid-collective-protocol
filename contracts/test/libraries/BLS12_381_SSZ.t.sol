@@ -112,9 +112,6 @@ contract BLS12_381_SSZTest is Test {
         assertEq(actualSigningRoot, expectedSigningRoot, "signing root does not match spec for 1 ETH deposit");
     }
 
-    // Verifies depositMessageSigningRoot reverts with InvalidDepositAmount when the
-    // deposit amount is not a whole number of gwei (BLS12_381.sol:584). Uses
-    // 1 gwei + 1 wei; the aligned-amount happy path is covered by the tests above.
     function test_computeSigningRoot_revertsOnNonGweiAlignedAmount() public {
         bytes memory pubkey = new bytes(48);
         bytes32 wc = bytes32(uint256(1));
@@ -125,10 +122,6 @@ contract BLS12_381_SSZTest is Test {
         harness.computeSigningRoot(pubkey, amount, wc, domain);
     }
 
-    // Verifies the signing root for a fully non-zero 48-byte pubkey (bytes 0x01..0x30).
-    // The other tests use pubkeys that are zero in bytes 1..47, so this is the only test
-    // that exercises pubkeyRoot's assembly copy/zero-padding across the whole pubkey; the
-    // expected pubkey leaf is computed independently via the sha256 builtin.
     function test_computeSigningRoot_fullNonZeroPubkey() public {
         bytes memory pubkey = new bytes(48);
         for (uint256 i = 0; i < 48; i++) {
