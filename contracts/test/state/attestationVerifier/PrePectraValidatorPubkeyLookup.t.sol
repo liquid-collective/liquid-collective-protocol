@@ -63,7 +63,6 @@ contract PrePectraValidatorPubkeyLookupTest is Test {
         inputs.add(pk);
         assertTrue(inputs.isPubkeyFunded(pk));
 
-        // one remove must fully clear it
         bytes[] memory pubkeys = new bytes[](1);
         pubkeys[0] = pk;
         inputs.remove(pubkeys);

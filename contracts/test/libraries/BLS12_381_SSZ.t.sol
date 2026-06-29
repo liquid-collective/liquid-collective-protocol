@@ -132,7 +132,6 @@ contract BLS12_381_SSZTest is Test {
         uint256 amount = 32 ether;
         uint256 amountGwei = amount / 1 gwei;
 
-        // expected pubkey root via sha256 builtin, independent of the library
         bytes32 pubkeyRoot = sha256(abi.encodePacked(pubkey, bytes16(0)));
         bytes32 amountChunk = bytes32(LibUint256.toLittleEndian64(amountGwei));
         bytes32 specDepositMessageRoot = sha256(
