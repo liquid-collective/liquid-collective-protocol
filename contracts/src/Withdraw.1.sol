@@ -155,8 +155,8 @@ contract WithdrawV1 is IWithdrawV1, Initializable, ReentrancyGuard, IProtocolVer
 
         // A consolidation target must be post-Pectra funded (0x02), or be the self-consolidation
         // of a known pre-Pectra (0x01) key — i.e. the on-chain 0x01 -> 0x02 upgrade.
-        bool isValidTarget =
-            isTargetFunded || (isSelfConsolidation && _isPrePectraFunded(attestationVerifier, targetPubkey));
+        bool isValidTarget = isTargetFunded
+            || (isSelfConsolidation && _isKnownPrePectraValidatorPubkey(attestationVerifier, targetPubkey));
 
         if (!isValidTarget) {
             revert TargetPubkeyNotFunded(targetPubkey);
@@ -225,13 +225,13 @@ contract WithdrawV1 is IWithdrawV1, Initializable, ReentrancyGuard, IProtocolVer
     }
 
     /// @notice Internal: check whether a pubkey is a known pre-Pectra (0x01) funded validator
-    function _isPrePectraFunded(IAttestationVerifierV1 attestationVerifier, bytes calldata pubkey)
+    function _isKnownPrePectraValidatorPubkey(IAttestationVerifierV1 attestationVerifier, bytes calldata pubkey)
         internal
         view
         returns (bool)
     {
-        return IAttestationVerifierPectraMigrationV1(address(attestationVerifier))
-            .isPrePectraValidatorPubkeyFunded(pubkey);
+        return
+            IAttestationVerifierPectraMigrationV1(address(attestationVerifier)).isPrePectraValidatorPubkeyFunded(pubkey);
     }
 
     /// @notice Internal: refund excess fee to recipient
