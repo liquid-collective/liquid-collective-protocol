@@ -41,12 +41,19 @@ jobs:
       # Fetch solc on the runner (which has network egress) so the Mythril
       # container reuses it via py-solc-x instead of downloading from
       # solc-bin.ethereum.org, which is not reachable from inside the container.
+      # The binary is verified against a pinned SHA-256 before it is made
+      # executable, so a tampered release asset cannot run in CI.
       - name: Pre-fetch solc 0.8.34 for Mythril
+        env:
+          SOLC_VERSION: "0.8.34"
+          # SHA-256 of solc-static-linux v0.8.34 (matches binaries.soliditylang.org linux-amd64).
+          SOLC_SHA256: "d40adc6f9fdbb22a97d32a02fa05688bf2ee7886affc48c9851b0afd4a726b39"
         run: |
           mkdir -p "${GITHUB_WORKSPACE}/.solcx"
-          curl -fsSL -o "${GITHUB_WORKSPACE}/.solcx/solc-v0.8.34" \
-            https://github.com/ethereum/solidity/releases/download/v0.8.34/solc-static-linux
-          chmod +x "${GITHUB_WORKSPACE}/.solcx/solc-v0.8.34"
+          curl -fsSL -o "${GITHUB_WORKSPACE}/.solcx/solc-v${SOLC_VERSION}" \
+            "https://github.com/ethereum/solidity/releases/download/v${SOLC_VERSION}/solc-static-linux"
+          echo "${SOLC_SHA256}  ${GITHUB_WORKSPACE}/.solcx/solc-v${SOLC_VERSION}" | sha256sum -c -
+          chmod +x "${GITHUB_WORKSPACE}/.solcx/solc-v${SOLC_VERSION}"
 
       - name: Mythril analysis
         uses: ./actions/mythril
