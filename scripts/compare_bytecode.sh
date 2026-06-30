@@ -18,21 +18,20 @@
 set -euo pipefail
 
 # ── 1. Assign your freshly-deployed mainnet / Tenderly fork addresses ─────────
-# Order matches 19_upgrade_v1_3_0_proxies.ts
-# Phase 1 — direct-admin proxies
-MAINNET_WITHDRAW_IMPL="0x94a470be6a17d0f5db490dc2d80febceac33a1ce"
-MAINNET_COVERAGE_FUND_IMPL="0x46bdea883c174c9c91e46dcd978d8713c42bca99"
-MAINNET_EL_FEE_RECIPIENT_IMPL="0x066d3244359649f5a557401c0ee1494dfccf263f"
-# Phase 2 — firewalled proxies
-MAINNET_ALLOWLIST_IMPL="0x04b5a28d1c08b4a4bec74405d3e7b0351ac27fdb"
-MAINNET_OPERATORS_REGISTRY_IMPL="0x15521d87f93d99903eb03ec5132fd0b3e8efc3cd"
-MAINNET_ORACLE_IMPL="0x8784d7318e8809f4703666c6b1d0bd601d55ec6e"
-MAINNET_REDEEM_MANAGER_IMPL="0xe87e766f9a8dd042b60f92e8264ed057a379b4f6"
-# Phase 3 — River
-MAINNET_RIVER_IMPL="0xf8cc01a92b9a5d07ff5adefaac31a789d1124661"
+ # Phase 1 — direct-admin proxies
+  MAINNET_WITHDRAW_IMPL="0x0C3C4B761AB0d6fF500bC9a49f5EA2F7b79Af4f6"
+  MAINNET_COVERAGE_FUND_IMPL="0xd4067A7d6b3E0FEC19307e7B89b4FC38867765E3"                                                                                                                                                                                                                
+  MAINNET_EL_FEE_RECIPIENT_IMPL="0xbdA8Cc728b0BC6fE634b9D26667f6Cf4b03f73AA"                                                                                                                                                                                                             
+  # Phase 2 — firewalled proxies                                                                                                                                                                                                                                                         
+  MAINNET_ALLOWLIST_IMPL="0xCC1c4c94f0df9B4930f8aCf6C92F92e2e36F151D"                                                                                                                                                                                                                    
+  MAINNET_OPERATORS_REGISTRY_IMPL="0x0170AEAb7B86805d5e7ff19FcDDF62F19575C37B"                                                                                                                                                                                                           
+  MAINNET_ORACLE_IMPL="0x2a0cD2854d1F20b93487f438012d7045e398880d"                                                                                                                                                                                                                       
+  MAINNET_REDEEM_MANAGER_IMPL="0xA56e13712436189f61aB9fDA1292b26Cf9FEf9F8"                                                                                                                                                                                                               
+  # Phase 3 — River                                                                                                                                                                                                                                                                      
+  MAINNET_RIVER_IMPL="0x0056f9ed62dAa4dc3F972340C92326AcCddd1a9D" 
 
 # ── 2. Mainnet / Tenderly fork RPC ────────────────────────────────────────────
-RPC_MAINNET="${RPC_MAINNET:-https://virtual.mainnet.eu.rpc.tenderly.co/liquid-collective/liquid-collective-mainnet/1deda0-b0dda7}"
+RPC_MAINNET="${RPC_MAINNET:-${RPC_URL:-}}"
 
 # ── 3. Reference bytecode — from committed hoodi artifacts (PR #615 / v1.3.0) ─
 #    These are read automatically from deployments/hoodi/ — do not edit.

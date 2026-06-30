@@ -83,16 +83,38 @@ const func: DeployFunction = async function ({
   async function doUpgradeTo(
     proxyAddress: string,
     sendTo: string,
+    targetLabel: string,
     newImplAddress: string,
     label: string
   ): Promise<void> {
     const currentImpl = await getProxyImplementation(proxyAddress, ethers.provider);
-    if (currentImpl.toLowerCase() === newImplAddress.toLowerCase()) {
-      console.log(`  ${label}: already upgraded to ${newImplAddress}, skipping.`);
+    const upgradeData = proxyTransparentInterface.encodeFunctionData("upgradeTo", [newImplAddress]);
+
+    // Paste-ready multisig proposal block — same format every network so the
+    // tenderly run produces the exact inputs the operator will paste into
+    // Defender for the mainnet run.
+    console.log(`\n=== Multisig proposal: ${label} ===`);
+    console.log(`  to:             ${sendTo}   (${targetLabel})`);
+    console.log(`  value:          0`);
+    console.log(`  function:       upgradeTo(address)`);
+    console.log(`  args[0]:        ${newImplAddress}   (new ${label}V1 impl)`);
+    console.log(`  data:           ${upgradeData}`);
+    console.log(`  (current impl on-chain: ${currentImpl}${
+      currentImpl.toLowerCase() === newImplAddress.toLowerCase() ? " — MATCHES new impl, upgrade is a no-op" : ""
+    })`);
+
+    if (network.name === "mainnet") {
+      // Print-only on mainnet: the proxyAdministrator is the Governor Safe,
+      // not an EOA. Broadcasting would either fail outright or waste gas on
+      // a guaranteed-revert tx. The block above is the deliverable.
       return;
     }
-    console.log(`  ${label}: upgrading from ${currentImpl} to ${newImplAddress}...`);
-    const upgradeData = proxyTransparentInterface.encodeFunctionData("upgradeTo", [newImplAddress]);
+
+    if (currentImpl.toLowerCase() === newImplAddress.toLowerCase()) {
+      console.log(`  ${label}: already upgraded to ${newImplAddress}, skipping broadcast.`);
+      return;
+    }
+
     const tx = await signer.sendTransaction({ to: sendTo, data: upgradeData });
     await tx.wait();
     console.log(`  ${label}: upgraded. tx: ${tx.hash}`);
@@ -105,11 +127,19 @@ const func: DeployFunction = async function ({
   // River at InitVersion 3). Calling upgradeToAndCall with those init selectors
   // would revert at the Solidity version guard.
 
-  console.log("\n=== Phase 1: Simple upgrades — direct-admin proxies ===\n");
+  if (network.name === "mainnet") {
+    console.log(
+      "\nMainnet detected — print-only mode. No transactions will be broadcast.\n" +
+      "Paste each printed block into the Defender multisig proposal builder."
+    );
+  }
+
+  console.log("\n=== Phase 1: Simple upgrades — direct-admin proxies ===");
 
   await doUpgradeTo(
     withdrawProxy.address,
     withdrawProxy.address,
+    "proxy",
     withdrawImpl.address,
     "Withdraw"
   );
@@ -117,6 +147,7 @@ const func: DeployFunction = async function ({
   await doUpgradeTo(
     coverageFundProxy.address,
     coverageFundProxy.address,
+    "proxy",
     coverageFundImpl.address,
     "CoverageFund"
   );
@@ -124,15 +155,17 @@ const func: DeployFunction = async function ({
   await doUpgradeTo(
     elFeeRecipientProxy.address,
     elFeeRecipientProxy.address,
+    "proxy",
     elFeeRecipientImpl.address,
     "ELFeeRecipient"
   );
 
-  console.log("\n=== Phase 2: Simple upgrades — firewalled proxies ===\n");
+  console.log("\n=== Phase 2: Simple upgrades — firewalled proxies ===");
 
   await doUpgradeTo(
     allowlistProxy.address,
     allowlistProxyFirewall.address,
+    "AllowlistProxyFirewall",
     allowlistImpl.address,
     "Allowlist"
   );
@@ -140,6 +173,7 @@ const func: DeployFunction = async function ({
   await doUpgradeTo(
     operatorsRegistryProxy.address,
     operatorsRegistryProxyFirewall.address,
+    "OperatorsRegistryProxyFirewall",
     operatorsRegistryImpl.address,
     "OperatorsRegistry"
   );
@@ -147,6 +181,7 @@ const func: DeployFunction = async function ({
   await doUpgradeTo(
     oracleProxy.address,
     oracleProxyFirewall.address,
+    "OracleProxyFirewall",
     oracleImpl.address,
     "Oracle"
   );
@@ -154,15 +189,17 @@ const func: DeployFunction = async function ({
   await doUpgradeTo(
     redeemManagerProxy.address,
     redeemManagerProxyFirewall.address,
+    "RedeemManagerProxyFirewall",
     redeemManagerImpl.address,
     "RedeemManager"
   );
 
-  console.log("\n=== Phase 3: River upgrade ===\n");
+  console.log("\n=== Phase 3: River upgrade ===");
 
   await doUpgradeTo(
     riverProxy.address,
     riverProxyFirewall.address,
+    "RiverProxyFirewall",
     riverImpl.address,
     "River"
   );
