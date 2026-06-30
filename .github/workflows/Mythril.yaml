@@ -38,6 +38,16 @@ jobs:
         with:
           submodules: recursive
 
+      # Fetch solc on the runner (which has network egress) so the Mythril
+      # container reuses it via py-solc-x instead of downloading from
+      # solc-bin.ethereum.org, which is not reachable from inside the container.
+      - name: Pre-fetch solc 0.8.34 for Mythril
+        run: |
+          mkdir -p "${GITHUB_WORKSPACE}/.solcx"
+          curl -fsSL -o "${GITHUB_WORKSPACE}/.solcx/solc-v0.8.34" \
+            https://github.com/ethereum/solidity/releases/download/v0.8.34/solc-static-linux
+          chmod +x "${GITHUB_WORKSPACE}/.solcx/solc-v0.8.34"
+
       - name: Mythril analysis
         uses: ./actions/mythril
         with:
