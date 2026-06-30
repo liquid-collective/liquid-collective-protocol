@@ -14,6 +14,7 @@ import "./utils/RiverV1WithLegacyInit.sol";
 import "../src/Firewall.sol";
 import "../src/Allowlist.1.sol";
 import "../src/River.1.sol";
+import "../src/RiverConfigManager.1.sol";
 import "../src/interfaces/IDepositContract.sol";
 import "../src/Withdraw.1.sol";
 import "../src/Oracle.1.sol";
@@ -77,6 +78,13 @@ contract FirewallTests is BytesGenerator, OperatorAllocationTestBase {
         LibImplementationUnbricker.unbrick(vm, address(withdraw));
         river = new FirewallTestRiverV1();
         LibImplementationUnbricker.unbrick(vm, address(river));
+        // Wire the RiverConfigManager so River's delegatecall stubs (e.g. setKeeper) resolve.
+        RiverConfigManagerV1 riverConfigManager = new RiverConfigManagerV1();
+        vm.store(
+            address(river),
+            bytes32(uint256(keccak256("river.state.riverConfigManagerAddress")) - 1),
+            bytes32(uint256(uint160(address(riverConfigManager))))
+        );
         allowlist = new AllowlistV1();
         LibImplementationUnbricker.unbrick(vm, address(allowlist));
         operatorsRegistry = new OperatorsRegistryV1();

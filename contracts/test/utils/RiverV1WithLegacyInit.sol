@@ -64,12 +64,13 @@ abstract contract RiverV1WithLegacyInit is RiverV1 {
         RedeemManagerAddress.set(_redeemManager);
         emit SetRedeemManager(_redeemManager);
 
-        _setDailyCommittableLimits(
-            DailyCommittableLimits.DailyCommittableLimitsStruct({
-                minDailyNetCommittableAmount: _minDailyNetCommittableAmount_,
-                maxDailyRelativeCommittableAmount: _maxDailyRelativeCommittableAmount_
-            })
-        );
+        DailyCommittableLimits.DailyCommittableLimitsStruct memory _dcl = DailyCommittableLimits
+            .DailyCommittableLimitsStruct({
+            minDailyNetCommittableAmount: _minDailyNetCommittableAmount_,
+            maxDailyRelativeCommittableAmount: _maxDailyRelativeCommittableAmount_
+        });
+        DailyCommittableLimits.set(_dcl);
+        emit SetMaxDailyCommittableAmounts(_dcl.minDailyNetCommittableAmount, _dcl.maxDailyRelativeCommittableAmount);
 
         initOracleManagerV1_1(
             _epochsPerFrame,

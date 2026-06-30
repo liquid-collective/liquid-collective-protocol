@@ -5,6 +5,7 @@ import {ECDSA} from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.s
 
 import "./Initializable.sol";
 import "./interfaces/IAdministrable.sol";
+import "./interfaces/IAllowlist.1.sol";
 import "./interfaces/IAttestationVerifier.1.sol";
 import "./interfaces/IAttestationVerifierPectraMigration.1.sol";
 import "./interfaces/IDepositContract.sol";
@@ -14,6 +15,7 @@ import "./interfaces/IRiver.1.sol";
 import "./interfaces/IWithdraw.1.sol";
 
 import "./libraries/BLS12_381.sol";
+import "./libraries/LibAllowlistMasks.sol";
 import "./libraries/LibErrors.sol";
 
 import "./state/attestationVerifier/ConsolidationCommitteeAttestationQuorum.sol";
@@ -28,6 +30,7 @@ import "./state/attestationVerifier/DomainSeparator.sol";
 import "./state/attestationVerifier/ProcessedDepositDataBufferIds.sol";
 import "./state/attestationVerifier/PectraValidatorPubkeyLookup.sol";
 import "./state/attestationVerifier/PrePectraValidatorPubkeyLookup.sol";
+import "./state/externalConsolidationRecipientMapping/ExternalConsolidationRecipientMapping.sol";
 import "./state/shared/RiverAddress.sol";
 
 /// @title AttestationVerifier (v1)
@@ -613,10 +616,11 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
         return ProcessedDepositDataBufferIds.isProcessed(depositDataBufferId);
     }
 
-    /// @inheritdoc IAttestationVerifierV1
-    /// @dev Trust boundary: this function only validates structural shape (array shapes
-    ///      and pubkey byte lengths) and the attestation quorum (ECDSA signature recovery
-    ///      against the consolidation committee). It does NOT check:
+    /// @notice Validates the consolidation-committee attestation quorum over a ConsolidationObject
+    ///         and marks the EIP-712 structHash processed for replay protection.
+    /// @dev Internal helper invoked by `mintLsETHForConsolidation`. Trust boundary: this function only
+    ///      validates structural shape (array shapes and pubkey byte lengths) and the attestation
+    ///      quorum (ECDSA signature recovery against the consolidation committee). It does NOT check:
     ///        - Source/target pubkey uniqueness within the request (EIP-7251 single-use
     ///          source rule). A source pubkey appearing twice, or a pubkey appearing in
     ///          both source and target arrays, is not rejected here.
@@ -625,13 +629,9 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
     ///        - Whether the source validators actually exist on the consensus layer or
     ///          carry the protocol's withdrawal credentials.
     ///      These are the responsibility of the caller (off-chain pipeline) and the
-    ///      consolidation committee that signs the request. The eventual
-    ///      `mintLsETHForConsolidation` River integration is the place to enforce any
-    ///      additional financial caps on `totalAmount`.
-    function validateConsolidation(IAttestationVerifierV1.ConsolidationObject calldata consolidation)
-        external
-        onlyRiver
-    {
+    ///      consolidation committee that signs the request.
+    /// @param consolidation The consolidation request to validate
+    function _validateConsolidation(IAttestationVerifierV1.ConsolidationObject calldata consolidation) internal {
         // 1. Structural checks (cheapest first — fail fast)
         uint256 sourceLen = consolidation.sourcePubkeys.length;
         uint256 targetLen = consolidation.targetPubkeys.length;
@@ -681,6 +681,63 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
         // 6. Mark as processed and emit
         ProcessedConsolidations.markProcessed(structHash);
         emit ConsolidationProcessed(structHash);
+    }
+
+    /// @inheritdoc IAttestationVerifierV1
+    function validateConsolidation(IAttestationVerifierV1.ConsolidationObject calldata consolidation) external onlyRiver {
+        _validateConsolidation(consolidation);
+    }
+
+    // -----------------------------------------------------------------------
+    // External consolidation minting flow (relocated from River)
+    // -----------------------------------------------------------------------
+
+    /// @inheritdoc IAttestationVerifierV1
+    function mintLsETHForConsolidation(IAttestationVerifierV1.ConsolidationObject calldata consolidation) external {
+        address river = RiverAddress.get();
+
+        // only the consolidator (a River-managed role) may trigger consolidation minting
+        if (msg.sender != IRiverV1(payable(river)).getConsolidator()) {
+            revert LibErrors.Unauthorized(msg.sender);
+        }
+
+        // we check the allowlist first to fail fast if the withdrawalAddress/recipient is denied
+        IAllowlistV1 allowlist = IAllowlistV1(IRiverV1(payable(river)).getAllowlist());
+        allowlist.onlyAllowed(consolidation.withdrawalAddress, LibAllowlistMasks.CONSOLIDATE_MASK);
+
+        address recipient = ExternalConsolidationRecipientMapping.get(consolidation.withdrawalAddress);
+
+        // if the recipient is not set, we use the withdrawalAddress
+        if (recipient == address(0)) {
+            recipient = consolidation.withdrawalAddress;
+        } else {
+            if (allowlist.isDenied(recipient)) {
+                revert IAllowlistV1.Denied(recipient);
+            }
+        }
+
+        // validate the consolidation object (quorum + replay protection); reverts if invalid
+        _validateConsolidation(consolidation);
+
+        // River performs the consolidation-buffer accounting + share mint and emits LsETHMintedForConsolidation
+        IRiverV1(payable(river)).mintForConsolidation(recipient, consolidation.totalAmount);
+    }
+
+    /// @inheritdoc IAttestationVerifierV1
+    function setRecipient(address _recipient) external {
+        IAllowlistV1 allowlist = IAllowlistV1(IRiverV1(payable(RiverAddress.get())).getAllowlist());
+        allowlist.onlyAllowed(msg.sender, LibAllowlistMasks.CONSOLIDATE_MASK);
+        if (allowlist.isDenied(_recipient)) {
+            revert RecipientIsDenied();
+        }
+
+        ExternalConsolidationRecipientMapping.set(msg.sender, _recipient);
+        emit SetRecipient(msg.sender, _recipient);
+    }
+
+    /// @inheritdoc IAttestationVerifierV1
+    function getRecipient(address _withdrawalCredential) external view returns (address) {
+        return ExternalConsolidationRecipientMapping.get(_withdrawalCredential);
     }
 
     // -----------------------------------------------------------------------

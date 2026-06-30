@@ -9,7 +9,6 @@ import "./components/ISharesManager.1.sol";
 import "./components/IUserDepositManager.1.sol";
 
 import "./IWithdraw.1.sol";
-import "./IAttestationVerifier.1.sol";
 
 /// @title River Interface (v1)
 /// @author Alluvial Finance Inc.
@@ -68,6 +67,10 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @param operatorRegistry The new Operators Registry
     event SetOperatorsRegistry(address indexed operatorRegistry);
 
+    /// @notice The stored River Config Manager has been changed
+    /// @param riverConfigManager The new River Config Manager
+    event SetRiverConfigManager(address indexed riverConfigManager);
+
     /// @notice The stored Metadata URI string has been changed
     /// @param metadataURI The new Metadata URI string
     event SetMetadataURI(string metadataURI);
@@ -121,10 +124,6 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @param newAmount The new consolidation buffer
     event SetConsolidationBuffer(uint256 oldAmount, uint256 newAmount);
 
-    /// @notice Emitted when the external consolidation recipient mapping address is changed
-    /// @param externalConsolidationRecipientMapping The new external consolidation recipient mapping address
-    event SetExternalConsolidationRecipientMapping(address indexed externalConsolidationRecipientMapping);
-
     /// @notice Emitted when the redeem manager received a withdraw event report
     /// @param redeemManagerDemand The total demand in LsETH of the redeem manager
     /// @param suppliedRedeemManagerDemand The amount of LsETH demand actually supplied
@@ -175,14 +174,14 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @param _withdrawalCredentials The withdrawal credentials to apply to all deposits
     /// @param _consolidationCoverageFund The address of the consolidation coverage fund
     /// @param _attestationVerifier The pre-initialized AttestationVerifier contract address
-    /// @param _externalConsolidationRecipientMapping The pre-initialized External Consolidation Recipient Mapping contract address
     /// @param _consolidator The address authorized to perform consolidator-only operations (EOA or contract)
+    /// @param _riverConfigManager The RiverConfigManager contract River delegatecalls for relocated function bodies
     function initRiverV1_3(
         bytes32 _withdrawalCredentials,
         address _consolidationCoverageFund,
         address _attestationVerifier,
-        address _externalConsolidationRecipientMapping,
-        address _consolidator
+        address _consolidator,
+        address _riverConfigManager
     ) external;
 
     /// @notice Get the current global fee
@@ -216,6 +215,14 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @notice Retrieve the operators registry
     /// @return The operators registry address
     function getOperatorsRegistry() external view returns (address);
+
+    /// @notice Retrieve the River Config Manager address (delegatecall target for relocated function bodies)
+    /// @return The River Config Manager address
+    function getRiverConfigManager() external view returns (address);
+
+    /// @notice Sets the River Config Manager address
+    /// @param _newRiverConfigManager The new River Config Manager address
+    function setRiverConfigManager(address _newRiverConfigManager) external;
 
     /// @notice Retrieve the consolidator address
     /// @return The consolidator address
@@ -256,9 +263,13 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @return The current balance to consolidate
     function getBalanceToConsolidate() external view returns (uint256);
 
-    /// @notice Mints LsETH to a recipient for consolidated ETH (consolidator only)
-    /// @param consolidation The consolidation object
-    function mintLsETHForConsolidation(IAttestationVerifierV1.ConsolidationObject calldata consolidation) external;
+    /// @notice Mints LsETH to a recipient for consolidated ETH and credits the consolidation buffer.
+    /// @dev Callback invoked only by the AttestationVerifier, which owns the external consolidation
+    ///      orchestration (consolidator gating, allowlist, recipient resolution, consolidation validation).
+    /// @param recipient The address that receives the minted LsETH
+    /// @param amount The consolidated ETH amount (wei) to mint shares against
+    /// @return sharesMinted The amount of LsETH shares minted
+    function mintForConsolidation(address recipient, uint256 amount) external returns (uint256 sharesMinted);
 
     /// @notice Performs a redeem request on the redeem manager
     /// @param _lsETHAmount The amount of LsETH to redeem

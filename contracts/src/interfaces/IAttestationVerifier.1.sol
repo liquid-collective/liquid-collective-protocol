@@ -77,6 +77,11 @@ interface IAttestationVerifierV1 {
     /// @param consolidationHash The EIP-712 structHash of the consolidation request
     event ConsolidationProcessed(bytes32 indexed consolidationHash);
 
+    /// @notice The recipient for a withdrawal credential address has changed
+    /// @param withdrawalCredential The withdrawal credential address
+    /// @param recipient The recipient address
+    event SetRecipient(address indexed withdrawalCredential, address indexed recipient);
+
     /// @notice Emitted when a batch of validator pubkeys is added to the Pectra lookup.
     /// @dev    Fires on every path that records membership in `PectraValidatorPubkeyLookup`:
     ///           - `recordNewlyFundedPubkeys` (initial-deposit callback from River),
@@ -250,6 +255,9 @@ interface IAttestationVerifierV1 {
     /// @notice The supplied consolidation has already been validated; replay rejected.
     /// @param consolidationHash The EIP-712 structHash of the consolidation request
     error ConsolidationAlreadyProcessed(bytes32 consolidationHash);
+
+    /// @notice The requested recipient is denied on the allowlist
+    error RecipientIsDenied();
     /// @notice A top-up referenced a pubkey that has never been initial-deposited by River.
     ///         Without this check, a malicious committee could mark an attacker pubkey as a
     ///         top-up and bypass BLS verification.
@@ -358,30 +366,43 @@ interface IAttestationVerifierV1 {
     /// @param pubkeys The 48-byte BLS pubkeys to remove
     function removeExitedValidatorPubkeys(bytes[] calldata pubkeys) external;
 
-    /// @notice Validate consolidation-committee attestations over a `ConsolidationObject` passed
-    ///         in by the caller and mark the request as processed for replay protection.
-    /// @dev    The caller supplies the full struct (including signatures) in calldata. The
-    ///         verifier constructs the EIP-712 typed-data digest directly from the four
-    ///         request fields and the cached consolidation domain separator, then recovers
-    ///         each signature against that digest. The `signatures` field of the struct is
-    ///         NOT part of the typed data.
+    /// @notice Validate an external consolidation request and mint LsETH for it. Only callable by the
+    ///         consolidator (a River-managed role).
+    /// @dev    Orchestrates the full external consolidation minting flow (relocated from River):
+    ///         allowlist `CONSOLIDATE_MASK` gating of the withdrawal address, recipient resolution via
+    ///         the internal recipient mapping (falling back to the withdrawal address, deny-checking a
+    ///         mapped recipient), consolidation-committee quorum + replay validation, then a callback
+    ///         into `River.mintForConsolidation(recipient, totalAmount)` which performs the
+    ///         consolidation-buffer accounting and share mint.
     ///
-    ///         Replay protection: the EIP-712 structHash is recorded in storage on success.
-    ///         Subsequent calls with a struct that hashes to the same value revert with
-    ///         `ConsolidationAlreadyProcessed`. Note that this makes the function
-    ///         state-mutating (not `view`) and callable only by River.
+    ///         Replay protection: the EIP-712 structHash is recorded in storage on success; a struct
+    ///         that hashes to the same value reverts with `ConsolidationAlreadyProcessed`.
     ///
-    ///         Trust boundary: this function only validates structural shape and the attestation
-    ///         quorum. The following are intentionally NOT checked here and are delegated to the
-    ///         caller (off-chain pipeline / consolidation committee) or to the eventual River
-    ///         integration:
+    ///         Trust boundary: only structural shape and the attestation quorum are checked. The
+    ///         following are delegated to the caller (off-chain pipeline / consolidation committee):
     ///           - Source/target pubkey uniqueness (EIP-7251 single-use source rule)
     ///           - `totalAmount` gwei alignment, upper bound, or correlation with pair count
     ///           - Financial caps (e.g. against committed/in-flight balances)
     /// @param consolidation The consolidation request to validate (withdrawal address,
     ///                      source/target pubkeys, totalAmount, signatures).
-    /// @dev Reverts on any validation failure; returns normally on success.
+    function mintLsETHForConsolidation(ConsolidationObject calldata consolidation) external;
+
+    /// @notice Validates a consolidation request's quorum + replay protection without minting. Only
+    ///         callable by River. The production mint flow uses the same logic internally via
+    ///         `mintLsETHForConsolidation`; this entry point exposes validation in isolation.
+    /// @param consolidation The consolidation request to validate
     function validateConsolidation(ConsolidationObject calldata consolidation) external;
+
+    /// @notice Sets the recipient address for the caller.
+    /// @dev The assumption is that the caller is the withdrawal credential address. Gated by the
+    ///      allowlist `CONSOLIDATE_MASK`; reverts `RecipientIsDenied` if the recipient is denied.
+    /// @param _recipient The address to receive minted LsETH
+    function setRecipient(address _recipient) external;
+
+    /// @notice Retrieves the recipient address mapped to a withdrawal credential address
+    /// @param _withdrawalCredential The withdrawal credential address to query
+    /// @return The mapped recipient address (zero if unset)
+    function getRecipient(address _withdrawalCredential) external view returns (address);
 
     // -----------------------------------------------------------------------
     // Admin setters

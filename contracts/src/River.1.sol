@@ -10,8 +10,9 @@ import "./interfaces/IProtocolVersion.sol";
 import "./interfaces/IELFeeRecipient.1.sol";
 import "./interfaces/IOperatorRegistry.1.sol";
 import "./interfaces/IAttestationVerifier.1.sol";
-import "./interfaces/IAttestationVerifierPectraMigration.1.sol";
-import "./interfaces/IExternalConsolidationRecipientMapping.1.sol";
+import "./interfaces/IRiverConfigManager.1.sol";
+
+import {Address} from "openzeppelin-contracts/contracts/utils/Address.sol";
 
 import "./components/SharesManager.1.sol";
 import "./components/OracleManager.1.sol";
@@ -40,7 +41,7 @@ import "./state/river/ELFeeRecipientAddress.sol";
 import "./state/river/DepositedValidatorCount.sol";
 import "./state/river/LastConsensusLayerReport.sol";
 import "./state/river/ConsolidationCoverageFundAddress.sol";
-import "./state/river/ExternalConsolidationRecipientMappingAddress.sol";
+import "./state/river/RiverConfigManagerAddress.sol";
 import "./state/shared/OperatorsRegistryAddress.sol";
 import "./state/shared/AttestationVerifierAddress.sol";
 
@@ -57,6 +58,8 @@ contract RiverV1 is
     IProtocolVersion,
     IRiverV1
 {
+    using Address for address;
+
     /// @notice Modifier to check if the caller is the consolidator
     modifier onlyConsolidator() {
         if (msg.sender != ConsolidatorAddress.get()) {
@@ -70,8 +73,8 @@ contract RiverV1 is
         bytes32 _withdrawalCredentials,
         address _consolidationCoverageFund,
         address _attestationVerifier,
-        address _externalConsolidationRecipientMapping,
-        address _consolidator
+        address _consolidator,
+        address _riverConfigManager
     ) external init(3) {
         if (_withdrawalCredentials == bytes32(0)) {
             revert InvalidWithdrawalCredentials();
@@ -95,8 +98,8 @@ contract RiverV1 is
         AttestationVerifierAddress.set(_attestationVerifier);
         emit SetAttestationVerifier(_attestationVerifier);
 
-        ExternalConsolidationRecipientMappingAddress.set(_externalConsolidationRecipientMapping);
-        emit SetExternalConsolidationRecipientMapping(_externalConsolidationRecipientMapping);
+        RiverConfigManagerAddress.set(_riverConfigManager);
+        emit SetRiverConfigManager(_riverConfigManager);
 
         // accounting changes to move from 0x01 to 0x02 accounting
 
@@ -105,31 +108,11 @@ contract RiverV1 is
 
         _setConsolidator(_consolidator);
 
-        IOracleManagerV1.StoredConsensusLayerReport storage lastReport = LastConsensusLayerReport.get();
-        uint32 clValidatorCount = lastReport.validatorsCount;
-        uint256 depositedValidatorCount = DepositedValidatorCount.get();
-        TotalDepositedETH.set(depositedValidatorCount * DEPOSIT_SIZE);
-        if (clValidatorCount < depositedValidatorCount) {
-            InFlightDeposit.set((depositedValidatorCount - clValidatorCount) * DEPOSIT_SIZE);
-        } else {
-            // explicit zero so a re-run on dirty storage cannot leak a stale value into
-            // the totalDepositedActivatedETH calculation below
-            InFlightDeposit.set(0);
-        }
-
-        IOracleManagerV1.StoredConsensusLayerReport memory storedReport;
-        storedReport.epoch = lastReport.epoch;
-        storedReport.validatorsBalance = lastReport.validatorsBalance;
-        storedReport.validatorsSkimmedBalance = lastReport.validatorsSkimmedBalance;
-        storedReport.validatorsExitedBalance = lastReport.validatorsExitedBalance;
-        storedReport.validatorsExitingBalance = lastReport.validatorsExitingBalance;
-        storedReport.validatorsCount = clValidatorCount;
-        storedReport.rebalanceDepositToRedeemMode = lastReport.rebalanceDepositToRedeemMode;
-        storedReport.slashingContainmentMode = lastReport.slashingContainmentMode;
-        storedReport.totalDepositedActivatedETH = depositedValidatorCount * DEPOSIT_SIZE - InFlightDeposit.get();
-        /// We don't set the totalExternalConsolidationsAmountReported here because consolidations were not enabled before this version.
-        /// And the default value will be 0, so we don't need to set it here.
-        LastConsensusLayerReport.set(storedReport);
+        // The Pectra 0x01→0x02 accounting-migration body lives in RiverConfigManager; run it via
+        // delegatecall so it executes in River's storage context (manager address was set just above).
+        RiverConfigManagerAddress.get().functionDelegateCall(
+            abi.encodeCall(IRiverConfigManagerV1.migrateV3Accounting, ())
+        );
     }
 
     /// @inheritdoc IRiverV1
@@ -187,15 +170,12 @@ contract RiverV1 is
     }
 
     /// @inheritdoc IRiverV1
-    function setDailyCommittableLimits(DailyCommittableLimits.DailyCommittableLimitsStruct memory _dcl)
-        external
-        onlyAdmin
-    {
-        _setDailyCommittableLimits(_dcl);
+    function setDailyCommittableLimits(DailyCommittableLimits.DailyCommittableLimitsStruct memory) external onlyAdmin {
+        RiverConfigManagerAddress.get().functionDelegateCall(msg.data);
     }
 
-    function setKeeper(address _keeper) external onlyAdmin {
-        _setKeeper(_keeper);
+    function setKeeper(address) external onlyAdmin {
+        RiverConfigManagerAddress.get().functionDelegateCall(msg.data);
     }
 
     /// @inheritdoc IRiverV1
@@ -209,35 +189,16 @@ contract RiverV1 is
     }
 
     /// @inheritdoc IRiverV1
-    function mintLsETHForConsolidation(IAttestationVerifierV1.ConsolidationObject calldata consolidation)
-        external
-        onlyConsolidator
-    {
-        // we check the allowlist first to fail fast if the withdrawalAddress/recipient is denied
-        IAllowlistV1 allowlist = IAllowlistV1(AllowlistAddress.get());
-        allowlist.onlyAllowed(consolidation.withdrawalAddress, LibAllowlistMasks.CONSOLIDATE_MASK);
-
-        address recipient = IExternalConsolidationRecipientMappingV1(ExternalConsolidationRecipientMappingAddress.get())
-            .getRecipient(consolidation.withdrawalAddress);
-
-        // if the recipient is not set, we use the withdrawalAddress
-        if (recipient == address(0)) {
-            recipient = consolidation.withdrawalAddress;
-        } else {
-            if (allowlist.isDenied(recipient)) {
-                revert Denied(recipient);
-            }
+    function mintForConsolidation(address recipient, uint256 amount) external returns (uint256 sharesMinted) {
+        // only the AttestationVerifier may trigger consolidation minting; it owns the orchestration
+        // (consolidator gating, allowlist, recipient resolution and consolidation validation)
+        if (msg.sender != AttestationVerifierAddress.get()) {
+            revert LibErrors.Unauthorized(msg.sender);
         }
-
-        IAttestationVerifierV1 verifier = IAttestationVerifierV1(AttestationVerifierAddress.get());
-        // Since the verifier validates the consolidation object, we do not validate it here
-        // this reverts if the consolidation is invalid
-        verifier.validateConsolidation(consolidation);
-
         uint256 oldConsolidationBuffer = ConsolidationBuffer.get();
-        _setConsolidationBuffer(oldConsolidationBuffer, oldConsolidationBuffer + consolidation.totalAmount);
-        uint256 sharesMinted = _mintShares(recipient, consolidation.totalAmount);
-        emit LsETHMintedForConsolidation(recipient, consolidation.totalAmount, sharesMinted);
+        _setConsolidationBuffer(oldConsolidationBuffer, oldConsolidationBuffer + amount);
+        sharesMinted = _mintShares(recipient, amount);
+        emit LsETHMintedForConsolidation(recipient, amount, sharesMinted);
     }
 
     /// @inheritdoc IRiverV1
@@ -250,74 +211,58 @@ contract RiverV1 is
     }
 
     /// @inheritdoc IRiverV1
-    function requestRedeem(uint256 _lsETHAmount, address _recipient)
-        external
-        whenNotSlashingContainmentMode
-        returns (uint32 _redeemRequestId)
-    {
-        IAllowlistV1(AllowlistAddress.get()).onlyAllowed(msg.sender, LibAllowlistMasks.REDEEM_MASK);
-        if (IAllowlistV1(AllowlistAddress.get()).isDenied(_recipient)) {
-            revert IRedeemManagerV1.RecipientIsDenied();
-        }
-        _transfer(msg.sender, address(this), _lsETHAmount);
-        return IRedeemManagerV1(RedeemManagerAddress.get()).requestRedeem(_lsETHAmount, _recipient, msg.sender);
+    /// @dev Thin stub: the slashing-containment gate runs here, then the body (allowlist, LsETH transfer
+    ///      to River, redeem-manager call) runs in the RiverConfigManager via delegatecall.
+    function requestRedeem(uint256, address) external whenNotSlashingContainmentMode returns (uint32) {
+        return abi.decode(RiverConfigManagerAddress.get().functionDelegateCall(msg.data), (uint32));
     }
 
     /// @inheritdoc IRiverV1
-    function claimRedeemRequests(uint32[] calldata _redeemRequestIds, uint32[] calldata _withdrawalEventIds)
-        external
-        returns (uint8[] memory claimStatuses)
-    {
-        return IRedeemManagerV1(RedeemManagerAddress.get())
-            .claimRedeemRequests(_redeemRequestIds, _withdrawalEventIds, true, type(uint16).max);
+    /// @dev Thin stub forwarding to the RiverConfigManager via delegatecall (runs in River's storage context).
+    function claimRedeemRequests(uint32[] calldata, uint32[] calldata) external returns (uint8[] memory) {
+        return abi.decode(RiverConfigManagerAddress.get().functionDelegateCall(msg.data), (uint8[]));
     }
 
     /// @inheritdoc IRiverV1
-    function setGlobalFee(uint256 _newFee) external onlyAdmin {
-        GlobalFee.set(_newFee);
-        emit SetGlobalFee(_newFee);
+    /// @dev Thin stub: forwards raw calldata to the RiverConfigManager via delegatecall (runs in River's
+    ///      storage context). Access control stays here; the body lives in RiverConfigManagerV1.
+    function setGlobalFee(uint256) external onlyAdmin {
+        RiverConfigManagerAddress.get().functionDelegateCall(msg.data);
     }
 
     /// @inheritdoc IRiverV1
-    function setAllowlist(address _newAllowlist) external onlyAdmin {
-        AllowlistAddress.set(_newAllowlist);
-        emit SetAllowlist(_newAllowlist);
+    function setAllowlist(address) external onlyAdmin {
+        RiverConfigManagerAddress.get().functionDelegateCall(msg.data);
     }
 
     /// @inheritdoc IRiverV1
-    function setCollector(address _newCollector) external onlyAdmin {
-        CollectorAddress.set(_newCollector);
-        emit SetCollector(_newCollector);
+    function setCollector(address) external onlyAdmin {
+        RiverConfigManagerAddress.get().functionDelegateCall(msg.data);
     }
 
     /// @inheritdoc IRiverV1
-    function setELFeeRecipient(address _newELFeeRecipient) external onlyAdmin {
-        ELFeeRecipientAddress.set(_newELFeeRecipient);
-        emit SetELFeeRecipient(_newELFeeRecipient);
+    function setELFeeRecipient(address) external onlyAdmin {
+        RiverConfigManagerAddress.get().functionDelegateCall(msg.data);
     }
 
     /// @inheritdoc IRiverV1
-    function setCoverageFund(address _newCoverageFund) external onlyAdmin {
-        CoverageFundAddress.set(_newCoverageFund);
-        emit SetCoverageFund(_newCoverageFund);
+    function setCoverageFund(address) external onlyAdmin {
+        RiverConfigManagerAddress.get().functionDelegateCall(msg.data);
     }
 
     /// @inheritdoc IRiverV1
-    function setConsolidationCoverageFund(address _newConsolidationCoverageFund) external onlyAdmin {
-        ConsolidationCoverageFundAddress.set(_newConsolidationCoverageFund);
-        emit SetConsolidationCoverageFund(_newConsolidationCoverageFund);
+    function setConsolidationCoverageFund(address) external onlyAdmin {
+        RiverConfigManagerAddress.get().functionDelegateCall(msg.data);
     }
 
     /// @inheritdoc IRiverV1
-    function setMetadataURI(string memory _metadataURI) external onlyAdmin {
-        LibSanitize._notEmptyString(_metadataURI);
-        MetadataURI.set(_metadataURI);
-        emit SetMetadataURI(_metadataURI);
+    function setMetadataURI(string memory) external onlyAdmin {
+        RiverConfigManagerAddress.get().functionDelegateCall(msg.data);
     }
 
     /// @inheritdoc IRiverV1
-    function setConsolidator(address _newConsolidator) external onlyAdmin {
-        _setConsolidator(_newConsolidator);
+    function setConsolidator(address) external onlyAdmin {
+        RiverConfigManagerAddress.get().functionDelegateCall(msg.data);
     }
 
     /// @notice Internal utility to set the consolidator address
@@ -330,6 +275,17 @@ contract RiverV1 is
     /// @inheritdoc IRiverV1
     function getOperatorsRegistry() external view returns (address) {
         return OperatorsRegistryAddress.get();
+    }
+
+    /// @inheritdoc IRiverV1
+    function getRiverConfigManager() external view returns (address) {
+        return RiverConfigManagerAddress.get();
+    }
+
+    /// @inheritdoc IRiverV1
+    function setRiverConfigManager(address _newRiverConfigManager) external onlyAdmin {
+        RiverConfigManagerAddress.set(_newRiverConfigManager);
+        emit SetRiverConfigManager(_newRiverConfigManager);
     }
 
     /// @inheritdoc IRiverV1
@@ -368,32 +324,15 @@ contract RiverV1 is
     }
 
     /// @inheritdoc IRiverV1
-    function selfConsolidation(bytes[] calldata pubkeys, uint256 maxFeePerConsolidation)
-        external
-        payable
-        onlyConsolidator
-    {
-        IWithdrawV1.ConsolidationRequest[] memory requests = IAttestationVerifierPectraMigrationV1(
-                AttestationVerifierAddress.get()
-            ).validateSelfConsolidation(pubkeys);
-        address excessFeeRecipient = msg.sender;
-        IWithdrawV1(payable(WithdrawalCredentials.getAddress())).consolidate{value: msg.value}(
-            requests, maxFeePerConsolidation, excessFeeRecipient
-        );
-        emit PectraConsolidationRequested(requests, maxFeePerConsolidation, excessFeeRecipient, msg.value);
+    /// @dev Thin stub: forwards raw calldata (incl. msg.value) to the RiverConfigManager via delegatecall.
+    ///      Runs in River's storage context with address(this) == River, so Withdraw's onlyRiver passes.
+    function selfConsolidation(bytes[] calldata, uint256) external payable onlyConsolidator {
+        RiverConfigManagerAddress.get().functionDelegateCall(msg.data);
     }
 
     /// @inheritdoc IRiverV1
-    function consolidate(IWithdrawV1.ConsolidationRequest[] calldata requests, uint256 maxFeePerConsolidation)
-        external
-        payable
-        onlyConsolidator
-    {
-        address excessFeeRecipient = msg.sender;
-        IWithdrawV1(payable(WithdrawalCredentials.getAddress())).consolidate{value: msg.value}(
-            requests, maxFeePerConsolidation, excessFeeRecipient
-        );
-        emit PectraConsolidationRequested(requests, maxFeePerConsolidation, excessFeeRecipient, msg.value);
+    function consolidate(IWithdrawV1.ConsolidationRequest[] calldata, uint256) external payable onlyConsolidator {
+        RiverConfigManagerAddress.get().functionDelegateCall(msg.data);
     }
 
     /// @notice Overridden handler to pass the system admin inside components
@@ -535,13 +474,6 @@ contract RiverV1 is
         IOracleManagerV1.StoredConsensusLayerReport storage storedReport = LastConsensusLayerReport.get();
         return storedReport.validatorsBalance + BalanceToDeposit.get() + CommittedBalance.get() + BalanceToRedeem.get()
             + InFlightDeposit.get() + ConsolidationBuffer.get();
-    }
-
-    /// @notice Internal utility to set the daily committable limits
-    /// @param _dcl The new daily committable limits
-    function _setDailyCommittableLimits(DailyCommittableLimits.DailyCommittableLimitsStruct memory _dcl) internal {
-        DailyCommittableLimits.set(_dcl);
-        emit SetMaxDailyCommittableAmounts(_dcl.minDailyNetCommittableAmount, _dcl.maxDailyRelativeCommittableAmount);
     }
 
     /// @notice Sets the balance to deposit, but not yet committed
