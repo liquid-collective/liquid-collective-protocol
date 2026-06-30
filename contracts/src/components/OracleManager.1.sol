@@ -6,6 +6,8 @@ import "../interfaces/components/IConsensusLayerDepositManager.1.sol";
 import "../interfaces/IRedeemManager.1.sol";
 
 import "../libraries/LibUint256.sol";
+import "../libraries/LibBasisPoints.sol";
+import "../libraries/LibCLReport.sol";
 
 import "../state/river/LastConsensusLayerReport.sol";
 import "../state/river/OracleAddress.sol";
@@ -248,24 +250,6 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         emit SetBounds(_newValue.annualAprUpperBound, _newValue.relativeLowerBound);
     }
 
-    /// @notice Structure holding internal variables used during reporting
-    struct ConsensusLayerDataReportingVariables {
-        uint256 preReportUnderlyingBalance;
-        uint256 postReportUnderlyingBalance;
-        uint256 lastReportExitedBalance;
-        uint256 lastReportSkimmedBalance;
-        uint256 exitedAmountIncrease;
-        uint256 skimmedAmountIncrease;
-        uint256 inFlightDepositedETH;
-        uint256 totalDepositedActivatedETHIncrease;
-        uint256 lastConsolidationBuffer;
-        uint256 totalExternalConsolidationsAmountReportedIncrease;
-        uint256 timeElapsedSinceLastReport;
-        uint256 availableAmountToUpperBound;
-        uint256 redeemManagerDemand;
-        ConsensusLayerDataReportingTrace trace;
-    }
-
     /// @inheritdoc IOracleManagerV1
     function setConsensusLayerData(IOracleManagerV1.ConsensusLayerReport calldata _report) external virtual {
         // only the oracle is allowed to call this endpoint
@@ -273,117 +257,41 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
             revert LibErrors.Unauthorized(msg.sender);
         }
 
-        CLSpec.CLSpecStruct memory cls = CLSpec.get();
+        // validate the report against the last stored report and compute the report deltas
+        // (epoch validity, monotonicity checks, in-flight bounds and consolidation buffer handling)
+        LibCLReport.ReportDeltas memory deltas = LibCLReport.validateAndComputeDeltas(
+            _report.epoch,
+            _report.validatorsExitedBalance,
+            _report.validatorsSkimmedBalance,
+            _report.totalDepositedActivatedETH,
+            _report.validatorsCount,
+            _report.totalExternalConsolidationsAmountReported
+        );
 
-        // we start by verifying that the reported epoch is valid based on the consensus layer spec
-        if (!_isValidEpoch(cls, _report.epoch)) {
-            revert InvalidEpoch(_report.epoch);
-        }
-
-        ConsensusLayerDataReportingVariables memory vars;
-
-        {
-            IOracleManagerV1.StoredConsensusLayerReport storage lastStoredReport = LastConsensusLayerReport.get();
-
-            vars.lastReportExitedBalance = lastStoredReport.validatorsExitedBalance;
-
-            // we ensure that the reported total exited balance is not decreasing
-            if (_report.validatorsExitedBalance < vars.lastReportExitedBalance) {
-                revert InvalidDecreasingValidatorsExitedBalance(
-                    vars.lastReportExitedBalance, _report.validatorsExitedBalance
-                );
-            }
-
-            // we compute the exited amount increase by taking the delta between reports
-            vars.exitedAmountIncrease = _report.validatorsExitedBalance - vars.lastReportExitedBalance;
-
-            vars.lastReportSkimmedBalance = lastStoredReport.validatorsSkimmedBalance;
-
-            // we ensure that the reported total skimmed balance is not decreasing
-            if (_report.validatorsSkimmedBalance < vars.lastReportSkimmedBalance) {
-                revert InvalidDecreasingValidatorsSkimmedBalance(
-                    vars.lastReportSkimmedBalance, _report.validatorsSkimmedBalance
-                );
-            }
-
-            if (lastStoredReport.totalDepositedActivatedETH > _report.totalDepositedActivatedETH) {
-                revert InvalidTotalDepositedActivatedETHDecrease(
-                    lastStoredReport.totalDepositedActivatedETH, _report.totalDepositedActivatedETH
-                );
-            }
-
-            vars.totalDepositedActivatedETHIncrease =
-                _report.totalDepositedActivatedETH - lastStoredReport.totalDepositedActivatedETH;
-            vars.inFlightDepositedETH = InFlightDeposit.get();
-
-            // we ensure that the total deposited activated ETH increase is not higher than the current in flight ETH
-            if (vars.totalDepositedActivatedETHIncrease > vars.inFlightDepositedETH) {
-                revert InvalidTotalDepositedActivatedETHIncrease(
-                    vars.inFlightDepositedETH, _report.totalDepositedActivatedETH
-                );
-            }
-
-            // we ensure that the reported validator count is not decreasing
-            if (_report.validatorsCount < lastStoredReport.validatorsCount) {
-                revert InvalidValidatorCountReport(_report.validatorsCount, lastStoredReport.validatorsCount);
-            }
-
-            if (
-                _report.totalExternalConsolidationsAmountReported
-                    < lastStoredReport.totalExternalConsolidationsAmountReported
-            ) {
-                revert InvalidTotalConsolidationsAmountReportedDecrease(
-                    lastStoredReport.totalExternalConsolidationsAmountReported,
-                    _report.totalExternalConsolidationsAmountReported
-                );
-            }
-
-            if (
-                _report.totalExternalConsolidationsAmountReported
-                    > lastStoredReport.totalExternalConsolidationsAmountReported
-            ) {
-                // the total consolidation amount reported has increased so we need to reduce the buffer
-                uint256 increaseInConsolidation = _report.totalExternalConsolidationsAmountReported
-                    - lastStoredReport.totalExternalConsolidationsAmountReported;
-                vars.lastConsolidationBuffer = ConsolidationBuffer.get();
-
-                if (increaseInConsolidation > vars.lastConsolidationBuffer) {
-                    // this means that the buffer is completely covered and the extra amount will go to rewards
-                    // as they would have already been accounted for in the validators balance increase we don't need to account for it
-                    vars.totalExternalConsolidationsAmountReportedIncrease = vars.lastConsolidationBuffer;
-                } else {
-                    vars.totalExternalConsolidationsAmountReportedIncrease = increaseInConsolidation;
-                }
-            }
-
-            // we compute the new skimmed amount by taking the delta between reports
-            vars.skimmedAmountIncrease = _report.validatorsSkimmedBalance - vars.lastReportSkimmedBalance;
-
-            vars.timeElapsedSinceLastReport = _timeBetweenEpochs(cls, lastStoredReport.epoch, _report.epoch);
-        }
+        IOracleManagerV1.ConsensusLayerDataReportingTrace memory trace;
 
         // we retrieve the current total underlying balance before any reporting data is applied to the system
-        vars.preReportUnderlyingBalance = _assetBalance();
+        uint256 preReportUnderlyingBalance = _assetBalance();
 
         // if we have new exited / skimmed eth available, we pull funds from the consensus layer recipient
-        if (vars.exitedAmountIncrease + vars.skimmedAmountIncrease > 0) {
+        if (deltas.exitedAmountIncrease + deltas.skimmedAmountIncrease > 0) {
             // this method pulls and updates ethToDeposit / ethToRedeem accordingly
-            _pullCLFunds(vars.skimmedAmountIncrease, vars.exitedAmountIncrease);
+            _pullCLFunds(deltas.skimmedAmountIncrease, deltas.exitedAmountIncrease);
         }
 
         // if we have new external consolidation funds that were reported, we reduce the consolidation buffer
-        if (vars.totalExternalConsolidationsAmountReportedIncrease > 0) {
+        if (deltas.totalExternalConsolidationsAmountReportedIncrease > 0) {
             _setConsolidationBuffer(
-                vars.lastConsolidationBuffer,
-                vars.lastConsolidationBuffer - vars.totalExternalConsolidationsAmountReportedIncrease
+                deltas.lastConsolidationBuffer,
+                deltas.lastConsolidationBuffer - deltas.totalExternalConsolidationsAmountReportedIncrease
             );
         }
 
         // checks if we have new deposited stake that activated in the last oracle reporting
-        if (vars.totalDepositedActivatedETHIncrease > 0) {
-            uint256 newInFlightETH = vars.inFlightDepositedETH - vars.totalDepositedActivatedETHIncrease;
+        if (deltas.totalDepositedActivatedETHIncrease > 0) {
+            uint256 newInFlightETH = deltas.inFlightDepositedETH - deltas.totalDepositedActivatedETHIncrease;
             InFlightDeposit.set(newInFlightETH);
-            emit IConsensusLayerDepositManagerV1.SetInFlightETH(vars.inFlightDepositedETH, newInFlightETH);
+            emit IConsensusLayerDepositManagerV1.SetInFlightETH(deltas.inFlightDepositedETH, newInFlightETH);
         }
 
         {
@@ -406,78 +314,76 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         ReportBounds.ReportBoundsStruct memory rb = ReportBounds.get();
 
         // we compute the maximum allowed increase in balance based on the pre report value
-        uint256 maxIncrease = _maxIncrease(rb, vars.preReportUnderlyingBalance, vars.timeElapsedSinceLastReport);
+        uint256 maxIncrease = _maxIncrease(rb, preReportUnderlyingBalance, deltas.timeElapsedSinceLastReport);
 
         // we retrieve the new total underlying balance after system parameters are changed
-        vars.postReportUnderlyingBalance = _assetBalance();
+        uint256 postReportUnderlyingBalance = _assetBalance();
+
+        uint256 availableAmountToUpperBound;
 
         // we can now compute the earned rewards from the consensus layer balances
         // in order to properly account for the balance increase, we compare the sums of current balances, skimmed balance and exited balances
         // we also synthetically increase the current balance by 32 eth per new activated validator, this way we have no discrepency due
         // to currently activating funds that were not yet accounted in the consensus layer balances
-        if (vars.postReportUnderlyingBalance >= vars.preReportUnderlyingBalance) {
+        if (postReportUnderlyingBalance >= preReportUnderlyingBalance) {
             // if this happens, we revert and the reporting process is cancelled
-            if (vars.postReportUnderlyingBalance > vars.preReportUnderlyingBalance + maxIncrease) {
+            if (postReportUnderlyingBalance > preReportUnderlyingBalance + maxIncrease) {
                 revert TotalValidatorBalanceIncreaseOutOfBound(
-                    vars.preReportUnderlyingBalance,
-                    vars.postReportUnderlyingBalance,
-                    vars.timeElapsedSinceLastReport,
+                    preReportUnderlyingBalance,
+                    postReportUnderlyingBalance,
+                    deltas.timeElapsedSinceLastReport,
                     rb.annualAprUpperBound
                 );
             }
 
             // we update the rewards based on the balance delta
-            vars.trace.rewards = vars.postReportUnderlyingBalance - vars.preReportUnderlyingBalance;
+            trace.rewards = postReportUnderlyingBalance - preReportUnderlyingBalance;
 
             // we update the available amount to upper bound (the amount of eth we can still pull and stay below the upper reporting bound)
-            vars.availableAmountToUpperBound = maxIncrease - vars.trace.rewards;
+            availableAmountToUpperBound = maxIncrease - trace.rewards;
         } else {
             // otherwise if the balance has decreased, we verify that we are not exceeding the lower reporting bound
 
             // we compute the maximum allowed decrease in balance
-            uint256 maxDecrease = _maxDecrease(rb, vars.preReportUnderlyingBalance);
+            uint256 maxDecrease = _maxDecrease(rb, preReportUnderlyingBalance);
 
             // we verify that the bound is not crossed
-            if (
-                vars.postReportUnderlyingBalance
-                    < vars.preReportUnderlyingBalance - LibUint256.min(maxDecrease, vars.preReportUnderlyingBalance)
-            ) {
+            if (postReportUnderlyingBalance < preReportUnderlyingBalance - LibUint256.min(maxDecrease, preReportUnderlyingBalance))
+            {
                 revert TotalValidatorBalanceDecreaseOutOfBound(
-                    vars.preReportUnderlyingBalance,
-                    vars.postReportUnderlyingBalance,
-                    vars.timeElapsedSinceLastReport,
+                    preReportUnderlyingBalance,
+                    postReportUnderlyingBalance,
+                    deltas.timeElapsedSinceLastReport,
                     rb.relativeLowerBound
                 );
             }
 
             // we update the available amount to upper bound to be equal to the maximum allowed increase plus the negative delta due to the loss
-            vars.availableAmountToUpperBound =
-                maxIncrease + (vars.preReportUnderlyingBalance - vars.postReportUnderlyingBalance);
+            availableAmountToUpperBound = maxIncrease + (preReportUnderlyingBalance - postReportUnderlyingBalance);
         }
 
         // if we have available amount to upper bound after the reporting values are applied
-        if (vars.availableAmountToUpperBound > 0) {
+        if (availableAmountToUpperBound > 0) {
             // we pull the funds from the execution layer fee recipient
-            vars.trace.pulledELFees = _pullELFees(vars.availableAmountToUpperBound);
+            trace.pulledELFees = _pullELFees(availableAmountToUpperBound);
             // we update the rewards
-            vars.trace.rewards += vars.trace.pulledELFees;
+            trace.rewards += trace.pulledELFees;
             // we update the available amount accordingly
-            vars.availableAmountToUpperBound -= vars.trace.pulledELFees;
+            availableAmountToUpperBound -= trace.pulledELFees;
         }
 
         // if we have available amount to upper bound after the execution layer fees are pulled
-        if (vars.availableAmountToUpperBound > 0) {
+        if (availableAmountToUpperBound > 0) {
             // we pull the funds from the exceeding eth buffer of the redeem manager
-            vars.trace.pulledRedeemManagerExceedingEthBuffer =
-                _pullRedeemManagerExceedingEth(vars.availableAmountToUpperBound);
+            trace.pulledRedeemManagerExceedingEthBuffer = _pullRedeemManagerExceedingEth(availableAmountToUpperBound);
             // we update the available amount accordingly
-            vars.availableAmountToUpperBound -= vars.trace.pulledRedeemManagerExceedingEthBuffer;
+            availableAmountToUpperBound -= trace.pulledRedeemManagerExceedingEthBuffer;
         }
 
         // if we have available amount to upper bound after pulling the exceeding eth buffer, we attempt to pull coverage funds
-        if (vars.availableAmountToUpperBound > 0) {
+        if (availableAmountToUpperBound > 0) {
             // we pull the funds from the coverage recipient
-            vars.trace.pulledCoverageFunds = _pullCoverageFunds(vars.availableAmountToUpperBound);
+            trace.pulledCoverageFunds = _pullCoverageFunds(availableAmountToUpperBound);
             // we do not update the rewards as coverage is not considered rewards
         }
 
@@ -485,19 +391,17 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         // if the consolidation buffer is greater than 0, we attempt to pull the funds from the consolidation coverage fund
         // we always attempt to pull the funds as we don't track on-chain if a consolidation failure has occurred
         if (consolidationBuffer > 0) {
-            vars.trace.pulledConsolidationCoverageFunds = _pullConsolidationCoverageFunds(consolidationBuffer);
-            if (vars.trace.pulledConsolidationCoverageFunds > 0) {
+            trace.pulledConsolidationCoverageFunds = _pullConsolidationCoverageFunds(consolidationBuffer);
+            if (trace.pulledConsolidationCoverageFunds > 0) {
                 // we update the consolidation buffer
-                _setConsolidationBuffer(
-                    consolidationBuffer, consolidationBuffer - vars.trace.pulledConsolidationCoverageFunds
-                );
+                _setConsolidationBuffer(consolidationBuffer, consolidationBuffer - trace.pulledConsolidationCoverageFunds);
                 // we do not update the rewards as consolidation coverage is not considered rewards
             }
         }
 
         // if our rewards are not null, we dispatch the fee to the collector
-        if (vars.trace.rewards > 0) {
-            _onEarnings(vars.trace.rewards);
+        if (trace.rewards > 0) {
+            _onEarnings(trace.rewards);
         }
 
         _reportCLETH(_report.activeCLETHPerOperator);
@@ -521,10 +425,10 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         _skimExcessBalanceToRedeem();
 
         // we update the committable amount based on daily maximum allowed
-        _commitBalanceToDeposit(vars.timeElapsedSinceLastReport, _report.slashingContainmentMode);
+        _commitBalanceToDeposit(deltas.timeElapsedSinceLastReport, _report.slashingContainmentMode);
 
         // we emit a summary event with all the reporting details
-        emit ProcessedConsensusLayerReport(_report, vars.trace);
+        emit ProcessedConsensusLayerReport(_report, trace);
     }
 
     /// @notice Retrieve the current epoch based on the current timestamp
@@ -566,18 +470,5 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         returns (uint256)
     {
         return (_prevTotalEth * _rb.relativeLowerBound) / LibBasisPoints.BASIS_POINTS_MAX;
-    }
-
-    /// @notice Retrieve the number of seconds between two epochs
-    /// @param _cls The consensus layer spec struct
-    /// @param _epochPast The starting epoch
-    /// @param _epochNow The current epoch
-    /// @return The number of seconds between the two epochs
-    function _timeBetweenEpochs(CLSpec.CLSpecStruct memory _cls, uint256 _epochPast, uint256 _epochNow)
-        internal
-        pure
-        returns (uint256)
-    {
-        return (_epochNow - _epochPast) * (_cls.secondsPerSlot * _cls.slotsPerEpoch);
     }
 }
