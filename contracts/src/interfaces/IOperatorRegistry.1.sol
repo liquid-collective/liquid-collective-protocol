@@ -155,6 +155,12 @@ interface IOperatorsRegistryV1 {
     /// @param amounts The per-key top-up amount in ETH(wei), aligned 1:1 with pubkeys
     event TopUps(uint256 indexed index, bytes[] pubkeys, uint256[] amounts);
 
+    /// @notice An operator was funded while it still had unfulfilled exit requests.
+    /// @param index The operator index
+    /// @param requestedExits The cumulative amount of exits requested for the operator
+    /// @param exitedETH The cumulative amount of exited ETH(wei) reported for the operator
+    event FundedOperatorWithPendingExits(uint256 indexed index, uint256 requestedExits, uint256 exitedETH);
+
     /// @notice The calling operator is inactive
     /// @param index The operator index
     error InactiveOperator(uint256 index);
@@ -164,10 +170,6 @@ interface IOperatorsRegistryV1 {
 
     /// @notice The provided list of operators is not in increasing order
     error UnorderedOperatorList();
-
-    /// @notice Thrown when an operator ignored the required number of requested exits
-    /// @param operatorIndex The operator index
-    error OperatorIgnoredExitRequests(uint256 operatorIndex);
 
     /// @notice Thrown when the sum of exited ETH is invalid
     error ExitedETHSumMismatch();
@@ -361,7 +363,6 @@ interface IOperatorsRegistryV1 {
     /// @dev Reverts with InvalidOperatorIndex when a delta references an operator outside the registered range
     /// @dev Reverts with OperatorIndicesUnsortedOrDuplicate when deltas are not strictly ascending
     /// @dev Reverts with InactiveOperator when a referenced operator is inactive
-    /// @dev Reverts with OperatorIgnoredExitRequests when a referenced operator has unfulfilled exit requests
     /// @param _deltas The per-operator funded ETH updates
     function incrementFundedETH(OperatorFundingDelta[] calldata _deltas) external;
 
