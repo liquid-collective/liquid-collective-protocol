@@ -163,6 +163,23 @@ contract ConsolidationAttestationTest is Test {
         return keccak256(abi.encodePacked("\x19\x01", domainSep, structHash));
     }
 
+    function _consolidationStructHash(
+        address withdrawalAddress,
+        bytes[] memory sources,
+        bytes[] memory targets,
+        uint256 totalAmount
+    ) internal pure returns (bytes32) {
+        return keccak256(
+            abi.encode(
+                ATTEST_CONSOLIDATION_TYPEHASH,
+                withdrawalAddress,
+                _hashBytesArray(sources),
+                _hashBytesArray(targets),
+                totalAmount
+            )
+        );
+    }
+
     /// @dev Sign a precomputed EIP-712 digest with the given private key.
     function _sign(uint256 pk, bytes32 digest) internal view returns (bytes memory) {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(pk, digest);
@@ -542,6 +559,72 @@ contract ConsolidationAttestationTest is Test {
             abi.encodeWithSelector(IAttestationVerifierV1.ConsolidationAlreadyProcessed.selector, structHash)
         );
         _validateConsolidationAsRiver(c);
+    }
+
+    function testRevert_consolidationAlreadyProcessedWithDifferentValidSignatures() public {
+        address user = address(0xBEEF);
+        IAttestationVerifierV1.ConsolidationObject memory c = _validConsolidation(user, 321);
+        _validateConsolidationAsRiver(c);
+
+        bytes32 digest = _consolidationDigest(c.withdrawalAddress, c.sourcePubkeys, c.targetPubkeys, c.totalAmount);
+        bytes[] memory alternateSigs = new bytes[](2);
+        alternateSigs[0] = _sign(pk2, digest);
+        alternateSigs[1] = _sign(pk3, digest);
+        c.signatures = alternateSigs;
+
+        bytes32 structHash =
+            _consolidationStructHash(c.withdrawalAddress, c.sourcePubkeys, c.targetPubkeys, c.totalAmount);
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.ConsolidationAlreadyProcessed.selector, structHash)
+        );
+        _validateConsolidationAsRiver(c);
+    }
+
+    function testRevert_overlappingSourceDistinctRequestCannotReuseFirstRequestSignatures() public {
+        address user = address(0xCAFE);
+        bytes memory sourceA = _pubkey(800);
+        bytes memory sourceB = _pubkey(801);
+
+        bytes[] memory firstSources = new bytes[](1);
+        firstSources[0] = sourceA;
+        bytes[] memory firstTargets = new bytes[](1);
+        firstTargets[0] = _pubkey(900);
+        uint256 firstAmount = 32 ether;
+        bytes32 firstDigest = _consolidationDigest(user, firstSources, firstTargets, firstAmount);
+        bytes[] memory firstSigs = new bytes[](2);
+        firstSigs[0] = _sign(pk1, firstDigest);
+        firstSigs[1] = _sign(pk2, firstDigest);
+
+        bytes[] memory secondSources = new bytes[](2);
+        secondSources[0] = sourceA;
+        secondSources[1] = sourceB;
+        bytes[] memory secondTargets = new bytes[](2);
+        secondTargets[0] = _pubkey(901);
+        secondTargets[1] = _pubkey(902);
+        uint256 secondAmount = 64 ether;
+
+        _validateConsolidationAsRiver(
+            IAttestationVerifierV1.ConsolidationObject({
+                withdrawalAddress: user,
+                sourcePubkeys: firstSources,
+                targetPubkeys: firstTargets,
+                totalAmount: firstAmount,
+                signatures: firstSigs
+            })
+        );
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.InsufficientConsolidationAttestations.selector, 0, 2)
+        );
+        _validateConsolidationAsRiver(
+            IAttestationVerifierV1.ConsolidationObject({
+                withdrawalAddress: user,
+                sourcePubkeys: secondSources,
+                targetPubkeys: secondTargets,
+                totalAmount: secondAmount,
+                signatures: firstSigs
+            })
+        );
     }
 
     function testValidateConsolidation_emitsConsolidationProcessed() public {
