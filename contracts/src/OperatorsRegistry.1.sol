@@ -227,6 +227,11 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                 revert InactiveOperator(operatorIndex);
             }
 
+            uint256 exitedETH = OperatorsV3.getExitedETH(operatorIndex);
+            if (operator.requestedExits > exitedETH) {
+                emit FundedOperatorWithPendingExits(operatorIndex, operator.requestedExits, exitedETH);
+            }
+
             // Defense-in-depth: enforce the per-class pubkey/amount alignment that
             // `LibFundingDeltas.build` already guarantees, so the registry never emits an event
             // whose pubkeys and amounts disagree on length (which would silently break indexers).

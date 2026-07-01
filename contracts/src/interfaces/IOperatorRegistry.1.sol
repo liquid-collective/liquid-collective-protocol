@@ -149,6 +149,12 @@ interface IOperatorsRegistryV1 {
     /// @param amounts The per-key top-up amount in ETH(wei), aligned 1:1 with pubkeys
     event TopUps(uint256 indexed index, bytes[] pubkeys, uint256[] amounts);
 
+    /// @notice An operator was funded while it still had unfulfilled exit requests.
+    /// @param index The operator index
+    /// @param requestedExits The cumulative amount of exits requested for the operator
+    /// @param exitedETH The cumulative amount of exited ETH(wei) reported for the operator
+    event FundedOperatorWithPendingExits(uint256 indexed index, uint256 requestedExits, uint256 exitedETH);
+
     /// @notice The calling operator is inactive
     /// @param index The operator index
     error InactiveOperator(uint256 index);
