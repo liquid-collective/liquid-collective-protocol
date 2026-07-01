@@ -1567,6 +1567,11 @@ contract OperatorsRegistryV1FlattenAndAllocationTests is OperatorAllocationTestB
         deltas[0].depositAmounts = new uint256[](1);
         deltas[0].depositAmounts[0] = 32 ether;
 
+        // Funding is allowed, but the unfulfilled exit requests are surfaced via an event
+        // (requestedExits = 5*32 ether, exitedETH = 0) instead of reverting.
+        vm.expectEmit(true, false, false, true);
+        emit IOperatorsRegistryV1.FundedOperatorWithPendingExits(0, 5 * 32 ether, 0);
+
         vm.prank(river);
         operatorsRegistry.incrementFundedETH(deltas);
 
