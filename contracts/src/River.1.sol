@@ -211,16 +211,26 @@ contract RiverV1 is
     }
 
     /// @inheritdoc IRiverV1
-    /// @dev Thin stub: the slashing-containment gate runs here, then the body (allowlist, LsETH transfer
-    ///      to River, redeem-manager call) runs in the RiverConfigManager via delegatecall.
-    function requestRedeem(uint256, address) external whenNotSlashingContainmentMode returns (uint32) {
-        return abi.decode(RiverConfigManagerAddress.get().functionDelegateCall(msg.data), (uint32));
+    function requestRedeem(uint256 _lsETHAmount, address _recipient)
+        external
+        whenNotSlashingContainmentMode
+        returns (uint32 _redeemRequestId)
+    {
+        IAllowlistV1(AllowlistAddress.get()).onlyAllowed(msg.sender, LibAllowlistMasks.REDEEM_MASK);
+        if (IAllowlistV1(AllowlistAddress.get()).isDenied(_recipient)) {
+            revert IRedeemManagerV1.RecipientIsDenied();
+        }
+        _transfer(msg.sender, address(this), _lsETHAmount);
+        return IRedeemManagerV1(RedeemManagerAddress.get()).requestRedeem(_lsETHAmount, _recipient, msg.sender);
     }
 
     /// @inheritdoc IRiverV1
-    /// @dev Thin stub forwarding to the RiverConfigManager via delegatecall (runs in River's storage context).
-    function claimRedeemRequests(uint32[] calldata, uint32[] calldata) external returns (uint8[] memory) {
-        return abi.decode(RiverConfigManagerAddress.get().functionDelegateCall(msg.data), (uint8[]));
+    function claimRedeemRequests(uint32[] calldata _redeemRequestIds, uint32[] calldata _withdrawalEventIds)
+        external
+        returns (uint8[] memory claimStatuses)
+    {
+        return IRedeemManagerV1(RedeemManagerAddress.get())
+            .claimRedeemRequests(_redeemRequestIds, _withdrawalEventIds, true, type(uint16).max);
     }
 
     /// @inheritdoc IRiverV1

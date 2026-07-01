@@ -66,20 +66,6 @@ interface IRiverConfigManagerV1 {
         external
         payable;
 
-    /// @notice Requests a redeem against the redeem manager, moving the caller's LsETH to River
-    /// @param _lsETHAmount The amount of LsETH to redeem
-    /// @param _recipient The address that will own the redeem request
-    /// @return _redeemRequestId The id of the created redeem request
-    function requestRedeem(uint256 _lsETHAmount, address _recipient) external returns (uint32 _redeemRequestId);
-
-    /// @notice Claims redeem requests against the redeem manager
-    /// @param _redeemRequestIds The redeem request ids
-    /// @param _withdrawalEventIds The withdrawal event ids
-    /// @return claimStatuses The per-request claim statuses
-    function claimRedeemRequests(uint32[] calldata _redeemRequestIds, uint32[] calldata _withdrawalEventIds)
-        external
-        returns (uint8[] memory claimStatuses);
-
     /// @notice Performs the V3 accounting migration (Pectra 0x01→0x02). Idempotent storage rebuild from
     ///         the last stored report and deposited-validator count; invoked once via delegatecall from
     ///         River's initRiverV1_3.

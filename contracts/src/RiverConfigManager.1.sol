@@ -4,19 +4,11 @@ pragma solidity 0.8.34;
 import "./interfaces/IRiver.1.sol";
 import "./interfaces/IRiverConfigManager.1.sol";
 import "./interfaces/IWithdraw.1.sol";
-import "./interfaces/IRedeemManager.1.sol";
-import "./interfaces/IAllowlist.1.sol";
 import "./interfaces/IAttestationVerifierPectraMigration.1.sol";
 import "./interfaces/components/IConsensusLayerDepositManager.1.sol";
 import "./interfaces/components/IOracleManager.1.sol";
-import "./interfaces/components/ISharesManager.1.sol";
-
-import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 
 import "./libraries/LibSanitize.sol";
-import "./libraries/LibAllowlistMasks.sol";
-
-import "./state/river/SharesPerOwner.sol";
 
 import "./state/river/GlobalFee.sol";
 import "./state/river/MetadataURI.sol";
@@ -29,7 +21,6 @@ import "./state/river/ELFeeRecipientAddress.sol";
 import "./state/river/DailyCommittableLimits.sol";
 import "./state/river/KeeperAddress.sol";
 import "./state/river/WithdrawalCredentials.sol";
-import "./state/river/RedeemManagerAddress.sol";
 import "./state/river/LastConsensusLayerReport.sol";
 import "./state/river/DepositedValidatorCount.sol";
 import "./state/river/TotalDepositedETH.sol";
@@ -136,31 +127,6 @@ contract RiverConfigManagerV1 is IRiverConfigManagerV1 {
             requests, maxFeePerConsolidation, excessFeeRecipient
         );
         emit IRiverV1.PectraConsolidationRequested(requests, maxFeePerConsolidation, excessFeeRecipient, msg.value);
-    }
-
-    /// @inheritdoc IRiverConfigManagerV1
-    function requestRedeem(uint256 _lsETHAmount, address _recipient) external returns (uint32 _redeemRequestId) {
-        IAllowlistV1 allowlist = IAllowlistV1(AllowlistAddress.get());
-        allowlist.onlyAllowed(msg.sender, LibAllowlistMasks.REDEEM_MASK);
-        if (allowlist.isDenied(_recipient)) {
-            revert IRedeemManagerV1.RecipientIsDenied();
-        }
-        // Replicates SharesManagerV1._transfer(msg.sender, address(this), _lsETHAmount) — runs in River's
-        // storage context, so this moves River's LsETH to River pending the redeem. Underflow on an
-        // insufficient balance reverts identically to the inherited path.
-        SharesPerOwner.set(msg.sender, SharesPerOwner.get(msg.sender) - _lsETHAmount);
-        SharesPerOwner.set(address(this), SharesPerOwner.get(address(this)) + _lsETHAmount);
-        emit IERC20.Transfer(msg.sender, address(this), _lsETHAmount);
-        return IRedeemManagerV1(RedeemManagerAddress.get()).requestRedeem(_lsETHAmount, _recipient, msg.sender);
-    }
-
-    /// @inheritdoc IRiverConfigManagerV1
-    function claimRedeemRequests(uint32[] calldata _redeemRequestIds, uint32[] calldata _withdrawalEventIds)
-        external
-        returns (uint8[] memory claimStatuses)
-    {
-        return IRedeemManagerV1(RedeemManagerAddress.get())
-            .claimRedeemRequests(_redeemRequestIds, _withdrawalEventIds, true, type(uint16).max);
     }
 
     /// @inheritdoc IRiverConfigManagerV1
