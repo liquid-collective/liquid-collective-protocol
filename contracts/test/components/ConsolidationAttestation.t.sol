@@ -312,7 +312,7 @@ contract ConsolidationAttestationTest is Test {
         dep[0] = depositAttester;
         address[] memory cc = new address[](1);
         cc[0] = attester1;
-        vm.expectRevert();
+        vm.expectRevert(abi.encodeWithSignature("InvalidInitialization(uint256,uint256)", 0, 1));
         verifier.initAttestationVerifierV1(address(river), depositBufferStub, dep, 1, bytes4(0), cc, 1);
     }
 
