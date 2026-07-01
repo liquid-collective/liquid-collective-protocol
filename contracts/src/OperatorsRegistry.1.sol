@@ -236,8 +236,10 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             if (!operator.active) {
                 revert InactiveOperator(operatorIndex);
             }
-            if (operator.requestedExits > OperatorsV3.getExitedETH(operatorIndex)) {
-                revert OperatorIgnoredExitRequests(operatorIndex);
+
+            uint256 exitedETH = OperatorsV3.getExitedETH(operatorIndex);
+            if (operator.requestedExits > exitedETH) {
+                emit FundedOperatorWithPendingExits(operatorIndex, operator.requestedExits, exitedETH);
             }
 
             // Defense-in-depth: enforce the per-class pubkey/amount alignment that

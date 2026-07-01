@@ -1246,38 +1246,28 @@ contract RiverV1Tests is RiverV1TestBase {
         assertEq(river.getTotalDepositedETH(), 0);
     }
 
-    // Reverts when the attested batch targets an operator whose requestedExits exceeds the
-    // recorded exited ETH (an unfulfilled exit request). Fires inside
-    // OperatorsRegistry.incrementFundedETH (LibFundingDeltas.build is pure aggregation and does
-    // not enforce operator-status invariants).
-    function testDepositRevertsForOperatorWithPendingExitRequests() public {
+    function testDepositSucceedsForOperatorWithPendingExitRequests() public {
         vm.deal(bob, 1000 ether);
         _allow(bob);
         vm.prank(bob);
         river.deposit{value: 1000 ether}();
         river.debug_moveDepositToCommitted();
 
-        // No exitedETH recorded for this operator yet, so any non-zero requestedExits trips the check.
+        // No exitedETH is recorded for this operator yet, so the exit request is still pending.
         operatorsRegistry.sudoSetRequestedExits(operatorOneIndex, 32 ether);
 
         (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _buildSingleDepositArgs(operatorOneIndex);
 
         vm.prank(river.getKeeper());
-        vm.expectRevert(
-            abi.encodeWithSelector(IOperatorsRegistryV1.OperatorIgnoredExitRequests.selector, operatorOneIndex)
-        );
         river.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
 
-        assertEq(river.getTotalDepositedETH(), 0);
+        assertEq(river.getTotalDepositedETH(), 32 ether);
+        assertEq(operatorsRegistry.getOperator(operatorOneIndex).funded, 32 ether);
+        assertEq(operatorsRegistry.getOperator(operatorOneIndex).requestedExits, 32 ether);
     }
 
-    // Positive regression test for the storage-context fix in commit 83eb06f. The registry's
-    // pending-exit check reads `operator.requestedExits` and `OperatorsV3.getExitedETH(index)`
-    // against the registry's own storage. Pre-fix, a buggy cross-contract read returned 0 from
-    // River's storage, which would have caused this case (requestedExits == exitedETH == 32 ether)
-    // to revert OperatorIgnoredExitRequests. Post-fix, the exit is correctly seen as fulfilled
-    // and the deposit proceeds. Negative-only coverage (the two tests above) cannot regress this
-    // class of bug because the buggy read of 0 makes the negative case still pass.
+    // Deposits also continue to work when the operator's requested exits have already been
+    // fulfilled in the registry's exitedETH accounting.
     function testDepositSucceedsWhenExitsAreFulfilled() public {
         vm.deal(bob, 1000 ether);
         _allow(bob);
