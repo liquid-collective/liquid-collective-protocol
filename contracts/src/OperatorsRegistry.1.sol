@@ -412,7 +412,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             }
 
             (uint256 elExitAmount, uint256 feePaid) =
-                _requestSingleELETHExit(withdraw, _elAllocations[i], _maxFeePerWithdrawal);
+                _requestOperatorELETHExits(withdraw, _elAllocations[i], _maxFeePerWithdrawal);
             requestedETHAmount += elExitAmount;
             totalFeePaid += feePaid;
         }
@@ -424,7 +424,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     /// @notice Validates a single operator's EL exit allocation, reserves it, triggers the withdrawal and emits.
     /// @return elExitAmount The total reserved exit amount (wei) for this operator
     /// @return feePaid The withdrawal fee paid for this operator
-    function _requestELETHExits(
+    function _requestOperatorELETHExits(
         IWithdrawV1 _withdraw,
         ELExitETHAllocation calldata _operatorAllocation,
         uint256 _maxFeePerWithdrawal
