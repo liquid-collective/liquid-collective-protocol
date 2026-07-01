@@ -60,6 +60,10 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @param consolidator The new Consolidator
     event SetConsolidator(address indexed consolidator);
 
+    /// @notice The stored RiverDepositManager has been changed
+    /// @param riverDepositManager The new RiverDepositManager
+    event SetRiverDepositManager(address indexed riverDepositManager);
+
     /// @notice The stored Global Fee has been changed
     /// @param fee The new Global Fee
     event SetGlobalFee(uint256 fee);
@@ -221,6 +225,10 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @return The consolidator address
     function getConsolidator() external view returns (address);
 
+    /// @notice Retrieve the RiverDepositManager address
+    /// @return The RiverDepositManager address
+    function getRiverDepositManager() external view returns (address);
+
     /// @notice Retrieve the metadata uri string value
     /// @return The metadata uri string value
     function getMetadataURI() external view returns (string memory);
@@ -293,6 +301,10 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @notice Changes the keeper address
     /// @param _keeper New address for the keeper
     function setKeeper(address _keeper) external;
+
+    /// @notice Changes the RiverDepositManager address (delegatecall target for the consensus-layer deposit flow)
+    /// @param _newRiverDepositManager New address for the RiverDepositManager
+    function setRiverDepositManager(address _newRiverDepositManager) external;
 
     /// @notice Changes the coverage fund
     /// @param _newCoverageFund New address for the fund

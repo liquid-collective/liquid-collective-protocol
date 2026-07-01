@@ -145,7 +145,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         bytes32 depositDataBufferId,
         bytes32 depositRootHash,
         bytes[] calldata signatures
-    ) external {
+    ) external virtual {
         // 1. Keeper check
         if (msg.sender != KeeperAddress.get()) revert OnlyKeeper();
         // 2. Slashing containment mode check

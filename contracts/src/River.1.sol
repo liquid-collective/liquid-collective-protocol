@@ -13,6 +13,8 @@ import "./interfaces/IAttestationVerifier.1.sol";
 import "./interfaces/IAttestationVerifierPectraMigration.1.sol";
 import "./interfaces/IExternalConsolidationRecipientMapping.1.sol";
 
+import {Address} from "openzeppelin-contracts/contracts/utils/Address.sol";
+
 import "./components/SharesManager.1.sol";
 import "./components/OracleManager.1.sol";
 import "./components/UserDepositManager.1.sol";
@@ -41,6 +43,7 @@ import "./state/river/DepositedValidatorCount.sol";
 import "./state/river/LastConsensusLayerReport.sol";
 import "./state/river/ConsolidationCoverageFundAddress.sol";
 import "./state/river/ExternalConsolidationRecipientMappingAddress.sol";
+import "./state/river/RiverDepositManagerAddress.sol";
 import "./state/shared/OperatorsRegistryAddress.sol";
 import "./state/shared/AttestationVerifierAddress.sol";
 
@@ -57,6 +60,8 @@ contract RiverV1 is
     IProtocolVersion,
     IRiverV1
 {
+    using Address for address;
+
     /// @notice Modifier to check if the caller is the consolidator
     modifier onlyConsolidator() {
         if (msg.sender != ConsolidatorAddress.get()) {
@@ -196,6 +201,29 @@ contract RiverV1 is
 
     function setKeeper(address _keeper) external onlyAdmin {
         _setKeeper(_keeper);
+    }
+
+    /// @inheritdoc IRiverV1
+    function getRiverDepositManager() external view returns (address) {
+        return RiverDepositManagerAddress.get();
+    }
+
+    /// @inheritdoc IRiverV1
+    function setRiverDepositManager(address _newRiverDepositManager) external onlyAdmin {
+        RiverDepositManagerAddress.set(_newRiverDepositManager);
+        emit SetRiverDepositManager(_newRiverDepositManager);
+    }
+
+    /// @inheritdoc IConsensusLayerDepositManagerV1
+    /// @dev Thin stub: forwards raw calldata to the RiverDepositManager via delegatecall so the body runs
+    ///      in River's storage context (moving River's ETH and updating River's balances/accounting). The
+    ///      body lives in RiverDepositManagerV1 to keep River's deployed bytecode under EIP-170; it enforces
+    ///      the keeper, slashing-containment and withdrawal-credentials checks itself.
+    function depositToConsensusLayerWithAttestation(bytes32, bytes32, bytes[] calldata)
+        external
+        override(ConsensusLayerDepositManagerV1, IConsensusLayerDepositManagerV1)
+    {
+        RiverDepositManagerAddress.get().functionDelegateCall(msg.data);
     }
 
     /// @inheritdoc IRiverV1

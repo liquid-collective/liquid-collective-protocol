@@ -16,6 +16,7 @@ import "../src/libraries/BLS12_381.sol";
 import "../src/Allowlist.1.sol";
 import "../src/AttestationVerifier.1.sol";
 import "../src/River.1.sol";
+import "../src/RiverDepositManager.1.sol";
 import "../src/state/river/LastConsensusLayerReport.sol";
 import "../src/interfaces/components/IOracleManager.1.sol";
 import "../src/interfaces/IRiver.1.sol";
@@ -118,6 +119,7 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
 
     MockDepositDataBuffer internal depositBuffer;
     AttestationVerifierV1 internal attestationVerifier;
+    RiverDepositManagerV1 internal riverDepositManager;
 
     uint256 internal consolidationCommitteeAttesterPk1 = 0xC1;
     uint256 internal consolidationCommitteeAttesterPk2 = 0xC2;
@@ -244,6 +246,15 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
         LibImplementationUnbricker.unbrick(vm, address(withdraw));
         river = new RiverV1ForceCommittable();
         LibImplementationUnbricker.unbrick(vm, address(river));
+        // Deploy the RiverDepositManager (delegatecall target for the consensus-layer deposit flow) and
+        // wire its address into River's storage directly, mirroring the attestationVerifier wiring below.
+        riverDepositManager = new RiverDepositManagerV1();
+        LibImplementationUnbricker.unbrick(vm, address(riverDepositManager));
+        vm.store(
+            address(river),
+            bytes32(uint256(keccak256("river.state.riverDepositManagerAddress")) - 1),
+            bytes32(uint256(uint160(address(riverDepositManager))))
+        );
         operatorsRegistry = new OperatorsRegistryWithOverridesV1();
         LibImplementationUnbricker.unbrick(vm, address(operatorsRegistry));
         depositBuffer = new MockDepositDataBuffer();
