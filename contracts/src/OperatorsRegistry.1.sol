@@ -422,7 +422,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @notice Validates a single operator's EL exit allocation, reserves it, triggers the withdrawal and emits.
-    ///      otherwise hits "stack too deep" when compiled without `viaIR`, e.g. under `forge coverage`).
     /// @return elExitAmount The total reserved exit amount (wei) for this operator
     /// @return feePaid The withdrawal fee paid for this operator
     function _requestSingleELETHExit(
