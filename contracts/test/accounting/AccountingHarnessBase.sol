@@ -8,6 +8,7 @@ import "../utils/LibImplementationUnbricker.sol";
 import "../mocks/DepositContractMock.sol";
 
 import "../../src/River.1.sol";
+import "../../src/RiverDepositManager.1.sol";
 import "../../src/AttestationVerifier.1.sol";
 import "../utils/RiverV1WithLegacyInit.sol";
 import "../../src/Oracle.1.sol";
@@ -105,6 +106,7 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
     IDepositContract internal depositContract;
     AccountingMockDepositDataBuffer internal depositBuffer;
     AttestationVerifierV1 internal attestationVerifier;
+    RiverDepositManagerV1 internal riverDepositManager;
     ExternalConsolidationRecipientMappingV1 internal externalConsolidationRecipientMapping;
 
     /// @dev Monotonic counter mixed into pubkey/signature generation in `_makeDepositObjects`.
@@ -266,6 +268,10 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
         vm.startPrank(admin);
         river.setCoverageFund(address(coverageFund));
         river.setKeeper(keeper);
+        // Deploy + wire the RiverDepositManager (delegatecall target for the consensus-layer deposit flow).
+        riverDepositManager = new RiverDepositManagerV1();
+        LibImplementationUnbricker.unbrick(vm, address(riverDepositManager));
+        river.setRiverDepositManager(address(riverDepositManager));
         oracle.addMember(oracleMember, 1);
         operatorOneIndex = operatorsRegistry.addOperator("OperatorOne", operatorOneAddr);
         operatorTwoIndex = operatorsRegistry.addOperator("OperatorTwo", operatorTwoAddr);
