@@ -2,6 +2,31 @@
 
 pragma solidity 0.8.34;
 
+// ─────────────────────────────────────────────────────────────────────────────
+// COVERAGE NOTE (post LibOracleReporting extraction)
+//
+// `OracleManagerV1.setConsensusLayerData` is now a thin stub that DELEGATECALLs `LibOracleReporting`, whose
+// report orchestration self-calls River's `ISharesManagerV1(address(this)).totalUnderlyingSupply()/totalSupply()/
+// underlyingBalanceFromShares()/sharesFromUnderlyingBalance()` and real collaborators (Withdraw, ELFeeRecipient,
+// RedeemManager, CoverageFund, OperatorsRegistry). The lightweight mock below cannot satisfy those, so the FULL
+// report-orchestration path is no longer testable here. This file now keeps only what does NOT touch that seam:
+//   - access control + setters (setOracle / setCLSpec / setReportBounds, authorized + unauthorized)
+//   - getters + epoch/frame math (getOracle, getCLSpec, getReportBounds, getCurrentFrame, getCurrentEpochId,
+//     getFrameFirstEpochId, getExpectedEpochId, isValidEpoch, getLastCompletedEpochId, getCLValidator*,
+//     getLastConsensusLayerReport)
+//   - the EARLY bound-check reverts inside setConsensusLayerData that fire in LibOracleReporting BEFORE the first
+//     self-call (validator-count decrease, totalDepositedActivatedETH increase-over-in-flight / decrease,
+//     totalExternalConsolidationsAmountReported decrease).
+//
+// DROPPED report-orchestration tests and their integration coverage in contracts/test/River.1.t.sol:
+//   - testFuzzedReporting                                    -> RiverV1TestsReport_HEAVY_FUZZING.testReportingFuzzing
+//       (7 scenarios: nothing pulled / EL fees / coverage / exceeding buffer / half EL+coverage / rebalancing /
+//        slashing containment) + testReportingSuccess_AssertCommittedAmountAfter{Skimming,ELFees,Coverage,MultiPulling}
+//   - consolidation-buffer effect tests                      -> RiverV1CoverageTests.testPullConsolidationCoverageFunds*
+//       (HappyPath / Partial / ZeroBalance / ZeroAddress). See the per-test mapping and remaining COVERAGE GAPs
+//       in the note at the end of contract OracleManagerV1CoverageTests.
+// ─────────────────────────────────────────────────────────────────────────────
+
 import "forge-std/Test.sol";
 
 import "../utils/UserFactory.sol";
@@ -13,6 +38,18 @@ import "../../src/state/shared/AdministratorAddress.sol";
 import "../../src/state/river/DepositedValidatorCount.sol";
 import "../../src/state/river/ConsolidationBuffer.sol";
 
+/// @dev Lightweight harness over `OracleManagerV1` used to exercise the parts of the base contract that do NOT
+///      depend on the full report orchestration: access control, setters, getters and epoch/bounds math, plus
+///      the early bound-check reverts inside `setConsensusLayerData` (validator-count / exited / skimmed /
+///      totalDepositedActivatedETH / consolidations-amount) that fire in `LibOracleReporting` BEFORE any
+///      `ISharesManagerV1(address(this))` self-call.
+///
+///      NOTE: `setConsensusLayerData` now DELEGATECALLs `LibOracleReporting`, which self-calls River's
+///      `totalUnderlyingSupply()/totalSupply()/...` and real collaborators. Those cannot be satisfied by this
+///      bare mock, so the full report-orchestration path (fund pulls, rewards, exit requests, redeem-manager
+///      reporting, commit-to-deposit, consolidation-buffer reduction) is NOT tested here. Those behaviors are
+///      covered by the real-River integration tests in contracts/test/River.1.t.sol (see the file header note
+///      below for the exact mapping).
 contract OracleManagerV1ExposeInitializer is OracleManagerV1 {
     event Internal_SetConsolidationBuffer(uint256 oldValue, uint256 newValue);
 
@@ -45,6 +82,16 @@ contract OracleManagerV1ExposeInitializer is OracleManagerV1 {
         return AdministratorAddress.get();
     }
 
+    function _assetBalance() internal view override returns (uint256 result) {
+        // Mirror RiverV1._assetBalance by including the consolidation buffer in the total underlying.
+        result = (DepositedValidatorCount.get() - LastConsensusLayerReport.get().validatorsCount) * 32 ether
+            + LastConsensusLayerReport.get().validatorsBalance + ConsolidationBuffer.get();
+    }
+
+    function debug_getTotalUnderlyingBalance() external view returns (uint256) {
+        return _assetBalance();
+    }
+
     constructor(
         address oracle,
         address admin,
@@ -68,155 +115,6 @@ contract OracleManagerV1ExposeInitializer is OracleManagerV1 {
             relativeLowerBound
         );
     }
-
-    // internal hooks
-
-    uint256 amountToRedeem;
-    uint256 amountToDeposit;
-
-    event Internal_OnEarnings(uint256 amount);
-
-    function _onEarnings(uint256 amount) internal override {
-        emit Internal_OnEarnings(amount);
-    }
-
-    uint256 public elFeesAvailable;
-
-    function sudoSetElFeesAvailable(uint256 newValue) external {
-        elFeesAvailable = newValue;
-    }
-
-    event Internal_PullELFees(uint256 _max, uint256 _returned);
-
-    function _pullELFees(uint256 _max) internal override returns (uint256 result) {
-        result = LibUint256.min(elFeesAvailable, _max);
-        amountToDeposit += result;
-        emit Internal_PullELFees(_max, result);
-    }
-
-    uint256 public coverageFundAvailable;
-
-    function sudoSetCoverageFundAvailable(uint256 newValue) external {
-        coverageFundAvailable = newValue;
-    }
-
-    event Internal_PullCoverageFunds(uint256 _max, uint256 _returned);
-
-    function _pullCoverageFunds(uint256 _max) internal override returns (uint256 result) {
-        result = LibUint256.min(coverageFundAvailable, _max);
-        amountToDeposit += result;
-        emit Internal_PullCoverageFunds(_max, result);
-    }
-
-    uint256 public consolidationCoverageFundAvailable;
-
-    function sudoSetConsolidationCoverageFundAvailable(uint256 newValue) external {
-        consolidationCoverageFundAvailable = newValue;
-    }
-
-    event Internal_PullConsolidationCoverageFunds(uint256 _max, uint256 _returned);
-
-    function _pullConsolidationCoverageFunds(uint256 _max) internal override returns (uint256 result) {
-        result = LibUint256.min(consolidationCoverageFundAvailable, _max);
-        amountToDeposit += result;
-        emit Internal_PullConsolidationCoverageFunds(_max, result);
-    }
-
-    function _assetBalance() internal view override returns (uint256 result) {
-        // Mirror RiverV1._assetBalance by including the consolidation buffer in the total underlying.
-        result = (DepositedValidatorCount.get() - LastConsensusLayerReport.get().validatorsCount) * 32 ether
-            + LastConsensusLayerReport.get().validatorsBalance + amountToDeposit + amountToRedeem
-            + ConsolidationBuffer.get();
-    }
-
-    function debug_getTotalUnderlyingBalance() external view returns (uint256) {
-        return _assetBalance();
-    }
-
-    uint256 public redeemDemand;
-
-    function sudoSetRedeemDemand(uint256 newValue) external {
-        redeemDemand = newValue;
-    }
-
-    event Internal_ReportWithdrawToRedeemManager(uint256 currentAmountToRedeem);
-
-    function _reportWithdrawToRedeemManager() internal override {
-        emit Internal_ReportWithdrawToRedeemManager(amountToRedeem);
-        uint256 amountToUse = LibUint256.min(amountToRedeem, redeemDemand);
-        amountToRedeem -= amountToUse;
-        redeemDemand -= amountToUse;
-    }
-
-    event Internal_PullCLFunds(uint256 skimmedEthAmount, uint256 exitedEthAmount);
-
-    function _pullCLFunds(uint256 skimmedEthAmount, uint256 exitedEthAmount) internal override {
-        amountToDeposit += skimmedEthAmount;
-        amountToRedeem += exitedEthAmount;
-        emit Internal_PullCLFunds(skimmedEthAmount, exitedEthAmount);
-    }
-
-    uint256 public exceedingEth;
-
-    function sudoSetExceedingEth(uint256 newValue) external {
-        exceedingEth = newValue;
-    }
-
-    event Internal_PullRedeemManagerExceedingEth(uint256 max, uint256 result);
-
-    function _pullRedeemManagerExceedingEth(uint256 max) internal override returns (uint256 result) {
-        result = LibUint256.min(max, exceedingEth);
-        emit Internal_PullRedeemManagerExceedingEth(max, result);
-        amountToDeposit += result;
-    }
-
-    event Internal_SetReportedExitedETH(uint256[] exitedETHPerOperator);
-    event Internal_ReportCLETH(uint256[] activeCLETHPerOperator);
-
-    event Internal_RequestExitsBasedOnRedeemDemandAfterRebalancings(
-        uint256 exitingBalance, bool depositToRedeemRebalancingAllowed, uint256 exitCountRequest
-    );
-
-    function _requestExitsBasedOnRedeemDemandAfterRebalancings(
-        uint256 exitingBalance,
-        uint256[] memory exitedETHPerOperator,
-        uint256 totalAvailableCLETH,
-        bool depositToRedeemRebalancingAllowed,
-        bool slashingContainmentModeEnabled
-    ) internal override {
-        uint256 exitCount = 0;
-
-        emit Internal_SetReportedExitedETH(exitedETHPerOperator);
-
-        if (slashingContainmentModeEnabled) {
-            return;
-        }
-
-        if (redeemDemand > amountToRedeem + exitingBalance) {
-            exitCount = LibUint256.ceil((redeemDemand - (amountToRedeem + exitingBalance)), 32 ether);
-        }
-        emit Internal_RequestExitsBasedOnRedeemDemandAfterRebalancings(
-            exitingBalance, depositToRedeemRebalancingAllowed, exitCount
-        );
-    }
-
-    function _reportCLETH(uint256[] memory _activeCLETH) internal override {
-        emit Internal_ReportCLETH(_activeCLETH);
-    }
-
-    event Internal_CommitBalanceToDeposit(uint256 period, uint256 depositBalance);
-
-    function _commitBalanceToDeposit(uint256 period, bool slashingContainmentModeEnabled) internal override {
-        emit Internal_CommitBalanceToDeposit(period, amountToDeposit);
-    }
-
-    event Internal_SkimExcessBalanceToRedeem(uint256 balanceToDeposit, uint256 balanceToRedeem);
-
-    function _skimExcessBalanceToRedeem() internal override {
-        emit Internal_SkimExcessBalanceToRedeem(amountToDeposit, amountToRedeem);
-        amountToDeposit += amountToRedeem;
-        amountToRedeem = 0;
-    }
 }
 
 contract OracleManagerV1Tests is Test {
@@ -236,19 +134,6 @@ contract OracleManagerV1Tests is Test {
     uint64 internal constant epochsToAssumedFinality = 4;
     uint256 internal constant annualAprUpperBound = 1000;
     uint256 internal constant relativeLowerBound = 250;
-
-    event Internal_OnEarnings(uint256 amount);
-    event Internal_PullELFees(uint256 _max, uint256 _returned);
-    event Internal_PullCoverageFunds(uint256 _max, uint256 _returned);
-    event Internal_ReportWithdrawToRedeemManager(uint256 currentAmountToRedeem);
-    event Internal_PullCLFunds(uint256 skimmedEthAmount, uint256 exitedEthAmount);
-    event Internal_PullRedeemManagerExceedingEth(uint256 max, uint256 result);
-    event Internal_RequestExitsBasedOnRedeemDemandAfterRebalancings(
-        uint256 exitingBalance, bool depositToRedeemRebalancingAllowed, uint256 exitCountRequest
-    );
-    event Internal_CommitBalanceToDeposit(uint256 period, uint256 depositBalance);
-    event Internal_SkimExcessBalanceToRedeem(uint256 balanceToDeposit, uint256 balanceToRedeem);
-    event Internal_SetReportedExitedETH(uint256[] exitedETHPerOperator);
 
     function setUp() public {
         admin = makeAddr("admin");
@@ -289,128 +174,12 @@ contract OracleManagerV1Tests is Test {
         return uint256(keccak256(abi.encode(_salt)));
     }
 
-    struct ReportingVars {
-        IOracleManagerV1.ConsensusLayerReport clr;
-        CLSpec.CLSpecStruct cls;
-        ReportBounds.ReportBoundsStruct rb;
-        uint256 depositedValidatorCount;
-        uint256 reportedValidatorCount;
-        uint256 currentTotalUnderlyingSupply;
-        uint256 maxIncrease;
-        uint256 elFeesAvailable;
-        uint256 exceedingEth;
-        uint256 coverageFundAvailable;
-    }
-
-    function testFuzzedReporting(uint256 _salt) external {
-        ReportingVars memory v;
-        OracleManagerV1ExposeInitializer om = OracleManagerV1ExposeInitializer(address(oracleManager));
-        v.cls = om.getCLSpec();
-        v.rb = om.getReportBounds();
-
-        {
-            // setup
-
-            v.depositedValidatorCount = bound(_salt, 1, type(uint16).max);
-            om.supersedeDepositedValidatorCount(v.depositedValidatorCount);
-
-            _salt = _next(_salt);
-
-            v.reportedValidatorCount = bound(_salt, 0, v.depositedValidatorCount);
-            om.supersedeReportedValidatorCount(v.reportedValidatorCount);
-
-            _salt = _next(_salt);
-
-            uint256 reportedValidatorBalanceSum = v.reportedValidatorCount * 32 ether; // no rewards
-            om.supersedeReportedBalanceSum(reportedValidatorBalanceSum);
-
-            assertEq(om.debug_getTotalUnderlyingBalance(), v.depositedValidatorCount * 32 ether);
-        }
-
-        v.currentTotalUnderlyingSupply = om.debug_getTotalUnderlyingBalance();
-
-        v.clr.epoch = bound(_salt, 1, 1_000_000) * epochsPerFrame;
-        vm.warp(genesisTime + (v.clr.epoch + epochsToAssumedFinality) * v.cls.slotsPerEpoch * v.cls.secondsPerSlot);
-
-        v.maxIncrease =
-            debug_maxIncrease(v.rb, v.currentTotalUnderlyingSupply, debug_timeBetweenEpochs(v.cls, 0, v.clr.epoch));
-
-        _salt = _next(_salt);
-
-        uint256 stoppedValidatorCount = bound(_salt, 0, v.depositedValidatorCount);
-        _salt = _next(_salt);
-        uint256 exitedCount = bound(_salt, 0, stoppedValidatorCount);
-        _salt = _next(_salt);
-
-        v.clr.validatorsCount = uint32(v.depositedValidatorCount);
-        v.clr.validatorsBalance = (v.depositedValidatorCount - exitedCount) * 32 ether;
-        v.clr.validatorsSkimmedBalance = bound(_salt, 0, v.maxIncrease);
-        v.maxIncrease -= v.clr.validatorsSkimmedBalance;
-        _salt = _next(_salt);
-        om.sudoSetElFeesAvailable(bound(_salt, 0, v.maxIncrease));
-        _salt = _next(_salt);
-        om.sudoSetExceedingEth(bound(_salt, 0, v.maxIncrease - om.elFeesAvailable()));
-        _salt = _next(_salt);
-        om.sudoSetCoverageFundAvailable(bound(_salt, 0, v.maxIncrease - om.elFeesAvailable() - om.exceedingEth()));
-
-        v.clr.validatorsExitedBalance = exitedCount * 32 ether;
-        v.clr.validatorsExitingBalance = (stoppedValidatorCount - exitedCount) * 32 ether;
-        v.clr.exitedETHPerOperator = new uint256[](1);
-        v.clr.rebalanceDepositToRedeemMode = false;
-        v.clr.slashingContainmentMode = false;
-
-        v.elFeesAvailable = om.elFeesAvailable();
-        v.exceedingEth = om.exceedingEth();
-        v.coverageFundAvailable = om.coverageFundAvailable();
-
-        {
-            (uint256 epochStart, uint256 timeStart, uint256 timeEnd) = om.getCurrentFrame();
-
-            assertEq(epochStart, v.clr.epoch);
-            assertEq(timeStart, v.clr.epoch * v.cls.slotsPerEpoch * v.cls.secondsPerSlot);
-            assertEq(timeEnd, (v.clr.epoch + v.cls.epochsPerFrame) * v.cls.slotsPerEpoch * v.cls.secondsPerSlot - 1);
-        }
-
-        assertEq(om.getCurrentEpochId(), v.clr.epoch + epochsToAssumedFinality);
-        assertEq(om.getFrameFirstEpochId(v.clr.epoch), v.clr.epoch);
-
-        if (v.clr.validatorsSkimmedBalance + v.clr.validatorsExitedBalance > 0) {
-            vm.expectEmit(true, true, true, true);
-            emit Internal_PullCLFunds(v.clr.validatorsSkimmedBalance, v.clr.validatorsExitedBalance);
-        }
-        vm.expectEmit(true, true, true, true);
-        emit Internal_PullELFees(v.maxIncrease, v.elFeesAvailable);
-        vm.expectEmit(true, true, true, true);
-        emit Internal_PullRedeemManagerExceedingEth(v.maxIncrease - v.elFeesAvailable, v.exceedingEth);
-        vm.expectEmit(true, true, true, true);
-        emit Internal_PullCoverageFunds(v.maxIncrease - v.elFeesAvailable - v.exceedingEth, v.coverageFundAvailable);
-        vm.expectEmit(true, true, true, true);
-        emit Internal_OnEarnings(v.elFeesAvailable + v.clr.validatorsSkimmedBalance);
-        vm.expectEmit(true, true, true, true);
-        emit Internal_SetReportedExitedETH(v.clr.exitedETHPerOperator);
-        vm.expectEmit(true, true, true, true);
-        emit Internal_RequestExitsBasedOnRedeemDemandAfterRebalancings(v.clr.validatorsExitingBalance, false, 0);
-        vm.expectEmit(true, true, true, true);
-        emit Internal_ReportWithdrawToRedeemManager(v.clr.validatorsExitedBalance);
-        vm.expectEmit(true, true, true, true);
-        emit Internal_SkimExcessBalanceToRedeem(
-            v.clr.validatorsSkimmedBalance
-                + LibUint256.min(v.maxIncrease, v.elFeesAvailable + v.exceedingEth + v.coverageFundAvailable),
-            v.clr.validatorsExitedBalance
-        );
-        vm.expectEmit(true, true, true, true);
-        emit Internal_CommitBalanceToDeposit(
-            debug_timeBetweenEpochs(v.cls, 0, v.clr.epoch),
-            v.clr.validatorsSkimmedBalance
-                + LibUint256.min(v.maxIncrease, v.elFeesAvailable + v.exceedingEth + v.coverageFundAvailable)
-                + v.clr.validatorsExitedBalance
-        );
-        vm.prank(oracle);
-        om.setConsensusLayerData(v.clr);
-
-        assertEq(om.getLastCompletedEpochId(), v.clr.epoch);
-        assertEq(om.getExpectedEpochId(), v.clr.epoch + v.cls.epochsPerFrame);
-    }
+    // NOTE: the former `testFuzzedReporting` fuzz test that drove the full report orchestration through the
+    // (now removed) fake handler seam has been deleted — the report path now runs in LibOracleReporting via
+    // DELEGATECALL and self-calls River's share math / collaborators, which this isolated mock cannot satisfy.
+    // Its coverage is provided by the real-River fuzz test `RiverV1TestsReport_HEAVY_FUZZING.testReportingFuzzing`
+    // (contracts/test/River.1.t.sol), which drives setConsensusLayerData across 7 pull/rebalance/slashing
+    // scenarios and asserts real balances, committed amounts, shares/fees and redeem-manager reporting.
 
     function debug_maxIncrease(ReportBounds.ReportBoundsStruct memory rb, uint256 _prevTotalEth, uint256 _timeElapsed)
         internal
@@ -528,11 +297,7 @@ contract OracleManagerV1Tests is Test {
 
 contract OracleManagerV1CoverageTests is OracleManagerV1Tests {
     bytes32 constant IN_FLIGHT_DEPOSIT_SLOT = bytes32(uint256(keccak256("river.state.inFlightDeposit")) - 1);
-    bytes32 constant CONSOLIDATION_BUFFER_SLOT = bytes32(uint256(keccak256("river.state.consolidationBuffer")) - 1);
     bytes32 constant LAST_CLR_BASE_SLOT = bytes32(uint256(keccak256("river.state.lastConsensusLayerReport")) - 1);
-
-    event Internal_PullConsolidationCoverageFunds(uint256 _max, uint256 _returned);
-    event Internal_SetConsolidationBuffer(uint256 oldValue, uint256 newValue);
 
     /// Asserts that getCLValidatorTotalBalance returns the value stored in the last consensus layer report.
     function testGetCLValidatorTotalBalance() public {
@@ -609,63 +374,6 @@ contract OracleManagerV1CoverageTests is OracleManagerV1Tests {
         oracleManager.setConsensusLayerData(clr);
     }
 
-    /// Asserts that with a non-zero ConsolidationBuffer, setConsensusLayerData calls _pullConsolidationCoverageFunds
-    /// with the buffer amount and pulls the available amount.
-    function testSetConsensusLayerDataConsolidationBufferNonZero() public {
-        OracleManagerV1ExposeInitializer om = OracleManagerV1ExposeInitializer(address(oracleManager));
-
-        uint256 buffer = 0.5 ether;
-        uint256 fundAvailable = 0.5 ether;
-        vm.store(address(oracleManager), CONSOLIDATION_BUFFER_SLOT, bytes32(buffer));
-        om.sudoSetConsolidationCoverageFundAvailable(fundAvailable);
-
-        uint256 epoch = epochsPerFrame;
-        vm.warp(genesisTime + (epoch + epochsToAssumedFinality) * slotsPerEpoch * secondsPerSlot);
-        IOracleManagerV1.ConsensusLayerReport memory clr;
-        clr.epoch = epoch;
-        clr.validatorsBalance = 0;
-        clr.validatorsExitedBalance = 0;
-        clr.validatorsSkimmedBalance = 0;
-        clr.totalDepositedActivatedETH = 0;
-        clr.exitedETHPerOperator = new uint256[](1);
-
-        vm.expectEmit(true, true, true, true, address(om));
-        emit Internal_PullConsolidationCoverageFunds(buffer, fundAvailable);
-
-        vm.prank(oracle);
-        oracleManager.setConsensusLayerData(clr);
-    }
-
-    /// Asserts that with a non-zero ConsolidationBuffer but zero pull, setConsensusLayerData skips _setConsolidationBuffer
-    /// (covers the false branch of `pulledConsolidationCoverageFunds > 0`).
-    function testSetConsensusLayerDataConsolidationBufferNoPull() public {
-        OracleManagerV1ExposeInitializer om = OracleManagerV1ExposeInitializer(address(oracleManager));
-
-        uint256 buffer = 0.5 ether;
-        vm.store(address(oracleManager), CONSOLIDATION_BUFFER_SLOT, bytes32(buffer));
-        // fundAvailable left at 0 - pull will return 0.
-
-        uint256 epoch = epochsPerFrame;
-        vm.warp(genesisTime + (epoch + epochsToAssumedFinality) * slotsPerEpoch * secondsPerSlot);
-        IOracleManagerV1.ConsensusLayerReport memory clr;
-        clr.epoch = epoch;
-        clr.validatorsBalance = 0;
-        clr.validatorsExitedBalance = 0;
-        clr.validatorsSkimmedBalance = 0;
-        clr.totalDepositedActivatedETH = 0;
-        clr.exitedETHPerOperator = new uint256[](1);
-
-        vm.expectEmit(true, true, true, true, address(om));
-        emit Internal_PullConsolidationCoverageFunds(buffer, 0);
-
-        vm.prank(oracle);
-        oracleManager.setConsensusLayerData(clr);
-
-        // Buffer slot must be untouched since the inner if (pulledConsolidationCoverageFunds > 0) was false,
-        // so _setConsolidationBuffer was never invoked for this report.
-        assertEq(uint256(vm.load(address(oracleManager), CONSOLIDATION_BUFFER_SLOT)), buffer);
-    }
-
     /// Asserts that setConsensusLayerData reverts with InvalidTotalConsolidationsAmountReportedDecrease when the
     /// reported totalExternalConsolidationsAmountReported is lower than the previously stored value.
     function testSetConsensusLayerDataRevertsOnConsolidationsAmountDecrease() public {
@@ -688,199 +396,19 @@ contract OracleManagerV1CoverageTests is OracleManagerV1Tests {
         oracleManager.setConsensusLayerData(clr);
     }
 
-    /// Asserts that when totalExternalConsolidationsAmountReported increases within the available ConsolidationBuffer, the
-    /// buffer is reduced by the delta and the new value is persisted.
-    function testSetConsensusLayerDataConsolidationsIncreaseReducesBuffer() public {
-        OracleManagerV1ExposeInitializer om = OracleManagerV1ExposeInitializer(address(oracleManager));
-
-        uint256 buffer = 5 ether;
-        vm.store(address(om), CONSOLIDATION_BUFFER_SLOT, bytes32(buffer));
-        om.supersedeTotalConsolidationsAmountReported(1 ether);
-        // Keep the later pull path from performing a second buffer update.
-        om.sudoSetConsolidationCoverageFundAvailable(0);
-
-        uint256 epoch = epochsPerFrame;
-        vm.warp(genesisTime + (epoch + epochsToAssumedFinality) * slotsPerEpoch * secondsPerSlot);
-        IOracleManagerV1.ConsensusLayerReport memory clr;
-        clr.epoch = epoch;
-        clr.exitedETHPerOperator = new uint256[](1);
-        clr.totalExternalConsolidationsAmountReported = 3 ether; // delta = 2 ether
-        // The consolidated principal (the 2 ether delta) lands in validatorsBalance in the same report, so the
-        // buffer reduction offsets it rather than registering as a loss.
-        clr.validatorsBalance = 2 ether;
-
-        uint256 assetBalanceBefore = om.debug_getTotalUnderlyingBalance();
-
-        vm.expectEmit(true, true, true, true, address(om));
-        emit Internal_SetConsolidationBuffer(buffer, buffer - 2 ether); // 5 -> 3
-        vm.prank(oracle);
-        oracleManager.setConsensusLayerData(clr);
-
-        assertEq(oracleManager.getLastConsensusLayerReport().totalExternalConsolidationsAmountReported, 3 ether);
-        // The buffer delta (-2 ether) is exactly offset by the validatorsBalance increase (+2 ether): the total
-        // underlying is unchanged and the consolidated principal is not counted as rewards.
-        assertEq(om.debug_getTotalUnderlyingBalance(), assetBalanceBefore);
-    }
-
-    /// Asserts that an unchanged totalExternalConsolidationsAmountReported neither reverts nor reduces the buffer, and that
-    /// the value is persisted (confirms the decrease guard is `<`, not `<=`).
-    function testSetConsensusLayerDataConsolidationsUnchangedKeepsBuffer() public {
-        OracleManagerV1ExposeInitializer om = OracleManagerV1ExposeInitializer(address(oracleManager));
-
-        uint256 buffer = 5 ether;
-        vm.store(address(om), CONSOLIDATION_BUFFER_SLOT, bytes32(buffer));
-        om.supersedeTotalConsolidationsAmountReported(3 ether);
-        om.sudoSetConsolidationCoverageFundAvailable(0);
-
-        uint256 epoch = epochsPerFrame;
-        vm.warp(genesisTime + (epoch + epochsToAssumedFinality) * slotsPerEpoch * secondsPerSlot);
-        IOracleManagerV1.ConsensusLayerReport memory clr;
-        clr.epoch = epoch;
-        clr.exitedETHPerOperator = new uint256[](1);
-        clr.totalExternalConsolidationsAmountReported = 3 ether; // equal -> buffer-reduction branch skipped
-
-        uint256 assetBalanceBefore = om.debug_getTotalUnderlyingBalance();
-
-        vm.prank(oracle);
-        oracleManager.setConsensusLayerData(clr);
-
-        assertEq(oracleManager.getLastConsensusLayerReport().totalExternalConsolidationsAmountReported, 3 ether);
-        // Equal report skips the buffer-reduction branch, so the buffer and asset balance are unchanged.
-        assertEq(uint256(vm.load(address(oracleManager), CONSOLIDATION_BUFFER_SLOT)), buffer);
-        assertEq(om.debug_getTotalUnderlyingBalance(), assetBalanceBefore);
-    }
-
-    /// Fuzzes the full consolidation branch: decrease revert, capped buffer reduction on increase, APR-bound
-    /// revert on unbuffered excess, and the unchanged case. Generalizes the targeted tests above.
-    function testFuzzSetConsensusLayerDataConsolidations(
-        uint256 lastConsolidation,
-        uint256 newConsolidation,
-        uint256 buffer
-    ) public {
-        OracleManagerV1ExposeInitializer om = OracleManagerV1ExposeInitializer(address(oracleManager));
-
-        lastConsolidation = bound(lastConsolidation, 0, 1_000_000 ether);
-        newConsolidation = bound(newConsolidation, 0, 1_000_000 ether);
-        buffer = bound(buffer, 0, 1_000_000 ether);
-
-        om.supersedeTotalConsolidationsAmountReported(lastConsolidation);
-        vm.store(address(om), CONSOLIDATION_BUFFER_SLOT, bytes32(buffer));
-        // Isolate the increase branch: the later pull path must not perform a second buffer update.
-        om.sudoSetConsolidationCoverageFundAvailable(0);
-
-        uint256 epoch = epochsPerFrame;
-        vm.warp(genesisTime + (epoch + epochsToAssumedFinality) * slotsPerEpoch * secondsPerSlot);
-        IOracleManagerV1.ConsensusLayerReport memory clr;
-        clr.epoch = epoch;
-        clr.exitedETHPerOperator = new uint256[](1);
-        clr.totalExternalConsolidationsAmountReported = newConsolidation;
-
-        if (newConsolidation < lastConsolidation) {
-            vm.prank(oracle);
-            vm.expectRevert(
-                abi.encodeWithSignature(
-                    "InvalidTotalConsolidationsAmountReportedDecrease(uint256,uint256)",
-                    lastConsolidation,
-                    newConsolidation
-                )
-            );
-            oracleManager.setConsensusLayerData(clr);
-        } else if (newConsolidation > lastConsolidation) {
-            uint256 delta = newConsolidation - lastConsolidation;
-            // The consolidated principal lands in validatorsBalance in the same report, so the buffer reduction
-            // offsets as much of it as the current buffer can cover (mirrors the production flow).
-            clr.validatorsBalance = delta;
-            uint256 assetBalanceBefore = om.debug_getTotalUnderlyingBalance();
-            uint256 bufferReduction = LibUint256.min(delta, buffer);
-            uint256 expectedPostReportBalance = assetBalanceBefore + (delta - bufferReduction);
-            uint256 timeElapsed = debug_timeBetweenEpochs(om.getCLSpec(), 0, epoch);
-            ReportBounds.ReportBoundsStruct memory rb = om.getReportBounds();
-            uint256 maxIncrease = debug_maxIncrease(rb, assetBalanceBefore, timeElapsed);
-
-            if (expectedPostReportBalance > assetBalanceBefore + maxIncrease) {
-                vm.prank(oracle);
-                vm.expectRevert(
-                    abi.encodeWithSignature(
-                        "TotalValidatorBalanceIncreaseOutOfBound(uint256,uint256,uint256,uint256)",
-                        assetBalanceBefore,
-                        expectedPostReportBalance,
-                        timeElapsed,
-                        rb.annualAprUpperBound
-                    )
-                );
-                oracleManager.setConsensusLayerData(clr);
-            } else {
-                if (bufferReduction > 0) {
-                    vm.expectEmit(true, true, true, true, address(om));
-                    emit Internal_SetConsolidationBuffer(buffer, buffer - bufferReduction);
-                }
-                vm.prank(oracle);
-                oracleManager.setConsensusLayerData(clr);
-                assertEq(
-                    oracleManager.getLastConsensusLayerReport().totalExternalConsolidationsAmountReported,
-                    newConsolidation
-                );
-                assertEq(uint256(vm.load(address(oracleManager), CONSOLIDATION_BUFFER_SLOT)), buffer - bufferReduction);
-                assertEq(om.debug_getTotalUnderlyingBalance(), expectedPostReportBalance);
-            }
-        } else {
-            vm.prank(oracle);
-            oracleManager.setConsensusLayerData(clr);
-            assertEq(
-                oracleManager.getLastConsensusLayerReport().totalExternalConsolidationsAmountReported, newConsolidation
-            );
-        }
-    }
-
-    /// Asserts the consolidation-buffer ordering invariant: when consolidated principal lands in
-    /// validatorsBalance in the SAME report that raises totalExternalConsolidationsAmountReported by the same
-    /// delta, the buffer reduction offsets the validatorsBalance increase so the delta is NOT booked as rewards
-    /// — even when the delta dwarfs the APR upper bound.
-    ///
-    /// This is the regression guard for the buffer-reduction ordering. The reduction must run between the pre-
-    /// and post-report _assetBalance snapshots so the `-delta` cancels the `+delta` in validatorsBalance and
-    /// rewards stay 0. If the reduction instead ran before the pre-report snapshot, the delta would be counted
-    /// as rewards and this large consolidation would revert with TotalValidatorBalanceIncreaseOutOfBound.
-    function testSetConsensusLayerDataConsolidationNetsOutAgainstValidatorBalanceIncrease() public {
-        OracleManagerV1ExposeInitializer om = OracleManagerV1ExposeInitializer(address(oracleManager));
-
-        uint256 validatorsBalanceBefore = 200 ether;
-        uint256 buffer = 100 ether;
-        om.supersedeReportedBalanceSum(validatorsBalanceBefore);
-        om.supersedeTotalConsolidationsAmountReported(0);
-        vm.store(address(om), CONSOLIDATION_BUFFER_SLOT, bytes32(buffer));
-        // Isolate the report-time reduction from the later coverage-pull path (no second buffer update).
-        om.sudoSetConsolidationCoverageFundAvailable(0);
-
-        uint256 assetBalanceBefore = om.debug_getTotalUnderlyingBalance();
-
-        // The consolidated principal (delta) appears in validatorsBalance AND is reported as external
-        // consolidation in the same report. delta is intentionally far above the APR upper bound to prove it is
-        // not treated as rewards (a pre-fix run would revert with TotalValidatorBalanceIncreaseOutOfBound).
-        uint256 delta = 64 ether;
-
-        uint256 epoch = epochsPerFrame;
-        vm.warp(genesisTime + (epoch + epochsToAssumedFinality) * slotsPerEpoch * secondsPerSlot);
-        IOracleManagerV1.ConsensusLayerReport memory clr;
-        clr.epoch = epoch;
-        clr.exitedETHPerOperator = new uint256[](1);
-        clr.validatorsBalance = validatorsBalanceBefore + delta; // principal now visible on the consensus layer
-        clr.totalExternalConsolidationsAmountReported = delta; // same delta reported as external consolidation
-
-        // The buffer is reduced by exactly the delta, between the pre- and post-report snapshots.
-        vm.expectEmit(true, true, true, true, address(om));
-        emit Internal_SetConsolidationBuffer(buffer, buffer - delta); // 100 -> 36
-        vm.prank(oracle);
-        // Must NOT revert despite delta >> APR upper bound, since the delta is offset, not counted as rewards.
-        oracleManager.setConsensusLayerData(clr);
-
-        // Core invariant: the consolidated principal is fully offset. Total underlying is unchanged, which means
-        // rewards == 0 (_onEarnings is only invoked when rewards > 0, so no fee is minted on the principal).
-        assertEq(om.debug_getTotalUnderlyingBalance(), assetBalanceBefore);
-        // The reported values are persisted: principal in validatorsBalance and the cumulative consolidation.
-        assertEq(oracleManager.getLastConsensusLayerReport().validatorsBalance, validatorsBalanceBefore + delta);
-        assertEq(oracleManager.getLastConsensusLayerReport().totalExternalConsolidationsAmountReported, delta);
-        // Buffer reduced by exactly the delta.
-        assertEq(uint256(vm.load(address(om), CONSOLIDATION_BUFFER_SLOT)), buffer - delta);
-    }
+    // ─────────────────────────────────────────────────────────────────────────────
+    // DROPPED consolidation-buffer report-effect tests (moved to real-River integration).
+    //
+    // The following tests previously drove setConsensusLayerData past the early bound checks and asserted
+    // on consolidation-buffer reduction / consolidation-coverage pulls. Those effects now execute inside
+    // LibOracleReporting via DELEGATECALL, which self-calls River's totalUnderlyingSupply()/totalSupply()
+    // and real collaborators — none of which this isolated OracleManager mock can satisfy. They are covered
+    // by real-River integration tests in contracts/test/River.1.t.sol:
+    //   - testSetConsensusLayerDataConsolidationBufferNonZero          -> RiverV1CoverageTests.testPullConsolidationCoverageFundsHappyPath
+    //   - testSetConsensusLayerDataConsolidationBufferNoPull           -> RiverV1CoverageTests.testPullConsolidationCoverageFundsZeroBalance / testPullConsolidationCoverageFundsZeroAddress
+    //   - testSetConsensusLayerDataConsolidationsIncreaseReducesBuffer -> RiverV1CoverageTests.testPullConsolidationCoverageFundsPartial (buffer-reduction + persistence)
+    //   - testSetConsensusLayerDataConsolidationsUnchangedKeepsBuffer  -> COVERAGE GAP: no integration test asserts the equal-report (`<` not `<=`) branch skips buffer reduction.
+    //   - testFuzzSetConsensusLayerDataConsolidations                  -> partially by the above; the fuzzed decrease-revert / capped-reduction / APR-bound matrix is a COVERAGE GAP at integration level.
+    //   - testSetConsensusLayerDataConsolidationNetsOutAgainstValidatorBalanceIncrease -> COVERAGE GAP: the buffer-reduction ordering regression guard (delta offsets validatorsBalance, not booked as rewards) has no equivalent River integration test.
+    // ─────────────────────────────────────────────────────────────────────────────
 }

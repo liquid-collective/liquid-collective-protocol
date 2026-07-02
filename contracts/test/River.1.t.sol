@@ -3004,6 +3004,11 @@ contract RiverV1CoverageTests is RiverV1TestBase {
     bytes32 constant IN_FLIGHT_DEPOSIT_SLOT = bytes32(uint256(keccak256("river.state.inFlightDeposit")) - 1);
     bytes32 constant BUFFERED_EXCEEDING_ETH_SLOT = bytes32(uint256(keccak256("river.state.bufferedExceedingEth")) - 1);
     bytes32 constant CONSOLIDATION_BUFFER_SLOT = bytes32(uint256(keccak256("river.state.consolidationBuffer")) - 1);
+    // Storage offset of StoredConsensusLayerReport.totalExternalConsolidationsAmountReported within the
+    // lastConsensusLayerReport struct: epoch(0) validatorsBalance(1) validatorsSkimmedBalance(2)
+    // validatorsExitedBalance(3) validatorsExitingBalance(4) {validatorsCount,rebalance,slashing}(5)
+    // totalDepositedActivatedETH(6) totalExternalConsolidationsAmountReported(7).
+    uint256 constant LAST_CLR_CONSOLIDATIONS_OFFSET = 7;
     bytes32 constant BALANCE_FOR_CONSOLIDATION_COVERAGE_SLOT =
         bytes32(uint256(keccak256("river.state.balanceForConsolidationCoverage")) - 1);
     bytes32 constant EXTERNAL_CONSOLIDATION_RECIPIENT_MAPPING_ADDRESS_SLOT =
@@ -3416,6 +3421,158 @@ contract RiverV1CoverageTests is RiverV1TestBase {
 
         assertEq(uint256(vm.load(address(river), CONSOLIDATION_BUFFER_SLOT)), buffer - available);
         assertEq(river.getCommittedBalance(), committedBalanceBefore + available);
+    }
+
+    /// Asserts that a report whose totalExternalConsolidationsAmountReported is UNCHANGED versus the last
+    /// stored report leaves the consolidation buffer untouched. The reduction branch in
+    /// LibOracleReporting.setConsensusLayerData uses a strict `>` comparison, so an equal report must not
+    /// enter the reduction path.
+    function testReportConsolidationsUnchangedKeepsBuffer() public {
+        _initRiverMinimalForReporting();
+        // No consolidation coverage fund configured, so the end-of-report pull path cannot touch the buffer.
+        assertEq(river.getConsolidationCoverageFund(), address(0));
+
+        uint256 buffer = 2 ether;
+        uint256 storedConsolidations = 5 ether;
+        vm.store(address(river), CONSOLIDATION_BUFFER_SLOT, bytes32(buffer));
+        // Seed the last stored report's totalExternalConsolidationsAmountReported = X.
+        vm.store(
+            address(river),
+            bytes32(uint256(LAST_CLR_BASE_SLOT) + LAST_CLR_CONSOLIDATIONS_OFFSET),
+            bytes32(storedConsolidations)
+        );
+
+        uint256 epoch = epochsPerFrame;
+        vm.warp((epoch + epochsUntilFinal) * slotsPerEpoch * secondsPerSlot);
+        IOracleManagerV1.ConsensusLayerReport memory clr;
+        clr.epoch = epoch;
+        clr.validatorsBalance = 0;
+        clr.totalDepositedActivatedETH = 0;
+        // Same value as the stored report: no increase, so no reduction.
+        clr.totalExternalConsolidationsAmountReported = storedConsolidations;
+        clr.exitedETHPerOperator = new uint256[](1);
+        clr.activeCLETHPerOperator = new uint256[](1);
+
+        vm.prank(address(oracle));
+        river.setConsensusLayerData(clr);
+
+        // The buffer must be exactly what we seeded: the strict `>` branch was not taken and no coverage
+        // pull occurred.
+        assertEq(uint256(vm.load(address(river), CONSOLIDATION_BUFFER_SLOT)), buffer);
+        assertEq(river.getBalanceToConsolidate(), buffer);
+    }
+
+    /// Asserts that when the reported consolidation increase exceeds the current buffer, the buffer reduction
+    /// is capped at the buffer (ends at 0, no underflow) and the report succeeds. The excess is not separately
+    /// booked because it is already reflected in the validatorsBalance increase.
+    function testReportConsolidationsIncreaseCappedAtBuffer() public {
+        _initRiverMinimalForReporting();
+        assertEq(river.getConsolidationCoverageFund(), address(0));
+
+        // Give the pool a backing so total supply > 0 (onEarnings won't revert with ZeroMintedShares).
+        address alice = makeAddr("alice");
+        _allowDeposit(alice);
+        vm.deal(alice, 32 ether);
+        vm.prank(alice);
+        river.deposit{value: 32 ether}();
+
+        uint256 buffer = 1 ether; // B
+        vm.store(address(river), CONSOLIDATION_BUFFER_SLOT, bytes32(buffer));
+        // Last stored consolidations = 0 (default) so the whole report value is the increase.
+        // delta = 3 ether > B = 1 ether -> reduction capped at B.
+        uint256 reportedConsolidations = 3 ether;
+
+        // Seed a matching last stored validatorsBalance so the post-report balance stays within bounds.
+        // pre  = oldVB(0) + buffer(B) + balanceToDeposit(32e) + ...
+        // post = newVB(reportedConsolidations) + buffer(0) + balanceToDeposit(32e) + ...
+        // The net increase (reportedConsolidations - B) is bounded by the APR upper bound over the elapsed
+        // period; keep it tiny so we exercise the cap without tripping the bound.
+        uint256 epoch = epochsPerFrame;
+        vm.warp((epoch + epochsUntilFinal) * slotsPerEpoch * secondsPerSlot);
+        IOracleManagerV1.ConsensusLayerReport memory clr;
+        clr.epoch = epoch;
+        // validatorsBalance increase must accommodate the APR bound. Choose the reported consolidation
+        // amount minus the buffer to represent the net rewards, but keep the net small enough. Here we make
+        // validatorsBalance exactly equal to the buffer B so the net underlying change is zero and the report
+        // is trivially in bounds, while still forcing the increase (delta=3e) > buffer(1e) via the reported
+        // consolidation field.
+        clr.validatorsBalance = buffer;
+        clr.totalDepositedActivatedETH = 0;
+        clr.totalExternalConsolidationsAmountReported = reportedConsolidations;
+        clr.exitedETHPerOperator = new uint256[](1);
+        clr.activeCLETHPerOperator = new uint256[](1);
+
+        // The reduction is capped: SetConsolidationBuffer(buffer, 0).
+        vm.expectEmit(true, true, true, true, address(river));
+        emit SetConsolidationBuffer(buffer, 0);
+
+        vm.prank(address(oracle));
+        river.setConsensusLayerData(clr);
+
+        // Buffer capped to 0, no underflow, report succeeded.
+        assertEq(uint256(vm.load(address(river), CONSOLIDATION_BUFFER_SLOT)), 0);
+        assertEq(river.getBalanceToConsolidate(), 0);
+        // Confirm the stored report recorded the full reported amount.
+        assertEq(
+            uint256(
+                vm.load(
+                    address(river), bytes32(uint256(LAST_CLR_BASE_SLOT) + LAST_CLR_CONSOLIDATIONS_OFFSET)
+                )
+            ),
+            reportedConsolidations
+        );
+    }
+
+    /// Regression guard: a report whose validatorsBalance increase is exactly matched by a consolidation
+    /// increase must NOT be booked as rewards. The consolidation was already accounted for in the buffer when
+    /// it happened; the buffer reduction offsets the validatorsBalance increase in totalUnderlyingSupply
+    /// (which includes both), so the net change is zero, no fee shares are minted to the collector, and the
+    /// APR upper-bound revert is not tripped.
+    function testReportConsolidationsIncreaseNotBookedAsRewards() public {
+        _initRiverMinimalForReporting();
+        assertEq(river.getConsolidationCoverageFund(), address(0));
+
+        // Backing so total supply > 0.
+        address alice = makeAddr("alice");
+        _allowDeposit(alice);
+        vm.deal(alice, 32 ether);
+        vm.prank(alice);
+        river.deposit{value: 32 ether}();
+
+        uint256 buffer = 4 ether; // B, already includes the consolidated funds
+        vm.store(address(river), CONSOLIDATION_BUFFER_SLOT, bytes32(buffer));
+
+        uint256 collectorSharesBefore = river.balanceOfUnderlying(collector);
+        uint256 collectorRawSharesBefore = river.balanceOf(collector);
+        uint256 totalSupplyBefore = river.totalSupply();
+        uint256 totalUnderlyingBefore = river.totalUnderlyingSupply();
+
+        uint256 epoch = epochsPerFrame;
+        vm.warp((epoch + epochsUntilFinal) * slotsPerEpoch * secondsPerSlot);
+        IOracleManagerV1.ConsensusLayerReport memory clr;
+        clr.epoch = epoch;
+        // validatorsBalance increases by exactly the consolidation delta (last stored VB = 0).
+        clr.validatorsBalance = buffer;
+        clr.totalDepositedActivatedETH = 0;
+        // The consolidation increase (== buffer) offsets the validatorsBalance increase: buffer drops by
+        // `buffer` at the same time validatorsBalance rises by `buffer`, so totalUnderlyingSupply is flat.
+        clr.totalExternalConsolidationsAmountReported = buffer;
+        clr.exitedETHPerOperator = new uint256[](1);
+        clr.activeCLETHPerOperator = new uint256[](1);
+
+        vm.prank(address(oracle));
+        river.setConsensusLayerData(clr);
+
+        // Buffer fully reduced by the reported increase.
+        assertEq(uint256(vm.load(address(river), CONSOLIDATION_BUFFER_SLOT)), 0);
+        assertEq(river.getBalanceToConsolidate(), 0);
+
+        // The consolidation-offset portion must NOT be counted as rewards: no fee shares minted to the
+        // collector, total supply unchanged, and the total underlying supply unchanged by the offset.
+        assertEq(river.balanceOf(collector), collectorRawSharesBefore);
+        assertEq(river.balanceOfUnderlying(collector), collectorSharesBefore);
+        assertEq(river.totalSupply(), totalSupplyBefore);
+        assertEq(river.totalUnderlyingSupply(), totalUnderlyingBefore);
     }
 
     function _initRiverAndV1_2() internal {
