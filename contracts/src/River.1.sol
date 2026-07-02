@@ -24,7 +24,7 @@ import "./Initializable.sol";
 import "./Administrable.sol";
 
 import "./libraries/LibErrors.sol";
-import "./libraries/LibFundingDeltas.sol";
+import "./libraries/LibRiverHandlers.sol";
 import "./libraries/LibAllowlistMasks.sol";
 import "./interfaces/IDepositDataBuffer.sol";
 
@@ -432,27 +432,23 @@ contract RiverV1 is
         override(OracleManagerV1, ConsensusLayerDepositManagerV1)
         returns (address)
     {
-        return Administrable._getAdmin();
+        return LibRiverHandlers.getAdmin();
     }
 
     /// @notice Overridden handler to increment the funded ETH for the operators
     /// @param _deltas The per-operator funding deltas (sorted by operatorIndex)
     function _incrementFundedETH(IOperatorsRegistryV1.OperatorFundingDelta[] memory _deltas) internal override {
-        IOperatorsRegistryV1(OperatorsRegistryAddress.get()).incrementFundedETH(_deltas);
+        LibRiverHandlers.incrementFundedETH(_deltas);
     }
 
     /// @notice Overridden handler to update operator funded ETH accounting for attestation-based deposits.
-    ///         Delegates bucketing/aggregation to LibFundingDeltas so the production path and the
-    ///         attestation test harness share the same code, then forwards to _incrementFundedETH.
     /// @param deposits Initial deposits from the buffer
     /// @param topUps Top-ups from the buffer
     function _updateFundedETHFromBuffer(
         IDepositDataBuffer.Deposit[] memory deposits,
         IDepositDataBuffer.TopUp[] memory topUps
     ) internal override {
-        if (deposits.length == 0 && topUps.length == 0) return;
-        uint256 operatorCount = IOperatorsRegistryV1(OperatorsRegistryAddress.get()).getOperatorCount();
-        _incrementFundedETH(LibFundingDeltas.build(deposits, topUps, operatorCount));
+        LibRiverHandlers.updateFundedETHFromBuffer(deposits, topUps);
     }
 
     /// @notice Overridden handler called whenever a token transfer is triggered
@@ -588,7 +584,7 @@ contract RiverV1 is
 
     /// @notice Returns whether slashing containment mode is currently active
     function _getSlashingContainmentMode() internal view override(ConsensusLayerDepositManagerV1) returns (bool) {
-        return LastConsensusLayerReport.get().slashingContainmentMode;
+        return LibRiverHandlers.getSlashingContainmentMode();
     }
 
     /// @inheritdoc IRiverV1
@@ -616,8 +612,7 @@ contract RiverV1 is
     /// @notice Sets the committed balance, ready to be deposited to the consensus layer
     /// @param _newCommittedBalance The new committed balance value
     function _setCommittedBalance(uint256 _newCommittedBalance) internal override(ConsensusLayerDepositManagerV1) {
-        emit SetBalanceCommittedToDeposit(CommittedBalance.get(), _newCommittedBalance);
-        CommittedBalance.set(_newCommittedBalance);
+        LibRiverHandlers.setCommittedBalance(_newCommittedBalance);
     }
 
     /// @notice Sets the consolidation buffer
