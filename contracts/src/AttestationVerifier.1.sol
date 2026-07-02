@@ -5,20 +5,25 @@ import {ECDSA} from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.s
 
 import "./Initializable.sol";
 import "./interfaces/IAdministrable.sol";
+import "./interfaces/IAllowlist.1.sol";
 import "./interfaces/IAttestationVerifier.1.sol";
 import "./interfaces/IAttestationVerifierPectraMigration.1.sol";
 import "./interfaces/IDepositContract.sol";
 import "./interfaces/IDepositDataBuffer.sol";
+import "./interfaces/IExternalConsolidationRecipientMapping.1.sol";
 import "./interfaces/IOperatorRegistry.1.sol";
 import "./interfaces/IRiver.1.sol";
 import "./interfaces/IWithdraw.1.sol";
 
 import "./libraries/BLS12_381.sol";
+import "./libraries/LibAllowlistMasks.sol";
 import "./libraries/LibErrors.sol";
 
 import "./state/attestationVerifier/ConsolidationCommitteeAttestationQuorum.sol";
 import "./state/attestationVerifier/ConsolidationCommitteeAttesters.sol";
 import "./state/attestationVerifier/ConsolidationDomainSeparator.sol";
+import "./state/attestationVerifier/ConsolidatorAddress.sol";
+import "./state/attestationVerifier/ExternalConsolidationRecipientMappingAddress.sol";
 import "./state/attestationVerifier/ProcessedConsolidations.sol";
 import "./state/attestationVerifier/RootAttestationQuorum.sol";
 import "./state/attestationVerifier/RootAttesters.sol";
@@ -44,12 +49,18 @@ import "./state/shared/RiverAddress.sol";
 ///            slashing-containment gating, ETH execution, operator funding accounting,
 ///            and balance bookkeeping. View-only.
 ///
-///         2. Consolidation flow (`validateConsolidation`):
+///         2. Consolidation minting flow (`mintLsETHForConsolidation`):
 ///            Validates EIP-7251 consolidation requests passed in directly as a
 ///            `ConsolidationObject` struct (no on-chain buffer). Verifies the
 ///            consolidation-committee attestation quorum over a typed-data digest
-///            built from the request fields, and marks the request as processed
-///            for replay protection. State-mutating.
+///            built from the request fields, marks the request as processed
+///            for replay protection, resolves the LsETH recipient against River's
+///            allowlist and the external consolidation recipient mapping, and mints
+///            via River's `mintSharesForConsolidation` callback. State-mutating.
+///
+///         The contract is also the consolidator-facing entry point for dispatching
+///         EIP-7251 consolidation requests to the Withdraw contract (`consolidate`,
+///         `selfConsolidation`), gated by the stored consolidator address.
 ///
 ///         Extracted from RiverV1 to keep River's deployed bytecode under EIP-170.
 contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttestationVerifierPectraMigrationV1 {
@@ -126,6 +137,16 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
         _;
     }
 
+    /// @notice Restrict to the stored consolidator address.
+    /// @dev Gates the consolidator-facing entry points (`mintLsETHForConsolidation`,
+    ///      `consolidate`, `selfConsolidation`).
+    modifier onlyConsolidator() {
+        if (msg.sender != ConsolidatorAddress.get()) {
+            revert OnlyConsolidator();
+        }
+        _;
+    }
+
     // -----------------------------------------------------------------------
     // Initialization
     // -----------------------------------------------------------------------
@@ -138,7 +159,9 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
         uint256 _quorum,
         bytes4 _genesisForkVersion,
         address[] calldata _consolidationCommitteeAttesters,
-        uint256 _consolidationQuorum
+        uint256 _consolidationQuorum,
+        address _consolidator,
+        address _externalConsolidationRecipientMapping
     ) external init(0) {
         // ---- Validate deposit-side parameters ----
         if (_rootAttesters.length == 0 || _rootAttesters.length > MAX_ROOT_ATTESTERS) {
@@ -165,6 +188,10 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
 
         DepositDataBufferAddress.set(_depositDataBuffer);
         emit SetDepositDataBuffer(_depositDataBuffer);
+
+        // ---- Consolidator + external consolidation recipient mapping ----
+        _setConsolidator(_consolidator);
+        _setExternalConsolidationRecipientMapping(_externalConsolidationRecipientMapping);
 
         // Validate + store the BLS deposit domain. On a known chain (mainnet/hoodi) the supplied fork
         // version must match the canonical value, so a misconfigured domain — which would silently
@@ -336,6 +363,33 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
         emit SetConsolidationCommitteeAttestationQuorum(newQuorum);
     }
 
+    /// @inheritdoc IAttestationVerifierV1
+    function setConsolidator(address _newConsolidator) external onlyRiverAdmin {
+        _setConsolidator(_newConsolidator);
+    }
+
+    /// @notice Internal utility to set the consolidator address
+    /// @param _newConsolidator The new consolidator address
+    function _setConsolidator(address _newConsolidator) internal {
+        ConsolidatorAddress.set(_newConsolidator);
+        emit SetConsolidator(_newConsolidator);
+    }
+
+    /// @inheritdoc IAttestationVerifierV1
+    function setExternalConsolidationRecipientMapping(address _newExternalConsolidationRecipientMapping)
+        external
+        onlyRiverAdmin
+    {
+        _setExternalConsolidationRecipientMapping(_newExternalConsolidationRecipientMapping);
+    }
+
+    /// @notice Internal utility to set the external consolidation recipient mapping address
+    /// @param _newExternalConsolidationRecipientMapping The new external consolidation recipient mapping address
+    function _setExternalConsolidationRecipientMapping(address _newExternalConsolidationRecipientMapping) internal {
+        ExternalConsolidationRecipientMappingAddress.set(_newExternalConsolidationRecipientMapping);
+        emit SetExternalConsolidationRecipientMapping(_newExternalConsolidationRecipientMapping);
+    }
+
     // -----------------------------------------------------------------------
     // Views
     // -----------------------------------------------------------------------
@@ -394,6 +448,16 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
     /// @inheritdoc IAttestationVerifierV1
     function getConsolidationDomainSeparator() external view returns (bytes32) {
         return ConsolidationDomainSeparator.get();
+    }
+
+    /// @inheritdoc IAttestationVerifierV1
+    function getConsolidator() external view returns (address) {
+        return ConsolidatorAddress.get();
+    }
+
+    /// @inheritdoc IAttestationVerifierV1
+    function getExternalConsolidationRecipientMapping() external view returns (address) {
+        return ExternalConsolidationRecipientMappingAddress.get();
     }
 
     // -----------------------------------------------------------------------
@@ -550,10 +614,15 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
         emit MigratedPrePectraValidatorPubkeys(operatorIndex, startIndex, stopIndex);
     }
 
-    /// @inheritdoc IAttestationVerifierPectraMigrationV1
-    function validateSelfConsolidation(bytes[] calldata pubkeys)
-        external
-        onlyRiver
+    /// @notice Validate and prepare self-consolidation requests for pre-Pectra validator pubkeys.
+    /// @dev    For each pubkey: requires membership in the pre-Pectra lookup, then promotes it to
+    ///         the post-Pectra lookup and builds a `src == target` self-consolidation request.
+    ///         The lookup mutations revert atomically with the rest of the transaction if the
+    ///         downstream consolidation call fails.
+    /// @param pubkeys The 48-byte BLS pubkeys to consolidate
+    /// @return requests The consolidation requests
+    function _validateSelfConsolidation(bytes[] calldata pubkeys)
+        internal
         returns (IWithdrawV1.ConsolidationRequest[] memory)
     {
         uint256 len = pubkeys.length;
@@ -613,7 +682,8 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
         return ProcessedDepositDataBufferIds.isProcessed(depositDataBufferId);
     }
 
-    /// @inheritdoc IAttestationVerifierV1
+    /// @notice Validate a consolidation request: structural shape, attestation quorum, and
+    ///         replay protection. Reverts on any failure; marks the request processed on success.
     /// @dev Trust boundary: this function only validates structural shape (array shapes
     ///      and pubkey byte lengths) and the attestation quorum (ECDSA signature recovery
     ///      against the consolidation committee). It does NOT check:
@@ -625,13 +695,10 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
     ///        - Whether the source validators actually exist on the consensus layer or
     ///          carry the protocol's withdrawal credentials.
     ///      These are the responsibility of the caller (off-chain pipeline) and the
-    ///      consolidation committee that signs the request. The eventual
-    ///      `mintLsETHForConsolidation` River integration is the place to enforce any
-    ///      additional financial caps on `totalAmount`.
-    function validateConsolidation(IAttestationVerifierV1.ConsolidationObject calldata consolidation)
-        external
-        onlyRiver
-    {
+    ///      consolidation committee that signs the request. `mintLsETHForConsolidation`
+    ///      is the place to enforce any additional financial caps on `totalAmount`.
+    /// @param consolidation The consolidation request to validate
+    function _validateConsolidation(IAttestationVerifierV1.ConsolidationObject calldata consolidation) internal {
         // 1. Structural checks (cheapest first — fail fast)
         uint256 sourceLen = consolidation.sourcePubkeys.length;
         uint256 targetLen = consolidation.targetPubkeys.length;
@@ -681,6 +748,73 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
         // 6. Mark as processed and emit
         ProcessedConsolidations.markProcessed(structHash);
         emit ConsolidationProcessed(structHash);
+    }
+
+    // -----------------------------------------------------------------------
+    // Consolidator entry points
+    // -----------------------------------------------------------------------
+
+    /// @inheritdoc IAttestationVerifierV1
+    function mintLsETHForConsolidation(IAttestationVerifierV1.ConsolidationObject calldata consolidation)
+        external
+        onlyConsolidator
+    {
+        IRiverV1 river = IRiverV1(payable(RiverAddress.get()));
+
+        // we check the allowlist first to fail fast if the withdrawalAddress/recipient is denied
+        IAllowlistV1 allowlist = IAllowlistV1(river.getAllowlist());
+        allowlist.onlyAllowed(consolidation.withdrawalAddress, LibAllowlistMasks.CONSOLIDATE_MASK);
+
+        address recipient = IExternalConsolidationRecipientMappingV1(ExternalConsolidationRecipientMappingAddress.get())
+            .getRecipient(consolidation.withdrawalAddress);
+
+        // if the recipient is not set, we use the withdrawalAddress
+        if (recipient == address(0)) {
+            recipient = consolidation.withdrawalAddress;
+        } else {
+            if (allowlist.isDenied(recipient)) {
+                revert IRiverV1.Denied(recipient);
+            }
+        }
+
+        // this reverts if the consolidation is invalid or replayed
+        _validateConsolidation(consolidation);
+
+        river.mintSharesForConsolidation(recipient, consolidation.totalAmount);
+    }
+
+    /// @inheritdoc IAttestationVerifierPectraMigrationV1
+    function selfConsolidation(bytes[] calldata pubkeys, uint256 maxFeePerConsolidation)
+        external
+        payable
+        onlyConsolidator
+    {
+        IWithdrawV1.ConsolidationRequest[] memory requests = _validateSelfConsolidation(pubkeys);
+        address excessFeeRecipient = msg.sender;
+        _withdrawContract().consolidate{value: msg.value}(requests, maxFeePerConsolidation, excessFeeRecipient);
+        emit PectraConsolidationRequested(requests, maxFeePerConsolidation, excessFeeRecipient, msg.value);
+    }
+
+    /// @inheritdoc IAttestationVerifierV1
+    function consolidate(IWithdrawV1.ConsolidationRequest[] calldata requests, uint256 maxFeePerConsolidation)
+        external
+        payable
+        onlyConsolidator
+    {
+        address excessFeeRecipient = msg.sender;
+        _withdrawContract().consolidate{value: msg.value}(requests, maxFeePerConsolidation, excessFeeRecipient);
+        emit PectraConsolidationRequested(requests, maxFeePerConsolidation, excessFeeRecipient, msg.value);
+    }
+
+    /// @notice Resolve the Withdraw contract from River's withdrawal credentials.
+    /// @dev The credentials are `0x02 ‖ 0…0 ‖ address(withdraw)` (see `WithdrawV1.getCredentials`),
+    ///      so the low 20 bytes are the Withdraw contract address. Deriving instead of storing
+    ///      keeps the verifier in lockstep with River's canonical withdrawal credentials.
+    /// @return The Withdraw contract
+    function _withdrawContract() internal view returns (IWithdrawV1) {
+        return IWithdrawV1(
+            payable(address(uint160(uint256(IRiverV1(payable(RiverAddress.get())).getWithdrawalCredentials()))))
+        );
     }
 
     // -----------------------------------------------------------------------

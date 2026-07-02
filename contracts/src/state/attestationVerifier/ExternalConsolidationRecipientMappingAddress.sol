@@ -9,7 +9,7 @@ import "../../libraries/LibSanitize.sol";
 library ExternalConsolidationRecipientMappingAddress {
     /// @notice Storage slot of the External Consolidation Recipient Mapping Address
     bytes32 internal constant EXTERNAL_CONSOLIDATION_RECIPIENT_MAPPING_ADDRESS_SLOT =
-        bytes32(uint256(keccak256("river.state.externalConsolidationRecipientMappingAddress")) - 1);
+        bytes32(uint256(keccak256("attestationVerifier.state.externalConsolidationRecipientMappingAddress")) - 1);
 
     /// @notice Retrieve the External Consolidation Recipient Mapping Address
     /// @return The External Consolidation Recipient Mapping Address

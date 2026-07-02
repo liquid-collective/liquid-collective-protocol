@@ -44,8 +44,9 @@ interface IAttestationVerifierPectraMigrationV1 {
     /// @param length The observed pubkey length
     error InvalidSelfConsolidationPubkeyLength(uint256 index, uint256 length);
 
-    /// @notice Validate and prepare self-consolidation requests for pre-Pectra validator pubkeys.
-    ///         Only callable by River.
+    /// @notice Request self consolidation of pre-Pectra validator pubkeys via the Withdraw
+    ///         contract. Fee ETH sent as msg.value; excess is refunded by the Withdraw
+    ///         contract directly to the caller. Only callable by the consolidator.
     /// @dev    For each pubkey: requires membership in the pre-Pectra lookup, then promotes it to
     ///         the post-Pectra lookup (removes the pre-Pectra entry and adds a post-Pectra entry)
     ///         and builds a `src == target` self-consolidation request. The promotion reflects
@@ -54,10 +55,8 @@ interface IAttestationVerifierPectraMigrationV1 {
     ///         atomically revert with the rest of the transaction if the downstream
     ///         consolidation call fails.
     /// @param pubkeys The 48-byte BLS pubkeys to consolidate
-    /// @return requests The consolidation requests
-    function validateSelfConsolidation(bytes[] calldata pubkeys)
-        external
-        returns (IWithdrawV1.ConsolidationRequest[] memory);
+    /// @param maxFeePerConsolidation The maximum fee per consolidation to accept
+    function selfConsolidation(bytes[] calldata pubkeys, uint256 maxFeePerConsolidation) external payable;
 
     /// @notice Migrate a chunk of pre-Pectra funded validator pubkeys into the verifier lookup.
     /// @dev Only callable by River admin. `stopIndex` is exclusive and must be no greater than

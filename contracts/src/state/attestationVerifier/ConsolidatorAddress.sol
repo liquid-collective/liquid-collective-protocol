@@ -9,7 +9,7 @@ import "../../libraries/LibSanitize.sol";
 library ConsolidatorAddress {
     /// @notice Storage slot of the Consolidator Address
     bytes32 internal constant CONSOLIDATOR_ADDRESS_SLOT =
-        bytes32(uint256(keccak256("river.state.consolidatorAddress")) - 1);
+        bytes32(uint256(keccak256("attestationVerifier.state.consolidatorAddress")) - 1);
 
     /// @notice Retrieve the Consolidator Address
     /// @return The Consolidator Address

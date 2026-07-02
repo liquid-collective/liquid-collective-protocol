@@ -2,6 +2,7 @@
 pragma solidity 0.8.34;
 
 import "./IDepositDataBuffer.sol";
+import "./IWithdraw.1.sol";
 
 /// @title Attestation Verifier Interface (v1)
 /// @author Alluvial Finance Inc.
@@ -10,9 +11,12 @@ import "./IDepositDataBuffer.sol";
 ///         1. Deposit flow (`fetchAndValidateDeposits`) — attestation-quorum + BLS deposit-message
 ///            verification, plus per-deposit withdrawal-credentials and committed-balance
 ///            checks against a batch fetched from the `DepositDataBuffer`. View-only.
-///         2. Consolidation flow (`validateConsolidation`) — attestation-quorum verification
-///            over an EIP-7251 `ConsolidationObject` passed in by the caller (no on-chain
-///            buffer), with replay protection on the EIP-712 structHash. State-mutating.
+///         2. Consolidation flow (`mintLsETHForConsolidation`) — attestation-quorum verification
+///            over an EIP-7251 `ConsolidationObject` passed in by the consolidator (no on-chain
+///            buffer), with replay protection on the EIP-712 structHash, followed by a mint
+///            callback into River. State-mutating.
+///         The verifier is also the consolidator-facing entry point for dispatching EIP-7251
+///         consolidation requests to the Withdraw contract (`consolidate`, `selfConsolidation`).
 interface IAttestationVerifierV1 {
     // -----------------------------------------------------------------------
     // Types
@@ -71,6 +75,26 @@ interface IAttestationVerifierV1 {
 
     /// @notice Emitted when the EIP-712 consolidation domain separator is (re)cached
     event SetConsolidationDomainSeparator(bytes32 consolidationDomainSeparator);
+
+    /// @notice The stored Consolidator has been changed
+    /// @param consolidator The new Consolidator
+    event SetConsolidator(address indexed consolidator);
+
+    /// @notice Emitted when the external consolidation recipient mapping address is changed
+    /// @param externalConsolidationRecipientMapping The new external consolidation recipient mapping address
+    event SetExternalConsolidationRecipientMapping(address indexed externalConsolidationRecipientMapping);
+
+    /// @notice Emitted when a Pectra consolidation request is forwarded to the Withdraw contract
+    /// @param requests Consolidation requests
+    /// @param maxFeePerConsolidation Maximum fee per consolidation
+    /// @param excessFeeRecipient Address to receive any excess msg.value
+    /// @param valueSent ETH sent with the call for fees
+    event PectraConsolidationRequested(
+        IWithdrawV1.ConsolidationRequest[] requests,
+        uint256 maxFeePerConsolidation,
+        address excessFeeRecipient,
+        uint256 valueSent
+    );
 
     /// @notice Emitted when a consolidation request is successfully validated and
     ///         marked as processed for replay protection.
@@ -237,6 +261,9 @@ interface IAttestationVerifierV1 {
     /// @param value The requested status (matches current status)
     error ConsolidationCommitteeAttesterStatusUnchanged(address consolidationCommitteeAttester, bool value);
 
+    /// @notice Thrown when the caller is not the consolidator
+    error OnlyConsolidator();
+
     // -- Consolidation-side errors --
 
     /// @notice The consolidation's totalAmount is zero
@@ -289,6 +316,8 @@ interface IAttestationVerifierV1 {
     /// @param _consolidationCommitteeAttesters  Initial set of consolidation-committee attester EOAs.
     /// @param _consolidationQuorum              Initial consolidation-attestation quorum
     ///                                          (1 ≤ q ≤ consolidationCommitteeAttesters.length, ≤ MAX_SIGNATURES).
+    /// @param _consolidator         The address authorized to perform consolidator-only operations (EOA or contract).
+    /// @param _externalConsolidationRecipientMapping The pre-initialized External Consolidation Recipient Mapping contract address.
     function initAttestationVerifierV1(
         address _river,
         address _depositDataBuffer,
@@ -296,7 +325,9 @@ interface IAttestationVerifierV1 {
         uint256 _quorum,
         bytes4 _genesisForkVersion,
         address[] calldata _consolidationCommitteeAttesters,
-        uint256 _consolidationQuorum
+        uint256 _consolidationQuorum,
+        address _consolidator,
+        address _externalConsolidationRecipientMapping
     ) external;
 
     // -----------------------------------------------------------------------
@@ -359,29 +390,45 @@ interface IAttestationVerifierV1 {
     function removeExitedValidatorPubkeys(bytes[] calldata pubkeys) external;
 
     /// @notice Validate consolidation-committee attestations over a `ConsolidationObject` passed
-    ///         in by the caller and mark the request as processed for replay protection.
+    ///         in by the consolidator, mark the request as processed for replay protection, and
+    ///         mint LsETH to the resolved recipient via River's `mintSharesForConsolidation` callback.
     /// @dev    The caller supplies the full struct (including signatures) in calldata. The
     ///         verifier constructs the EIP-712 typed-data digest directly from the four
     ///         request fields and the cached consolidation domain separator, then recovers
     ///         each signature against that digest. The `signatures` field of the struct is
     ///         NOT part of the typed data.
     ///
+    ///         Recipient resolution: the withdrawal address must be allowed for
+    ///         CONSOLIDATE_MASK on River's allowlist; the LsETH recipient is the external
+    ///         consolidation recipient mapping's entry for the withdrawal address, or the
+    ///         withdrawal address itself when unset, and must not be denied.
+    ///
     ///         Replay protection: the EIP-712 structHash is recorded in storage on success.
     ///         Subsequent calls with a struct that hashes to the same value revert with
     ///         `ConsolidationAlreadyProcessed`. Note that this makes the function
-    ///         state-mutating (not `view`) and callable only by River.
+    ///         state-mutating (not `view`) and callable only by the consolidator.
     ///
-    ///         Trust boundary: this function only validates structural shape and the attestation
-    ///         quorum. The following are intentionally NOT checked here and are delegated to the
-    ///         caller (off-chain pipeline / consolidation committee) or to the eventual River
-    ///         integration:
+    ///         Trust boundary: this function only validates structural shape, the allowlist
+    ///         status of the recipient, and the attestation quorum. The following are
+    ///         intentionally NOT checked here and are delegated to the off-chain pipeline /
+    ///         consolidation committee:
     ///           - Source/target pubkey uniqueness (EIP-7251 single-use source rule)
     ///           - `totalAmount` gwei alignment, upper bound, or correlation with pair count
     ///           - Financial caps (e.g. against committed/in-flight balances)
     /// @param consolidation The consolidation request to validate (withdrawal address,
     ///                      source/target pubkeys, totalAmount, signatures).
     /// @dev Reverts on any validation failure; returns normally on success.
-    function validateConsolidation(ConsolidationObject calldata consolidation) external;
+    function mintLsETHForConsolidation(ConsolidationObject calldata consolidation) external;
+
+    /// @notice Request Pectra consolidations via the Withdraw contract. Fee ETH sent as msg.value;
+    ///         excess is refunded by the Withdraw contract directly to the caller.
+    /// @dev Only callable by the consolidator
+    /// @dev Since we consolidate to validators we own there is no need to track the consolidation buffer
+    /// @param requests Consolidation requests (each: src pubkeys[] -> target pubkey)
+    /// @param maxFeePerConsolidation Maximum fee per consolidation to accept
+    function consolidate(IWithdrawV1.ConsolidationRequest[] calldata requests, uint256 maxFeePerConsolidation)
+        external
+        payable;
 
     // -----------------------------------------------------------------------
     // Admin setters
@@ -418,6 +465,14 @@ interface IAttestationVerifierV1 {
     /// @notice Update the consolidation-committee attestation quorum. Only callable by River's admin.
     /// @param newQuorum The new quorum (1 ≤ newQuorum ≤ consolidationCommitteeAttesterCount, ≤ MAX_SIGNATURES)
     function setConsolidationCommitteeAttestationQuorum(uint256 newQuorum) external;
+
+    /// @notice Changes the consolidator address. Only callable by River's admin.
+    /// @param _newConsolidator New address for the consolidator
+    function setConsolidator(address _newConsolidator) external;
+
+    /// @notice Changes the external consolidation recipient mapping address. Only callable by River's admin.
+    /// @param _newExternalConsolidationRecipientMapping New address for the mapping
+    function setExternalConsolidationRecipientMapping(address _newExternalConsolidationRecipientMapping) external;
 
     // -----------------------------------------------------------------------
     // Views
@@ -472,6 +527,14 @@ interface IAttestationVerifierV1 {
     /// @notice Retrieve the cached EIP-712 consolidation domain separator
     /// @return The EIP-712 consolidation domain separator
     function getConsolidationDomainSeparator() external view returns (bytes32);
+
+    /// @notice Retrieve the consolidator address
+    /// @return The consolidator address
+    function getConsolidator() external view returns (address);
+
+    /// @notice Retrieve the external consolidation recipient mapping address
+    /// @return The external consolidation recipient mapping address
+    function getExternalConsolidationRecipientMapping() external view returns (address);
     /// @notice Check whether a pubkey has been initial-deposited by River.
     /// @dev Off-chain producers should subscribe to ConsensusLayerDepositManager's `PubkeyFunded`
     ///      events and use this view to confirm a pubkey is eligible for top-up submissions.

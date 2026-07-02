@@ -7,11 +7,8 @@ import "./interfaces/IAllowlist.1.sol";
 import "./interfaces/ICoverageFund.1.sol";
 import "./interfaces/IELFeeRecipient.1.sol";
 import "./interfaces/IProtocolVersion.sol";
-import "./interfaces/IELFeeRecipient.1.sol";
 import "./interfaces/IOperatorRegistry.1.sol";
 import "./interfaces/IAttestationVerifier.1.sol";
-import "./interfaces/IAttestationVerifierPectraMigration.1.sol";
-import "./interfaces/IExternalConsolidationRecipientMapping.1.sol";
 
 import "./components/SharesManager.1.sol";
 import "./components/OracleManager.1.sol";
@@ -24,6 +21,7 @@ import "./Administrable.sol";
 import "./libraries/LibErrors.sol";
 import "./libraries/LibFundingDeltas.sol";
 import "./libraries/LibAllowlistMasks.sol";
+import "./libraries/LibRiverV1_3Migration.sol";
 import "./interfaces/IDepositDataBuffer.sol";
 
 import "./state/river/GlobalFee.sol";
@@ -31,16 +29,11 @@ import "./state/river/MetadataURI.sol";
 import "./state/river/BalanceToRedeem.sol";
 import "./state/river/AllowlistAddress.sol";
 import "./state/river/CollectorAddress.sol";
-import "./state/river/TotalDepositedETH.sol";
-import "./state/river/ConsolidatorAddress.sol";
 import "./state/river/CoverageFundAddress.sol";
 import "./state/river/ConsolidationCoverageFundAddress.sol";
 import "./state/river/RedeemManagerAddress.sol";
 import "./state/river/ELFeeRecipientAddress.sol";
-import "./state/river/DepositedValidatorCount.sol";
 import "./state/river/LastConsensusLayerReport.sol";
-import "./state/river/ConsolidationCoverageFundAddress.sol";
-import "./state/river/ExternalConsolidationRecipientMappingAddress.sol";
 import "./state/shared/OperatorsRegistryAddress.sol";
 import "./state/shared/AttestationVerifierAddress.sol";
 
@@ -57,79 +50,12 @@ contract RiverV1 is
     IProtocolVersion,
     IRiverV1
 {
-    /// @notice Modifier to check if the caller is the consolidator
-    modifier onlyConsolidator() {
-        if (msg.sender != ConsolidatorAddress.get()) {
-            revert OnlyConsolidator();
-        }
-        _;
-    }
-
     /// @inheritdoc IRiverV1
-    function initRiverV1_3(
-        bytes32 _withdrawalCredentials,
-        address _consolidationCoverageFund,
-        address _attestationVerifier,
-        address _externalConsolidationRecipientMapping,
-        address _consolidator
-    ) external init(3) {
-        if (_withdrawalCredentials == bytes32(0)) {
-            revert InvalidWithdrawalCredentials();
-        }
-        if (_attestationVerifier == address(0) || _attestationVerifier.code.length == 0) {
-            revert InvalidAttestationVerifier();
-        }
-        if (IAttestationVerifierV1(_attestationVerifier).getRiver() != address(this)) {
-            revert InvalidAttestationVerifier();
-        }
-
-        // Re-emit deposit-contract address (carry-over from prior initConsensusLayerDepositManagerV1_2 call)
-        address depositContract = DepositContractAddress.get();
-        DepositContractAddress.set(depositContract);
-        emit SetDepositContractAddress(depositContract);
-
-        ConsensusLayerDepositManagerV1.initConsensusLayerDepositManagerV1(
-            DepositContractAddress.get(), _withdrawalCredentials
-        );
-
-        AttestationVerifierAddress.set(_attestationVerifier);
-        emit SetAttestationVerifier(_attestationVerifier);
-
-        ExternalConsolidationRecipientMappingAddress.set(_externalConsolidationRecipientMapping);
-        emit SetExternalConsolidationRecipientMapping(_externalConsolidationRecipientMapping);
-
-        // accounting changes to move from 0x01 to 0x02 accounting
-
-        ConsolidationCoverageFundAddress.set(_consolidationCoverageFund);
-        emit SetConsolidationCoverageFund(_consolidationCoverageFund);
-
-        _setConsolidator(_consolidator);
-
-        IOracleManagerV1.StoredConsensusLayerReport storage lastReport = LastConsensusLayerReport.get();
-        uint32 clValidatorCount = lastReport.validatorsCount;
-        uint256 depositedValidatorCount = DepositedValidatorCount.get();
-        TotalDepositedETH.set(depositedValidatorCount * DEPOSIT_SIZE);
-        if (clValidatorCount < depositedValidatorCount) {
-            InFlightDeposit.set((depositedValidatorCount - clValidatorCount) * DEPOSIT_SIZE);
-        } else {
-            // explicit zero so a re-run on dirty storage cannot leak a stale value into
-            // the totalDepositedActivatedETH calculation below
-            InFlightDeposit.set(0);
-        }
-
-        IOracleManagerV1.StoredConsensusLayerReport memory storedReport;
-        storedReport.epoch = lastReport.epoch;
-        storedReport.validatorsBalance = lastReport.validatorsBalance;
-        storedReport.validatorsSkimmedBalance = lastReport.validatorsSkimmedBalance;
-        storedReport.validatorsExitedBalance = lastReport.validatorsExitedBalance;
-        storedReport.validatorsExitingBalance = lastReport.validatorsExitingBalance;
-        storedReport.validatorsCount = clValidatorCount;
-        storedReport.rebalanceDepositToRedeemMode = lastReport.rebalanceDepositToRedeemMode;
-        storedReport.slashingContainmentMode = lastReport.slashingContainmentMode;
-        storedReport.totalDepositedActivatedETH = depositedValidatorCount * DEPOSIT_SIZE - InFlightDeposit.get();
-        /// We don't set the totalExternalConsolidationsAmountReported here because consolidations were not enabled before this version.
-        /// And the default value will be 0, so we don't need to set it here.
-        LastConsensusLayerReport.set(storedReport);
+    function initRiverV1_3(bytes32 _withdrawalCredentials, address _consolidationCoverageFund, address _attestationVerifier)
+        external
+        init(3)
+    {
+        LibRiverV1_3Migration.run(_withdrawalCredentials, _consolidationCoverageFund, _attestationVerifier);
     }
 
     /// @inheritdoc IRiverV1
@@ -165,11 +91,6 @@ contract RiverV1 is
     /// @inheritdoc IRiverV1
     function getRedeemManager() external view returns (address) {
         return RedeemManagerAddress.get();
-    }
-
-    /// @inheritdoc IRiverV1
-    function getConsolidator() external view returns (address) {
-        return ConsolidatorAddress.get();
     }
 
     /// @inheritdoc IRiverV1
@@ -209,44 +130,14 @@ contract RiverV1 is
     }
 
     /// @inheritdoc IRiverV1
-    function mintLsETHForConsolidation(IAttestationVerifierV1.ConsolidationObject calldata consolidation)
-        external
-        onlyConsolidator
-    {
-        // we check the allowlist first to fail fast if the withdrawalAddress/recipient is denied
-        IAllowlistV1 allowlist = IAllowlistV1(AllowlistAddress.get());
-        allowlist.onlyAllowed(consolidation.withdrawalAddress, LibAllowlistMasks.CONSOLIDATE_MASK);
-
-        address recipient = IExternalConsolidationRecipientMappingV1(ExternalConsolidationRecipientMappingAddress.get())
-            .getRecipient(consolidation.withdrawalAddress);
-
-        // if the recipient is not set, we use the withdrawalAddress
-        if (recipient == address(0)) {
-            recipient = consolidation.withdrawalAddress;
-        } else {
-            if (allowlist.isDenied(recipient)) {
-                revert Denied(recipient);
-            }
+    function mintSharesForConsolidation(address _recipient, uint256 _amount) external {
+        if (msg.sender != AttestationVerifierAddress.get()) {
+            revert LibErrors.Unauthorized(msg.sender);
         }
-
-        IAttestationVerifierV1 verifier = IAttestationVerifierV1(AttestationVerifierAddress.get());
-        // Since the verifier validates the consolidation object, we do not validate it here
-        // this reverts if the consolidation is invalid
-        verifier.validateConsolidation(consolidation);
-
         uint256 oldConsolidationBuffer = ConsolidationBuffer.get();
-        _setConsolidationBuffer(oldConsolidationBuffer, oldConsolidationBuffer + consolidation.totalAmount);
-        uint256 sharesMinted = _mintShares(recipient, consolidation.totalAmount);
-        emit LsETHMintedForConsolidation(recipient, consolidation.totalAmount, sharesMinted);
-    }
-
-    /// @inheritdoc IRiverV1
-    function resolveRedeemRequests(uint32[] calldata _redeemRequestIds)
-        external
-        view
-        returns (int64[] memory withdrawalEventIds)
-    {
-        return IRedeemManagerV1(RedeemManagerAddress.get()).resolveRedeemRequests(_redeemRequestIds);
+        _setConsolidationBuffer(oldConsolidationBuffer, oldConsolidationBuffer + _amount);
+        uint256 sharesMinted = _mintShares(_recipient, _amount);
+        emit LsETHMintedForConsolidation(_recipient, _amount, sharesMinted);
     }
 
     /// @inheritdoc IRiverV1
@@ -261,15 +152,6 @@ contract RiverV1 is
         }
         _transfer(msg.sender, address(this), _lsETHAmount);
         return IRedeemManagerV1(RedeemManagerAddress.get()).requestRedeem(_lsETHAmount, _recipient, msg.sender);
-    }
-
-    /// @inheritdoc IRiverV1
-    function claimRedeemRequests(uint32[] calldata _redeemRequestIds, uint32[] calldata _withdrawalEventIds)
-        external
-        returns (uint8[] memory claimStatuses)
-    {
-        return IRedeemManagerV1(RedeemManagerAddress.get())
-            .claimRedeemRequests(_redeemRequestIds, _withdrawalEventIds, true, type(uint16).max);
     }
 
     /// @inheritdoc IRiverV1
@@ -316,18 +198,6 @@ contract RiverV1 is
     }
 
     /// @inheritdoc IRiverV1
-    function setConsolidator(address _newConsolidator) external onlyAdmin {
-        _setConsolidator(_newConsolidator);
-    }
-
-    /// @notice Internal utility to set the consolidator address
-    /// @param _newConsolidator The new consolidator address
-    function _setConsolidator(address _newConsolidator) internal {
-        ConsolidatorAddress.set(_newConsolidator);
-        emit SetConsolidator(_newConsolidator);
-    }
-
-    /// @inheritdoc IRiverV1
     function getOperatorsRegistry() external view returns (address) {
         return OperatorsRegistryAddress.get();
     }
@@ -365,35 +235,6 @@ contract RiverV1 is
         if (msg.sender != RedeemManagerAddress.get()) {
             revert LibErrors.Unauthorized(msg.sender);
         }
-    }
-
-    /// @inheritdoc IRiverV1
-    function selfConsolidation(bytes[] calldata pubkeys, uint256 maxFeePerConsolidation)
-        external
-        payable
-        onlyConsolidator
-    {
-        IWithdrawV1.ConsolidationRequest[] memory requests = IAttestationVerifierPectraMigrationV1(
-                AttestationVerifierAddress.get()
-            ).validateSelfConsolidation(pubkeys);
-        address excessFeeRecipient = msg.sender;
-        IWithdrawV1(payable(WithdrawalCredentials.getAddress())).consolidate{value: msg.value}(
-            requests, maxFeePerConsolidation, excessFeeRecipient
-        );
-        emit PectraConsolidationRequested(requests, maxFeePerConsolidation, excessFeeRecipient, msg.value);
-    }
-
-    /// @inheritdoc IRiverV1
-    function consolidate(IWithdrawV1.ConsolidationRequest[] calldata requests, uint256 maxFeePerConsolidation)
-        external
-        payable
-        onlyConsolidator
-    {
-        address excessFeeRecipient = msg.sender;
-        IWithdrawV1(payable(WithdrawalCredentials.getAddress())).consolidate{value: msg.value}(
-            requests, maxFeePerConsolidation, excessFeeRecipient
-        );
-        emit PectraConsolidationRequested(requests, maxFeePerConsolidation, excessFeeRecipient, msg.value);
     }
 
     /// @notice Overridden handler to pass the system admin inside components

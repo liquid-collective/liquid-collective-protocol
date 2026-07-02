@@ -32,6 +32,13 @@ contract WithdrawV1 is IWithdrawV1, Initializable, ReentrancyGuard, IProtocolVer
         _;
     }
 
+    modifier onlyAttestationVerifier() {
+        if (msg.sender != AttestationVerifierAddress.get()) {
+            revert LibErrors.Unauthorized(msg.sender);
+        }
+        _;
+    }
+
     /// @inheritdoc IWithdrawV1
     function initializeWithdrawV1(address _river) external init(0) {
         _setRiver(_river);
@@ -114,7 +121,7 @@ contract WithdrawV1 is IWithdrawV1, Initializable, ReentrancyGuard, IProtocolVer
         IWithdrawV1.ConsolidationRequest[] calldata requests,
         uint256 maxFeePerConsolidation,
         address excessFeeRecipient
-    ) external payable onlyRiver nonReentrant {
+    ) external payable onlyAttestationVerifier nonReentrant {
         if (requests.length == 0) {
             revert InvalidEmptyArray();
         }
