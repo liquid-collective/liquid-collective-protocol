@@ -178,7 +178,7 @@ library LibOracleReporting {
         // if we have new exited / skimmed eth available, we pull funds from the consensus layer recipient
         if (vars.exitedAmountIncrease + vars.skimmedAmountIncrease > 0) {
             // this method pulls and updates ethToDeposit / ethToRedeem accordingly
-            pullCLFunds(vars.skimmedAmountIncrease, vars.exitedAmountIncrease);
+            _pullCLFunds(vars.skimmedAmountIncrease, vars.exitedAmountIncrease);
         }
 
         // if we have new external consolidation funds that were reported, we reduce the consolidation buffer
@@ -268,7 +268,7 @@ library LibOracleReporting {
         // if we have available amount to upper bound after the reporting values are applied
         if (vars.availableAmountToUpperBound > 0) {
             // we pull the funds from the execution layer fee recipient
-            vars.trace.pulledELFees = pullELFees(vars.availableAmountToUpperBound);
+            vars.trace.pulledELFees = _pullELFees(vars.availableAmountToUpperBound);
             // we update the rewards
             vars.trace.rewards += vars.trace.pulledELFees;
             // we update the available amount accordingly
@@ -279,7 +279,7 @@ library LibOracleReporting {
         if (vars.availableAmountToUpperBound > 0) {
             // we pull the funds from the exceeding eth buffer of the redeem manager
             vars.trace.pulledRedeemManagerExceedingEthBuffer =
-                pullRedeemManagerExceedingEth(vars.availableAmountToUpperBound);
+                _pullRedeemManagerExceedingEth(vars.availableAmountToUpperBound);
             // we update the available amount accordingly
             vars.availableAmountToUpperBound -= vars.trace.pulledRedeemManagerExceedingEthBuffer;
         }
@@ -287,7 +287,7 @@ library LibOracleReporting {
         // if we have available amount to upper bound after pulling the exceeding eth buffer, we attempt to pull coverage funds
         if (vars.availableAmountToUpperBound > 0) {
             // we pull the funds from the coverage recipient
-            vars.trace.pulledCoverageFunds = pullCoverageFunds(vars.availableAmountToUpperBound);
+            vars.trace.pulledCoverageFunds = _pullCoverageFunds(vars.availableAmountToUpperBound);
             // we do not update the rewards as coverage is not considered rewards
         }
 
@@ -295,7 +295,7 @@ library LibOracleReporting {
         // if the consolidation buffer is greater than 0, we attempt to pull the funds from the consolidation coverage fund
         // we always attempt to pull the funds as we don't track on-chain if a consolidation failure has occurred
         if (consolidationBuffer > 0) {
-            vars.trace.pulledConsolidationCoverageFunds = pullConsolidationCoverageFunds(consolidationBuffer);
+            vars.trace.pulledConsolidationCoverageFunds = _pullConsolidationCoverageFunds(consolidationBuffer);
             if (vars.trace.pulledConsolidationCoverageFunds > 0) {
                 // we update the consolidation buffer
                 _setConsolidationBuffer(
@@ -307,16 +307,16 @@ library LibOracleReporting {
 
         // if our rewards are not null, we dispatch the fee to the collector
         if (vars.trace.rewards > 0) {
-            onEarnings(vars.trace.rewards);
+            _onEarnings(vars.trace.rewards);
         }
 
-        reportCLETH(_report.activeCLETHPerOperator);
+        _reportCLETH(_report.activeCLETHPerOperator);
 
         uint256 base = _report.validatorsBalance + InFlightDeposit.get();
         uint256 totalAvailableCLETH =
             base > _report.validatorsExitingBalance ? base - _report.validatorsExitingBalance : 0;
 
-        requestExitsBasedOnRedeemDemandAfterRebalancings(
+        _requestExitsBasedOnRedeemDemandAfterRebalancings(
             _report.validatorsExitingBalance,
             _report.exitedETHPerOperator,
             totalAvailableCLETH,
@@ -325,13 +325,13 @@ library LibOracleReporting {
         );
 
         // we use the updated balanceToRedeem value to report a withdraw event on the redeem manager
-        reportWithdrawToRedeemManager();
+        _reportWithdrawToRedeemManager();
 
         // if funds are left in the balance to redeem, we move them to the deposit balance
-        skimExcessBalanceToRedeem();
+        _skimExcessBalanceToRedeem();
 
         // we update the committable amount based on daily maximum allowed
-        commitBalanceToDeposit(vars.timeElapsedSinceLastReport, _report.slashingContainmentMode);
+        _commitBalanceToDeposit(vars.timeElapsedSinceLastReport, _report.slashingContainmentMode);
 
         // we emit a summary event with all the reporting details
         emit IOracleManagerV1.ProcessedConsensusLayerReport(_report, vars.trace);
@@ -344,7 +344,7 @@ library LibOracleReporting {
     /// @notice Pulls funds from the Withdraw contract, and adds funds to deposit and redeem balances
     /// @param _skimmedEthAmount The new amount of skimmed eth to pull
     /// @param _exitedEthAmount The new amount of exited eth to pull
-    function pullCLFunds(uint256 _skimmedEthAmount, uint256 _exitedEthAmount) private {
+    function _pullCLFunds(uint256 _skimmedEthAmount, uint256 _exitedEthAmount) private {
         uint256 currentBalance = address(this).balance;
         uint256 totalAmountToPull = _skimmedEthAmount + _exitedEthAmount;
         IWithdrawV1(WithdrawalCredentials.getAddress()).pullEth(totalAmountToPull);
@@ -364,7 +364,7 @@ library LibOracleReporting {
     /// @notice Pulls funds from the execution layer fee recipient to River and returns the delta in the balance
     /// @param _max The maximum amount to pull from the execution layer fee recipient
     /// @return The amount pulled from the execution layer fee recipient
-    function pullELFees(uint256 _max) private returns (uint256) {
+    function _pullELFees(uint256 _max) private returns (uint256) {
         address elFeeRecipient = ELFeeRecipientAddress.get();
         uint256 initialBalance = address(this).balance;
         IELFeeRecipientV1(payable(elFeeRecipient)).pullELFees(_max);
@@ -379,7 +379,7 @@ library LibOracleReporting {
     /// @notice Pulls funds from the coverage fund to River and returns the delta in the balance
     /// @param _max The maximum amount to pull from the coverage fund
     /// @return collectedCoverageFunds The amount pulled from the coverage fund
-    function pullCoverageFunds(uint256 _max) private returns (uint256 collectedCoverageFunds) {
+    function _pullCoverageFunds(uint256 _max) private returns (uint256 collectedCoverageFunds) {
         collectedCoverageFunds = _pullFundsFromCoverageFund(CoverageFundAddress.get(), _max);
         emit IRiverV1.PulledCoverageFunds(collectedCoverageFunds);
     }
@@ -387,7 +387,7 @@ library LibOracleReporting {
     /// @notice Pulls funds from the consolidation coverage fund to River and returns the delta in the balance
     /// @param _max The maximum amount to pull from the consolidation coverage fund
     /// @return collectedConsolidationCoverageFunds The amount pulled from the consolidation coverage fund
-    function pullConsolidationCoverageFunds(uint256 _max)
+    function _pullConsolidationCoverageFunds(uint256 _max)
         private
         returns (uint256 collectedConsolidationCoverageFunds)
     {
@@ -398,7 +398,7 @@ library LibOracleReporting {
     /// @notice Pulls funds from the redeem manager exceeding eth buffer
     /// @param _max The maximum amount to pull
     /// @return The amount pulled
-    function pullRedeemManagerExceedingEth(uint256 _max) private returns (uint256) {
+    function _pullRedeemManagerExceedingEth(uint256 _max) private returns (uint256) {
         uint256 currentBalance = address(this).balance;
         IRedeemManagerV1(RedeemManagerAddress.get()).pullExceedingEth(_max);
         uint256 collectedExceedingEth = address(this).balance - currentBalance;
@@ -411,7 +411,7 @@ library LibOracleReporting {
 
     /// @notice Computes the fees paid to the collector whenever the balance of ETH handled by the system increases
     /// @param _amount Additional ETH received
-    function onEarnings(uint256 _amount) private {
+    function _onEarnings(uint256 _amount) private {
         uint256 oldTotalSupply = ISharesManagerV1(address(this)).totalSupply();
         if (oldTotalSupply == 0) {
             revert IRiverV1.ZeroMintedShares();
@@ -433,7 +433,7 @@ library LibOracleReporting {
 
     /// @notice Reports the ETH that is currently active on the consensus layer for the operators
     /// @param _activeCLETH The array of active ETH amounts
-    function reportCLETH(uint256[] memory _activeCLETH) private {
+    function _reportCLETH(uint256[] memory _activeCLETH) private {
         IOperatorsRegistryV1(OperatorsRegistryAddress.get()).reportCLETH(_activeCLETH);
     }
 
@@ -443,7 +443,7 @@ library LibOracleReporting {
     /// @param _totalAvailableCLETH The total available ETH(wei) on the consensus layer that can be used to exit validators, this value includes the InFlightDeposit amount & excludes the exiting balance
     /// @param _depositToRedeemRebalancingAllowed True if rebalancing from deposit to redeem is allowed
     /// @param _slashingContainmentModeEnabled True if slashing containment mode is enabled
-    function requestExitsBasedOnRedeemDemandAfterRebalancings(
+    function _requestExitsBasedOnRedeemDemandAfterRebalancings(
         uint256 _exitingBalance,
         uint256[] memory _exitedETH,
         uint256 _totalAvailableCLETH,
@@ -507,7 +507,7 @@ library LibOracleReporting {
     }
 
     /// @notice Uses the balance to redeem to report a withdrawal event on the redeem manager
-    function reportWithdrawToRedeemManager() private {
+    function _reportWithdrawToRedeemManager() private {
         IRedeemManagerV1 redeemManager_ = IRedeemManagerV1(RedeemManagerAddress.get());
         uint256 underlyingAssetBalance = ISharesManagerV1(address(this)).totalUnderlyingSupply();
         uint256 totalSupply = ISharesManagerV1(address(this)).totalSupply();
@@ -547,7 +547,7 @@ library LibOracleReporting {
     }
 
     /// @notice Skims the redeem balance and sends remaining funds to the deposit balance
-    function skimExcessBalanceToRedeem() private {
+    function _skimExcessBalanceToRedeem() private {
         uint256 availableBalanceToRedeem = BalanceToRedeem.get();
 
         // if the available balance to redeem is not 0, it means that all the redeem requests are fulfilled, we should redirect funds for deposits
@@ -560,7 +560,7 @@ library LibOracleReporting {
     /// @notice Commits the deposit balance up to the allowed daily limit in batches of 32 ETH.
     /// @param _period The period between current and last report
     /// @param _slashingContainmentModeEnabled True if slashing containment mode is enabled
-    function commitBalanceToDeposit(uint256 _period, bool _slashingContainmentModeEnabled) private {
+    function _commitBalanceToDeposit(uint256 _period, bool _slashingContainmentModeEnabled) private {
         // When slashing containment mode is active, skip new validator funding to prevent compounding
         // losses. The deposit buffer remains available for redeem rebalancing but nothing is committed.
         if (_slashingContainmentModeEnabled) {
