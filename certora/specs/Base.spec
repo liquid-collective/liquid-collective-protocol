@@ -68,7 +68,7 @@ methods {
     
     // RiverV1 : ConsensusLayerDepositManagerV1
     function _.depositToConsensusLayerWithDepositRoot(IOperatorsRegistryV1.OperatorAllocation[], bytes32) external => DISPATCHER(true);
-    function _.mintLsETHForConsolidation(uint256, address) external => DISPATCHER(true);
+    function _.mintSharesForConsolidation(address, uint256) external => DISPATCHER(true);
     function RiverV1Harness.getDepositedValidatorCount() external returns(uint256) envfree;
 
     // WithdrawV1

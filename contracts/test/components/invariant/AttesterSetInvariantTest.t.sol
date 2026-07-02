@@ -54,7 +54,17 @@ contract AttesterSetInvariantTest is Test {
         initial[1] = makeAddr("att2");
         initial[2] = makeAddr("att3");
 
-        verifier.initAttestationVerifierV1(address(riverStub), address(0xBEEF), initial, 2, bytes4(0), initial, 2);
+        verifier.initAttestationVerifierV1(
+            address(riverStub),
+            address(0xBEEF),
+            initial,
+            2,
+            bytes4(0),
+            initial,
+            2,
+            makeAddr("consolidatorStub"),
+            makeAddr("externalConsolidationRecipientMappingStub")
+        );
 
         handler = new AttesterSetHandler(verifier, ADMIN, initial);
         targetContract(address(handler));

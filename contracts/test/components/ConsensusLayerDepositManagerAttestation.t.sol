@@ -16,6 +16,7 @@ import "../../src/libraries/LibFundingDeltas.sol";
 import "../../src/libraries/BLS12_381.sol";
 import "../../src/state/river/DepositContractAddress.sol";
 import "../../src/state/shared/AttestationVerifierAddress.sol";
+import "../utils/AttestationVerifierV1ExposedHarness.sol";
 import "../utils/LibImplementationUnbricker.sol";
 import "../mocks/DepositContractEnhancedMock.sol";
 import "../mocks/DepositContractInvalidMock.sol";
@@ -222,7 +223,7 @@ contract AttestationDepositHarness is ConsensusLayerDepositManagerV1 {
 
 contract ConsensusLayerDepositManagerAttestationTest is Test {
     AttestationDepositHarness internal dm;
-    AttestationVerifierV1 internal verifier;
+    AttestationVerifierV1ExposedHarness internal verifier;
     MockDepositDataBuffer internal buffer;
     MockPrePectraOperatorsRegistry internal prePectraRegistry;
     DepositContractEnhancedMock internal depositContract;
@@ -323,10 +324,20 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         address[] memory consolidationCommitteeAttesters = new address[](1);
         consolidationCommitteeAttesters[0] = makeAddr("consolidationCommitteeAttesterStub");
 
-        verifier = new AttestationVerifierV1();
+        // Exposed harness: identical to AttestationVerifierV1 plus external wrappers around the
+        // now-internal `_validateSelfConsolidation` / `_validateConsolidation` routines.
+        verifier = new AttestationVerifierV1ExposedHarness();
         LibImplementationUnbricker.unbrick(vm, address(verifier));
         verifier.initAttestationVerifierV1(
-            address(dm), address(buffer), rootAttesters, 2, bytes4(0), consolidationCommitteeAttesters, 1
+            address(dm),
+            address(buffer),
+            rootAttesters,
+            2,
+            bytes4(0),
+            consolidationCommitteeAttesters,
+            1,
+            makeAddr("consolidatorStub"),
+            makeAddr("externalConsolidationRecipientMappingStub")
         );
 
         // 3. Wire the verifier address into the harness.
@@ -1180,8 +1191,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         vm.expectEmit(false, false, false, true);
         emit AddedPectraValidatorPubkeys(pubkeys);
 
-        vm.prank(address(dm));
-        IWithdrawV1.ConsolidationRequest[] memory requests = verifier.validateSelfConsolidation(pubkeys);
+        IWithdrawV1.ConsolidationRequest[] memory requests = verifier.exposed_validateSelfConsolidation(pubkeys);
 
         assertEq(requests.length, 2, "request count");
         assertEq(requests[0].srcPubkeys.length, 1, "request 0 source count");
@@ -1197,7 +1207,11 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         assertTrue(verifier.isPubkeyFunded(pk1), "pk1 added to post-Pectra");
     }
 
-    function testValidateSelfConsolidation_revertsWhenCallerNotRiver() public {
+    /// @dev `validateSelfConsolidation`'s onlyRiver gate is gone — the routine is internal now and
+    ///      reached through the consolidator-gated `selfConsolidation` entry point. The equivalent
+    ///      unauthorized-caller check is the OnlyConsolidator revert on that public entry point,
+    ///      which fires before any validation runs.
+    function testSelfConsolidation_revertsWhenCallerNotConsolidator() public {
         uint256 operatorIdx = 9;
         prePectraRegistry.setPrePectraFundedValidatorCount(operatorIdx, 1);
         bytes memory pubkey = _seedPrePectraValidator(operatorIdx, 0, 652);
@@ -1209,25 +1223,23 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         pubkeys[0] = pubkey;
 
         vm.prank(admin);
-        vm.expectRevert(abi.encodeWithSelector(LibErrors.Unauthorized.selector, admin));
-        verifier.validateSelfConsolidation(pubkeys);
+        vm.expectRevert(IAttestationVerifierV1.OnlyConsolidator.selector);
+        verifier.selfConsolidation(pubkeys, 0);
     }
 
     function testValidateSelfConsolidation_revertsWhenBatchEmpty() public {
         bytes[] memory pubkeys = new bytes[](0);
 
-        vm.prank(address(dm));
         vm.expectRevert(
             abi.encodeWithSelector(IAttestationVerifierPectraMigrationV1.InvalidSelfConsolidationEmptyPubkeys.selector)
         );
-        verifier.validateSelfConsolidation(pubkeys);
+        verifier.exposed_validateSelfConsolidation(pubkeys);
     }
 
     function testValidateSelfConsolidation_revertsWhenPubkeyLengthInvalid() public {
         bytes[] memory pubkeys = new bytes[](1);
         pubkeys[0] = hex"1234";
 
-        vm.prank(address(dm));
         vm.expectRevert(
             abi.encodeWithSelector(
                 IAttestationVerifierPectraMigrationV1.InvalidSelfConsolidationPubkeyLength.selector,
@@ -1235,7 +1247,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
                 uint256(2)
             )
         );
-        verifier.validateSelfConsolidation(pubkeys);
+        verifier.exposed_validateSelfConsolidation(pubkeys);
     }
 
     function testValidateSelfConsolidation_revertsWhenPubkeyNotFunded() public {
@@ -1243,13 +1255,12 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         bytes[] memory pubkeys = new bytes[](1);
         pubkeys[0] = pubkey;
 
-        vm.prank(address(dm));
         vm.expectRevert(
             abi.encodeWithSelector(
                 IAttestationVerifierPectraMigrationV1.PrePectraValidatorPubkeyNotFunded.selector, pubkey
             )
         );
-        verifier.validateSelfConsolidation(pubkeys);
+        verifier.exposed_validateSelfConsolidation(pubkeys);
     }
 
     function testRemovePrePectraValidatorPubkeys_adminRemovesSubsetAndEmits() public {
@@ -2043,7 +2054,17 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         LibImplementationUnbricker.unbrick(vm, address(freshVerifier));
         address[] memory empty = new address[](0);
         vm.expectRevert(LibErrors.InvalidArgument.selector);
-        freshVerifier.initAttestationVerifierV1(address(dm), address(buffer), empty, 1, bytes4(0), empty, 1);
+        freshVerifier.initAttestationVerifierV1(
+            address(dm),
+            address(buffer),
+            empty,
+            1,
+            bytes4(0),
+            empty,
+            1,
+            makeAddr("consolidatorStub"),
+            makeAddr("externalConsolidationRecipientMappingStub")
+        );
     }
 
     /// @dev Cannot init with a root quorum of zero. This is distinct from an empty
@@ -2058,7 +2079,15 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
         vm.expectRevert(IAttestationVerifierV1.ZeroQuorum.selector);
         freshVerifier.initAttestationVerifierV1(
-            address(dm), address(buffer), rootAttesters, 0, bytes4(0), consolidationAttesters, 1
+            address(dm),
+            address(buffer),
+            rootAttesters,
+            0,
+            bytes4(0),
+            consolidationAttesters,
+            1,
+            makeAddr("consolidatorStub"),
+            makeAddr("externalConsolidationRecipientMappingStub")
         );
     }
 
@@ -2077,7 +2106,15 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
         vm.expectRevert(LibErrors.InvalidArgument.selector);
         freshVerifier.initAttestationVerifierV1(
-            address(dm), address(buffer), tooManyRootAttesters, 1, bytes4(0), consolidationAttesters, 1
+            address(dm),
+            address(buffer),
+            tooManyRootAttesters,
+            1,
+            bytes4(0),
+            consolidationAttesters,
+            1,
+            makeAddr("consolidatorStub"),
+            makeAddr("externalConsolidationRecipientMappingStub")
         );
     }
 
@@ -2089,7 +2126,17 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         attesters[0] = rootAttester1;
         attesters[1] = rootAttester2;
         vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.QuorumExceedsRootAttesterCount.selector, 3, 2));
-        freshVerifier.initAttestationVerifierV1(address(dm), address(buffer), attesters, 3, bytes4(0), attesters, 3);
+        freshVerifier.initAttestationVerifierV1(
+            address(dm),
+            address(buffer),
+            attesters,
+            3,
+            bytes4(0),
+            attesters,
+            3,
+            makeAddr("consolidatorStub"),
+            makeAddr("externalConsolidationRecipientMappingStub")
+        );
     }
 
     /// @dev Cannot add an attester that would push the total past MAX_ROOT_ATTESTERS.
@@ -2147,7 +2194,17 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(IAttestationVerifierV1.QuorumExceedsMaxSignatures.selector, max + 1, max)
         );
-        fresh.initAttestationVerifierV1(address(dm), address(buffer), atts, max + 1, bytes4(0), atts, max + 1);
+        fresh.initAttestationVerifierV1(
+            address(dm),
+            address(buffer),
+            atts,
+            max + 1,
+            bytes4(0),
+            atts,
+            max + 1,
+            makeAddr("consolidatorStub"),
+            makeAddr("externalConsolidationRecipientMappingStub")
+        );
     }
 
     /// @dev Admin cannot set quorum > MAX_SIGNATURES via the post-init setter. Distinct code
@@ -2274,7 +2331,17 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         atts[0] = makeAddr("a");
         atts[1] = makeAddr("b");
         vm.expectRevert(abi.encodeWithSelector(Initializable.InvalidInitialization.selector, 0, 1));
-        verifier.initAttestationVerifierV1(address(dm), address(buffer), atts, 1, bytes4(0), atts, 1);
+        verifier.initAttestationVerifierV1(
+            address(dm),
+            address(buffer),
+            atts,
+            1,
+            bytes4(0),
+            atts,
+            1,
+            makeAddr("consolidatorStub"),
+            makeAddr("externalConsolidationRecipientMappingStub")
+        );
     }
 
     // -----------------------------------------------------------------------

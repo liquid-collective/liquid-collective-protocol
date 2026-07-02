@@ -229,6 +229,8 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
         LibImplementationUnbricker.unbrick(vm, address(attestationVerifier));
         address[] memory _initConsolidationCommitteeAttesters = new address[](1);
         _initConsolidationCommitteeAttesters[0] = makeAddr("consolidationCommitteeAttesterStub");
+        // Consolidator + recipient-mapping wiring lives on the verifier now (init + admin
+        // setters moved off River), so both addresses are supplied at verifier init.
         attestationVerifier.initAttestationVerifierV1(
             address(river),
             address(depositBuffer),
@@ -236,20 +238,16 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
             2,
             bytes4(0),
             _initConsolidationCommitteeAttesters,
-            1
+            1,
+            consolidator,
+            address(externalConsolidationRecipientMapping)
         );
 
         bytes32 _initWc = withdraw.getCredentials();
         address _initConsolidationCoverageFund = makeAddr("consolidationCoverageFund");
         externalConsolidationRecipientMapping.initExternalConsolidationRecipientMappingV1(address(river));
         vm.prank(admin);
-        river.initRiverV1_3(
-            _initWc,
-            _initConsolidationCoverageFund,
-            address(attestationVerifier),
-            address(externalConsolidationRecipientMapping),
-            consolidator
-        );
+        river.initRiverV1_3(_initWc, _initConsolidationCoverageFund, address(attestationVerifier));
         // Mock BLS verification: EIP-2537 precompiles are unavailable in Foundry.
         vm.mockCall(
             address(attestationVerifier),

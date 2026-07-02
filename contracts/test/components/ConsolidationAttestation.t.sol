@@ -6,6 +6,7 @@ import "forge-std/Test.sol";
 import "../../src/AttestationVerifier.1.sol";
 import "../../src/interfaces/IAttestationVerifier.1.sol";
 import "../../src/libraries/LibErrors.sol";
+import "../utils/AttestationVerifierV1ExposedHarness.sol";
 import "../utils/LibImplementationUnbricker.sol";
 
 // ---------------------------------------------------------------------------
@@ -40,11 +41,13 @@ contract MockRiverAdmin {
 // ---------------------------------------------------------------------------
 
 contract ConsolidationAttestationTest is Test {
-    AttestationVerifierV1 internal verifier;
+    AttestationVerifierV1ExposedHarness internal verifier;
     MockRiverAdmin internal river;
 
     address internal admin = address(0xAD);
     address internal depositBufferStub;
+    address internal consolidatorStub;
+    address internal recipientMappingStub;
 
     uint256 internal pk1 = 0xC1;
     uint256 internal pk2 = 0xC2;
@@ -79,8 +82,12 @@ contract ConsolidationAttestationTest is Test {
         // The consolidation tests do not exercise the deposit `validate` path; a non-zero
         // EOA satisfies the deposit buffer's LibSanitize._notZeroAddress check at init.
         depositBufferStub = makeAddr("depositDataBufferStub");
+        consolidatorStub = makeAddr("consolidatorStub");
+        recipientMappingStub = makeAddr("externalConsolidationRecipientMappingStub");
 
-        verifier = new AttestationVerifierV1();
+        // The exposed harness inherits AttestationVerifierV1 unchanged and only adds
+        // external wrappers around the now-internal validation routines.
+        verifier = new AttestationVerifierV1ExposedHarness();
         LibImplementationUnbricker.unbrick(vm, address(verifier));
 
         address[] memory depCommittee = new address[](1);
@@ -89,7 +96,17 @@ contract ConsolidationAttestationTest is Test {
         cCommittee[0] = attester1;
         cCommittee[1] = attester2;
         cCommittee[2] = attester3;
-        verifier.initAttestationVerifierV1(address(river), depositBufferStub, depCommittee, 1, bytes4(0), cCommittee, 2);
+        verifier.initAttestationVerifierV1(
+            address(river),
+            depositBufferStub,
+            depCommittee,
+            1,
+            bytes4(0),
+            cCommittee,
+            2,
+            consolidatorStub,
+            recipientMappingStub
+        );
     }
 
     /// @dev Deploy + unbrick a fresh verifier.
@@ -109,7 +126,15 @@ contract ConsolidationAttestationTest is Test {
         address[] memory dep = new address[](1);
         dep[0] = depositAttester;
         fresh.initAttestationVerifierV1(
-            address(river), depositBufferStub, dep, 1, bytes4(0), consolidationCommittee, consolidationQuorum
+            address(river),
+            depositBufferStub,
+            dep,
+            1,
+            bytes4(0),
+            consolidationCommittee,
+            consolidationQuorum,
+            consolidatorStub,
+            recipientMappingStub
         );
     }
 
@@ -213,9 +238,11 @@ contract ConsolidationAttestationTest is Test {
         });
     }
 
-    function _validateConsolidationAsRiver(IAttestationVerifierV1.ConsolidationObject memory consolidation) internal {
-        vm.prank(address(river));
-        verifier.validateConsolidation(consolidation);
+    /// @dev `_validateConsolidation` is internal on the verifier now (the consolidator-gated
+    ///      `mintLsETHForConsolidation` is its production caller); the harness exposes it so the
+    ///      validation logic can still be unit-tested directly, with no caller gate to prank past.
+    function _validateConsolidation(IAttestationVerifierV1.ConsolidationObject memory consolidation) internal {
+        verifier.exposed_validateConsolidation(consolidation);
     }
 
     // -----------------------------------------------------------------------
@@ -225,7 +252,7 @@ contract ConsolidationAttestationTest is Test {
     function testValidateConsolidation_singlePair_quorumMet() public {
         address user = address(0xBEEF);
         IAttestationVerifierV1.ConsolidationObject memory c = _validConsolidation(user, 1);
-        _validateConsolidationAsRiver(c);
+        _validateConsolidation(c);
     }
 
     function testValidateConsolidation_multiplePairs_succeeds() public {
@@ -251,20 +278,22 @@ contract ConsolidationAttestationTest is Test {
             totalAmount: totalAmount,
             signatures: sigs
         });
-        _validateConsolidationAsRiver(c);
+        _validateConsolidation(c);
     }
 
     function testValidateConsolidation_exactlyQuorumSignatures() public {
         // Quorum is 2; supplying exactly 2 valid signatures should pass.
         address user = address(0x11);
         IAttestationVerifierV1.ConsolidationObject memory c = _validConsolidation(user, 7);
-        _validateConsolidationAsRiver(c);
+        _validateConsolidation(c);
     }
 
-    function testRevert_validateConsolidation_onlyRiver() public {
+    function testRevert_mintLsETHForConsolidation_onlyConsolidator() public {
+        // The public entry point is gated to the stored consolidator; the modifier fires
+        // before any validation, so any syntactically valid object works here.
         IAttestationVerifierV1.ConsolidationObject memory c = _validConsolidation(address(0xBEEF), 123);
-        vm.expectRevert(abi.encodeWithSelector(LibErrors.Unauthorized.selector, address(this)));
-        verifier.validateConsolidation(c);
+        vm.expectRevert(IAttestationVerifierV1.OnlyConsolidator.selector);
+        verifier.mintLsETHForConsolidation(c);
     }
 
     // -----------------------------------------------------------------------
@@ -330,7 +359,9 @@ contract ConsolidationAttestationTest is Test {
         address[] memory cc = new address[](1);
         cc[0] = attester1;
         vm.expectRevert(abi.encodeWithSignature("InvalidInitialization(uint256,uint256)", 0, 1));
-        verifier.initAttestationVerifierV1(address(river), depositBufferStub, dep, 1, bytes4(0), cc, 1);
+        verifier.initAttestationVerifierV1(
+            address(river), depositBufferStub, dep, 1, bytes4(0), cc, 1, consolidatorStub, recipientMappingStub
+        );
     }
 
     function testInit_consolidationDomainSeparatorDiffersFromDeposit() public {
@@ -356,7 +387,9 @@ contract ConsolidationAttestationTest is Test {
         cc[0] = attester1;
         // RiverAddress.set calls LibSanitize._notZeroAddress before writing the slot.
         vm.expectRevert(LibErrors.InvalidZeroAddress.selector);
-        fresh.initAttestationVerifierV1(address(0), depositBufferStub, dep, 1, bytes4(0), cc, 1);
+        fresh.initAttestationVerifierV1(
+            address(0), depositBufferStub, dep, 1, bytes4(0), cc, 1, consolidatorStub, recipientMappingStub
+        );
     }
 
     function testInit_revertZeroAttesterInArray() public {
@@ -385,7 +418,7 @@ contract ConsolidationAttestationTest is Test {
             signatures: new bytes[](0)
         });
         vm.expectRevert(IAttestationVerifierV1.NoConsolidations.selector);
-        _validateConsolidationAsRiver(c);
+        _validateConsolidation(c);
     }
 
     function testRevert_sourceTargetLengthMismatch() public {
@@ -403,7 +436,7 @@ contract ConsolidationAttestationTest is Test {
             signatures: new bytes[](0)
         });
         vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.ConsolidationArrayLengthMismatch.selector, 2, 1));
-        _validateConsolidationAsRiver(c);
+        _validateConsolidation(c);
     }
 
     function testRevert_zeroTotalAmount() public {
@@ -420,7 +453,7 @@ contract ConsolidationAttestationTest is Test {
             signatures: new bytes[](0)
         });
         vm.expectRevert(IAttestationVerifierV1.ZeroConsolidationTotalAmount.selector);
-        _validateConsolidationAsRiver(c);
+        _validateConsolidation(c);
     }
 
     function testRevert_zeroWithdrawalAddress() public {
@@ -437,7 +470,7 @@ contract ConsolidationAttestationTest is Test {
             signatures: new bytes[](0)
         });
         vm.expectRevert(IAttestationVerifierV1.ZeroConsolidationWithdrawalAddress.selector);
-        _validateConsolidationAsRiver(c);
+        _validateConsolidation(c);
     }
 
     function testRevert_sourcePubkeyWrongLength() public {
@@ -456,7 +489,7 @@ contract ConsolidationAttestationTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(IAttestationVerifierV1.InvalidConsolidationPubkeyLength.selector, 0, 47, true)
         );
-        _validateConsolidationAsRiver(c);
+        _validateConsolidation(c);
     }
 
     function testRevert_targetPubkeyWrongLength() public {
@@ -475,7 +508,7 @@ contract ConsolidationAttestationTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(IAttestationVerifierV1.InvalidConsolidationPubkeyLength.selector, 0, 49, false)
         );
-        _validateConsolidationAsRiver(c);
+        _validateConsolidation(c);
     }
 
     // -----------------------------------------------------------------------
@@ -510,7 +543,7 @@ contract ConsolidationAttestationTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(IAttestationVerifierV1.InsufficientConsolidationAttestations.selector, 0, 2)
         );
-        _validateConsolidationAsRiver(
+        _validateConsolidation(
             IAttestationVerifierV1.ConsolidationObject({
                 withdrawalAddress: user,
                 sourcePubkeys: sources,
@@ -526,7 +559,7 @@ contract ConsolidationAttestationTest is Test {
         sigsA[0] = _sign(pk1, expectedDigest);
         sigsA[1] = _sign(pk2, expectedDigest);
         // Succeeds (does not revert): correct signatures over the same request fields.
-        _validateConsolidationAsRiver(
+        _validateConsolidation(
             IAttestationVerifierV1.ConsolidationObject({
                 withdrawalAddress: user,
                 sourcePubkeys: sources,
@@ -542,7 +575,7 @@ contract ConsolidationAttestationTest is Test {
         // call with the same payload (even with the same valid signatures) must revert.
         address user = address(0xBEEF);
         IAttestationVerifierV1.ConsolidationObject memory c = _validConsolidation(user, 1);
-        _validateConsolidationAsRiver(c);
+        _validateConsolidation(c);
 
         // The expected key is the EIP-712 structHash over the four request fields.
         bytes32 structHash = keccak256(
@@ -558,13 +591,13 @@ contract ConsolidationAttestationTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(IAttestationVerifierV1.ConsolidationAlreadyProcessed.selector, structHash)
         );
-        _validateConsolidationAsRiver(c);
+        _validateConsolidation(c);
     }
 
     function testRevert_consolidationAlreadyProcessedWithDifferentValidSignatures() public {
         address user = address(0xBEEF);
         IAttestationVerifierV1.ConsolidationObject memory c = _validConsolidation(user, 321);
-        _validateConsolidationAsRiver(c);
+        _validateConsolidation(c);
 
         bytes32 digest = _consolidationDigest(c.withdrawalAddress, c.sourcePubkeys, c.targetPubkeys, c.totalAmount);
         bytes[] memory alternateSigs = new bytes[](2);
@@ -577,7 +610,7 @@ contract ConsolidationAttestationTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(IAttestationVerifierV1.ConsolidationAlreadyProcessed.selector, structHash)
         );
-        _validateConsolidationAsRiver(c);
+        _validateConsolidation(c);
     }
 
     function testRevert_overlappingSourceDistinctRequestCannotReuseFirstRequestSignatures() public {
@@ -603,7 +636,7 @@ contract ConsolidationAttestationTest is Test {
         secondTargets[1] = _pubkey(902);
         uint256 secondAmount = 64 ether;
 
-        _validateConsolidationAsRiver(
+        _validateConsolidation(
             IAttestationVerifierV1.ConsolidationObject({
                 withdrawalAddress: user,
                 sourcePubkeys: firstSources,
@@ -616,7 +649,7 @@ contract ConsolidationAttestationTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(IAttestationVerifierV1.InsufficientConsolidationAttestations.selector, 0, 2)
         );
-        _validateConsolidationAsRiver(
+        _validateConsolidation(
             IAttestationVerifierV1.ConsolidationObject({
                 withdrawalAddress: user,
                 sourcePubkeys: secondSources,
@@ -641,7 +674,7 @@ contract ConsolidationAttestationTest is Test {
         );
         vm.expectEmit(true, false, false, true);
         emit IAttestationVerifierV1.ConsolidationProcessed(structHash);
-        _validateConsolidationAsRiver(c);
+        _validateConsolidation(c);
     }
 
     // -----------------------------------------------------------------------
@@ -663,7 +696,7 @@ contract ConsolidationAttestationTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(IAttestationVerifierV1.InsufficientConsolidationAttestations.selector, 1, 2)
         );
-        _validateConsolidationAsRiver(
+        _validateConsolidation(
             IAttestationVerifierV1.ConsolidationObject({
                 withdrawalAddress: user,
                 sourcePubkeys: sources,
@@ -689,7 +722,7 @@ contract ConsolidationAttestationTest is Test {
         }
 
         vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.TooManySignatures.selector, 21, 20));
-        _validateConsolidationAsRiver(
+        _validateConsolidation(
             IAttestationVerifierV1.ConsolidationObject({
                 withdrawalAddress: user,
                 sourcePubkeys: sources,
@@ -716,7 +749,7 @@ contract ConsolidationAttestationTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(IAttestationVerifierV1.InsufficientConsolidationAttestations.selector, 1, 2)
         );
-        _validateConsolidationAsRiver(
+        _validateConsolidation(
             IAttestationVerifierV1.ConsolidationObject({
                 withdrawalAddress: user,
                 sourcePubkeys: sources,
@@ -743,7 +776,7 @@ contract ConsolidationAttestationTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(IAttestationVerifierV1.InsufficientConsolidationAttestations.selector, 1, 2)
         );
-        _validateConsolidationAsRiver(
+        _validateConsolidation(
             IAttestationVerifierV1.ConsolidationObject({
                 withdrawalAddress: user,
                 sourcePubkeys: sources,
@@ -770,7 +803,7 @@ contract ConsolidationAttestationTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(IAttestationVerifierV1.InsufficientConsolidationAttestations.selector, 1, 2)
         );
-        _validateConsolidationAsRiver(
+        _validateConsolidation(
             IAttestationVerifierV1.ConsolidationObject({
                 withdrawalAddress: user,
                 sourcePubkeys: sources,
@@ -802,7 +835,7 @@ contract ConsolidationAttestationTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(IAttestationVerifierV1.InsufficientConsolidationAttestations.selector, 1, 2)
         );
-        _validateConsolidationAsRiver(
+        _validateConsolidation(
             IAttestationVerifierV1.ConsolidationObject({
                 withdrawalAddress: user,
                 sourcePubkeys: sources,
@@ -827,7 +860,7 @@ contract ConsolidationAttestationTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(IAttestationVerifierV1.InsufficientConsolidationAttestations.selector, 0, 2)
         );
-        _validateConsolidationAsRiver(
+        _validateConsolidation(
             IAttestationVerifierV1.ConsolidationObject({
                 withdrawalAddress: user,
                 sourcePubkeys: sources,
@@ -846,7 +879,7 @@ contract ConsolidationAttestationTest is Test {
         IAttestationVerifierV1.ConsolidationObject memory c = _validConsolidation(user, 1);
 
         vm.expectRevert(IAttestationVerifierV1.ZeroConsolidationDomainSeparator.selector);
-        _validateConsolidationAsRiver(c);
+        _validateConsolidation(c);
     }
 
     function testRevert_zeroConsolidationQuorumStorage() public {
@@ -858,7 +891,7 @@ contract ConsolidationAttestationTest is Test {
         IAttestationVerifierV1.ConsolidationObject memory c = _validConsolidation(address(0x11), 2);
 
         vm.expectRevert(IAttestationVerifierV1.ZeroQuorum.selector);
-        _validateConsolidationAsRiver(c);
+        _validateConsolidation(c);
     }
 
     // -----------------------------------------------------------------------

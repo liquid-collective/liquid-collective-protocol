@@ -404,7 +404,7 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         withdraw.withdraw{value: 0}(pubkeys, amounts, 1 gwei, excessFeeRecipient);
     }
 
-    function testConsolidateOnlyCallableByRiver() external {
+    function testConsolidateOnlyCallableByAttestationVerifier() external {
         bytes[] memory srcPubkeys = new bytes[](1);
         srcPubkeys[0] = VALID_PUBKEY_48;
         IWithdrawV1.ConsolidationRequest[] memory requests = new IWithdrawV1.ConsolidationRequest[](1);
@@ -416,9 +416,20 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         withdraw.consolidate{value: 1 gwei}(requests, 1 gwei, excessFeeRecipient);
     }
 
+    /// @notice River (the formerly-authorized caller) can no longer call consolidate.
+    function testConsolidateRevertsWhenCalledByRiver() external {
+        bytes[] memory srcPubkeys = new bytes[](1);
+        srcPubkeys[0] = VALID_PUBKEY_48;
+        IWithdrawV1.ConsolidationRequest[] memory requests = new IWithdrawV1.ConsolidationRequest[](1);
+        requests[0] = IWithdrawV1.ConsolidationRequest({srcPubkeys: srcPubkeys, targetPubkey: VALID_PUBKEY_48});
+        vm.deal(address(river), 10 gwei);
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", address(river)));
+        river.debug_consolidate{value: 1 gwei}(address(withdraw), requests, 1 gwei, excessFeeRecipient);
+    }
+
     function testConsolidateRevertsIfEmptyRequestsArray() external {
         IWithdrawV1.ConsolidationRequest[] memory requests = new IWithdrawV1.ConsolidationRequest[](0);
-        vm.prank(address(river));
+        vm.prank(address(attestationVerifier));
         vm.expectRevert(IWithdrawV1.InvalidEmptyArray.selector);
         withdraw.consolidate{value: 0}(requests, 1 gwei, excessFeeRecipient);
     }
@@ -488,8 +499,8 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         IWithdrawV1.ConsolidationRequest[] memory requests = new IWithdrawV1.ConsolidationRequest[](1);
         requests[0] = IWithdrawV1.ConsolidationRequest({srcPubkeys: srcPubkeys, targetPubkey: VALID_PUBKEY_48});
         uint256 valueSent = 5 gwei;
-        vm.deal(address(river), valueSent);
-        vm.prank(address(river));
+        vm.deal(address(attestationVerifier), valueSent);
+        vm.prank(address(attestationVerifier));
         withdraw.consolidate{value: valueSent}(requests, 1 gwei, excessFeeRecipient);
 
         assertEq(address(mockConsolidation).balance, 1 gwei);
@@ -503,10 +514,10 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         requests[0] = IWithdrawV1.ConsolidationRequest({srcPubkeys: srcPubkeys, targetPubkey: VALID_PUBKEY_48});
 
         uint256 fee = 1 gwei;
-        vm.deal(address(river), fee);
+        vm.deal(address(attestationVerifier), fee);
 
         vm.expectCall(address(mockConsolidation), fee, bytes.concat(srcPubkeys[0], VALID_PUBKEY_48));
-        vm.prank(address(river));
+        vm.prank(address(attestationVerifier));
         withdraw.consolidate{value: fee}(requests, fee, excessFeeRecipient);
 
         assertEq(address(mockConsolidation).balance, fee);
@@ -522,10 +533,10 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         requests[0] = IWithdrawV1.ConsolidationRequest({srcPubkeys: srcPubkeys, targetPubkey: VALID_PUBKEY_48});
 
         uint256 fee = 1 gwei;
-        vm.deal(address(river), fee);
+        vm.deal(address(attestationVerifier), fee);
 
         vm.expectCall(address(mockConsolidation), fee, bytes.concat(sourcePubkey, VALID_PUBKEY_48));
-        vm.prank(address(river));
+        vm.prank(address(attestationVerifier));
         withdraw.consolidate{value: fee}(requests, fee, excessFeeRecipient);
 
         assertEq(address(mockConsolidation).balance, fee);
@@ -540,8 +551,8 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         IWithdrawV1.ConsolidationRequest[] memory requests = new IWithdrawV1.ConsolidationRequest[](1);
         requests[0] = IWithdrawV1.ConsolidationRequest({srcPubkeys: srcPubkeys, targetPubkey: targetPubkey});
 
-        vm.deal(address(river), 1 gwei);
-        vm.prank(address(river));
+        vm.deal(address(attestationVerifier), 1 gwei);
+        vm.prank(address(attestationVerifier));
         vm.expectRevert(abi.encodeWithSelector(IWithdrawV1.TargetPubkeyNotFunded.selector, targetPubkey));
         withdraw.consolidate{value: 1 gwei}(requests, 1 gwei, excessFeeRecipient);
 
@@ -558,10 +569,10 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         requests[0] = IWithdrawV1.ConsolidationRequest({srcPubkeys: srcPubkeys, targetPubkey: pubkey});
 
         uint256 fee = 1 gwei;
-        vm.deal(address(river), fee);
+        vm.deal(address(attestationVerifier), fee);
 
         vm.expectCall(address(mockConsolidation), fee, bytes.concat(pubkey, pubkey));
-        vm.prank(address(river));
+        vm.prank(address(attestationVerifier));
         withdraw.consolidate{value: fee}(requests, fee, excessFeeRecipient);
 
         assertEq(address(mockConsolidation).balance, fee);
@@ -575,8 +586,8 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         IWithdrawV1.ConsolidationRequest[] memory requests = new IWithdrawV1.ConsolidationRequest[](1);
         requests[0] = IWithdrawV1.ConsolidationRequest({srcPubkeys: srcPubkeys, targetPubkey: VALID_PUBKEY_48});
 
-        vm.deal(address(river), 1 gwei);
-        vm.prank(address(river));
+        vm.deal(address(attestationVerifier), 1 gwei);
+        vm.prank(address(attestationVerifier));
         vm.expectRevert(abi.encodeWithSelector(IWithdrawV1.SourcePubkeyNotFunded.selector, sourcePubkey));
         withdraw.consolidate{value: 1 gwei}(requests, 1 gwei, excessFeeRecipient);
 
@@ -596,8 +607,8 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         requests[1] = IWithdrawV1.ConsolidationRequest({srcPubkeys: invalidSources, targetPubkey: VALID_PUBKEY_48});
 
         uint256 totalValue = 2 gwei;
-        vm.deal(address(river), totalValue);
-        vm.prank(address(river));
+        vm.deal(address(attestationVerifier), totalValue);
+        vm.prank(address(attestationVerifier));
         vm.expectRevert(abi.encodeWithSelector(IWithdrawV1.SourcePubkeyNotFunded.selector, unfundedSource));
         withdraw.consolidate{value: totalValue}(requests, 1 gwei, excessFeeRecipient);
 
@@ -644,12 +655,12 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         IWithdrawV1.ConsolidationRequest[] memory requests = new IWithdrawV1.ConsolidationRequest[](1);
         requests[0] = IWithdrawV1.ConsolidationRequest(srcPubkeys, targetPubkey);
 
-        vm.prank(address(river));
+        vm.prank(address(attestationVerifier));
         vm.expectRevert(abi.encodeWithSelector(IWithdrawV1.FeeReadFailed.selector));
         w.consolidate(requests, 0.1 ether, excessFeeRecipient);
     }
 
-    /// @notice Tests that consolidate refunds the sender (river) any excess funds after actual fee deduction.
+    /// @notice Tests that consolidate refunds the excess fee recipient any excess funds after actual fee deduction.
     function testConsolidateRefundsSenderAnyExcessFund() public {
         bytes[] memory srcPubkeys = new bytes[](1);
         srcPubkeys[0] = VALID_PUBKEY_48;
@@ -660,10 +671,10 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         uint256 maxFeePerConsolidation = 1.5 ether;
         uint256 fee = maxFeePerConsolidation - 1;
         mockConsolidation.setFee(fee);
-        vm.deal(address(river), maxFeePerConsolidation);
+        vm.deal(address(attestationVerifier), maxFeePerConsolidation);
 
         uint256 recipientBalBefore = excessFeeRecipient.balance;
-        vm.prank(address(river));
+        vm.prank(address(attestationVerifier));
         withdraw.consolidate{value: maxFeePerConsolidation}(requests, maxFeePerConsolidation, excessFeeRecipient);
         uint256 recipientBalAfter = excessFeeRecipient.balance;
         assertEq(
@@ -684,7 +695,7 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         uint256 maxFeePerConsolidation = 1.5 ether;
         uint256 fee = maxFeePerConsolidation - 1;
         mockConsolidation.setFee(fee);
-        vm.deal(address(river), maxFeePerConsolidation);
+        vm.deal(address(attestationVerifier), maxFeePerConsolidation);
 
         address excessFeeRecipientAddr = address(new MockBeneficiaryContract());
         uint256 totalValueReceived = maxFeePerConsolidation;
@@ -693,7 +704,7 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         vm.expectEmit(true, true, true, true);
         emit UnsentExcessFee(excessFeeRecipientAddr, excessFee);
 
-        vm.prank(address(river));
+        vm.prank(address(attestationVerifier));
         withdraw.consolidate{value: maxFeePerConsolidation}(requests, maxFeePerConsolidation, excessFeeRecipientAddr);
     }
 
@@ -708,9 +719,9 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         uint256 maxFeePerConsolidation = 0.1 ether;
         uint256 fee = maxFeePerConsolidation + 1;
         mockConsolidation.setFee(fee);
-        vm.deal(address(river), fee);
+        vm.deal(address(attestationVerifier), fee);
 
-        vm.prank(address(river));
+        vm.prank(address(attestationVerifier));
         vm.expectRevert(abi.encodeWithSelector(IWithdrawV1.FeeTooHigh.selector, fee, maxFeePerConsolidation));
         withdraw.consolidate{value: fee}(requests, maxFeePerConsolidation, excessFeeRecipient);
     }
@@ -725,11 +736,11 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
 
         uint256 maxFeePerConsolidation = 0.1 ether;
         mockConsolidation.setFee(maxFeePerConsolidation);
-        vm.deal(address(river), maxFeePerConsolidation);
+        vm.deal(address(attestationVerifier), maxFeePerConsolidation);
         vm.deal(address(withdraw), 10 ether);
 
         uint256 value = maxFeePerConsolidation - 1;
-        vm.prank(address(river));
+        vm.prank(address(attestationVerifier));
         vm.expectRevert(
             abi.encodeWithSelector(IWithdrawV1.InsufficientValueForFee.selector, value, maxFeePerConsolidation)
         );
@@ -755,14 +766,14 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
 
         uint256 maxFeePerConsolidation = 0.1 ether;
         mockConsolidation.setFee(maxFeePerConsolidation);
-        vm.deal(address(river), 1 ether);
+        vm.deal(address(attestationVerifier), 1 ether);
         vm.deal(address(withdraw), 10 ether);
 
         uint256 totalNumOfConsolidationOperations = 8;
         uint256 totalFeeRequired = maxFeePerConsolidation * totalNumOfConsolidationOperations;
         uint256 value = totalFeeRequired - 1;
 
-        vm.prank(address(river));
+        vm.prank(address(attestationVerifier));
         vm.expectRevert(abi.encodeWithSelector(IWithdrawV1.InsufficientValueForFee.selector, value, totalFeeRequired));
         withdraw.consolidate{value: value}(requests, maxFeePerConsolidation, excessFeeRecipient);
     }
@@ -789,8 +800,8 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         IWithdrawV1.ConsolidationRequest[] memory requests = new IWithdrawV1.ConsolidationRequest[](1);
         requests[0] = IWithdrawV1.ConsolidationRequest(srcPubkeys, targetPubkey);
 
-        vm.deal(address(river), maxFeePerConsolidation);
-        vm.prank(address(river));
+        vm.deal(address(attestationVerifier), maxFeePerConsolidation);
+        vm.prank(address(attestationVerifier));
         vm.expectRevert(abi.encodeWithSignature("RequestFailed()"));
         w.consolidate{value: maxFeePerConsolidation}(requests, maxFeePerConsolidation, excessFeeRecipient);
     }
@@ -805,7 +816,7 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
 
         uint256 maxFeePerConsolidation = 0.1 ether;
         mockConsolidation.setFee(maxFeePerConsolidation);
-        vm.deal(address(river), maxFeePerConsolidation);
+        vm.deal(address(attestationVerifier), maxFeePerConsolidation);
 
         bytes memory callData = bytes.concat(srcPubkeys[0], targetPubkey);
 
@@ -813,7 +824,7 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         vm.expectEmit(true, true, true, true);
         emit ConsolidationRequested(srcPubkeys[0], targetPubkey, maxFeePerConsolidation);
 
-        vm.prank(address(river));
+        vm.prank(address(attestationVerifier));
         withdraw.consolidate{value: maxFeePerConsolidation}(requests, maxFeePerConsolidation, excessFeeRecipient);
     }
 
@@ -831,7 +842,7 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
 
         uint256 maxFeePerConsolidation = 0.1 ether;
         mockConsolidation.setFee(maxFeePerConsolidation);
-        vm.deal(address(river), maxFeePerConsolidation * 2);
+        vm.deal(address(attestationVerifier), maxFeePerConsolidation * 2);
 
         bytes memory callData1 = bytes.concat(srcPubkeys1[0], targetPubkey);
         bytes memory callData2 = bytes.concat(srcPubkeys2[0], targetPubkey);
@@ -843,7 +854,7 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         vm.expectEmit(true, true, true, true);
         emit ConsolidationRequested(srcPubkeys2[0], targetPubkey, maxFeePerConsolidation);
 
-        vm.prank(address(river));
+        vm.prank(address(attestationVerifier));
         withdraw.consolidate{value: maxFeePerConsolidation * 2}(requests, maxFeePerConsolidation, excessFeeRecipient);
     }
 
@@ -857,10 +868,10 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         requests[0] = IWithdrawV1.ConsolidationRequest(srcPubkeys, targetPubkey);
 
         uint256 maxFeePerConsolidation = 0.1 ether;
-        vm.deal(address(river), maxFeePerConsolidation);
+        vm.deal(address(attestationVerifier), maxFeePerConsolidation);
 
         vm.expectRevert(abi.encodeWithSelector(IWithdrawV1.InvalidPubkeyLength.selector, 47));
-        vm.prank(address(river));
+        vm.prank(address(attestationVerifier));
         withdraw.consolidate{value: maxFeePerConsolidation}(requests, maxFeePerConsolidation, excessFeeRecipient);
     }
 
@@ -874,10 +885,10 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         requests[0] = IWithdrawV1.ConsolidationRequest(srcPubkeys, targetPubkey);
 
         uint256 maxFeePerConsolidation = 0.1 ether;
-        vm.deal(address(river), maxFeePerConsolidation);
+        vm.deal(address(attestationVerifier), maxFeePerConsolidation);
 
         vm.expectRevert(abi.encodeWithSelector(IWithdrawV1.InvalidPubkeyLength.selector, 47));
-        vm.prank(address(river));
+        vm.prank(address(attestationVerifier));
         withdraw.consolidate{value: maxFeePerConsolidation}(requests, maxFeePerConsolidation, excessFeeRecipient);
     }
 
@@ -1102,14 +1113,14 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
 
         uint256 maxFeePerConsolidation = 1 gwei;
         uint256 valueSent = 5 gwei;
-        vm.deal(address(river), valueSent);
+        vm.deal(address(attestationVerifier), valueSent);
 
-        vm.prank(address(river));
+        vm.prank(address(attestationVerifier));
         vm.expectRevert(abi.encodeWithSelector(IWithdrawV1.InvalidEmptyArray.selector));
         withdraw.consolidate{value: valueSent}(requests, maxFeePerConsolidation, excessFeeRecipient);
 
         assertEq(address(mockConsolidation).balance, 0, "no fee should be paid for empty srcPubkeys");
-        assertEq(address(river).balance, valueSent, "full value should be refunded");
+        assertEq(address(attestationVerifier).balance, valueSent, "full value should be refunded");
     }
 
     /// @notice A ConsolidationRequest with srcPubkeys but invalid targetPubkey length reverts.
@@ -1119,8 +1130,8 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         requests[0] = IWithdrawV1.ConsolidationRequest({srcPubkeys: new bytes[](1), targetPubkey: shortPubkey});
         requests[0].srcPubkeys[0] = VALID_PUBKEY_48;
 
-        vm.deal(address(river), 1 gwei);
-        vm.prank(address(river));
+        vm.deal(address(attestationVerifier), 1 gwei);
+        vm.prank(address(attestationVerifier));
         vm.expectRevert(abi.encodeWithSelector(IWithdrawV1.InvalidPubkeyLength.selector, uint256(2)));
         withdraw.consolidate{value: 1 gwei}(requests, 1 gwei, excessFeeRecipient);
     }
@@ -1154,9 +1165,9 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         uint256 maxFeePerConsolidation = 1 gwei;
         mockConsolidation.setFee(maxFeePerConsolidation);
         uint256 valueSent = 5 gwei; // ensures excess exists
-        vm.deal(address(river), valueSent);
+        vm.deal(address(attestationVerifier), valueSent);
 
-        vm.prank(address(river));
+        vm.prank(address(attestationVerifier));
         vm.expectRevert(LibErrors.InvalidZeroAddress.selector);
         withdraw.consolidate{value: valueSent}(requests, maxFeePerConsolidation, address(0));
     }
@@ -1207,9 +1218,9 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         requests[0] = IWithdrawV1.ConsolidationRequest(srcPubkeys, VALID_PUBKEY_48);
 
         uint256 maxFeePerConsolidation = 1 gwei;
-        vm.deal(address(river), maxFeePerConsolidation);
+        vm.deal(address(attestationVerifier), maxFeePerConsolidation);
 
-        vm.prank(address(river));
+        vm.prank(address(attestationVerifier));
         vm.expectRevert();
         w.consolidate{value: maxFeePerConsolidation}(requests, maxFeePerConsolidation, excessFeeRecipient);
     }
@@ -1274,7 +1285,7 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         uint256 hugeFee = type(uint256).max;
         mockConsolidation.setFee(hugeFee);
 
-        vm.prank(address(river));
+        vm.prank(address(attestationVerifier));
         vm.expectRevert(stdError.arithmeticError);
         withdraw.consolidate{value: 0}(requests, hugeFee, excessFeeRecipient);
     }
@@ -1350,10 +1361,10 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         uint256 totalOps = numReqs * srcPer;
         // consolidate requires msg.value >= fee*totalOps; add extra on top. maxFee == fee passes the cap.
         uint256 valueSent = fee * totalOps + extra;
-        vm.deal(address(river), valueSent);
+        vm.deal(address(attestationVerifier), valueSent);
 
         uint256 recipientBefore = excessFeeRecipient.balance;
-        vm.prank(address(river));
+        vm.prank(address(attestationVerifier));
         withdraw.consolidate{value: valueSent}(requests, fee, excessFeeRecipient);
 
         uint256 totalFeePaid = fee * totalOps;
