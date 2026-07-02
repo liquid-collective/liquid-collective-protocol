@@ -163,8 +163,16 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
             depositDataBufferId, depositRootHash, signatures, depositContract, withdrawalCredentials, committedBalance
         );
 
-        // 5. Mark the batch ID processed BEFORE any external interactions.
+        // 5. Mark the batch ID processed in River's local replay guard before any external
+        //    interactions. This is the primary in-tx guard against double-processing.
         verifier.markDepositDataBufferIdProcessed(depositDataBufferId);
+
+        // 5b. Notify the external DepositDataBuffer to flip its own `processed` flag so the
+        //     batch can never be re-served/re-queued from the buffer side. Gated to River on
+        //     the buffer (msg.sender == this River contract). The buffer address is sourced
+        //     from the AttestationVerifier, the single owner of that dependency. A revert here
+        //     (unknown / already-processed batch) reverts the whole deposit.
+        IDepositDataBuffer(verifier.getDepositDataBuffer()).markDepositDataProcessed(depositDataBufferId);
 
         // 6. Update operator funded validator accounting
         _updateFundedETHFromBuffer(batch.deposits, batch.topUps);

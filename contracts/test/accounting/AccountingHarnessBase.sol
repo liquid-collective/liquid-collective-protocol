@@ -36,6 +36,7 @@ import "../../src/state/operatorsRegistry/Operators.3.sol";
 contract AccountingMockDepositDataBuffer is IDepositDataBuffer {
     mapping(bytes32 => DepositObject) internal _batches;
     mapping(bytes32 => bool) internal _exists;
+    mapping(bytes32 => bool) internal _processed;
 
     function submitDepositData(bytes32 depositDataBufferId, DepositObject calldata batch) external {
         if (_exists[depositDataBufferId]) revert DepositDataBufferIdAlreadyExists(depositDataBufferId);
@@ -53,6 +54,17 @@ contract AccountingMockDepositDataBuffer is IDepositDataBuffer {
     function getDepositData(bytes32 depositDataBufferId) external view returns (DepositObject memory) {
         if (!_exists[depositDataBufferId]) revert DepositDataBufferIdNotFound(depositDataBufferId);
         return _batches[depositDataBufferId];
+    }
+
+    function markDepositDataProcessed(bytes32 depositDataBufferId) external {
+        if (!_exists[depositDataBufferId]) revert DepositDataBufferIdNotFound(depositDataBufferId);
+        if (_processed[depositDataBufferId]) revert DepositDataBufferIdAlreadyExists(depositDataBufferId);
+        _processed[depositDataBufferId] = true;
+        emit DepositDataProcessed(depositDataBufferId);
+    }
+
+    function isDepositDataProcessed(bytes32 depositDataBufferId) external view returns (bool) {
+        return _processed[depositDataBufferId];
     }
 
     function getWriter() external pure returns (address) {

@@ -68,6 +68,10 @@ interface IDepositDataBuffer {
     /// @param topUpCount           Number of top-ups in the batch
     event DepositDataSubmitted(bytes32 indexed depositDataBufferId, uint256 depositCount, uint256 topUpCount);
 
+    /// @notice Emitted when River marks a queued batch as processed.
+    /// @param depositDataBufferId  The batch identifier that was flagged processed
+    event DepositDataProcessed(bytes32 indexed depositDataBufferId);
+
     // -----------------------------------------------------------------------
     // Errors
     // -----------------------------------------------------------------------
@@ -98,6 +102,18 @@ interface IDepositDataBuffer {
     /// @param depositDataBufferId  The batch identifier
     /// @return batch               The stored deposit batch
     function getDepositData(bytes32 depositDataBufferId) external view returns (DepositObject memory batch);
+
+    /// @notice Mark a queued batch as processed so it can never be served/queued again.
+    /// @dev Restricted to River on the buffer side. Called by River after a successful
+    ///      `depositToConsensusLayerWithAttestation`. Reverts if the batch is unknown or
+    ///      already processed, then emits `DepositDataProcessed`.
+    /// @param depositDataBufferId  The batch identifier to mark processed
+    function markDepositDataProcessed(bytes32 depositDataBufferId) external;
+
+    /// @notice Whether a queued batch has been marked processed.
+    /// @param depositDataBufferId  The batch identifier
+    /// @return True if the batch has been marked processed
+    function isDepositDataProcessed(bytes32 depositDataBufferId) external view returns (bool);
 
     /// @notice Returns the authorized writer address.
     /// @return The authorized writer address

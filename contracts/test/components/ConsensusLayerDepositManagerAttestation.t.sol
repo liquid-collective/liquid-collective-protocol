@@ -27,6 +27,7 @@ import "../mocks/DepositContractInvalidMock.sol";
 contract MockDepositDataBuffer is IDepositDataBuffer {
     mapping(bytes32 => DepositObject) internal _batches;
     mapping(bytes32 => bool) internal _exists;
+    mapping(bytes32 => bool) internal _processed;
 
     function submitDepositData(bytes32 depositDataBufferId, DepositObject calldata batch) external {
         if (_exists[depositDataBufferId]) revert DepositDataBufferIdAlreadyExists(depositDataBufferId);
@@ -46,12 +47,33 @@ contract MockDepositDataBuffer is IDepositDataBuffer {
         return _batches[depositDataBufferId];
     }
 
+    function markDepositDataProcessed(bytes32 depositDataBufferId) external virtual {
+        if (!_exists[depositDataBufferId]) revert DepositDataBufferIdNotFound(depositDataBufferId);
+        if (_processed[depositDataBufferId]) revert DepositDataBufferIdAlreadyExists(depositDataBufferId);
+        _processed[depositDataBufferId] = true;
+        emit DepositDataProcessed(depositDataBufferId);
+    }
+
+    function isDepositDataProcessed(bytes32 depositDataBufferId) external view returns (bool) {
+        return _processed[depositDataBufferId];
+    }
+
     function getWriter() external pure returns (address) {
         return address(0);
     }
 
     function getAdmin() external pure returns (address) {
         return address(0);
+    }
+}
+
+/// @dev Buffer variant whose `markDepositDataProcessed` always reverts, used to prove River
+///      propagates a buffer-side failure (no swallowing) rather than completing the deposit.
+contract RevertOnMarkDepositDataBuffer is MockDepositDataBuffer {
+    error MarkRejected();
+
+    function markDepositDataProcessed(bytes32) external pure override {
+        revert MarkRejected();
     }
 }
 
@@ -267,6 +289,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     event SetTotalDepositedETH(uint256 oldTotalDepositedETH, uint256 newTotalDepositedETH);
     event PubkeyFunded(bytes32 indexed depositDataBufferId, uint256 indexed operatorIdx, bytes pubkey, uint256 amount);
     event TopUp(bytes32 indexed depositDataBufferId, uint256 indexed operatorIdx, bytes pubkey, uint256 amount);
+    event DepositDataProcessed(bytes32 indexed depositDataBufferId);
 
     function _emptyDepositY() internal pure returns (BLS12_381.DepositY memory) {
         return BLS12_381.DepositY({
@@ -571,6 +594,59 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         assertEq(depositContract.deposit_count(), 2, "should have 2 total deposits");
         assertEq(dm.getTotalDepositedETH(), 64 ether);
         assertEq(dm.getCommittedBalance(), 64 ether);
+    }
+
+    // -----------------------------------------------------------------------
+    // DepositDataBuffer processed-flag cross-contract call (issue #621)
+    // -----------------------------------------------------------------------
+
+    /// @dev A successful attested deposit flips the buffer's own `processed` flag via the
+    ///      River-gated `markDepositDataProcessed` call (step 5b) and emits DepositDataProcessed.
+    function testSuccessfulDeposit_marksBufferProcessed() public {
+        IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](1);
+        deposits[0] = _makeDeposit(0, 314);
+
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits);
+
+        assertFalse(buffer.isDepositDataProcessed(bufferId), "batch must start unprocessed");
+
+        // The buffer flips its own processed flag as part of the deposit (step 5b).
+        vm.expectEmit(true, false, false, true, address(buffer));
+        emit DepositDataProcessed(bufferId);
+
+        vm.prank(keeper);
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+
+        assertTrue(buffer.isDepositDataProcessed(bufferId), "batch must be marked processed after deposit");
+    }
+
+    /// @dev A revert from the buffer's markDepositDataProcessed propagates and reverts the whole
+    ///      deposit — River does not swallow the failure. No deposits execute.
+    function testRevert_bufferMarkRejectionRevertsDeposit() public {
+        // Point the verifier (River's source of the buffer address) at a buffer whose
+        // markDepositDataProcessed always reverts.
+        RevertOnMarkDepositDataBuffer revertingBuffer = new RevertOnMarkDepositDataBuffer();
+        vm.prank(admin);
+        verifier.setDepositDataBuffer(address(revertingBuffer));
+
+        IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](1);
+        deposits[0] = _makeDeposit(0, 271);
+        IDepositDataBuffer.DepositObject memory batch = _batchOf(deposits);
+        bytes32 bufferId = keccak256(abi.encode(batch));
+        revertingBuffer.submitDepositData(bufferId, batch);
+
+        bytes32 rootHash = depositContract.get_deposit_root();
+        bytes[] memory sigs = new bytes[](2);
+        sigs[0] = _signAttestation(rootAttesterPk1, bufferId, rootHash);
+        sigs[1] = _signAttestation(rootAttesterPk2, bufferId, rootHash);
+
+        vm.prank(keeper);
+        vm.expectRevert(RevertOnMarkDepositDataBuffer.MarkRejected.selector);
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+
+        // The whole tx reverted: nothing was deposited.
+        assertEq(depositContract.deposit_count(), 0, "no deposits should have executed");
+        assertEq(dm.getTotalDepositedETH(), 0, "total deposited must remain zero");
     }
 
     // -----------------------------------------------------------------------
