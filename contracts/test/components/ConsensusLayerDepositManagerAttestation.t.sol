@@ -944,11 +944,21 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         vm.expectEmit(true, false, false, true);
         emit TopUps(0, topUpKeys, topUpAmounts);
 
+        uint256 committedBefore = dm.getCommittedBalance();
+        uint256 balanceBefore = address(dm).balance;
+        uint256 totalDepositedBefore = dm.getTotalDepositedETH();
+
         vm.prank(keeper);
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
 
         assertEq(dm.lastFundedETH(0), 64 ether, "both initial and top-up bump fundedETH");
         assertEq(depositContract.deposit_count(), 2);
+
+        assertEq(committedBefore - dm.getCommittedBalance(), 64 ether, "committed balance should decrease by 64 ETH");
+        assertEq(balanceBefore - address(dm).balance, 64 ether, "contract ETH balance should decrease by 64 ETH");
+        assertEq(
+            dm.getTotalDepositedETH() - totalDepositedBefore, 64 ether, "total deposited should increase by 64 ETH"
+        );
     }
 
     // Issue #543: a top-ups-only batch must NOT emit Deposits (which would inflate
@@ -1717,6 +1727,9 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits);
         vm.prank(keeper);
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs); // must not revert
+
+        assertEq(depositContract.deposit_count(), 1, "exact-minimum deposit must reach the deposit contract");
+        assertEq(dm.getTotalDepositedETH(), 32 ether, "total deposited must reflect the 32 ETH deposit");
     }
 
     /// @dev When a batch has two initial deposits and the second is below 32 ETH, validation must
