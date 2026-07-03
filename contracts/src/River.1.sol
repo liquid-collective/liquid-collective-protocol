@@ -215,15 +215,10 @@ contract RiverV1 is
         allowlist.onlyAllowed(consolidation.withdrawalAddress, LibAllowlistMasks.CONSOLIDATE_MASK);
 
         address recipient = IExternalConsolidationRecipientMappingV1(ExternalConsolidationRecipientMappingAddress.get())
-            .getRecipient(consolidation.withdrawalAddress);
+            .resolveRecipient(consolidation.withdrawalAddress);
 
-        // if the recipient is not set, we use the withdrawalAddress
-        if (recipient == address(0)) {
-            recipient = consolidation.withdrawalAddress;
-        } else {
-            if (allowlist.isDenied(recipient)) {
-                revert Denied(recipient);
-            }
+        if (recipient != consolidation.withdrawalAddress && allowlist.isDenied(recipient)) {
+            revert Denied(recipient);
         }
 
         IAttestationVerifierV1 verifier = IAttestationVerifierV1(AttestationVerifierAddress.get());
