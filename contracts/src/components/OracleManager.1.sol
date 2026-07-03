@@ -23,7 +23,6 @@ import "../state/river/ConsolidationBuffer.sol";
 /// @notice values: the sum of all balances of all deposited validators and the count of
 /// @notice validators that have been activated on the consensus layer.
 abstract contract OracleManagerV1 is IOracleManagerV1 {
-    uint256 internal constant ONE_YEAR = 365 days;
 
     /// @notice Handler called to retrieve the system administrator address
     /// @dev Must be overridden
@@ -187,24 +186,6 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         emit SetBounds(_newValue.annualAprUpperBound, _newValue.relativeLowerBound);
     }
 
-    /// @notice Structure holding internal variables used during reporting
-    struct ConsensusLayerDataReportingVariables {
-        uint256 preReportUnderlyingBalance;
-        uint256 postReportUnderlyingBalance;
-        uint256 lastReportExitedBalance;
-        uint256 lastReportSkimmedBalance;
-        uint256 exitedAmountIncrease;
-        uint256 skimmedAmountIncrease;
-        uint256 inFlightDepositedETH;
-        uint256 totalDepositedActivatedETHIncrease;
-        uint256 lastConsolidationBuffer;
-        uint256 totalExternalConsolidationsAmountReportedIncrease;
-        uint256 timeElapsedSinceLastReport;
-        uint256 availableAmountToUpperBound;
-        uint256 redeemManagerDemand;
-        ConsensusLayerDataReportingTrace trace;
-    }
-
     /// @inheritdoc IOracleManagerV1
     function setConsensusLayerData(IOracleManagerV1.ConsensusLayerReport calldata _report) external virtual {
         // The full report computation (auth, bound checks, fund pulls, rewards, exit requests,
@@ -228,43 +209,5 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
     function _isValidEpoch(CLSpec.CLSpecStruct memory _cls, uint256 _epoch) internal view returns (bool) {
         return (_currentEpoch(_cls) >= _epoch + _cls.epochsToAssumedFinality
                 && _epoch > LastConsensusLayerReport.get().epoch && _epoch % _cls.epochsPerFrame == 0);
-    }
-
-    /// @notice Retrieves the maximum increase in balance based on current total underlying supply and period since last report
-    /// @param _rb The report bounds struct
-    /// @param _prevTotalEth The total underlying supply during reporting
-    /// @param _timeElapsed The time since last report
-    /// @return The maximum allowed increase in balance
-    function _maxIncrease(ReportBounds.ReportBoundsStruct memory _rb, uint256 _prevTotalEth, uint256 _timeElapsed)
-        internal
-        pure
-        returns (uint256)
-    {
-        return (_prevTotalEth * _rb.annualAprUpperBound * _timeElapsed) / (LibBasisPoints.BASIS_POINTS_MAX * ONE_YEAR);
-    }
-
-    /// @notice Retrieves the maximum decrease in balance based on current total underlying supply
-    /// @param _rb The report bounds struct
-    /// @param _prevTotalEth The total underlying supply during reporting
-    /// @return The maximum allowed decrease in balance
-    function _maxDecrease(ReportBounds.ReportBoundsStruct memory _rb, uint256 _prevTotalEth)
-        internal
-        pure
-        returns (uint256)
-    {
-        return (_prevTotalEth * _rb.relativeLowerBound) / LibBasisPoints.BASIS_POINTS_MAX;
-    }
-
-    /// @notice Retrieve the number of seconds between two epochs
-    /// @param _cls The consensus layer spec struct
-    /// @param _epochPast The starting epoch
-    /// @param _epochNow The current epoch
-    /// @return The number of seconds between the two epochs
-    function _timeBetweenEpochs(CLSpec.CLSpecStruct memory _cls, uint256 _epochPast, uint256 _epochNow)
-        internal
-        pure
-        returns (uint256)
-    {
-        return (_epochNow - _epochPast) * (_cls.secondsPerSlot * _cls.slotsPerEpoch);
     }
 }
