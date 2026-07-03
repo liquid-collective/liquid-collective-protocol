@@ -338,6 +338,8 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
                 );
             }
 
+            // totalExternalConsolidationsAmountReported MUST be increased in the same report in which the corresponding consolidated
+            // principal first appears in validatorsBalance. The buffer reduction nets against that same report's validatorsBalance increase
             if (
                 _report.totalExternalConsolidationsAmountReported
                     > lastStoredReport.totalExternalConsolidationsAmountReported
