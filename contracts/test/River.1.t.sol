@@ -2567,12 +2567,9 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         return _salt;
     }
 
-    // DISABLED: InvalidValidatorCountReport error no longer exists; DepositedValidatorCount
-    // is no longer tracked. This validation has been removed in the new attestation-based flow.
-    // function testReportingError_InvalidValidatorCountReport(uint256 _salt) external { ... }
-    // DISABLED: InvalidValidatorCountReport error no longer exists; DepositedValidatorCount
-    // is no longer tracked. This validation has been removed in the new attestation-based flow.
-    // function testReportingError_InvalidValidatorCountReport(uint256 _salt) external { ... }
+    // The InvalidValidatorCountReport (decreasing validator count) branch is now covered by
+    // testReportingError_InvalidValidatorCountReport in RiverV1CoverageTests, which seeds the last stored
+    // report's validatorsCount and drives the real river.setConsensusLayerData path.
 
     function testReportingError_InvalidDecreasingValidatorsExitedBalance(uint256 _salt) external {
         uint8 depositCount = uint8(bound(_salt, 2, 32));
@@ -2728,14 +2725,9 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         river.setConsensusLayerData(clr);
     }
 
-    // DISABLED: InvalidValidatorCountReport error no longer exists; DepositedValidatorCount
-    // is no longer tracked. These validations have been removed in the new attestation-based flow.
-    // function testReportingError_ValidatorCountDecreasing(uint256 _salt) external { ... }
-    // function testReportingError_ValidatorCountHigherThanDeposits(uint256 _salt) external { ... }
-    // DISABLED: InvalidValidatorCountReport error no longer exists; DepositedValidatorCount
-    // is no longer tracked. These validations have been removed in the new attestation-based flow.
-    // function testReportingError_ValidatorCountDecreasing(uint256 _salt) external { ... }
-    // function testReportingError_ValidatorCountHigherThanDeposits(uint256 _salt) external { ... }
+    // The decreasing-validator-count validation (formerly ValidatorCountDecreasing) is reinstated as
+    // testReportingError_InvalidValidatorCountReport in RiverV1CoverageTests. The ValidatorCountHigherThanDeposits
+    // validation no longer exists: DepositedValidatorCount is not tracked in the attestation-based flow.
 
     function testReportingError_InvalidPulledClFundsAmount(uint256 _salt) external {
         uint8 depositCount = uint8(bound(_salt, 2, 32));
@@ -3573,6 +3565,181 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         assertEq(river.balanceOfUnderlying(collector), collectorSharesBefore);
         assertEq(river.totalSupply(), totalSupplyBefore);
         assertEq(river.totalUnderlyingSupply(), totalUnderlyingBefore);
+    }
+
+    /// Asserts that a report whose totalDepositedActivatedETH is LESS than the last stored report reverts with
+    /// InvalidTotalDepositedActivatedETHDecrease. Covers LibOracleReporting.setConsensusLayerData L118.
+    function testReportingError_InvalidTotalDepositedActivatedETHDecrease() public {
+        _initRiverMinimalForReporting();
+
+        uint256 lastDeposited = 64 ether;
+        // Seed last stored report totalDepositedActivatedETH (offset 6) to a non-zero value.
+        vm.store(address(river), bytes32(uint256(LAST_CLR_BASE_SLOT) + 6), bytes32(lastDeposited));
+
+        uint256 epoch = epochsPerFrame;
+        vm.warp((epoch + epochsUntilFinal) * slotsPerEpoch * secondsPerSlot);
+        IOracleManagerV1.ConsensusLayerReport memory clr;
+        clr.epoch = epoch;
+        // New value strictly below the stored one triggers the decrease revert.
+        uint256 newDeposited = 32 ether;
+        clr.totalDepositedActivatedETH = newDeposited;
+        clr.exitedETHPerOperator = new uint256[](1);
+        clr.activeCLETHPerOperator = new uint256[](1);
+
+        vm.prank(address(oracle));
+        vm.expectRevert(
+            abi.encodeWithSignature(
+                "InvalidTotalDepositedActivatedETHDecrease(uint256,uint256)", lastDeposited, newDeposited
+            )
+        );
+        river.setConsensusLayerData(clr);
+    }
+
+    /// Asserts that a report whose totalDepositedActivatedETH increase exceeds the current in-flight ETH reverts
+    /// with InvalidTotalDepositedActivatedETHIncrease. Covers LibOracleReporting.setConsensusLayerData L129.
+    function testReportingError_InvalidTotalDepositedActivatedETHIncrease() public {
+        _initRiverMinimalForReporting();
+
+        // Last stored report totalDepositedActivatedETH = 0 (default), so the increase equals the reported value.
+        uint256 inFlight = 32 ether;
+        vm.store(address(river), IN_FLIGHT_DEPOSIT_SLOT, bytes32(inFlight));
+
+        uint256 epoch = epochsPerFrame;
+        vm.warp((epoch + epochsUntilFinal) * slotsPerEpoch * secondsPerSlot);
+        IOracleManagerV1.ConsensusLayerReport memory clr;
+        clr.epoch = epoch;
+        // Increase (newDeposited - 0) is strictly greater than the in-flight ETH.
+        uint256 newDeposited = inFlight + 1 ether;
+        clr.totalDepositedActivatedETH = newDeposited;
+        clr.exitedETHPerOperator = new uint256[](1);
+        clr.activeCLETHPerOperator = new uint256[](1);
+
+        vm.prank(address(oracle));
+        // The revert reports (currentInFlightETH, newTotalDepositedActivatedETH).
+        vm.expectRevert(
+            abi.encodeWithSignature(
+                "InvalidTotalDepositedActivatedETHIncrease(uint256,uint256)", inFlight, newDeposited
+            )
+        );
+        river.setConsensusLayerData(clr);
+    }
+
+    /// Asserts that a report whose validatorsCount is LESS than the last stored report reverts with
+    /// InvalidValidatorCountReport. Covers LibOracleReporting.setConsensusLayerData L136.
+    function testReportingError_InvalidValidatorCountReport() public {
+        _initRiverMinimalForReporting();
+
+        // validatorsCount is a uint32 packed at offset 5 (low bytes) of the stored report struct.
+        // Seed it to a value higher than the one we will report.
+        uint32 lastCount = 5;
+        vm.store(address(river), bytes32(uint256(LAST_CLR_BASE_SLOT) + 5), bytes32(uint256(lastCount)));
+
+        uint256 epoch = epochsPerFrame;
+        vm.warp((epoch + epochsUntilFinal) * slotsPerEpoch * secondsPerSlot);
+        IOracleManagerV1.ConsensusLayerReport memory clr;
+        clr.epoch = epoch;
+        uint32 newCount = 3; // strictly less than lastCount -> revert
+        clr.validatorsCount = newCount;
+        clr.totalDepositedActivatedETH = 0;
+        clr.exitedETHPerOperator = new uint256[](1);
+        clr.activeCLETHPerOperator = new uint256[](1);
+
+        vm.prank(address(oracle));
+        // The revert reports (reportedValidatorCount, lastReportedValidatorCount).
+        vm.expectRevert(
+            abi.encodeWithSignature("InvalidValidatorCountReport(uint256,uint256)", newCount, lastCount)
+        );
+        river.setConsensusLayerData(clr);
+    }
+
+    /// Asserts that a report whose totalExternalConsolidationsAmountReported is LESS than the last stored report
+    /// reverts with InvalidTotalConsolidationsAmountReportedDecrease. Covers
+    /// LibOracleReporting.setConsensusLayerData L144-145.
+    function testReportingError_InvalidTotalConsolidationsAmountReportedDecrease() public {
+        _initRiverMinimalForReporting();
+
+        uint256 lastConsolidations = 5 ether;
+        // Seed last stored report totalExternalConsolidationsAmountReported (offset 7).
+        vm.store(
+            address(river),
+            bytes32(uint256(LAST_CLR_BASE_SLOT) + LAST_CLR_CONSOLIDATIONS_OFFSET),
+            bytes32(lastConsolidations)
+        );
+
+        uint256 epoch = epochsPerFrame;
+        vm.warp((epoch + epochsUntilFinal) * slotsPerEpoch * secondsPerSlot);
+        IOracleManagerV1.ConsensusLayerReport memory clr;
+        clr.epoch = epoch;
+        clr.totalDepositedActivatedETH = 0;
+        uint256 newConsolidations = 2 ether; // strictly less than stored -> revert
+        clr.totalExternalConsolidationsAmountReported = newConsolidations;
+        clr.exitedETHPerOperator = new uint256[](1);
+        clr.activeCLETHPerOperator = new uint256[](1);
+
+        vm.prank(address(oracle));
+        // The revert reports (lastTotalConsolidationsAmountReported, newTotalConsolidationsAmountReported).
+        vm.expectRevert(
+            abi.encodeWithSignature(
+                "InvalidTotalConsolidationsAmountReportedDecrease(uint256,uint256)",
+                lastConsolidations,
+                newConsolidations
+            )
+        );
+        river.setConsensusLayerData(clr);
+    }
+
+    /// Asserts the WITHIN-BOUND balance-DECREASE (loss) accounting path: a report whose post-report underlying
+    /// balance is LESS than the pre-report balance but whose decrease stays within the allowed lower bound must
+    /// SUCCEED (no revert) and mint NO reward fee shares to the collector (a loss produces no rewards).
+    /// Covers LibOracleReporting.setConsensusLayerData L264 (the loss branch of availableAmountToUpperBound).
+    function testReportingSuccess_WithinBoundBalanceDecreaseMintsNoRewards() public {
+        _initRiverMinimalForReporting();
+        // No coverage / EL fees available, so availableAmountToUpperBound cannot be consumed by pulls and the
+        // loss branch is exercised without any reward being booked.
+        assertEq(river.getConsolidationCoverageFund(), address(0));
+
+        address alice = makeAddr("alice");
+        _allowDeposit(alice);
+        vm.deal(alice, 32 ether);
+        vm.prank(alice);
+        river.deposit{value: 32 ether}();
+
+        // Seed the last stored report validatorsBalance (offset 1) so this report represents a modest loss.
+        uint256 lastValidatorsBalance = 32 ether;
+        vm.store(address(river), bytes32(uint256(LAST_CLR_BASE_SLOT) + 1), bytes32(lastValidatorsBalance));
+
+        uint256 epoch = epochsPerFrame;
+        vm.warp((epoch + epochsUntilFinal) * slotsPerEpoch * secondsPerSlot);
+
+        // Compute the maximum allowed decrease for the current pre-report underlying supply and keep the loss
+        // strictly within it so the lower-bound revert is not tripped.
+        uint256 preUnderlying = river.totalUnderlyingSupply();
+        uint256 maxDecrease =
+            (preUnderlying * river.getReportBounds().relativeLowerBound) / LibBasisPoints.BASIS_POINTS_MAX;
+        assertGt(maxDecrease, 0);
+        uint256 loss = maxDecrease / 2;
+        assertGt(loss, 0);
+
+        IOracleManagerV1.ConsensusLayerReport memory clr;
+        clr.epoch = epoch;
+        // validatorsBalance drops by `loss` relative to the last stored report: post < pre, within bound.
+        clr.validatorsBalance = lastValidatorsBalance - loss;
+        clr.totalDepositedActivatedETH = 0;
+        clr.exitedETHPerOperator = new uint256[](1);
+        clr.activeCLETHPerOperator = new uint256[](1);
+
+        uint256 collectorSharesBefore = river.balanceOf(collector);
+        uint256 totalSupplyBefore = river.totalSupply();
+
+        // Must succeed: the decrease is within bound, so no TotalValidatorBalanceDecreaseOutOfBound revert.
+        vm.prank(address(oracle));
+        river.setConsensusLayerData(clr);
+
+        // A loss produces no rewards: no fee shares minted to the collector, total supply unchanged.
+        assertEq(river.balanceOf(collector), collectorSharesBefore);
+        assertEq(river.totalSupply(), totalSupplyBefore);
+        // And the loss was actually applied.
+        assertLt(river.totalUnderlyingSupply(), preUnderlying);
     }
 
     function _initRiverAndV1_2() internal {
