@@ -345,17 +345,23 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             revert InvalidEmptyArray();
         }
 
+        // --- effects: reserve exits and compute amounts; performs no external calls ---
         uint256 requestedETHAmount = _requestCLETHExits(_allocations);
-        uint256 remainingETHExitsDemand =
-            requestedETHAmount >= currentETHExitsDemand ? 0 : currentETHExitsDemand - requestedETHAmount;
-        (uint256 elRequestedETHAmount, uint256 totalFeePaid) =
-            _requestELETHExits(_elAllocations, _maxFeePerWithdrawal, remainingETHExitsDemand);
+        (uint256 elRequestedETHAmount, uint256 totalFeePaid) = _reserveELETHExits(_elAllocations, _maxFeePerWithdrawal);
         requestedETHAmount += elRequestedETHAmount;
 
-        // Check that the exits requested do not exceed the current ETH exits demand
+        // Check that the combined CL + EL exits requested do not exceed the current ETH exits demand
         if (requestedETHAmount > currentETHExitsDemand) {
             revert ExitsRequestedExceedExitDemand(requestedETHAmount, currentETHExitsDemand);
         }
+
+        // --- effects: finalise the global aggregates before any value leaves the contract (CEI) ---
+        uint256 totalETHExitsRequested = TotalETHExitsRequested.get();
+        _setTotalETHExitsRequested(totalETHExitsRequested, totalETHExitsRequested + requestedETHAmount);
+        _setCurrentETHExitsDemand(currentETHExitsDemand, currentETHExitsDemand - requestedETHAmount);
+
+        // --- interactions: execute the reserved EL withdrawals, then refund any excess fee ---
+        _executeELWithdrawals(_elAllocations, _maxFeePerWithdrawal);
         if (totalFeePaid < msg.value) {
             uint256 excess = msg.value - totalFeePaid;
             (bool ok,) = msg.sender.call{value: excess}("");
@@ -363,10 +369,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                 revert UnsentRefund(msg.sender, excess);
             }
         }
-
-        uint256 totalETHExitsRequested = TotalETHExitsRequested.get();
-        _setTotalETHExitsRequested(totalETHExitsRequested, totalETHExitsRequested + requestedETHAmount);
-        _setCurrentETHExitsDemand(currentETHExitsDemand, currentETHExitsDemand - requestedETHAmount);
     }
 
     /// @notice Reserves full ETH exits per operator via CL and returns the total requested amount.
@@ -396,41 +398,38 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         }
     }
 
-    /// @notice Requests partial/full ETH exits through Withdrawal Contract and returns the total requested amount.
-    function _requestELETHExits(
-        ELExitETHAllocation[] calldata _elAllocations,
-        uint256 _maxFeePerWithdrawal,
-        uint256 _remainingETHExitsDemand
-    ) private returns (uint256 requestedETHAmount, uint256 totalFeePaid) {
-        if (_elAllocations.length == 0) {
-            return (0, 0);
-        }
-
-        IWithdrawV1 withdraw = IWithdrawV1(WithdrawAddress.get());
-
+    /// @notice Effects phase of the EL exit path: validates input, reserves each operator's exit, accumulates the
+    ///         total requested amount and fee, and emits the per-operator exit events.
+    /// @dev Performs NO external calls so it can run before the global aggregates are written. The matching
+    ///      withdrawal requests are executed by `_executeELWithdrawals` during the interactions phase.
+    /// @param _elAllocations The EL exit allocations to reserve
+    /// @param _maxFeePerWithdrawal Maximum fee per withdrawal, used to accumulate the total fee
+    /// @return requestedETHAmount The total EL ETH(wei) reserved across all allocations
+    /// @return totalFeePaid The total fee that will be forwarded to the withdrawal contract
+    function _reserveELETHExits(ELExitETHAllocation[] calldata _elAllocations, uint256 _maxFeePerWithdrawal)
+        private
+        returns (uint256 requestedETHAmount, uint256 totalFeePaid)
+    {
         for (uint256 i = 0; i < _elAllocations.length; ++i) {
             if (i > 0 && _elAllocations[i].operatorIndex <= _elAllocations[i - 1].operatorIndex) {
                 revert UnorderedOperatorList();
             }
 
-            (uint256 elExitAmount, uint256 feePaid) =
-                _requestOperatorELETHExits(withdraw, _elAllocations[i], _maxFeePerWithdrawal);
+            (uint256 elExitAmount, uint256 feePaid) = _reserveOperatorELETHExit(_elAllocations[i], _maxFeePerWithdrawal);
             requestedETHAmount += elExitAmount;
             totalFeePaid += feePaid;
         }
-        if (requestedETHAmount > _remainingETHExitsDemand) {
-            revert ExitsGreaterThanExitDemand(requestedETHAmount, _remainingETHExitsDemand);
-        }
     }
 
-    /// @notice Validates a single operator's EL exit allocation, reserves it, triggers the withdrawal and emits.
+    /// @notice Effects phase for a single operator's EL exit allocation: validates the arrays and amounts, reserves
+    ///         the exit against the operator's available ETH and emits the request event.
+    /// @dev Performs no external call. The matching withdrawal is executed by `_executeELWithdrawals`.
     /// @return elExitAmount The total reserved exit amount (wei) for this operator
-    /// @return feePaid The withdrawal fee paid for this operator
-    function _requestOperatorELETHExits(
-        IWithdrawV1 _withdraw,
-        ELExitETHAllocation calldata _operatorAllocation,
-        uint256 _maxFeePerWithdrawal
-    ) private returns (uint256 elExitAmount, uint256 feePaid) {
+    /// @return feePaid The withdrawal fee that will be paid for this operator
+    function _reserveOperatorELETHExit(ELExitETHAllocation calldata _operatorAllocation, uint256 _maxFeePerWithdrawal)
+        private
+        returns (uint256 elExitAmount, uint256 feePaid)
+    {
         uint256 operatorIndex = _operatorAllocation.operatorIndex;
 
         if (
@@ -474,15 +473,34 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         _reserveOperatorExit(operator, operatorIndex, elExitAmount, true);
 
         feePaid = _maxFeePerWithdrawal * _operatorAllocation.pubkeys.length;
-        _withdraw.withdraw{value: feePaid}(
-            _operatorAllocation.pubkeys, _operatorAllocation.withdrawalAmounts, _maxFeePerWithdrawal, msg.sender
-        );
         emit RequestedELETHExits(
             operatorIndex,
             _operatorAllocation.pubkeys,
             _operatorAllocation.withdrawalAmounts,
             _operatorAllocation.reservedExitAmounts
         );
+    }
+
+    /// @notice Interactions phase of the EL exit path: forwards each operator's withdrawal request to the
+    ///         withdrawal contract, paying the fee from `msg.value`.
+    /// @dev Must run only AFTER the global aggregates have been written, so external calls cannot observe or act on
+    ///      stale `CurrentETHExitsDemand` / `TotalETHExitsRequested` values.
+    /// @param _elAllocations The EL exit allocations (pubkeys and wire amounts are read directly from calldata)
+    /// @param _maxFeePerWithdrawal Maximum fee per withdrawal forwarded with each call
+    function _executeELWithdrawals(ELExitETHAllocation[] calldata _elAllocations, uint256 _maxFeePerWithdrawal)
+        private
+    {
+        if (_elAllocations.length == 0) {
+            return;
+        }
+
+        IWithdrawV1 withdraw = IWithdrawV1(WithdrawAddress.get());
+
+        for (uint256 i = 0; i < _elAllocations.length; ++i) {
+            withdraw.withdraw{value: _maxFeePerWithdrawal * _elAllocations[i].pubkeys.length}(
+                _elAllocations[i].pubkeys, _elAllocations[i].withdrawalAmounts, _maxFeePerWithdrawal, msg.sender
+            );
+        }
     }
 
     /// @notice Internal utility to reserve an exit against an operator's available ETH.

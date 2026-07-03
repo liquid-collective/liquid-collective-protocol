@@ -2227,6 +2227,103 @@ contract RejectingRefundRecipient {
     }
 }
 
+// Records every withdraw call it receives so a test can assert the interactions phase forwards the
+// exact per-operator pubkeys and wire (withdrawal) amounts — not the reserved accounting amounts —
+// and the exact fee value. Like MockWithdrawForELExits it forwards msg.value to the fee recipient.
+contract RecordingWithdrawForELExits {
+    uint256 public callCount;
+    mapping(uint256 => uint256) public callValue;
+    mapping(uint256 => uint64[]) internal _callAmounts;
+    mapping(uint256 => bytes[]) internal _callPubkeys;
+
+    function withdraw(bytes[] calldata pubkeys, uint64[] calldata amounts, uint256, address excessFeeRecipient)
+        external
+        payable
+    {
+        uint256 idx = callCount++;
+        callValue[idx] = msg.value;
+        for (uint256 i = 0; i < amounts.length; ++i) {
+            _callAmounts[idx].push(amounts[i]);
+        }
+        for (uint256 i = 0; i < pubkeys.length; ++i) {
+            _callPubkeys[idx].push(pubkeys[i]);
+        }
+        if (msg.value > 0) {
+            (bool ok,) = excessFeeRecipient.call{value: msg.value}("");
+            require(ok, "RecordingWithdraw: refund failed");
+        }
+    }
+
+    function callAmounts(uint256 idx) external view returns (uint64[] memory) {
+        return _callAmounts[idx];
+    }
+
+    function callPubkeys(uint256 idx) external view returns (bytes[] memory) {
+        return _callPubkeys[idx];
+    }
+}
+
+// A keeper that, once armed, re-enters requestETHExits from its receive() the first time it is handed
+// value (the EL withdrawal callback), capturing the revert reason. It swallows the failed re-entry so
+// the outer call proceeds — letting a test prove the nonReentrant guard blocks re-entry at the EARLIEST
+// external interaction (the withdraw call), which the existing refund-callback reentrancy test does not
+// exercise.
+contract ReentrantELKeeper {
+    IOperatorsRegistryV1 internal immutable REGISTRY;
+    bool public reentryBlocked;
+    string public reentryReason;
+    bool internal _armed;
+
+    constructor(address _registry) {
+        REGISTRY = IOperatorsRegistryV1(_registry);
+    }
+
+    function arm() external {
+        _armed = true;
+    }
+
+    receive() external payable {
+        if (!_armed) {
+            return;
+        }
+        _armed = false; // single attempt; avoids an infinite callback loop
+        IOperatorsRegistryV1.ExitETHAllocation[] memory noCL = new IOperatorsRegistryV1.ExitETHAllocation[](0);
+        IOperatorsRegistryV1.ELExitETHAllocation[] memory noEL = new IOperatorsRegistryV1.ELExitETHAllocation[](0);
+        // nonReentrant runs at function entry, ahead of any argument-driven check, so the empty arrays are
+        // irrelevant: the guard reverts first with the OZ ReentrancyGuard string.
+        try REGISTRY.requestETHExits(noCL, noEL, 0) {}
+        catch Error(string memory reason) {
+            reentryBlocked = true;
+            reentryReason = reason;
+        } catch {
+            reentryBlocked = true;
+        }
+    }
+}
+
+// Records the registry's global exit aggregates the FIRST time it is handed any value, so a test can
+// assert the decrement was already applied before the earliest external interaction (CEI). As the keeper
+// it is the excessFeeRecipient: with a non-zero fee it is re-entered during the withdrawal call (the
+// first value transfer), and again on the trailing excess-fee refund. Only the first receipt is captured.
+contract StateProbingRefundRecipient {
+    IOperatorsRegistryV1 internal immutable REGISTRY;
+    uint256 public demandAtFirstInteraction;
+    uint256 public totalRequestedAtFirstInteraction;
+    uint256 public interactionCount;
+
+    constructor(address _registry) {
+        REGISTRY = IOperatorsRegistryV1(_registry);
+    }
+
+    receive() external payable {
+        if (interactionCount == 0) {
+            demandAtFirstInteraction = REGISTRY.getCurrentETHExitsDemand();
+            totalRequestedAtFirstInteraction = REGISTRY.getTotalETHExitsRequested();
+        }
+        ++interactionCount;
+    }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Partial-exit unit tests for requestETHExits (H-05)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2651,7 +2748,7 @@ contract OperatorsRegistryV1ELExitTests is Test {
     }
 
     /// When the requested EL exits are within the operator's available CL ETH but exceed the
-    /// remaining exit demand, the aggregate ExitsGreaterThanExitDemand guard must revert.
+    /// current exit demand, the combined ExitsRequestedExceedExitDemand guard must revert.
     function testELExitRevertsWhenExceedsRemainingDemand() public {
         vm.prank(admin);
         reg.addOperator("Op0", makeAddr("op0addr"));
@@ -2661,12 +2758,12 @@ contract OperatorsRegistryV1ELExitTests is Test {
         reg.demandETHExits(4 ether, 32 ether); // but demand is only 4 ETH
 
         IOperatorsRegistryV1.ExitETHAllocation[] memory empty = new IOperatorsRegistryV1.ExitETHAllocation[](0);
-        // Request an 8 ETH EL exit: below available (32) but above remaining demand (4).
+        // Request an 8 ETH EL exit: below available (32) but above current demand (4).
         IOperatorsRegistryV1.ELExitETHAllocation[] memory allocs = _makeELAlloc(0, EIGHT_ETH_IN_GWEI);
 
         vm.prank(keeper);
         vm.expectRevert(
-            abi.encodeWithSelector(IOperatorsRegistryV1.ExitsGreaterThanExitDemand.selector, 8 ether, 4 ether)
+            abi.encodeWithSelector(IOperatorsRegistryV1.ExitsRequestedExceedExitDemand.selector, 8 ether, 4 ether)
         );
         reg.requestETHExits(empty, allocs, 0);
     }
@@ -2959,5 +3056,176 @@ contract OperatorsRegistryV1ELExitTests is Test {
             )
         );
         reg.requestETHExits(empty, allocs, 0);
+    }
+
+    // ── CEI hardening: pin the behaviour a checks-effects-interactions reorder must preserve ──
+
+    // The nonReentrant guard must block re-entry that arrives via the EL withdrawal callback (the
+    // earliest external interaction), complementing the existing refund-callback reentrancy test on the
+    // CL path. The armed keeper re-enters from receive() when the mock withdrawal forwards the fee to it.
+    function testRequestETHExitsReentrancyIsBlocked() public {
+        ReentrantELKeeper attacker = new ReentrantELKeeper(address(reg));
+        keeper = address(attacker);
+        RiverMock(river).setKeeper(keeper);
+
+        _setupSingleOperator(32 ether, 32 ether, 8 ether);
+
+        IOperatorsRegistryV1.ExitETHAllocation[] memory empty = new IOperatorsRegistryV1.ExitETHAllocation[](0);
+        IOperatorsRegistryV1.ELExitETHAllocation[] memory allocs = _makeELAlloc(0, EIGHT_ETH_IN_GWEI);
+
+        // Non-zero fee equal to msg.value: the mock forwards the whole fee to the keeper during the
+        // withdrawal (triggering the re-entrant attempt) and no trailing refund is owed.
+        uint256 maxFee = 1 gwei;
+        vm.deal(keeper, 1 ether);
+        attacker.arm();
+        vm.prank(keeper);
+        reg.requestETHExits{value: maxFee}(empty, allocs, maxFee);
+
+        assertTrue(attacker.reentryBlocked(), "re-entry via the withdrawal callback must be blocked");
+        assertEq(attacker.reentryReason(), "ReentrancyGuard: reentrant call", "re-entry must be blocked by the guard");
+        // The outer call still settles despite the blocked re-entry.
+        assertEq(reg.getCurrentETHExitsDemand(), 0, "outer EL exit must still settle the demand");
+        assertEq(reg.getTotalETHExitsRequested(), 8 ether, "outer total requested must still settle");
+        assertEq(reg.getOperator(0).requestedExits, 8 ether, "outer reservation must still settle");
+    }
+
+    // The interactions phase must forward one withdrawal per operator, each carrying that operator's exact
+    // pubkeys, WIRE (withdrawal) amounts — not the reserved accounting amounts — and fee value. Operator 1
+    // uses a full exit (wire 0, reserved 32 ETH) so the assertion distinguishes the two amount arrays.
+    function testELExitForwardsPerOperatorWithdrawCallsExactly() public {
+        RecordingWithdrawForELExits recordingWithdraw = new RecordingWithdrawForELExits();
+        reg.sudoSetWithdrawAddress(address(recordingWithdraw));
+
+        vm.startPrank(admin);
+        reg.addOperator("Op0", makeAddr("op0addr"));
+        reg.addOperator("Op1", makeAddr("op1addr"));
+        vm.stopPrank();
+        reg.sudoSetFundedV3(0, 32 ether);
+        reg.sudoSetFundedV3(1, 32 ether);
+        reg.sudoSetActiveCLETH(0, 32 ether);
+        reg.sudoSetActiveCLETH(1, 32 ether);
+        vm.prank(river);
+        reg.demandETHExits(40 ether, 64 ether);
+
+        IOperatorsRegistryV1.ExitETHAllocation[] memory empty = new IOperatorsRegistryV1.ExitETHAllocation[](0);
+        IOperatorsRegistryV1.ELExitETHAllocation[] memory allocs = new IOperatorsRegistryV1.ELExitETHAllocation[](2);
+        allocs[0] = _makeELAlloc(0, EIGHT_ETH_IN_GWEI)[0]; // partial: wire 8 ETH == reserved 8 ETH
+        allocs[1] = _makeFullELAlloc(1, THIRTY_TWO_ETH_IN_GWEI)[0]; // full: wire 0, reserved 32 ETH
+
+        uint256 maxFee = 5 gwei;
+        uint256 valueSent = maxFee * 2; // one pubkey per operator, exact fee, no trailing refund
+        vm.deal(keeper, valueSent);
+        vm.prank(keeper);
+        reg.requestETHExits{value: valueSent}(empty, allocs, maxFee);
+
+        assertEq(recordingWithdraw.callCount(), 2, "one withdrawal per operator");
+
+        // Operator 0 (partial exit).
+        assertEq(recordingWithdraw.callValue(0), maxFee, "op0 fee value = maxFee * pubkeys.length");
+        assertEq(recordingWithdraw.callPubkeys(0).length, 1, "op0 forwards one pubkey");
+        assertEq(recordingWithdraw.callPubkeys(0)[0], PUBKEY_48, "op0 forwards its exact pubkey");
+        assertEq(recordingWithdraw.callAmounts(0).length, 1, "op0 forwards one amount");
+        assertEq(recordingWithdraw.callAmounts(0)[0], EIGHT_ETH_IN_GWEI, "op0 forwards the wire amount");
+
+        // Operator 1 (full exit): the forwarded wire amount must be 0, proving withdrawalAmounts (not
+        // reservedExitAmounts, which is 32 ETH here) are forwarded.
+        assertEq(recordingWithdraw.callValue(1), maxFee, "op1 fee value = maxFee * pubkeys.length");
+        assertEq(recordingWithdraw.callPubkeys(1).length, 1, "op1 forwards one pubkey");
+        assertEq(recordingWithdraw.callPubkeys(1)[0], PUBKEY_48, "op1 forwards its exact pubkey");
+        assertEq(recordingWithdraw.callAmounts(1).length, 1, "op1 forwards one amount");
+        assertEq(recordingWithdraw.callAmounts(1)[0], 0, "op1 full exit forwards a wire amount of 0");
+    }
+
+    // A combined CL + EL request that overshoots the current demand must revert. Uses a generic
+    // expectRevert so the test is stable across the reorder (which changes the error identity from the
+    // EL-only ExitsGreaterThanExitDemand to the combined ExitsRequestedExceedExitDemand).
+    function testRequestETHExitsRevertsWhenCLPlusELExceedDemand() public {
+        // Ample per-operator headroom so the demand check — not the available-CL check — is what fires.
+        _setupSingleOperator(64 ether, 64 ether, 8 ether);
+
+        IOperatorsRegistryV1.ExitETHAllocation[] memory clAllocs = new IOperatorsRegistryV1.ExitETHAllocation[](1);
+        clAllocs[0] = IOperatorsRegistryV1.ExitETHAllocation({operatorIndex: 0, ethAmount: 8 ether});
+        // CL 8 ETH + EL 8 ETH = 16 ETH combined, above the 8 ETH demand.
+        IOperatorsRegistryV1.ELExitETHAllocation[] memory elAllocs = _makeELAlloc(0, EIGHT_ETH_IN_GWEI);
+
+        vm.prank(keeper);
+        vm.expectRevert();
+        reg.requestETHExits(clAllocs, elAllocs, 0);
+    }
+
+    // A revert must leave the global aggregates and the per-operator reservation exactly as they were —
+    // no partial state may survive when the write ordering changes. Case: EL exit exceeds current demand.
+    function testRequestETHExitsRevertLeavesStateUntouchedOnExceedsDemand() public {
+        _setupSingleOperator(32 ether, 32 ether, 4 ether);
+
+        uint256 demandBefore = reg.getCurrentETHExitsDemand();
+        uint256 totalBefore = reg.getTotalETHExitsRequested();
+        uint256 reservedBefore = reg.getOperator(0).requestedExits;
+
+        IOperatorsRegistryV1.ExitETHAllocation[] memory empty = new IOperatorsRegistryV1.ExitETHAllocation[](0);
+        IOperatorsRegistryV1.ELExitETHAllocation[] memory allocs = _makeELAlloc(0, EIGHT_ETH_IN_GWEI); // 8 > 4
+
+        vm.prank(keeper);
+        vm.expectRevert();
+        reg.requestETHExits(empty, allocs, 0);
+
+        assertEq(reg.getCurrentETHExitsDemand(), demandBefore, "demand unchanged after revert");
+        assertEq(reg.getTotalETHExitsRequested(), totalBefore, "total requested unchanged after revert");
+        assertEq(reg.getOperator(0).requestedExits, reservedBefore, "operator reservation unchanged after revert");
+    }
+
+    // Same atomicity guarantee for the per-operator available-CL check: the EL amount exceeds the
+    // operator's available active CL ETH, so the reservation reverts and no state may persist.
+    function testRequestETHExitsRevertLeavesStateUntouchedOnExceedsAvailable() public {
+        // Demand (16 ETH) leaves room, but the operator only has 8 ETH of active CL available.
+        _setupSingleOperator(8 ether, 8 ether, 16 ether);
+
+        uint256 demandBefore = reg.getCurrentETHExitsDemand();
+        uint256 totalBefore = reg.getTotalETHExitsRequested();
+        uint256 reservedBefore = reg.getOperator(0).requestedExits;
+
+        IOperatorsRegistryV1.ExitETHAllocation[] memory empty = new IOperatorsRegistryV1.ExitETHAllocation[](0);
+        uint64 sixteenEthGwei = 16_000_000_000;
+        IOperatorsRegistryV1.ELExitETHAllocation[] memory allocs = _makeELAlloc(0, sixteenEthGwei);
+
+        vm.prank(keeper);
+        vm.expectRevert();
+        reg.requestETHExits(empty, allocs, 0);
+
+        assertEq(reg.getCurrentETHExitsDemand(), demandBefore, "demand unchanged after revert");
+        assertEq(reg.getTotalETHExitsRequested(), totalBefore, "total requested unchanged after revert");
+        assertEq(reg.getOperator(0).requestedExits, reservedBefore, "operator reservation unchanged after revert");
+    }
+
+    // CEI proof test. The global aggregates must already reflect the decrement at the point of the FIRST
+    // external interaction. With a non-zero fee the keeper is re-entered during the withdrawal call (the
+    // earliest value transfer, ahead of the trailing excess-fee refund), so the probe asserts CEI there.
+    // This test is expected to FAIL against the pre-refactor code (aggregates are written last) and pass
+    // once the checks-effects-interactions reorder lands.
+    function testRequestETHExitsFinalisesAggregatesBeforeSendingValue() public {
+        StateProbingRefundRecipient probe = new StateProbingRefundRecipient(address(reg));
+        keeper = address(probe);
+        RiverMock(river).setKeeper(keeper);
+
+        _setupSingleOperator(32 ether, 32 ether, 8 ether);
+
+        IOperatorsRegistryV1.ExitETHAllocation[] memory empty = new IOperatorsRegistryV1.ExitETHAllocation[](0);
+        IOperatorsRegistryV1.ELExitETHAllocation[] memory allocs = _makeELAlloc(0, EIGHT_ETH_IN_GWEI);
+
+        // Non-zero fee plus 1 wei excess: the mock forwards the fee to the keeper during the withdrawal,
+        // and the extra wei triggers the trailing excess-fee refund — so the keeper is re-entered twice.
+        uint256 maxFee = 1 gwei;
+        vm.deal(keeper, 1 ether);
+        vm.prank(keeper);
+        reg.requestETHExits{value: maxFee + 1 wei}(empty, allocs, maxFee);
+
+        assertEq(mockWithdraw.withdrawCallCount(), 1, "the withdrawal interaction must have executed");
+        assertGt(probe.interactionCount(), 1, "keeper re-entered during the withdrawal AND the excess refund");
+        assertEq(probe.demandAtFirstInteraction(), 0, "demand decrement must be applied before the first interaction");
+        assertEq(
+            probe.totalRequestedAtFirstInteraction(),
+            8 ether,
+            "total requested must be applied before the first interaction"
+        );
     }
 }
