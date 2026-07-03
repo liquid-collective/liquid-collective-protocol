@@ -15,7 +15,7 @@ import "./state/externalConsolidationRecipientMapping/ExternalConsolidationRecip
 
 /// @title External Consolidation Recipient Mapping (v1)
 /// @author Alluvial Finance Inc.
-/// @notice Maps withdrawal credential addresses to recipient addresses for external consolidation minting
+/// @notice Maps caller's withdrawal credentials to recipient addresses for external consolidation minting
 contract ExternalConsolidationRecipientMappingV1 is
     Initializable,
     IExternalConsolidationRecipientMappingV1,

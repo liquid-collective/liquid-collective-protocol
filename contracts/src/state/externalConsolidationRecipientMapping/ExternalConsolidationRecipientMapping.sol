@@ -2,7 +2,7 @@
 pragma solidity 0.8.34;
 
 /// @title External Consolidation Recipient Mapping Storage
-/// @notice Utility to manage withdrawal-credential-address recipient mapping storage
+/// @notice Utility to manage withdrawal credentials to recipient address mapping storage
 library ExternalConsolidationRecipientMapping {
     /// @notice Storage slot of the withdrawal-credential-address recipient mapping
     bytes32 internal constant EXTERNAL_CONSOLIDATION_RECIPIENT_MAPPING_SLOT =
@@ -10,7 +10,7 @@ library ExternalConsolidationRecipientMapping {
 
     /// @notice Structure stored in storage slot
     struct Slot {
-        /// @custom:attribute Mapping from withdrawal credential addresses to recipient addresses
+        /// @custom:attribute Mapping from withdrawal credentials to recipient addresses
         mapping(address => address) value;
     }
 

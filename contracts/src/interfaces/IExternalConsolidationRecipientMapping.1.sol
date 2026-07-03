@@ -33,6 +33,7 @@ interface IExternalConsolidationRecipientMappingV1 {
 
     /// @notice Resolves the mint recipient for a withdrawal credential address
     /// @dev Returns the mapped recipient when set, otherwise falls back to the withdrawal credential address.
+    /// @dev Does not perform any validation on the recipient address.
     /// @param _withdrawalCredentialAddress The withdrawal credential address to resolve
     /// @return The recipient address to receive minted LsETH
     function resolveRecipient(address _withdrawalCredentialAddress) external view returns (address);
