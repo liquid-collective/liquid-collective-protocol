@@ -240,6 +240,8 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                 revert MisalignedDeltaArrays(operatorIndex, delta.topUpPubkeys.length, delta.topUpAmounts.length);
             }
 
+            // Trusts delta.fundedETH == sum(deposit+topUp amounts) by construction (LibFundingDeltas.build).
+            // Revisit this assumption if any non-builder call path can reach here — see the NatSpec @dev.
             operator.funded += delta.fundedETH;
             // Emit initial-deposit pubkeys and top-up pubkeys on separate events so off-chain
             // indexers do not conflate a top-up (existing key, additional ETH) with a brand-new
