@@ -25,7 +25,6 @@ import "./state/attestationVerifier/RootAttesters.sol";
 import "./state/attestationVerifier/DepositDataBufferAddress.sol";
 import "./state/attestationVerifier/DepositDomainValue.sol";
 import "./state/attestationVerifier/DomainSeparator.sol";
-import "./state/attestationVerifier/ProcessedDepositDataBufferIds.sol";
 import "./state/attestationVerifier/PectraValidatorPubkeyLookup.sol";
 import "./state/attestationVerifier/PrePectraValidatorPubkeyLookup.sol";
 import "./state/shared/RiverAddress.sol";
@@ -409,22 +408,26 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
         bytes32 withdrawalCredentials,
         uint256 committedBalance
     ) external view returns (IDepositDataBuffer.DepositObject memory batch, uint256 totalAmount) {
-        // 0. Replay protection — reject any batch ID already processed
-        if (ProcessedDepositDataBufferIds.isProcessed(depositDataBufferId)) {
+        // 0. Replay protection — reject any batch ID the buffer has already marked processed.
+        //    The buffer is the authoritative source for this flag (River flips it after execution).
+        address depositDataBuffer = DepositDataBufferAddress.get();
+        if (IDepositDataBuffer(depositDataBuffer).isDepositDataProcessed(depositDataBufferId)) {
             revert DepositDataBufferIdAlreadyProcessed(depositDataBufferId);
         }
 
         // 1. Verify attestation quorum
         _verifyAttestationQuorum(depositDataBufferId, depositRootHash, signatures, depositContract);
 
-        // 2. Get deposit batch from buffer
-        batch = IDepositDataBuffer(DepositDataBufferAddress.get()).getDepositData(depositDataBufferId);
+        // 2. Get deposit batch (and its stored nonce) from buffer
+        uint256 nonce;
+        (batch, nonce) = IDepositDataBuffer(depositDataBuffer).getDepositData(depositDataBufferId);
         uint256 depositCount = batch.deposits.length;
         uint256 topUpCount = batch.topUps.length;
         if (depositCount == 0 && topUpCount == 0) revert NoDeposits();
 
-        // 3. Re-compute and check the bufferId binding so the buffer cannot tamper post-attestation
-        bytes32 computedId = keccak256(abi.encode(batch));
+        // 3. Re-compute and check the bufferId binding so the buffer cannot tamper post-attestation.
+        //    The nonce is folded into the id, so it is included in the recompute.
+        bytes32 computedId = keccak256(abi.encode(batch, nonce));
         if (computedId != depositDataBufferId) revert BufferIdMismatch(depositDataBufferId, computedId);
 
         // 4. Validate initial deposits: field lengths, amount bounds, pubkey-not-already-funded
@@ -614,16 +617,6 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
             PrePectraValidatorPubkeyLookup.remove(pubkey);
         }
         emit RemovedPrePectraValidatorPubkeys(pubkeys);
-    }
-
-    /// @inheritdoc IAttestationVerifierV1
-    function markDepositDataBufferIdProcessed(bytes32 depositDataBufferId) external onlyRiver {
-        ProcessedDepositDataBufferIds.markProcessed(depositDataBufferId);
-    }
-
-    /// @inheritdoc IAttestationVerifierV1
-    function isDepositDataBufferIdProcessed(bytes32 depositDataBufferId) external view returns (bool) {
-        return ProcessedDepositDataBufferIds.isProcessed(depositDataBufferId);
     }
 
     /// @inheritdoc IAttestationVerifierV1

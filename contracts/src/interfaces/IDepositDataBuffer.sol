@@ -5,9 +5,13 @@ import "../libraries/BLS12_381.sol";
 
 /// @title IDepositDataBuffer
 /// @notice Interface for the DepositDataBuffer contract that stores pre-committed validator deposit batches.
-/// @dev `depositDataBufferId` MUST be unique per submission — implementations should salt with an
-///      ever-incrementing counter (e.g. `lastQueueIdx++`). The AttestationVerifier marks every
-///      processed ID, so any reuse permanently bricks the colliding batch.
+/// @dev `depositDataBufferId` is `keccak256(abi.encode(batch, nonce))`, where `nonce` is the buffer's
+///      ever-incrementing `lastQueuedIdx` at submission time. Folding the nonce into the id makes every
+///      submission unique: byte-identical batches submitted more than once receive distinct,
+///      individually-addressable ids rather than colliding.
+/// @dev Replay/processed state lives on the buffer itself: River flips a per-batch `processed` flag via
+///      `markDepositDataProcessed`, and the AttestationVerifier reads `isDepositDataProcessed` to reject
+///      replays. The buffer — not the verifier — is the authoritative source for this flag.
 interface IDepositDataBuffer {
     /// @notice An initial validator deposit. BLS signature is verified by the verifier and
     ///         passed to the official deposit contract; pubkey must NOT already be in
@@ -63,10 +67,21 @@ interface IDepositDataBuffer {
     // -----------------------------------------------------------------------
 
     /// @notice Emitted when a new deposit batch is submitted to the buffer.
-    /// @param depositDataBufferId  The deterministic batch identifier (keccak256 of ABI-encoded batch)
+    /// @param depositDataBufferId  The deterministic batch identifier (keccak256(abi.encode(batch, nonce)))
+    /// @param nonce                The batch nonce folded into the id (the `lastQueuedIdx` at submit time)
     /// @param depositCount         Number of initial deposits in the batch
     /// @param topUpCount           Number of top-ups in the batch
-    event DepositDataSubmitted(bytes32 indexed depositDataBufferId, uint256 depositCount, uint256 topUpCount);
+    event DepositDataSubmitted(
+        bytes32 indexed depositDataBufferId, uint256 nonce, uint256 depositCount, uint256 topUpCount
+    );
+
+    /// @notice Emitted when River marks a queued batch as processed.
+    /// @param depositDataBufferId  The identifier of the batch that was flagged
+    event DepositDataProcessed(bytes32 indexed depositDataBufferId);
+
+    /// @notice Emitted when the admin rotates the authorized writer.
+    /// @param writer  The new authorized writer address
+    event SetWriter(address indexed writer);
 
     // -----------------------------------------------------------------------
     // Errors
@@ -81,23 +96,68 @@ interface IDepositDataBuffer {
     /// @notice Reverts when a requested batch ID does not exist
     error DepositDataBufferIdNotFound(bytes32 depositDataBufferId);
 
+    /// @notice Reverts when the supplied ID does not match keccak256(abi.encode(batch, nonce))
+    error DepositDataBufferIdMismatch(bytes32 expected, bytes32 computed);
+
+    /// @notice Reverts when a batch has already been marked processed
+    error DepositDataAlreadyProcessed(bytes32 depositDataBufferId);
+
     /// @notice Reverts when caller is not the authorized writer
     error OnlyWriter();
+
+    /// @notice Reverts when caller is not the authorized admin
+    error OnlyAdmin();
+
+    /// @notice Reverts when caller is not River (the only account allowed to mark data processed)
+    error OnlyRiver();
+
+    /// @notice Reverts when an initial-deposit pubkey is not exactly 48 bytes
+    error InvalidPubkeyLength(uint256 index, uint256 length);
+
+    /// @notice Reverts when an initial-deposit signature is not exactly 96 bytes
+    error InvalidSignatureLength(uint256 index, uint256 length);
+
+    /// @notice Reverts when a top-up pubkey is not exactly 48 bytes
+    error InvalidTopUpPubkeyLength(uint256 index, uint256 length);
+
+    /// @notice Reverts when a deposit or top-up amount is zero or not gwei-aligned
+    error InvalidDepositAmount(uint256 index, uint256 amount);
 
     // -----------------------------------------------------------------------
     // Functions
     // -----------------------------------------------------------------------
 
     /// @notice Submit a deposit batch to the buffer.
-    /// @dev The buffer ID is computed deterministically as keccak256(abi.encode(batch)).
-    /// @param depositDataBufferId  The expected batch ID (must equal keccak256(abi.encode(batch)))
+    /// @dev Restricted to the writer. The buffer ID folds in the batch nonce: it MUST equal
+    ///      `keccak256(abi.encode(batch, nonce))` where `nonce == lastQueuedIdx` at submit time. The
+    ///      nonce is then stored so the AttestationVerifier can reconstruct and re-check the binding.
+    /// @param depositDataBufferId  The expected batch ID (must equal keccak256(abi.encode(batch, nonce)))
     /// @param batch                Deposit batch containing initial deposits and top-ups
     function submitDepositData(bytes32 depositDataBufferId, DepositObject calldata batch) external;
 
-    /// @notice Retrieve a stored deposit batch by its ID.
+    /// @notice Retrieve a stored deposit batch and its nonce by ID.
     /// @param depositDataBufferId  The batch identifier
     /// @return batch               The stored deposit batch
-    function getDepositData(bytes32 depositDataBufferId) external view returns (DepositObject memory batch);
+    /// @return nonce               The batch nonce folded into the id at submit time
+    function getDepositData(bytes32 depositDataBufferId)
+        external
+        view
+        returns (DepositObject memory batch, uint256 nonce);
+
+    /// @notice Mark a queued batch as processed.
+    /// @dev Restricted to River. Reverts if the batch is unknown or already processed, then emits
+    ///      `DepositDataProcessed`.
+    /// @param depositDataBufferId  The identifier of the batch to mark processed
+    function markDepositDataProcessed(bytes32 depositDataBufferId) external;
+
+    /// @notice Whether a queued batch has been marked processed.
+    /// @param depositDataBufferId  The batch identifier
+    /// @return True if the batch has been marked processed
+    function isDepositDataProcessed(bytes32 depositDataBufferId) external view returns (bool);
+
+    /// @notice Rotate the authorized writer. Restricted to the admin.
+    /// @param newWriter  The new authorized writer address
+    function setWriter(address newWriter) external;
 
     /// @notice Returns the authorized writer address.
     /// @return The authorized writer address
@@ -106,4 +166,13 @@ interface IDepositDataBuffer {
     /// @notice Returns the admin address.
     /// @return The admin address
     function getAdmin() external view returns (address);
+
+    /// @notice The address of River, the only account allowed to mark deposit data processed.
+    /// @return The River address
+    // solhint-disable-next-line func-name-mixedcase
+    function RIVER() external view returns (address);
+
+    /// @notice The index (and batch nonce) that will be assigned to the next submitted batch.
+    /// @return The next batch nonce
+    function lastQueuedIdx() external view returns (uint256);
 }

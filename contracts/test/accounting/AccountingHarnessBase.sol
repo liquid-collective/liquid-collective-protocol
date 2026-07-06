@@ -35,11 +35,20 @@ import "../../src/state/operatorsRegistry/Operators.3.sol";
 
 contract AccountingMockDepositDataBuffer is IDepositDataBuffer {
     mapping(bytes32 => DepositObject) internal _batches;
+    mapping(bytes32 => uint256) internal _nonce;
     mapping(bytes32 => bool) internal _exists;
+    mapping(bytes32 => bool) internal _processed;
+    address internal _river;
+    uint256 public lastQueuedIdx;
+
+    constructor(address river) {
+        _river = river;
+    }
 
     function submitDepositData(bytes32 depositDataBufferId, DepositObject calldata batch) external {
         if (_exists[depositDataBufferId]) revert DepositDataBufferIdAlreadyExists(depositDataBufferId);
         _exists[depositDataBufferId] = true;
+        _nonce[depositDataBufferId] = lastQueuedIdx;
         DepositObject storage stored = _batches[depositDataBufferId];
         for (uint256 i = 0; i < batch.deposits.length; i++) {
             stored.deposits.push(batch.deposits[i]);
@@ -47,13 +56,32 @@ contract AccountingMockDepositDataBuffer is IDepositDataBuffer {
         for (uint256 i = 0; i < batch.topUps.length; i++) {
             stored.topUps.push(batch.topUps[i]);
         }
-        emit DepositDataSubmitted(depositDataBufferId, batch.deposits.length, batch.topUps.length);
+        emit DepositDataSubmitted(depositDataBufferId, lastQueuedIdx, batch.deposits.length, batch.topUps.length);
+        ++lastQueuedIdx;
     }
 
-    function getDepositData(bytes32 depositDataBufferId) external view returns (DepositObject memory) {
+    function getDepositData(bytes32 depositDataBufferId)
+        external
+        view
+        returns (DepositObject memory, uint256 nonce)
+    {
         if (!_exists[depositDataBufferId]) revert DepositDataBufferIdNotFound(depositDataBufferId);
-        return _batches[depositDataBufferId];
+        return (_batches[depositDataBufferId], _nonce[depositDataBufferId]);
     }
+
+    function markDepositDataProcessed(bytes32 depositDataBufferId) external {
+        if (msg.sender != _river) revert OnlyRiver();
+        if (!_exists[depositDataBufferId]) revert DepositDataBufferIdNotFound(depositDataBufferId);
+        if (_processed[depositDataBufferId]) revert DepositDataAlreadyProcessed(depositDataBufferId);
+        _processed[depositDataBufferId] = true;
+        emit DepositDataProcessed(depositDataBufferId);
+    }
+
+    function isDepositDataProcessed(bytes32 depositDataBufferId) external view returns (bool) {
+        return _processed[depositDataBufferId];
+    }
+
+    function setWriter(address) external {}
 
     function getWriter() external pure returns (address) {
         return address(0);
@@ -61,6 +89,11 @@ contract AccountingMockDepositDataBuffer is IDepositDataBuffer {
 
     function getAdmin() external pure returns (address) {
         return address(0);
+    }
+
+    // solhint-disable-next-line func-name-mixedcase
+    function RIVER() external view returns (address) {
+        return _river;
     }
 }
 
@@ -163,7 +196,6 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
         vm.warp(1_000_000);
 
         depositContract = new DepositContractMock();
-        depositBuffer = new AccountingMockDepositDataBuffer();
         withdraw = new WithdrawV1();
         oracle = new OracleV1();
         allowlist = new AllowlistV1();
@@ -173,6 +205,8 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
         externalConsolidationRecipientMapping = new ExternalConsolidationRecipientMappingV1();
         river = new AccountingRiverV1();
         operatorsRegistry = new AccountingTestOperatorsRegistry();
+        // The buffer's RIVER is River itself: River marks batches processed on the buffer during deposit.
+        depositBuffer = new AccountingMockDepositDataBuffer(address(river));
 
         LibImplementationUnbricker.unbrick(vm, address(withdraw));
         LibImplementationUnbricker.unbrick(vm, address(oracle));

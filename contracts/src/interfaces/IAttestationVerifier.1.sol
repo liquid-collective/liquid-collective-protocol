@@ -334,11 +334,6 @@ interface IAttestationVerifierV1 {
         uint256 committedBalance
     ) external view returns (IDepositDataBuffer.DepositObject memory batch, uint256 totalAmount);
 
-    /// @notice Mark a `depositDataBufferId` as processed. Only callable by River.
-    /// @dev Called by River after the deposit-execution loop; consulted by `validateDeposits()` to reject replays.
-    /// @param depositDataBufferId The batch identifier to mark processed.
-    function markDepositDataBufferIdProcessed(bytes32 depositDataBufferId) external;
-
     // -----------------------------------------------------------------------
     // Initial-deposit recording (called by River after a successful deposit batch)
     // -----------------------------------------------------------------------
@@ -478,9 +473,4 @@ interface IAttestationVerifierV1 {
     /// @param pubkey The 48-byte BLS pubkey
     /// @return True if the pubkey is currently in the lookup
     function isPubkeyFunded(bytes calldata pubkey) external view returns (bool);
-
-    /// @notice Check whether a `depositDataBufferId` has already been processed.
-    /// @param depositDataBufferId The batch identifier
-    /// @return True if the ID has already been executed
-    function isDepositDataBufferIdProcessed(bytes32 depositDataBufferId) external view returns (bool);
 }

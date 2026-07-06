@@ -26,11 +26,24 @@ import "../mocks/DepositContractInvalidMock.sol";
 
 contract MockDepositDataBuffer is IDepositDataBuffer {
     mapping(bytes32 => DepositObject) internal _batches;
+    mapping(bytes32 => uint256) internal _nonce;
     mapping(bytes32 => bool) internal _exists;
+    mapping(bytes32 => bool) internal _processed;
+    address internal _river;
+    uint256 public lastQueuedIdx;
 
+    constructor(address river) {
+        _river = river;
+    }
+
+    /// @dev The mock deliberately stores the batch under the caller-supplied id (with the current
+    ///      nonce) WITHOUT enforcing `id == keccak256(abi.encode(batch, nonce))`, so tamper tests can
+    ///      store a batch whose content diverges from the signed id and exercise the verifier's
+    ///      `BufferIdMismatch` check.
     function submitDepositData(bytes32 depositDataBufferId, DepositObject calldata batch) external {
         if (_exists[depositDataBufferId]) revert DepositDataBufferIdAlreadyExists(depositDataBufferId);
         _exists[depositDataBufferId] = true;
+        _nonce[depositDataBufferId] = lastQueuedIdx;
         DepositObject storage stored = _batches[depositDataBufferId];
         for (uint256 i = 0; i < batch.deposits.length; i++) {
             stored.deposits.push(batch.deposits[i]);
@@ -38,13 +51,32 @@ contract MockDepositDataBuffer is IDepositDataBuffer {
         for (uint256 i = 0; i < batch.topUps.length; i++) {
             stored.topUps.push(batch.topUps[i]);
         }
-        emit DepositDataSubmitted(depositDataBufferId, batch.deposits.length, batch.topUps.length);
+        emit DepositDataSubmitted(depositDataBufferId, lastQueuedIdx, batch.deposits.length, batch.topUps.length);
+        ++lastQueuedIdx;
     }
 
-    function getDepositData(bytes32 depositDataBufferId) external view returns (DepositObject memory) {
+    function getDepositData(bytes32 depositDataBufferId)
+        external
+        view
+        returns (DepositObject memory, uint256 nonce)
+    {
         if (!_exists[depositDataBufferId]) revert DepositDataBufferIdNotFound(depositDataBufferId);
-        return _batches[depositDataBufferId];
+        return (_batches[depositDataBufferId], _nonce[depositDataBufferId]);
     }
+
+    function markDepositDataProcessed(bytes32 depositDataBufferId) external {
+        if (msg.sender != _river) revert OnlyRiver();
+        if (!_exists[depositDataBufferId]) revert DepositDataBufferIdNotFound(depositDataBufferId);
+        if (_processed[depositDataBufferId]) revert DepositDataAlreadyProcessed(depositDataBufferId);
+        _processed[depositDataBufferId] = true;
+        emit DepositDataProcessed(depositDataBufferId);
+    }
+
+    function isDepositDataProcessed(bytes32 depositDataBufferId) external view returns (bool) {
+        return _processed[depositDataBufferId];
+    }
+
+    function setWriter(address) external {}
 
     function getWriter() external pure returns (address) {
         return address(0);
@@ -52,6 +84,11 @@ contract MockDepositDataBuffer is IDepositDataBuffer {
 
     function getAdmin() external pure returns (address) {
         return address(0);
+    }
+
+    // solhint-disable-next-line func-name-mixedcase
+    function RIVER() external view returns (address) {
+        return _river;
     }
 }
 
@@ -302,11 +339,12 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         rootAttester3 = vm.addr(rootAttesterPk3);
 
         depositContract = new DepositContractEnhancedMock();
-        buffer = new MockDepositDataBuffer();
         prePectraRegistry = new MockPrePectraOperatorsRegistry();
 
         // 1. Deploy and init the harness (River-shaped).
         dm = new AttestationDepositHarness(admin);
+        // The buffer's RIVER is the harness: River marks batches processed on the buffer during deposit.
+        buffer = new MockDepositDataBuffer(address(dm));
         LibImplementationUnbricker.unbrick(vm, address(dm));
         dm.initialize(address(depositContract), withdrawalCredentials);
         dm.sudoSetKeeper(keeper);
@@ -422,12 +460,19 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         return abi.encodePacked(r, s, v);
     }
 
+    /// @dev The buffer id folds the batch nonce (the buffer's `lastQueuedIdx` at submit time) into
+    ///      the hash, so byte-identical batches submitted more than once receive distinct ids. Read
+    ///      immediately before submitting so the nonce matches what the buffer stores.
+    function _bid(IDepositDataBuffer.DepositObject memory batch) internal view returns (bytes32) {
+        return keccak256(abi.encode(batch, buffer.lastQueuedIdx()));
+    }
+
     /// @dev Submit a prebuilt batch to buffer, sign attestations, and return calldata.
     function _prepareDeposit(IDepositDataBuffer.DepositObject memory batch)
         internal
         returns (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs)
     {
-        bufferId = keccak256(abi.encode(batch));
+        bufferId = _bid(batch);
         buffer.submitDepositData(bufferId, batch);
 
         rootHash = depositContract.get_deposit_root();
@@ -555,7 +600,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         IDepositDataBuffer.Deposit[] memory batch2 = new IDepositDataBuffer.Deposit[](1);
         batch2[0] = _makeDeposit(1, 200);
 
-        bytes32 bid2 = keccak256(abi.encode(_batchOf(batch2)));
+        bytes32 bid2 = _bid(_batchOf(batch2));
         buffer.submitDepositData(bid2, _batchOf(batch2));
 
         bytes32 root2 = depositContract.get_deposit_root();
@@ -597,7 +642,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](1);
         deposits[0] = _makeDeposit(0, 0);
 
-        bytes32 bufferId = keccak256(abi.encode(_batchOf(deposits)));
+        bytes32 bufferId = _bid(_batchOf(deposits));
         buffer.submitDepositData(bufferId, _batchOf(deposits));
 
         bytes32 rootHash = depositContract.get_deposit_root();
@@ -615,7 +660,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](1);
         deposits[0] = _makeDeposit(0, 0);
 
-        bytes32 bufferId = keccak256(abi.encode(_batchOf(deposits)));
+        bytes32 bufferId = _bid(_batchOf(deposits));
         buffer.submitDepositData(bufferId, _batchOf(deposits));
 
         // Sign over a stale root that won't match the deposit contract
@@ -653,7 +698,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](1);
         deposits[0] = _makeDeposit(0, 0);
 
-        bytes32 bufferId = keccak256(abi.encode(_batchOf(deposits)));
+        bytes32 bufferId = _bid(_batchOf(deposits));
         buffer.submitDepositData(bufferId, _batchOf(deposits));
         bytes32 rootHash = invalidDepositContract.get_deposit_root();
         bytes[] memory sigs = new bytes[](2);
@@ -669,7 +714,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](1);
         deposits[0] = _makeDeposit(0, 0);
 
-        bytes32 bufferId = keccak256(abi.encode(_batchOf(deposits)));
+        bytes32 bufferId = _bid(_batchOf(deposits));
         buffer.submitDepositData(bufferId, _batchOf(deposits));
         bytes32 rootHash = depositContract.get_deposit_root();
 
@@ -687,7 +732,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](1);
         deposits[0] = _makeDeposit(0, 0);
 
-        bytes32 bufferId = keccak256(abi.encode(_batchOf(deposits)));
+        bytes32 bufferId = _bid(_batchOf(deposits));
         buffer.submitDepositData(bufferId, _batchOf(deposits));
         bytes32 rootHash = depositContract.get_deposit_root();
 
@@ -714,8 +759,10 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         IDepositDataBuffer.Deposit[] memory depositsActual = new IDepositDataBuffer.Deposit[](1);
         depositsActual[0] = _makeDeposit(0, 999); // different pubkey seed
 
+        // `signedId` is the (arbitrary) id the attesters commit to; `actualId` is what the verifier
+        // recomputes from the stored batch and its nonce. They must differ so BufferIdMismatch fires.
         bytes32 signedId = keccak256(abi.encode(_batchOf(depositsSigned)));
-        bytes32 actualId = keccak256(abi.encode(_batchOf(depositsActual)));
+        bytes32 actualId = _bid(_batchOf(depositsActual));
         assertTrue(signedId != actualId, "test precondition: the two batches must hash differently");
 
         // Malicious buffer: store `depositsActual` under `signedId`.
@@ -754,7 +801,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
         IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](1);
         deposits[0] = _makeDeposit(0, 901);
-        bytes32 bufferId = keccak256(abi.encode(_batchOf(deposits)));
+        bytes32 bufferId = _bid(_batchOf(deposits));
         buffer.submitDepositData(bufferId, _batchOf(deposits));
         bytes32 rootHash = depositContract.get_deposit_root();
 
@@ -895,7 +942,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         topUpsActual[0] = _makeTopUpDeposit(0, 80);
 
         bytes32 signedId = keccak256(abi.encode(_batchOf(depositsSigned)));
-        bytes32 actualId = keccak256(abi.encode(_batchOfTopUps(topUpsActual)));
+        bytes32 actualId = _bid(_batchOfTopUps(topUpsActual));
         assertTrue(signedId != actualId, "test precondition: moving entry between arrays must change the bufferId");
 
         // Malicious buffer: store the top-up version under the initial-deposit's signedId.
@@ -1096,7 +1143,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         IDepositDataBuffer.TopUp[] memory batchB = new IDepositDataBuffer.TopUp[](1);
         batchB[0] = _makeTopUpDeposit(0, 120); // same seed → same pubkey
 
-        bytes32 bidB = keccak256(abi.encode(_batchOfTopUps(batchB)));
+        bytes32 bidB = _bid(_batchOfTopUps(batchB));
         buffer.submitDepositData(bidB, _batchOfTopUps(batchB));
 
         bytes32 rootB = depositContract.get_deposit_root();
@@ -1434,7 +1481,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
         vm.prank(keeper);
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
-        assertTrue(verifier.isDepositDataBufferIdProcessed(bufferId), "id should be marked processed");
+        assertTrue(buffer.isDepositDataProcessed(bufferId), "id should be marked processed");
 
         uint256 depositCountBefore = depositContract.deposit_count();
         vm.prank(keeper);
@@ -1457,7 +1504,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
         vm.prank(keeper);
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
-        assertTrue(verifier.isDepositDataBufferIdProcessed(bufferId), "id should be marked processed");
+        assertTrue(buffer.isDepositDataProcessed(bufferId), "id should be marked processed");
 
         uint256 depositCountBefore = depositContract.deposit_count();
         vm.prank(keeper);
@@ -1484,7 +1531,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
         vm.prank(keeper);
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
-        assertTrue(verifier.isDepositDataBufferIdProcessed(bufferId), "id should be marked processed");
+        assertTrue(buffer.isDepositDataProcessed(bufferId), "id should be marked processed");
 
         uint256 depositCountBefore = depositContract.deposit_count();
         vm.prank(keeper);
@@ -1509,7 +1556,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
         vm.prank(keeper);
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
-        assertTrue(verifier.isDepositDataBufferIdProcessed(bufferId), "id should be marked processed");
+        assertTrue(buffer.isDepositDataProcessed(bufferId), "id should be marked processed");
 
         bytes32 attackerRootHash = keccak256("attacker-chosen-root");
         bytes[] memory attackerSigs = new bytes[](2);
@@ -1527,13 +1574,13 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         );
     }
 
-    /// @dev `markDepositDataBufferIdProcessed` is gated by `onlyRiver`.
-    function testRevert_markDepositDataBufferIdProcessed_notRiver() public {
+    /// @dev The buffer's `markDepositDataProcessed` is gated by `onlyRiver`.
+    function testRevert_markDepositDataProcessed_notRiver() public {
         bytes32 bufferId = keccak256("some-id");
         address stranger = address(0xC0FFEE);
         vm.prank(stranger);
-        vm.expectRevert(abi.encodeWithSelector(LibErrors.Unauthorized.selector, stranger));
-        verifier.markDepositDataBufferIdProcessed(bufferId);
+        vm.expectRevert(IDepositDataBuffer.OnlyRiver.selector);
+        buffer.markDepositDataProcessed(bufferId);
     }
 
     /// @dev Same-batch initial + top-up for the SAME pubkey must revert. The top-up check
@@ -1980,7 +2027,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     /// @dev An empty deposit batch must revert with NoDeposits before any further processing.
     function testRevert_validate_noDeposits() public {
         IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](0);
-        bytes32 bufferId = keccak256(abi.encode(_batchOf(deposits)));
+        bytes32 bufferId = _bid(_batchOf(deposits));
         buffer.submitDepositData(bufferId, _batchOf(deposits));
         bytes32 rootHash = depositContract.get_deposit_root();
         bytes[] memory sigs = new bytes[](2);
@@ -2253,7 +2300,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
         IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](1);
         deposits[0] = _makeDeposit(0, 850);
-        bytes32 bufferId = keccak256(abi.encode(_batchOf(deposits)));
+        bytes32 bufferId = _bid(_batchOf(deposits));
         buffer.submitDepositData(bufferId, _batchOf(deposits));
         bytes32 rootHash = depositContract.get_deposit_root();
 
@@ -2282,7 +2329,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
         IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](1);
         deposits[0] = _makeDeposit(0, 852);
-        bytes32 bufferId = keccak256(abi.encode(_batchOf(deposits)));
+        bytes32 bufferId = _bid(_batchOf(deposits));
         buffer.submitDepositData(bufferId, _batchOf(deposits));
         bytes32 rootHash = depositContract.get_deposit_root();
 
@@ -2305,7 +2352,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     function testRecover_normalizesLegacyVZero() public {
         IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](1);
         deposits[0] = _makeDeposit(0, 851);
-        bytes32 bufferId = keccak256(abi.encode(_batchOf(deposits)));
+        bytes32 bufferId = _bid(_batchOf(deposits));
         buffer.submitDepositData(bufferId, _batchOf(deposits));
         bytes32 rootHash = depositContract.get_deposit_root();
 
@@ -2440,7 +2487,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     ///      lengths; a regression that drops either conjunct would accept a half-empty batch.
     function testRevert_emptyContainer_revertsNoDeposits() public {
         IDepositDataBuffer.DepositObject memory batch;
-        bytes32 bufferId = keccak256(abi.encode(batch));
+        bytes32 bufferId = _bid(batch);
         buffer.submitDepositData(bufferId, batch);
         bytes32 rootHash = depositContract.get_deposit_root();
 
