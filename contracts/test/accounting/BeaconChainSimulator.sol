@@ -51,11 +51,14 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
     /// @dev Cumulative ETH deposited on the EL deposit contract that has been activated on the CL.
     ///      Monotonically increasing — incremented in sim_activateValidators.
     uint256 internal _simTotalDepositedActivatedETH;
-    /// @dev Cumulative external-consolidation principal that has landed in validatorsBalance and been reported.
-    ///      Monotonically increasing — incremented by the consolidation report step. `_buildReport` adds it to
-    ///      validatorsBalance and reports it as totalExternalConsolidationsAmountReported, so every report
-    ///      carries the current cumulative value (normal reports keep it unchanged → on-chain delta 0).
+    /// @dev Cumulative external-consolidation amount that has landed in validatorsBalance and been reported.
+    ///      Monotonically increasing — incremented by the consolidation report step. `_buildReport` reports it
+    ///      as totalExternalConsolidationsAmountReported and adds it to validatorsBalance.
     uint256 internal _simConsolidatedBalance;
+    /// @dev Cumulative CL rewards that landed above the externally reported consolidation amount.
+    ///      Added to validatorsBalance, but not to totalExternalConsolidationsAmountReported, so scenario tests
+    ///      can model source validators earning while queued before consolidation processing.
+    uint256 internal _simConsolidationRewardSurplus;
 
     uint256 internal _lastReportedSkimmed;
     uint256 internal _lastReportedExited;
@@ -228,6 +231,25 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
         revert("sim_slash: no active validator found");
     }
 
+    /// @dev Models an external consolidation that will be included in the next oracle report.
+    ///      `bufferedPrincipal` is the amount minted into the consolidation buffer at request time.
+    ///      `reportedAmount` is the cumulative-report delta for the consolidation that landed on the CL.
+    ///      `validatorBalanceSurplus` is extra CL balance above `reportedAmount` that lands in validatorsBalance.
+    function sim_reportExternalConsolidation(
+        uint256 bufferedPrincipal,
+        uint256 reportedAmount,
+        uint256 validatorBalanceSurplus
+    ) internal {
+        _simConsolidatedBalance += reportedAmount;
+        _simConsolidationRewardSurplus += validatorBalanceSurplus;
+        _simTotalUserDeposited += bufferedPrincipal;
+
+        if (reportedAmount > bufferedPrincipal) {
+            _simCumulativeAutocompounded += reportedAmount - bufferedPrincipal;
+        }
+        _simCumulativeAutocompounded += validatorBalanceSurplus;
+    }
+
     /// @dev Convenience overload — delegates to the two-argument variant.
     function sim_oracleReport() internal {
         sim_oracleReport(false, false);
@@ -298,8 +320,8 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
             exitedArr[0] += exitedArr[i];
         }
 
-        // The consolidated principal has landed on the CL, so it is part of the reported validatorsBalance.
-        report.validatorsBalance = validatorsBalance + _simConsolidatedBalance;
+        // The consolidated amount and any queue-earned surplus have landed on the CL.
+        report.validatorsBalance = validatorsBalance + _simConsolidatedBalance + _simConsolidationRewardSurplus;
         report.validatorsSkimmedBalance = _simCumulativeSkimmed;
         report.validatorsExitedBalance = _simCumulativeExited;
         report.validatorsExitingBalance = validatorsExiting;
