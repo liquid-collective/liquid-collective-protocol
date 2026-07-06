@@ -64,7 +64,6 @@ library LibOracleReporting {
         uint256 totalExternalConsolidationsAmountReportedIncrease;
         uint256 timeElapsedSinceLastReport;
         uint256 availableAmountToUpperBound;
-        uint256 redeemManagerDemand;
         IOracleManagerV1.ConsensusLayerDataReportingTrace trace;
     }
 
@@ -223,7 +222,7 @@ library LibOracleReporting {
 
         // we can now compute the earned rewards from the consensus layer balances
         // in order to properly account for the balance increase, we compare the sums of current balances, skimmed balance and exited balances
-        // we also synthetically increase the current balance by 32 eth per new activated validator, this way we have no discrepency due
+        // we also synthetically increase the current balance by 32 eth per new activated validator, this way we have no discrepancy due
         // to currently activating funds that were not yet accounted in the consensus layer balances
         if (vars.postReportUnderlyingBalance >= vars.preReportUnderlyingBalance) {
             // if this happens, we revert and the reporting process is cancelled
