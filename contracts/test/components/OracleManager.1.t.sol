@@ -288,6 +288,18 @@ contract OracleManagerV1Tests is Test {
     function testExternalViewFunctions() external {
         assertEq(false, oracleManager.isValidEpoch(1));
         assertEq(0, oracleManager.getCLValidatorCount());
+
+        // Restore coverage for the epoch/frame getters lost with the old OracleManager unit suite.
+        // setUp warps to genesisTime, so the current epoch is 0.
+        assertEq(0, oracleManager.getCurrentEpochId());
+
+        (uint256 startEpochId, uint256 startTime, uint256 endTime) = oracleManager.getCurrentFrame();
+        assertEq(0, startEpochId);
+        assertEq(0, startTime);
+        assertEq(uint256(epochsPerFrame) * slotsPerEpoch * secondsPerSlot - 1, endTime);
+
+        // Exact multiple of epochsPerFrame maps back to itself.
+        assertEq(uint256(epochsPerFrame), oracleManager.getFrameFirstEpochId(epochsPerFrame));
     }
 }
 
