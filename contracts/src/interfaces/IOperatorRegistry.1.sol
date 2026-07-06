@@ -30,13 +30,16 @@ interface IOperatorsRegistryV1 {
     /// @notice Structure representing an EL exit allocation for exits
     /// @param operatorIndex The index of the operator
     /// @param pubkeys The pubkeys through which the EL exits were requested
-    /// @param amounts The amounts (gwei) per pubkey that was requested for EL exits
-    /// @param isFullExit True if the EL exit is a full exit for each pubkey
+    /// @param withdrawalAmounts The wire amount (gwei) sent to the EIP-7002 withdrawal predeploy per pubkey.
+    ///                          0 signals a full exit; any non-zero value is a partial withdrawal.
+    /// @param reservedExitAmounts The accounting amount (gwei) reserved against the operator's exit headroom
+    ///                            per pubkey. Always set: for partial exits it equals the matching
+    ///                            withdrawalAmounts[i]; for full exits it should be the keeper-supplied projected balance (not validated on-chain).
     struct ELExitETHAllocation {
         uint256 operatorIndex;
         bytes[] pubkeys; // 48 bytes
-        uint64[] amounts; // gwei, actual balance for full exits
-        bool[] isFullExit; // true if the EL exit is a full exit for each pubkey
+        uint64[] withdrawalAmounts; // gwei, wire value to the predeploy; 0 == full exit
+        uint64[] reservedExitAmounts; // gwei, accounting value reserved against headroom; always set
     }
 
     /// @notice Structure representing a per-operator funded ETH update
@@ -92,8 +95,11 @@ interface IOperatorsRegistryV1 {
     /// @notice The amount of ETH(gwei) that has been requested to be exited per pubkey via EL
     /// @param index The operator index
     /// @param pubkeys The pubkeys through which the EL exits were requested
-    /// @param amounts The amount per pubkey that was requested for EL exits (for full exits it is the actual balance)
-    event RequestedELETHExits(uint256 indexed index, bytes[] pubkeys, uint64[] amounts);
+    /// @param withdrawalAmounts The wire amount (gwei) sent to the predeploy per pubkey (0 for full exits)
+    /// @param reservedExitAmounts The accounting amount (gwei) reserved against headroom per pubkey
+    event RequestedELETHExits(
+        uint256 indexed index, bytes[] pubkeys, uint64[] withdrawalAmounts, uint64[] reservedExitAmounts
+    );
 
     /// @notice The exit request demand has been updated
     /// @param previousETHExitsDemand The previous exit request demand in ETH(wei)
@@ -149,6 +155,12 @@ interface IOperatorsRegistryV1 {
     /// @param amounts The per-key top-up amount in ETH(wei), aligned 1:1 with pubkeys
     event TopUps(uint256 indexed index, bytes[] pubkeys, uint256[] amounts);
 
+    /// @notice An operator was funded while it still had unfulfilled exit requests.
+    /// @param index The operator index
+    /// @param requestedExits The cumulative amount of exits requested for the operator
+    /// @param exitedETH The cumulative amount of exited ETH(wei) reported for the operator
+    event FundedOperatorWithPendingExits(uint256 indexed index, uint256 requestedExits, uint256 exitedETH);
+
     /// @notice The calling operator is inactive
     /// @param index The operator index
     error InactiveOperator(uint256 index);
@@ -158,10 +170,6 @@ interface IOperatorsRegistryV1 {
 
     /// @notice The provided list of operators is not in increasing order
     error UnorderedOperatorList();
-
-    /// @notice Thrown when an operator ignored the required number of requested exits
-    /// @param operatorIndex The operator index
-    error OperatorIgnoredExitRequests(uint256 operatorIndex);
 
     /// @notice Thrown when the sum of exited ETH is invalid
     error ExitedETHSumMismatch();
@@ -212,11 +220,21 @@ interface IOperatorsRegistryV1 {
     /// @param ethAmount The incorrect ETH(wei) amount
     error AllocationWithIncorrectAmount(uint256 ethAmount);
 
-    /// @notice Thrown when an EL exit allocation amount is invalid (e.g. zero or above the allowed cap)
+    /// @notice Thrown when an EL exit allocation's reserved amount falls outside the bounds for its exit kind.
+    ///         Full exits (withdrawalAmount == 0) must reserve within [32 ETH, 2048 ETH]; partial exits
+    ///         (withdrawalAmount != 0) must reserve within (0, 2016 ETH] (MaxEB minus the 32 ETH floor).
     /// @param operatorIndex The operator index
-    /// @param isFullExit True if the EL exit allocation is marked as a full exit for this pubkey
-    /// @param amount The EL exit accounting amount in gwei
-    error InvalidELExitETHAllocationAmount(uint256 operatorIndex, bool isFullExit, uint64 amount);
+    /// @param withdrawalAmount The wire amount (gwei) for this pubkey (0 for full exits)
+    /// @param reservedExitAmount The reserved accounting amount (gwei) for this pubkey
+    error InvalidELExitETHAllocationAmount(uint256 operatorIndex, uint64 withdrawalAmount, uint64 reservedExitAmount);
+
+    /// @notice Thrown when a partial EL exit's wire amount does not match its reserved accounting amount.
+    ///         Partial exits (withdrawalAmount != 0) must wire exactly what they reserve; only full exits
+    ///         (withdrawalAmount == 0) are allowed to differ from the reserved (keeper-supplied) accounting amount.
+    /// @param operatorIndex The operator index
+    /// @param withdrawalAmount The wire amount (gwei) for this pubkey
+    /// @param reservedExitAmount The reserved accounting amount (gwei) for this pubkey
+    error ELExitReservedWithdrawalMismatch(uint256 operatorIndex, uint64 withdrawalAmount, uint64 reservedExitAmount);
 
     /// @notice Thrown when the provided active CL ETH array length does not match the operator count
     error InvalidActiveCLETHArrayLength();
@@ -249,7 +267,7 @@ interface IOperatorsRegistryV1 {
     /// @param excess The excess fee
     error UnsentRefund(address sender, uint256 excess);
 
-    /// @notice Thrown when an EL exit allocation has mismatched pubkeys/amounts/isFullExit lengths
+    /// @notice Thrown when an EL exit allocation has mismatched pubkeys/withdrawalAmounts/reservedExitAmounts lengths
     error InvalidELExitETHAllocationLength();
 
     /// @notice Thrown when the total EL exit amount requested is greater than the remaining exit demand
@@ -345,7 +363,6 @@ interface IOperatorsRegistryV1 {
     /// @dev Reverts with InvalidOperatorIndex when a delta references an operator outside the registered range
     /// @dev Reverts with OperatorIndicesUnsortedOrDuplicate when deltas are not strictly ascending
     /// @dev Reverts with InactiveOperator when a referenced operator is inactive
-    /// @dev Reverts with OperatorIgnoredExitRequests when a referenced operator has unfulfilled exit requests
     /// @dev `delta.fundedETH` is trusted to equal `sum(depositAmounts) + sum(topUpAmounts)` and is NOT
     ///      re-derived on-chain. This holds by construction: the only path that builds these deltas is
     ///      `LibFundingDeltas.build` (reached via River's `_incrementFundedETH`), which computes
