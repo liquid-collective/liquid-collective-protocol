@@ -36,6 +36,12 @@ interface IAttestationVerifierPectraMigrationV1 {
     /// @param pubkey The 48-byte BLS pubkey
     error PrePectraValidatorPubkeyNotFunded(bytes pubkey);
 
+    /// @notice A batch referenced a pubkey still in the pre-Pectra lookup as if it were a
+    ///         Pectra validator. Migrated legacy keys must first be promoted via
+    ///         self-consolidation before they can be initial-deposited or topped up.
+    /// @param pubkey The offending 48-byte BLS pubkey
+    error PrePectraValidatorPubkeyNotConsolidated(bytes pubkey);
+
     /// @notice The self consolidation batch is empty.
     error InvalidSelfConsolidationEmptyPubkeys();
 

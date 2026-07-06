@@ -457,6 +457,13 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
             if (PectraValidatorPubkeyLookup.isPubkeyFunded(d.pubkey)) {
                 revert PubkeyAlreadyFunded(d.pubkey);
             }
+            // A migrated pre-Pectra (0x01) key must be promoted via self-consolidation, not
+            // reintroduced as a fresh initial deposit. Gating here keeps the pre-Pectra lookup
+            // authoritative and preserves the migration state machine even if a producer or
+            // attester batch is malformed.
+            if (PrePectraValidatorPubkeyLookup.isPubkeyFunded(d.pubkey)) {
+                revert PrePectraValidatorPubkeyNotConsolidated(d.pubkey);
+            }
             for (uint256 j = 0; j < i; j++) {
                 if (pubkeyHashes[j] == pkHash) {
                     revert PubkeyAlreadyFunded(d.pubkey);
@@ -476,6 +483,12 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
             }
             totalAmount += t.amount;
 
+            // Explicitly reject migrated pre-Pectra keys with a distinct error. Such a key is not
+            // in the Pectra lookup so it would otherwise revert as TopUpPubkeyNotFunded; the
+            // dedicated error tells producers the key must be self-consolidated first.
+            if (PrePectraValidatorPubkeyLookup.isPubkeyFunded(t.pubkey)) {
+                revert PrePectraValidatorPubkeyNotConsolidated(t.pubkey);
+            }
             if (!PectraValidatorPubkeyLookup.isPubkeyFunded(t.pubkey)) {
                 revert TopUpPubkeyNotFunded(t.pubkey);
             }
