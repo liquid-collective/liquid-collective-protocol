@@ -5,48 +5,18 @@ import "forge-std/Test.sol";
 
 import "../../src/DepositDataBuffer.sol";
 import "../../src/interfaces/IDepositDataBuffer.sol";
-import "../../src/libraries/BLS12_381.sol";
+import "../shared/DepositDataBufferFixtures.sol";
 
 /// @title DepositDataBufferFuzzTest
 /// @notice Fuzz coverage for the DepositDataBuffer, ported from the frontrun-mitigation suite and
 ///         adapted to the `deposits[]/topUps[]` DepositObject shape.
-contract DepositDataBufferFuzzTest is Test {
+contract DepositDataBufferFuzzTest is Test, DepositDataBufferFixtures {
     DepositDataBuffer internal buffer;
 
     address internal writer = makeAddr("writer");
 
     function setUp() public {
         buffer = new DepositDataBuffer(makeAddr("admin"), writer, makeAddr("processor"));
-    }
-
-    function _pubkey(uint256 seed) internal pure returns (bytes memory) {
-        return abi.encodePacked(sha256(abi.encode("pubkey", seed)), bytes16(0));
-    }
-
-    function _signature(uint256 seed) internal pure returns (bytes memory) {
-        return abi.encodePacked(sha256(abi.encode("sig", seed)), sha256(abi.encode("sig2", seed)), bytes32(0));
-    }
-
-    function _deposit(uint256 seed) internal pure returns (IDepositDataBuffer.Deposit memory) {
-        BLS12_381.DepositY memory depositY;
-        return IDepositDataBuffer.Deposit({
-            pubkey: _pubkey(seed),
-            signature: _signature(seed),
-            amount: 32 ether,
-            operatorIdx: seed % 5,
-            depositY: depositY
-        });
-    }
-
-    function _batch(uint256 count, uint256 seedBase)
-        internal
-        pure
-        returns (IDepositDataBuffer.DepositObject memory batch)
-    {
-        batch.deposits = new IDepositDataBuffer.Deposit[](count);
-        for (uint256 i = 0; i < count; i++) {
-            batch.deposits[i] = _deposit(seedBase + i);
-        }
     }
 
     function _submit(IDepositDataBuffer.DepositObject memory batch) internal returns (bytes32 id) {

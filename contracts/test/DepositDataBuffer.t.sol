@@ -5,13 +5,13 @@ import "forge-std/Test.sol";
 
 import "../src/DepositDataBuffer.sol";
 import "../src/interfaces/IDepositDataBuffer.sol";
-import "../src/libraries/BLS12_381.sol";
 import "../src/libraries/LibErrors.sol";
+import "./shared/DepositDataBufferFixtures.sol";
 
 /// @title DepositDataBufferTest
 /// @notice Unit coverage for the DepositDataBuffer implementation, ported from the frontrun-mitigation
 ///         suite and adapted to the liquid-collective `deposits[]/topUps[]` DepositObject shape.
-contract DepositDataBufferTest is Test {
+contract DepositDataBufferTest is Test, DepositDataBufferFixtures {
     DepositDataBuffer internal buffer;
 
     address internal admin = makeAddr("admin");
@@ -29,39 +29,8 @@ contract DepositDataBufferTest is Test {
     }
 
     // -----------------------------------------------------------------------
-    // Fixture helpers
+    // Test-local helpers (fixtures are inherited from DepositDataBufferFixtures)
     // -----------------------------------------------------------------------
-
-    function _pubkey(uint256 seed) internal pure returns (bytes memory) {
-        return abi.encodePacked(sha256(abi.encode("pubkey", seed)), bytes16(0));
-    }
-
-    function _signature(uint256 seed) internal pure returns (bytes memory) {
-        return abi.encodePacked(sha256(abi.encode("sig", seed)), sha256(abi.encode("sig2", seed)), bytes32(0));
-    }
-
-    function _deposit(uint256 seed) internal pure returns (IDepositDataBuffer.Deposit memory) {
-        BLS12_381.DepositY memory depositY;
-        return IDepositDataBuffer.Deposit({
-            pubkey: _pubkey(seed),
-            signature: _signature(seed),
-            amount: 32 ether + seed * 1 gwei,
-            operatorIdx: seed % 3,
-            depositY: depositY
-        });
-    }
-
-    function _topUp(uint256 seed) internal pure returns (IDepositDataBuffer.TopUp memory) {
-        return IDepositDataBuffer.TopUp({pubkey: _pubkey(seed), amount: 1 ether + seed * 1 gwei, operatorIdx: seed % 3});
-    }
-
-    /// @dev Build a deposits-only batch of `count` initial deposits.
-    function _batch(uint256 count) internal pure returns (IDepositDataBuffer.DepositObject memory batch) {
-        batch.deposits = new IDepositDataBuffer.Deposit[](count);
-        for (uint256 i = 0; i < count; i++) {
-            batch.deposits[i] = _deposit(i);
-        }
-    }
 
     /// @dev The buffer id folds the batch nonce (the current `lastQueuedIdx`) into the hash.
     function _id(IDepositDataBuffer.DepositObject memory batch, uint256 nonce) internal pure returns (bytes32) {

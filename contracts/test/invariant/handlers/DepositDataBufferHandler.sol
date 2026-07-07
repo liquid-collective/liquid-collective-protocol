@@ -5,13 +5,13 @@ import "forge-std/Test.sol";
 
 import "../../../src/DepositDataBuffer.sol";
 import "../../../src/interfaces/IDepositDataBuffer.sol";
-import "../../../src/libraries/BLS12_381.sol";
+import "../../shared/DepositDataBufferFixtures.sol";
 
 /// @title DepositDataBufferHandler
 /// @notice Bounded action surface for the DepositDataBuffer invariant suite. Submits fresh batches,
 ///         re-submits existing batches verbatim (allowed under distinct nonces), and marks batches
 ///         processed as the processor — tracking ghost state the invariants assert against.
-contract DepositDataBufferHandler is Test {
+contract DepositDataBufferHandler is Test, DepositDataBufferFixtures {
     DepositDataBuffer public buffer;
     address public writer;
     address public processor;
@@ -38,31 +38,14 @@ contract DepositDataBufferHandler is Test {
     }
 
     // -----------------------------------------------------------------------
-    // Fixtures
-    // -----------------------------------------------------------------------
-
-    function _deposit(uint256 seed) internal pure returns (IDepositDataBuffer.Deposit memory) {
-        BLS12_381.DepositY memory depositY;
-        return IDepositDataBuffer.Deposit({
-            pubkey: abi.encodePacked(sha256(abi.encode("pubkey", seed)), bytes16(0)),
-            signature: abi.encodePacked(sha256(abi.encode("sig", seed)), sha256(abi.encode("sig2", seed)), bytes32(0)),
-            amount: 32 ether,
-            operatorIdx: seed % 5,
-            depositY: depositY
-        });
-    }
-
-    // -----------------------------------------------------------------------
     // Actions
     // -----------------------------------------------------------------------
 
     function queueRandom(uint8 batchSize, uint256 seed) external {
         uint256 count = bound(uint256(batchSize), 1, 5);
-        IDepositDataBuffer.DepositObject memory batch;
-        batch.deposits = new IDepositDataBuffer.Deposit[](count);
-        for (uint256 i = 0; i < count; i++) {
-            batch.deposits[i] = _deposit(seed + i);
-        }
+        // Bound the seed base so `seedBase + i` in the fixture builder cannot overflow.
+        seed = bound(seed, 0, type(uint256).max - 5);
+        IDepositDataBuffer.DepositObject memory batch = _batch(count, seed);
 
         // The batch nonce (lastQueuedIdx) is folded into the id, so valid data always succeeds.
         bytes32 id = keccak256(abi.encode(batch, buffer.lastQueuedIdx()));

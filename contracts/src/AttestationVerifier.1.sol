@@ -230,9 +230,25 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
     // -----------------------------------------------------------------------
 
     /// @inheritdoc IAttestationVerifierV1
+    /// @dev Validates that the new buffer authorizes River as its processor before storing it. A buffer
+    ///      whose processor is not River would let attested deposits pass validation only to revert at
+    ///      `markDepositDataProcessed` — this rejects such a misconfiguration up front. The check lives
+    ///      on this admin setter (the runtime buffer-swap vector), not on `initAttestationVerifierV1`:
+    ///      init is deploy-script-controlled and stays permissive (mirroring the fork-version handling).
     function setDepositDataBuffer(address _depositDataBuffer) external onlyRiverAdmin {
+        _assertDepositDataBufferProcessor(_depositDataBuffer, RiverAddress.get());
         DepositDataBufferAddress.set(_depositDataBuffer);
         emit SetDepositDataBuffer(_depositDataBuffer);
+    }
+
+    /// @notice Revert unless `buffer` authorizes `expectedProcessor` (River) as its processor.
+    /// @param buffer The DepositDataBuffer to validate
+    /// @param expectedProcessor The address that must be authorized to mark deposit data processed
+    function _assertDepositDataBufferProcessor(address buffer, address expectedProcessor) internal view {
+        address actualProcessor = IDepositDataBuffer(buffer).getProcessor();
+        if (actualProcessor != expectedProcessor) {
+            revert InvalidDepositDataBufferProcessor(buffer, expectedProcessor, actualProcessor);
+        }
     }
 
     /// @inheritdoc IAttestationVerifierV1

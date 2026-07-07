@@ -55,11 +55,7 @@ contract MockDepositDataBuffer is IDepositDataBuffer {
         ++lastQueuedIdx;
     }
 
-    function getDepositData(bytes32 depositDataBufferId)
-        external
-        view
-        returns (DepositObject memory, uint256 nonce)
-    {
+    function getDepositData(bytes32 depositDataBufferId) external view returns (DepositObject memory, uint256 nonce) {
         if (!_exists[depositDataBufferId]) revert DepositDataBufferIdNotFound(depositDataBufferId);
         return (_batches[depositDataBufferId], _nonce[depositDataBufferId]);
     }
@@ -2107,12 +2103,29 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         verifier.setRootAttestationQuorum(1);
     }
 
-    /// @dev Admin can rotate the DepositDataBuffer address.
+    /// @dev Admin can rotate the DepositDataBuffer address to a buffer that authorizes River (the
+    ///      harness `dm`) as its processor.
     function testSetDepositDataBuffer_happyPath() public {
-        address newBuffer = address(0xBABE);
+        address newBuffer = address(new MockDepositDataBuffer(address(dm)));
         vm.prank(admin);
         verifier.setDepositDataBuffer(newBuffer);
         assertEq(verifier.getDepositDataBuffer(), newBuffer);
+    }
+
+    /// @dev A buffer whose processor is not River is rejected at config time.
+    function testRevert_setDepositDataBuffer_processorMismatch() public {
+        address wrongProcessor = makeAddr("notRiver");
+        address badBuffer = address(new MockDepositDataBuffer(wrongProcessor));
+        vm.prank(admin);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAttestationVerifierV1.InvalidDepositDataBufferProcessor.selector,
+                badBuffer,
+                address(dm),
+                wrongProcessor
+            )
+        );
+        verifier.setDepositDataBuffer(badBuffer);
     }
 
     function testRevert_setDepositDataBuffer_unauthorized() public {

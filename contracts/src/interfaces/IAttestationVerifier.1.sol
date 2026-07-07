@@ -117,6 +117,13 @@ interface IAttestationVerifierV1 {
     /// @param depositDataBufferId The replayed deposit data buffer ID
     error DepositDataBufferIdAlreadyProcessed(bytes32 depositDataBufferId);
 
+    /// @notice The DepositDataBuffer does not authorize River as its processor, so River could not
+    ///         mark batches processed — attested deposits would revert. Rejected at config time.
+    /// @param buffer The DepositDataBuffer address being set
+    /// @param expected The expected processor (River)
+    /// @param actual The processor the buffer actually authorizes
+    error InvalidDepositDataBufferProcessor(address buffer, address expected, address actual);
+
     /// @notice The submitted signatures array exceeds MAX_SIGNATURES
     /// @param count The submitted signature count
     /// @param max The configured maximum
