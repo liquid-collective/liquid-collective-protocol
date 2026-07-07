@@ -80,16 +80,19 @@ contract DepositDataBuffer is IDepositDataBuffer {
         uint256 topUpCount = batch.topUps.length;
         if (depositCount == 0 && topUpCount == 0) revert EmptyDepositData();
 
+        // Amounts must be non-zero and gwei-aligned: the beacon-chain deposit contract encodes
+        // amounts in gwei, so a non-aligned amount would be silently truncated downstream. Rejecting
+        // here keeps the buffer consistent with the `InvalidDepositAmount` contract and the verifier.
         for (uint256 i = 0; i < depositCount; i++) {
             Deposit calldata d = batch.deposits[i];
             if (d.pubkey.length != 48) revert InvalidPubkeyLength(i, d.pubkey.length);
             if (d.signature.length != 96) revert InvalidSignatureLength(i, d.signature.length);
-            if (d.amount == 0) revert InvalidDepositAmount(i, d.amount);
+            if (d.amount == 0 || d.amount % 1 gwei != 0) revert InvalidDepositAmount(i, d.amount);
         }
         for (uint256 i = 0; i < topUpCount; i++) {
             TopUp calldata t = batch.topUps[i];
             if (t.pubkey.length != 48) revert InvalidTopUpPubkeyLength(i, t.pubkey.length);
-            if (t.amount == 0) revert InvalidDepositAmount(i, t.amount);
+            if (t.amount == 0 || t.amount % 1 gwei != 0) revert InvalidDepositAmount(i, t.amount);
         }
 
         // The batch nonce (lastQueuedIdx) is folded into the id, so two batches with byte-identical

@@ -45,14 +45,14 @@ contract DepositDataBufferTest is Test {
         return IDepositDataBuffer.Deposit({
             pubkey: _pubkey(seed),
             signature: _signature(seed),
-            amount: 32 ether + seed,
+            amount: 32 ether + seed * 1 gwei,
             operatorIdx: seed % 3,
             depositY: depositY
         });
     }
 
     function _topUp(uint256 seed) internal pure returns (IDepositDataBuffer.TopUp memory) {
-        return IDepositDataBuffer.TopUp({pubkey: _pubkey(seed), amount: 1 ether + seed, operatorIdx: seed % 3});
+        return IDepositDataBuffer.TopUp({pubkey: _pubkey(seed), amount: 1 ether + seed * 1 gwei, operatorIdx: seed % 3});
     }
 
     /// @dev Build a deposits-only batch of `count` initial deposits.
@@ -143,6 +143,23 @@ contract DepositDataBufferTest is Test {
         buffer.submitDepositData(wrongId, batch);
     }
 
+    /// @dev The `DepositDataBufferIdAlreadyExists` guard is unreachable through the normal API — the
+    ///      monotonic nonce folded into the id makes every submission unique. Force the `_exists` flag
+    ///      via storage to prove the defensive guard still reverts on a (hypothetical) id collision.
+    function test_RevertWhen_IdAlreadyExists() public {
+        IDepositDataBuffer.DepositObject memory batch = _batch(1);
+        bytes32 id = _id(batch, 0);
+
+        // Storage layout: _admin(0), _writer(1), lastQueuedIdx(2), _batches(3), _nonce(4), _exists(5).
+        bytes32 existsSlot = keccak256(abi.encode(id, uint256(5)));
+        vm.store(address(buffer), existsSlot, bytes32(uint256(1)));
+        assertTrue(buffer.isDepositDataProcessed(id) == false); // sanity: _processed untouched
+
+        vm.prank(writer);
+        vm.expectRevert(abi.encodeWithSelector(IDepositDataBuffer.DepositDataBufferIdAlreadyExists.selector, id));
+        buffer.submitDepositData(id, batch);
+    }
+
     function test_RevertWhen_InvalidPubkeyLength() public {
         IDepositDataBuffer.DepositObject memory batch = _batch(1);
         batch.deposits[0].pubkey = new bytes(47);
@@ -170,6 +187,27 @@ contract DepositDataBufferTest is Test {
         buffer.submitDepositData(id, batch);
     }
 
+    function test_RevertWhen_DepositAmountNotGweiAligned() public {
+        IDepositDataBuffer.DepositObject memory batch = _batch(1);
+        uint256 misaligned = 32 ether + 1 wei; // non-zero but not a multiple of 1 gwei
+        batch.deposits[0].amount = misaligned;
+        bytes32 id = _id(batch, 0);
+        vm.prank(writer);
+        vm.expectRevert(abi.encodeWithSelector(IDepositDataBuffer.InvalidDepositAmount.selector, 0, misaligned));
+        buffer.submitDepositData(id, batch);
+    }
+
+    /// @dev The validation index in `InvalidDepositAmount` must point at the offending entry.
+    function test_RevertWhen_SecondDepositAmountNotGweiAligned() public {
+        IDepositDataBuffer.DepositObject memory batch = _batch(2);
+        uint256 misaligned = 32 ether + 3 wei;
+        batch.deposits[1].amount = misaligned;
+        bytes32 id = _id(batch, 0);
+        vm.prank(writer);
+        vm.expectRevert(abi.encodeWithSelector(IDepositDataBuffer.InvalidDepositAmount.selector, 1, misaligned));
+        buffer.submitDepositData(id, batch);
+    }
+
     function test_RevertWhen_InvalidTopUpPubkeyLength() public {
         IDepositDataBuffer.DepositObject memory batch;
         batch.topUps = new IDepositDataBuffer.TopUp[](1);
@@ -179,6 +217,52 @@ contract DepositDataBufferTest is Test {
         vm.prank(writer);
         vm.expectRevert(abi.encodeWithSelector(IDepositDataBuffer.InvalidTopUpPubkeyLength.selector, 0, 49));
         buffer.submitDepositData(id, batch);
+    }
+
+    function test_RevertWhen_ZeroTopUpAmount() public {
+        IDepositDataBuffer.DepositObject memory batch;
+        batch.topUps = new IDepositDataBuffer.TopUp[](1);
+        batch.topUps[0] = _topUp(1);
+        batch.topUps[0].amount = 0;
+        bytes32 id = _id(batch, 0);
+        vm.prank(writer);
+        vm.expectRevert(abi.encodeWithSelector(IDepositDataBuffer.InvalidDepositAmount.selector, 0, 0));
+        buffer.submitDepositData(id, batch);
+    }
+
+    function test_RevertWhen_TopUpAmountNotGweiAligned() public {
+        IDepositDataBuffer.DepositObject memory batch;
+        batch.topUps = new IDepositDataBuffer.TopUp[](1);
+        batch.topUps[0] = _topUp(1);
+        uint256 misaligned = 1 ether + 7 wei;
+        batch.topUps[0].amount = misaligned;
+        bytes32 id = _id(batch, 0);
+        vm.prank(writer);
+        vm.expectRevert(abi.encodeWithSelector(IDepositDataBuffer.InvalidDepositAmount.selector, 0, misaligned));
+        buffer.submitDepositData(id, batch);
+    }
+
+    /// @dev A batch of only top-ups (no initial deposits) is valid.
+    function test_SubmitTopUpsOnly() public {
+        IDepositDataBuffer.DepositObject memory batch;
+        batch.topUps = new IDepositDataBuffer.TopUp[](2);
+        batch.topUps[0] = _topUp(10);
+        batch.topUps[1] = _topUp(11);
+
+        bytes32 expectedId = _id(batch, 0);
+        vm.expectEmit(true, false, false, true);
+        emit DepositDataSubmitted(expectedId, 0, 0, 2);
+
+        bytes32 id = _submit(batch);
+        assertEq(id, expectedId);
+
+        (IDepositDataBuffer.DepositObject memory stored, uint256 nonce) = buffer.getDepositData(id);
+        assertEq(nonce, 0);
+        assertEq(stored.deposits.length, 0);
+        assertEq(stored.topUps.length, 2);
+        assertEq(stored.topUps[0].pubkey, batch.topUps[0].pubkey);
+        assertEq(stored.topUps[1].amount, batch.topUps[1].amount);
+        assertEq(stored.topUps[1].operatorIdx, batch.topUps[1].operatorIdx);
     }
 
     // -----------------------------------------------------------------------
@@ -208,6 +292,28 @@ contract DepositDataBufferTest is Test {
             abi.encodeWithSelector(IDepositDataBuffer.DepositDataBufferIdNotFound.selector, bytes32(uint256(0xdead)))
         );
         buffer.getDepositData(bytes32(uint256(0xdead)));
+    }
+
+    /// @dev `isDepositDataProcessed` returns false for an unknown id (view, no revert).
+    function test_IsDepositDataProcessedUnknownReturnsFalse() public {
+        assertFalse(buffer.isDepositDataProcessed(bytes32(uint256(0xbeef))));
+    }
+
+    /// @dev A reverted submission must not advance `lastQueuedIdx` or store anything.
+    function test_LastQueuedIdxUnchangedOnRevertedSubmit() public {
+        _submit(_batch(1));
+        assertEq(buffer.lastQueuedIdx(), 1);
+
+        // A submission with a mismatched id reverts and must leave state untouched.
+        IDepositDataBuffer.DepositObject memory batch = _batch(1);
+        bytes32 wrongId = _id(batch, 999);
+        vm.prank(writer);
+        vm.expectRevert();
+        buffer.submitDepositData(wrongId, batch);
+
+        assertEq(buffer.lastQueuedIdx(), 1, "reverted submit must not bump the index");
+        vm.expectRevert(abi.encodeWithSelector(IDepositDataBuffer.DepositDataBufferIdNotFound.selector, wrongId));
+        buffer.getDepositData(wrongId);
     }
 
     // -----------------------------------------------------------------------
