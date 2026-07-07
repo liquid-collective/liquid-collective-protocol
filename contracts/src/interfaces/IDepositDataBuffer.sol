@@ -53,8 +53,8 @@ interface IDepositDataBuffer {
     }
 
     /// @notice A deposit batch — initial deposits and top-ups for a single attested submission.
-    /// @dev The root signs over `keccak256(abi.encode(batch))`, so the
-    ///      classification of each entry (initial vs top-up) is attested as part of the
+    /// @dev The root signs over the nonce-bound `depositDataBufferId` (`keccak256(abi.encode(batch, nonce))`),
+    ///      so the classification of each entry (initial vs top-up) is attested as part of the
     ///      buffer hash.
     struct DepositObject {
         /// @dev Initial deposits — BLS-verified, must NOT already be funded.
