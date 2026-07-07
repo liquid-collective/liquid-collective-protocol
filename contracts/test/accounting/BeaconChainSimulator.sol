@@ -233,7 +233,7 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
 
     /// @dev Models an external consolidation that will be included in the next oracle report.
     ///      `bufferedPrincipal` is the amount minted into the consolidation buffer at request time.
-    ///      `reportedAmount` is the cumulative-report delta for the consolidation that landed on the CL.
+    ///      `reportedAmount` is the delta to add to the cumulative `totalExternalConsolidationsAmountReported` for this report.
     ///      `validatorBalanceSurplus` is extra CL balance above `reportedAmount` that lands in validatorsBalance.
     function sim_reportExternalConsolidation(
         uint256 bufferedPrincipal,

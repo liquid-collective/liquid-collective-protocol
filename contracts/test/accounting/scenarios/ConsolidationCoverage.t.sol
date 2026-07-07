@@ -13,7 +13,6 @@ import "../../../src/state/river/ReportBounds.sol";
 ///         (1) reporting a consolidation increase reduces the consolidation buffer by the delta,
 ///         (2) the remaining buffer is then drained by pulling matching ETH from the coverage fund,
 ///         (3) the total underlying supply never increases as the buffer decreases,
-///         (4) a consolidation increase larger than the buffer reverts.
 ///
 ///         The consolidation buffer has no on-chain increase path on this branch — its value is
 ///         "computed off-chain and provided manually" (see ConsolidationCoverageFundV1) — so the
