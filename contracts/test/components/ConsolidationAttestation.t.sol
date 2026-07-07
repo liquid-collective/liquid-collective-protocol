@@ -614,7 +614,7 @@ contract ConsolidationAttestationTest is Test {
         );
 
         vm.expectRevert(
-            abi.encodeWithSelector(IAttestationVerifierV1.InsufficientConsolidationAttestations.selector, 0, 2)
+            abi.encodeWithSelector(IAttestationVerifierV1.ConsolidationSourceAlreadyProcessed.selector, sourceA)
         );
         _validateConsolidationAsRiver(
             IAttestationVerifierV1.ConsolidationObject({
@@ -623,6 +623,87 @@ contract ConsolidationAttestationTest is Test {
                 targetPubkeys: secondTargets,
                 totalAmount: secondAmount,
                 signatures: firstSigs
+            })
+        );
+    }
+
+    function testRevert_overlappingSourceDistinctValidRequest() public {
+        address user = address(0xCAFE);
+        bytes memory sourceA = _pubkey(810);
+        bytes memory sourceB = _pubkey(811);
+
+        bytes[] memory firstSources = new bytes[](1);
+        firstSources[0] = sourceA;
+        bytes[] memory firstTargets = new bytes[](1);
+        firstTargets[0] = _pubkey(910);
+        uint256 firstAmount = 32 ether;
+        bytes32 firstDigest = _consolidationDigest(user, firstSources, firstTargets, firstAmount);
+        bytes[] memory firstSigs = new bytes[](2);
+        firstSigs[0] = _sign(pk1, firstDigest);
+        firstSigs[1] = _sign(pk2, firstDigest);
+
+        bytes[] memory secondSources = new bytes[](2);
+        secondSources[0] = sourceA;
+        secondSources[1] = sourceB;
+        bytes[] memory secondTargets = new bytes[](2);
+        secondTargets[0] = _pubkey(911);
+        secondTargets[1] = _pubkey(912);
+        uint256 secondAmount = 64 ether;
+        bytes32 secondDigest = _consolidationDigest(user, secondSources, secondTargets, secondAmount);
+        bytes[] memory secondSigs = new bytes[](2);
+        secondSigs[0] = _sign(pk1, secondDigest);
+        secondSigs[1] = _sign(pk2, secondDigest);
+
+        _validateConsolidationAsRiver(
+            IAttestationVerifierV1.ConsolidationObject({
+                withdrawalAddress: user,
+                sourcePubkeys: firstSources,
+                targetPubkeys: firstTargets,
+                totalAmount: firstAmount,
+                signatures: firstSigs
+            })
+        );
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.ConsolidationSourceAlreadyProcessed.selector, sourceA)
+        );
+        _validateConsolidationAsRiver(
+            IAttestationVerifierV1.ConsolidationObject({
+                withdrawalAddress: user,
+                sourcePubkeys: secondSources,
+                targetPubkeys: secondTargets,
+                totalAmount: secondAmount,
+                signatures: secondSigs
+            })
+        );
+    }
+
+    function testRevert_duplicateSourceWithinConsolidationRequest() public {
+        address user = address(0xCAFE);
+        bytes memory sourceA = _pubkey(820);
+
+        bytes[] memory sources = new bytes[](2);
+        sources[0] = sourceA;
+        sources[1] = sourceA;
+        bytes[] memory targets = new bytes[](2);
+        targets[0] = _pubkey(920);
+        targets[1] = _pubkey(921);
+        uint256 totalAmount = 64 ether;
+        bytes32 digest = _consolidationDigest(user, sources, targets, totalAmount);
+        bytes[] memory sigs = new bytes[](2);
+        sigs[0] = _sign(pk1, digest);
+        sigs[1] = _sign(pk2, digest);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.ConsolidationSourceAlreadyProcessed.selector, sourceA)
+        );
+        _validateConsolidationAsRiver(
+            IAttestationVerifierV1.ConsolidationObject({
+                withdrawalAddress: user,
+                sourcePubkeys: sources,
+                targetPubkeys: targets,
+                totalAmount: totalAmount,
+                signatures: sigs
             })
         );
     }

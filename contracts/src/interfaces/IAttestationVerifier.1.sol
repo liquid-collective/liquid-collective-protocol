@@ -250,6 +250,12 @@ interface IAttestationVerifierV1 {
     /// @notice The supplied consolidation has already been validated; replay rejected.
     /// @param consolidationHash The EIP-712 structHash of the consolidation request
     error ConsolidationAlreadyProcessed(bytes32 consolidationHash);
+
+    /// @notice A consolidation source pubkey was already consumed by a previous
+    ///         successful request or appears more than once in this request.
+    /// @param pubkey The offending 48-byte BLS source pubkey
+    error ConsolidationSourceAlreadyProcessed(bytes pubkey);
+
     /// @notice A top-up referenced a pubkey that has never been initial-deposited by River.
     ///         Without this check, a malicious committee could mark an attacker pubkey as a
     ///         top-up and bypass BLS verification.
@@ -368,14 +374,16 @@ interface IAttestationVerifierV1 {
     ///
     ///         Replay protection: the EIP-712 structHash is recorded in storage on success.
     ///         Subsequent calls with a struct that hashes to the same value revert with
-    ///         `ConsolidationAlreadyProcessed`. Note that this makes the function
-    ///         state-mutating (not `view`) and callable only by River.
+    ///         `ConsolidationAlreadyProcessed`. Each source pubkey is also recorded on
+    ///         success so distinct signed requests cannot reuse the same consolidation
+    ///         source. Note that this makes the function state-mutating (not `view`) and
+    ///         callable only by River.
     ///
     ///         Trust boundary: this function only validates structural shape and the attestation
     ///         quorum. The following are intentionally NOT checked here and are delegated to the
     ///         caller (off-chain pipeline / consolidation committee) or to the eventual River
     ///         integration:
-    ///           - Source/target pubkey uniqueness (EIP-7251 single-use source rule)
+    ///           - Target pubkey uniqueness
     ///           - `totalAmount` gwei alignment, upper bound, or correlation with pair count
     ///           - Financial caps (e.g. against committed/in-flight balances)
     /// @param consolidation The consolidation request to validate (withdrawal address,

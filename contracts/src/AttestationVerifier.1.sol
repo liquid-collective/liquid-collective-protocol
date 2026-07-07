@@ -28,6 +28,7 @@ import "./state/attestationVerifier/DomainSeparator.sol";
 import "./state/attestationVerifier/ProcessedDepositDataBufferIds.sol";
 import "./state/attestationVerifier/PectraValidatorPubkeyLookup.sol";
 import "./state/attestationVerifier/PrePectraValidatorPubkeyLookup.sol";
+import "./state/attestationVerifier/ProcessedConsolidationSourcePubkeys.sol";
 import "./state/shared/RiverAddress.sol";
 
 /// @title AttestationVerifier (v1)
@@ -627,12 +628,11 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
     }
 
     /// @inheritdoc IAttestationVerifierV1
-    /// @dev Trust boundary: this function only validates structural shape (array shapes
-    ///      and pubkey byte lengths) and the attestation quorum (ECDSA signature recovery
-    ///      against the consolidation committee). It does NOT check:
-    ///        - Source/target pubkey uniqueness within the request (EIP-7251 single-use
-    ///          source rule). A source pubkey appearing twice, or a pubkey appearing in
-    ///          both source and target arrays, is not rejected here.
+    /// @dev Trust boundary: this function validates structural shape (array shapes,
+    ///      pubkey byte lengths, and single-use source pubkeys) plus the attestation
+    ///      quorum (ECDSA signature recovery against the consolidation committee). It
+    ///      does NOT check:
+    ///        - Target pubkey uniqueness.
     ///        - `totalAmount` gwei alignment, upper bound, or correlation with the number
     ///          of (source, target) pairs.
     ///        - Whether the source validators actually exist on the consensus layer or
@@ -653,14 +653,29 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
         if (consolidation.totalAmount == 0) revert ZeroConsolidationTotalAmount();
         if (consolidation.withdrawalAddress == address(0)) revert ZeroConsolidationWithdrawalAddress();
 
-        // 2. Per-pair pubkey length checks
-        for (uint256 i = 0; i < sourceLen; i++) {
-            if (consolidation.sourcePubkeys[i].length != CONSOLIDATION_PUBKEY_LENGTH) {
-                revert InvalidConsolidationPubkeyLength(i, consolidation.sourcePubkeys[i].length, true);
+        // 2. Per-pair pubkey checks. Source hashes are retained for in-request
+        //    duplicate detection and EIP-712 array hashing; the processed-source
+        //    registry below keys on the raw pubkey.
+        bytes32[] memory sourcePubkeyHashes = new bytes32[](sourceLen);
+        bytes32[] memory targetPubkeyHashes = new bytes32[](targetLen);
+        for (uint256 i = 0; i < sourceLen; ++i) {
+            bytes calldata sourcePubkey = consolidation.sourcePubkeys[i];
+            if (sourcePubkey.length != CONSOLIDATION_PUBKEY_LENGTH) {
+                revert InvalidConsolidationPubkeyLength(i, sourcePubkey.length, true);
             }
-            if (consolidation.targetPubkeys[i].length != CONSOLIDATION_PUBKEY_LENGTH) {
-                revert InvalidConsolidationPubkeyLength(i, consolidation.targetPubkeys[i].length, false);
+            bytes32 sourcePubkeyHash = keccak256(sourcePubkey);
+            sourcePubkeyHashes[i] = sourcePubkeyHash;
+            for (uint256 j = 0; j < i; ++j) {
+                if (sourcePubkeyHashes[j] == sourcePubkeyHash) {
+                    revert ConsolidationSourceAlreadyProcessed(sourcePubkey);
+                }
             }
+
+            bytes calldata targetPubkey = consolidation.targetPubkeys[i];
+            if (targetPubkey.length != CONSOLIDATION_PUBKEY_LENGTH) {
+                revert InvalidConsolidationPubkeyLength(i, targetPubkey.length, false);
+            }
+            targetPubkeyHashes[i] = keccak256(targetPubkey);
         }
 
         // 3. Compute the EIP-712 digest the committee signed.
@@ -674,8 +689,8 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
             abi.encode(
                 ATTEST_CONSOLIDATION_TYPEHASH,
                 consolidation.withdrawalAddress,
-                _hashBytesArray(consolidation.sourcePubkeys),
-                _hashBytesArray(consolidation.targetPubkeys),
+                keccak256(abi.encodePacked(sourcePubkeyHashes)),
+                keccak256(abi.encodePacked(targetPubkeyHashes)),
                 consolidation.totalAmount
             )
         );
@@ -687,12 +702,24 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
             revert ConsolidationAlreadyProcessed(structHash);
         }
 
-        // 5. Verify the consolidation attestation quorum from the supplied signatures
+        // 5. Distinct requests can share a source while hashing differently, so source
+        //    consumption is checked separately from the request-level replay guard.
+        for (uint256 i = 0; i < sourceLen; ++i) {
+            if (ProcessedConsolidationSourcePubkeys.isProcessed(consolidation.sourcePubkeys[i])) {
+                revert ConsolidationSourceAlreadyProcessed(consolidation.sourcePubkeys[i]);
+            }
+        }
+
+        // 6. Verify the consolidation attestation quorum from the supplied signatures
         bytes32 digest = ECDSA.toTypedDataHash(domainSep, structHash);
         _verifyConsolidationAttestationQuorum(digest, consolidation.signatures);
 
-        // 6. Mark as processed and emit
+        // 7. Mark the request and all of its sources as processed only after quorum
+        //    succeeds, so malformed signatures cannot burn a source pubkey.
         ProcessedConsolidations.markProcessed(structHash);
+        for (uint256 i = 0; i < sourceLen; ++i) {
+            ProcessedConsolidationSourcePubkeys.markProcessed(consolidation.sourcePubkeys[i]);
+        }
         emit ConsolidationProcessed(structHash);
     }
 
@@ -788,16 +815,6 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
         }
 
         if (validCount < quorum) revert InsufficientConsolidationAttestations(validCount, quorum);
-    }
-
-    /// @dev EIP-712 array hash for a `bytes[]` field. Each element is replaced by its
-    ///      `keccak256`, and the resulting `bytes32[]` is concatenated and hashed.
-    function _hashBytesArray(bytes[] calldata arr) internal pure returns (bytes32) {
-        bytes32[] memory hashes = new bytes32[](arr.length);
-        for (uint256 i = 0; i < arr.length; i++) {
-            hashes[i] = keccak256(arr[i]);
-        }
-        return keccak256(abi.encodePacked(hashes));
     }
 
     /// @notice Verify the BLS signatures of all initial deposits against the canonical River

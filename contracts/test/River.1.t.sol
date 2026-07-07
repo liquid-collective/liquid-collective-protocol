@@ -4056,7 +4056,7 @@ contract RiverV1ConsolidationMintTests is RiverV1TestBase {
         assertEq(river.totalSupply(), totalSupplyBeforeReplay);
     }
 
-    function testMintLsETHForConsolidationOverlappingSourceDistinctRequestsIsCommitteeInvariant() public {
+    function testRevert_mintLsETHForConsolidationOverlappingSourceDistinctRequestsDoesNotMint() public {
         _allowConsolidation(bob);
         bytes memory sourceA = _fakePubkey(2000);
         bytes memory sourceB = _fakePubkey(2001);
@@ -4087,9 +4087,17 @@ contract RiverV1ConsolidationMintTests is RiverV1TestBase {
         assertEq(river.getBalanceToConsolidate(), 32 ether);
         assertEq(river.balanceOf(bob), 32 ether);
 
+        uint256 bufferBeforeReplay = river.getBalanceToConsolidate();
+        uint256 bobSharesBeforeReplay = river.balanceOf(bob);
+        uint256 totalSupplyBeforeReplay = river.totalSupply();
+
         vm.prank(consolidator);
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.ConsolidationSourceAlreadyProcessed.selector, sourceA)
+        );
         river.mintLsETHForConsolidation(secondConsolidation);
-        assertEq(river.getBalanceToConsolidate(), 96 ether);
-        assertEq(river.balanceOf(bob), 96 ether);
+        assertEq(river.getBalanceToConsolidate(), bufferBeforeReplay);
+        assertEq(river.balanceOf(bob), bobSharesBeforeReplay);
+        assertEq(river.totalSupply(), totalSupplyBeforeReplay);
     }
 }
