@@ -3138,10 +3138,16 @@ contract OperatorsRegistryV1ELExitTests is Test {
 
     // A combined CL + EL request that overshoots the current demand must revert through the consolidated
     // demand check. Pin the exact selector and arguments so a different guard firing (e.g. the per-operator
-    // available-CL check) cannot make the test pass for the wrong reason.
+    // available-CL check) cannot make the test pass for the wrong reason. The consolidated check fires only
+    // AFTER both the CL and EL reservations have been written, so the revert must also roll every one of
+    // them back — this test additionally proves that atomicity for the mixed CL + EL path.
     function testRequestETHExitsRevertsWhenCLPlusELExceedDemand() public {
         // Ample per-operator headroom so the demand check — not the available-CL check — is what fires.
         _setupSingleOperator(64 ether, 64 ether, 8 ether);
+
+        uint256 demandBefore = reg.getCurrentETHExitsDemand();
+        uint256 totalBefore = reg.getTotalETHExitsRequested();
+        uint256 reservedBefore = reg.getOperator(0).requestedExits;
 
         IOperatorsRegistryV1.ExitETHAllocation[] memory clAllocs = new IOperatorsRegistryV1.ExitETHAllocation[](1);
         clAllocs[0] = IOperatorsRegistryV1.ExitETHAllocation({operatorIndex: 0, ethAmount: 8 ether});
@@ -3153,6 +3159,11 @@ contract OperatorsRegistryV1ELExitTests is Test {
             abi.encodeWithSelector(IOperatorsRegistryV1.ExitsRequestedExceedExitDemand.selector, 16 ether, 8 ether)
         );
         reg.requestETHExits(clAllocs, elAllocs, 0);
+
+        // Neither the CL reservation nor the EL reservation may survive the combined-demand revert.
+        assertEq(reg.getCurrentETHExitsDemand(), demandBefore, "demand unchanged after revert");
+        assertEq(reg.getTotalETHExitsRequested(), totalBefore, "total requested unchanged after revert");
+        assertEq(reg.getOperator(0).requestedExits, reservedBefore, "operator reservation unchanged after revert");
     }
 
     // A revert must leave the global aggregates and the per-operator reservation exactly as they were —
