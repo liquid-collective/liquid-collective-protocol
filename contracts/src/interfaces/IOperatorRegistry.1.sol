@@ -358,6 +358,14 @@ interface IOperatorsRegistryV1 {
     /// @dev Reverts with InvalidOperatorIndex when a delta references an operator outside the registered range
     /// @dev Reverts with OperatorIndicesUnsortedOrDuplicate when deltas are not strictly ascending
     /// @dev Reverts with InactiveOperator when a referenced operator is inactive
+    /// @dev `delta.fundedETH` is trusted to equal `sum(depositAmounts) + sum(topUpAmounts)` and is NOT
+    ///      re-derived on-chain. This holds by construction: the only path that builds these deltas is
+    ///      `LibFundingDeltas.build` (reached via River's `_incrementFundedETH`), which computes
+    ///      `fundedETH` and the per-key deposit/top-up amounts from the same source, so an explicit sum
+    ///      check would only add O(n) gas for a condition that cannot fail. If a future
+    ///      change lets deltas NOT produced by `LibFundingDeltas.build` reach this function, this
+    ///      invariant must be re-validated here (e.g. reinstate a `fundedETH == sum(amounts)` assertion)
+    ///      before the `operator.funded += delta.fundedETH` mutation can be trusted.
     /// @param _deltas The per-operator funded ETH updates
     function incrementFundedETH(OperatorFundingDelta[] calldata _deltas) external;
 
