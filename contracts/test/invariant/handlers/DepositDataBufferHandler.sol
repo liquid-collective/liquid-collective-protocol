@@ -10,11 +10,11 @@ import "../../../src/libraries/BLS12_381.sol";
 /// @title DepositDataBufferHandler
 /// @notice Bounded action surface for the DepositDataBuffer invariant suite. Submits fresh batches,
 ///         re-submits existing batches verbatim (allowed under distinct nonces), and marks batches
-///         processed as River — tracking ghost state the invariants assert against.
+///         processed as the processor — tracking ghost state the invariants assert against.
 contract DepositDataBufferHandler is Test {
     DepositDataBuffer public buffer;
     address public writer;
-    address public river;
+    address public processor;
 
     // Ghost state
     uint256 public ghost_successfulQueues;
@@ -23,10 +23,10 @@ contract DepositDataBufferHandler is Test {
     mapping(bytes32 => bool) public ghost_processed;
     uint256 public ghost_processedCount;
 
-    constructor(DepositDataBuffer _buffer, address _writer, address _river) {
+    constructor(DepositDataBuffer _buffer, address _writer, address _processor) {
         buffer = _buffer;
         writer = _writer;
-        river = _river;
+        processor = _processor;
     }
 
     function ghost_queuedIdsLength() external view returns (uint256) {
@@ -94,8 +94,8 @@ contract DepositDataBufferHandler is Test {
         if (ghost_queuedIds.length == 0) return;
         bytes32 id = ghost_queuedIds[bound(idx, 0, ghost_queuedIds.length - 1)];
 
-        // Only River may mark processed; re-marking an already-processed batch reverts.
-        vm.prank(river);
+        // Only the processor may mark processed; re-marking an already-processed batch reverts.
+        vm.prank(processor);
         try buffer.markDepositDataProcessed(id) {
             if (!ghost_processed[id]) {
                 ghost_processed[id] = true;

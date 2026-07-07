@@ -37,11 +37,11 @@ contract MockDepositDataBuffer is IDepositDataBuffer {
     mapping(bytes32 => uint256) internal _nonce;
     mapping(bytes32 => bool) internal _exists;
     mapping(bytes32 => bool) internal _processed;
-    address internal _river;
+    address internal _processor;
     uint256 public lastQueuedIdx;
 
-    constructor(address river) {
-        _river = river;
+    constructor(address processor) {
+        _processor = processor;
     }
 
     function submitDepositData(bytes32 depositDataBufferId, DepositObject calldata batch) external {
@@ -69,7 +69,7 @@ contract MockDepositDataBuffer is IDepositDataBuffer {
     }
 
     function markDepositDataProcessed(bytes32 depositDataBufferId) external {
-        if (msg.sender != _river) revert OnlyRiver();
+        if (msg.sender != _processor) revert OnlyProcessor();
         if (!_exists[depositDataBufferId]) revert DepositDataBufferIdNotFound(depositDataBufferId);
         if (_processed[depositDataBufferId]) revert DepositDataAlreadyProcessed(depositDataBufferId);
         _processed[depositDataBufferId] = true;
@@ -90,9 +90,8 @@ contract MockDepositDataBuffer is IDepositDataBuffer {
         return address(0);
     }
 
-    // solhint-disable-next-line func-name-mixedcase
-    function RIVER() external view returns (address) {
-        return _river;
+    function getProcessor() external view returns (address) {
+        return _processor;
     }
 }
 

@@ -16,7 +16,7 @@ contract DepositDataBufferTest is Test {
 
     address internal admin = makeAddr("admin");
     address internal writer = makeAddr("writer");
-    address internal river = makeAddr("river");
+    address internal processor = makeAddr("processor");
 
     event DepositDataSubmitted(
         bytes32 indexed depositDataBufferId, uint256 nonce, uint256 depositCount, uint256 topUpCount
@@ -25,7 +25,7 @@ contract DepositDataBufferTest is Test {
     event SetWriter(address indexed writer);
 
     function setUp() public {
-        buffer = new DepositDataBuffer(admin, writer, river);
+        buffer = new DepositDataBuffer(admin, writer, processor);
     }
 
     // -----------------------------------------------------------------------
@@ -235,17 +235,17 @@ contract DepositDataBufferTest is Test {
     }
 
     // -----------------------------------------------------------------------
-    // markDepositDataProcessed (River-only)
+    // markDepositDataProcessed (processor-only)
     // -----------------------------------------------------------------------
 
-    function test_RiverCanMarkProcessed() public {
+    function test_ProcessorCanMarkProcessed() public {
         bytes32 id = _submit(_batch(2));
         assertFalse(buffer.isDepositDataProcessed(id));
 
         vm.expectEmit(true, false, false, false);
         emit DepositDataProcessed(id);
 
-        vm.prank(river);
+        vm.prank(processor);
         buffer.markDepositDataProcessed(id);
 
         assertTrue(buffer.isDepositDataProcessed(id));
@@ -255,7 +255,7 @@ contract DepositDataBufferTest is Test {
         IDepositDataBuffer.DepositObject memory batch = _batch(2);
         bytes32 id = _submit(batch);
 
-        vm.prank(river);
+        vm.prank(processor);
         buffer.markDepositDataProcessed(id);
 
         (IDepositDataBuffer.DepositObject memory stored,) = buffer.getDepositData(id);
@@ -263,16 +263,16 @@ contract DepositDataBufferTest is Test {
         assertEq(stored.deposits[0].pubkey, batch.deposits[0].pubkey);
     }
 
-    function test_RevertWhen_NonRiverMarksProcessed() public {
+    function test_RevertWhen_NonProcessorMarksProcessed() public {
         bytes32 id = _submit(_batch(1));
-        vm.prank(makeAddr("notRiver"));
-        vm.expectRevert(IDepositDataBuffer.OnlyRiver.selector);
+        vm.prank(makeAddr("notProcessor"));
+        vm.expectRevert(IDepositDataBuffer.OnlyProcessor.selector);
         buffer.markDepositDataProcessed(id);
         assertFalse(buffer.isDepositDataProcessed(id));
     }
 
     function test_RevertWhen_MarkProcessedUnknownBatch() public {
-        vm.prank(river);
+        vm.prank(processor);
         vm.expectRevert(
             abi.encodeWithSelector(IDepositDataBuffer.DepositDataBufferIdNotFound.selector, bytes32(uint256(0xdead)))
         );
@@ -281,10 +281,10 @@ contract DepositDataBufferTest is Test {
 
     function test_RevertWhen_MarkProcessedTwice() public {
         bytes32 id = _submit(_batch(2));
-        vm.prank(river);
+        vm.prank(processor);
         buffer.markDepositDataProcessed(id);
 
-        vm.prank(river);
+        vm.prank(processor);
         vm.expectRevert(abi.encodeWithSelector(IDepositDataBuffer.DepositDataAlreadyProcessed.selector, id));
         buffer.markDepositDataProcessed(id);
     }
@@ -293,7 +293,7 @@ contract DepositDataBufferTest is Test {
         bytes32 id1 = _submit(_batch(2));
         bytes32 id2 = _submit(_batch(3));
 
-        vm.prank(river);
+        vm.prank(processor);
         buffer.markDepositDataProcessed(id1);
 
         assertTrue(buffer.isDepositDataProcessed(id1));
@@ -307,21 +307,21 @@ contract DepositDataBufferTest is Test {
     function test_ConstructorSetsRoles() public {
         assertEq(buffer.getAdmin(), admin);
         assertEq(buffer.getWriter(), writer);
-        assertEq(buffer.RIVER(), river);
+        assertEq(buffer.getProcessor(), processor);
         assertEq(buffer.lastQueuedIdx(), 0);
     }
 
     function test_RevertWhen_ConstructorAdminIsZero() public {
         vm.expectRevert(LibErrors.InvalidZeroAddress.selector);
-        new DepositDataBuffer(address(0), writer, river);
+        new DepositDataBuffer(address(0), writer, processor);
     }
 
     function test_RevertWhen_ConstructorWriterIsZero() public {
         vm.expectRevert(LibErrors.InvalidZeroAddress.selector);
-        new DepositDataBuffer(admin, address(0), river);
+        new DepositDataBuffer(admin, address(0), processor);
     }
 
-    function test_RevertWhen_ConstructorRiverIsZero() public {
+    function test_RevertWhen_ConstructorProcessorIsZero() public {
         vm.expectRevert(LibErrors.InvalidZeroAddress.selector);
         new DepositDataBuffer(admin, writer, address(0));
     }

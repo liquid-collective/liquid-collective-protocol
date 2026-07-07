@@ -16,7 +16,7 @@ contract DepositDataBufferFuzzTest is Test {
     address internal writer = makeAddr("writer");
 
     function setUp() public {
-        buffer = new DepositDataBuffer(makeAddr("admin"), writer, makeAddr("river"));
+        buffer = new DepositDataBuffer(makeAddr("admin"), writer, makeAddr("processor"));
     }
 
     function _pubkey(uint256 seed) internal pure returns (bytes memory) {

@@ -38,11 +38,11 @@ contract AccountingMockDepositDataBuffer is IDepositDataBuffer {
     mapping(bytes32 => uint256) internal _nonce;
     mapping(bytes32 => bool) internal _exists;
     mapping(bytes32 => bool) internal _processed;
-    address internal _river;
+    address internal _processor;
     uint256 public lastQueuedIdx;
 
-    constructor(address river) {
-        _river = river;
+    constructor(address processor) {
+        _processor = processor;
     }
 
     function submitDepositData(bytes32 depositDataBufferId, DepositObject calldata batch) external {
@@ -70,7 +70,7 @@ contract AccountingMockDepositDataBuffer is IDepositDataBuffer {
     }
 
     function markDepositDataProcessed(bytes32 depositDataBufferId) external {
-        if (msg.sender != _river) revert OnlyRiver();
+        if (msg.sender != _processor) revert OnlyProcessor();
         if (!_exists[depositDataBufferId]) revert DepositDataBufferIdNotFound(depositDataBufferId);
         if (_processed[depositDataBufferId]) revert DepositDataAlreadyProcessed(depositDataBufferId);
         _processed[depositDataBufferId] = true;
@@ -91,9 +91,8 @@ contract AccountingMockDepositDataBuffer is IDepositDataBuffer {
         return address(0);
     }
 
-    // solhint-disable-next-line func-name-mixedcase
-    function RIVER() external view returns (address) {
-        return _river;
+    function getProcessor() external view returns (address) {
+        return _processor;
     }
 }
 
@@ -205,7 +204,7 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
         externalConsolidationRecipientMapping = new ExternalConsolidationRecipientMappingV1();
         river = new AccountingRiverV1();
         operatorsRegistry = new AccountingTestOperatorsRegistry();
-        // The buffer's RIVER is River itself: River marks batches processed on the buffer during deposit.
+        // The buffer's processor is River itself: River marks batches processed on the buffer during deposit.
         depositBuffer = new AccountingMockDepositDataBuffer(address(river));
 
         LibImplementationUnbricker.unbrick(vm, address(withdraw));

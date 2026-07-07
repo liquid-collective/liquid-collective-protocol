@@ -17,10 +17,11 @@ import "./libraries/LibSanitize.sol";
 ///      withdrawal credentials are supplied by River at deposit time and used for BLS verification and
 ///      the official deposit-contract call, so the buffer producer is never trusted on that field.
 contract DepositDataBuffer is IDepositDataBuffer {
-    /// @notice The address of River, the only account allowed to mark deposit data processed.
-    /// @dev Immutable: set once at construction and used to gate `markDepositDataProcessed`.
-    // solhint-disable-next-line var-name-mixedcase
-    address public immutable RIVER;
+    /// @notice The processor — the only account allowed to mark deposit data processed.
+    /// @dev Immutable: set once at construction and used to gate `markDepositDataProcessed`. In
+    ///      production this is the River deposit-execution contract, but the buffer only relies on it
+    ///      being the account that consumes batches and flips their `processed` flag.
+    address internal immutable _processor;
 
     /// @notice The admin, able to rotate the writer.
     address internal _admin;
@@ -40,19 +41,19 @@ contract DepositDataBuffer is IDepositDataBuffer {
     /// @dev depositDataBufferId => whether the batch has been submitted.
     mapping(bytes32 => bool) internal _exists;
 
-    /// @dev depositDataBufferId => whether the batch has been marked processed by River.
+    /// @dev depositDataBufferId => whether the batch has been marked processed by the processor.
     mapping(bytes32 => bool) internal _processed;
 
-    /// @param admin  The admin address, able to rotate the writer.
-    /// @param writer The writer address authorized to submit deposit batches.
-    /// @param river  The River address permitted to mark deposit data processed.
-    constructor(address admin, address writer, address river) {
+    /// @param admin     The admin address, able to rotate the writer.
+    /// @param writer    The writer address authorized to submit deposit batches.
+    /// @param processor The address permitted to mark deposit data processed.
+    constructor(address admin, address writer, address processor) {
         LibSanitize._notZeroAddress(admin);
         LibSanitize._notZeroAddress(writer);
-        LibSanitize._notZeroAddress(river);
+        LibSanitize._notZeroAddress(processor);
         _admin = admin;
         _writer = writer;
-        RIVER = river;
+        _processor = processor;
     }
 
     /// @dev Restricts a function to the admin.
@@ -67,9 +68,9 @@ contract DepositDataBuffer is IDepositDataBuffer {
         _;
     }
 
-    /// @dev Restricts a function to River.
-    modifier onlyRiver() {
-        if (msg.sender != RIVER) revert OnlyRiver();
+    /// @dev Restricts a function to the processor.
+    modifier onlyProcessor() {
+        if (msg.sender != _processor) revert OnlyProcessor();
         _;
     }
 
@@ -119,7 +120,7 @@ contract DepositDataBuffer is IDepositDataBuffer {
     }
 
     /// @inheritdoc IDepositDataBuffer
-    function markDepositDataProcessed(bytes32 depositDataBufferId) external onlyRiver {
+    function markDepositDataProcessed(bytes32 depositDataBufferId) external onlyProcessor {
         if (!_exists[depositDataBufferId]) revert DepositDataBufferIdNotFound(depositDataBufferId);
         if (_processed[depositDataBufferId]) revert DepositDataAlreadyProcessed(depositDataBufferId);
 
@@ -148,5 +149,10 @@ contract DepositDataBuffer is IDepositDataBuffer {
     /// @inheritdoc IDepositDataBuffer
     function getAdmin() external view returns (address) {
         return _admin;
+    }
+
+    /// @inheritdoc IDepositDataBuffer
+    function getProcessor() external view returns (address) {
+        return _processor;
     }
 }

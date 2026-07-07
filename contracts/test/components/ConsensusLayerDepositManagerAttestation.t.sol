@@ -29,11 +29,11 @@ contract MockDepositDataBuffer is IDepositDataBuffer {
     mapping(bytes32 => uint256) internal _nonce;
     mapping(bytes32 => bool) internal _exists;
     mapping(bytes32 => bool) internal _processed;
-    address internal _river;
+    address internal _processor;
     uint256 public lastQueuedIdx;
 
-    constructor(address river) {
-        _river = river;
+    constructor(address processor) {
+        _processor = processor;
     }
 
     /// @dev The mock deliberately stores the batch under the caller-supplied id (with the current
@@ -65,7 +65,7 @@ contract MockDepositDataBuffer is IDepositDataBuffer {
     }
 
     function markDepositDataProcessed(bytes32 depositDataBufferId) external {
-        if (msg.sender != _river) revert OnlyRiver();
+        if (msg.sender != _processor) revert OnlyProcessor();
         if (!_exists[depositDataBufferId]) revert DepositDataBufferIdNotFound(depositDataBufferId);
         if (_processed[depositDataBufferId]) revert DepositDataAlreadyProcessed(depositDataBufferId);
         _processed[depositDataBufferId] = true;
@@ -86,9 +86,8 @@ contract MockDepositDataBuffer is IDepositDataBuffer {
         return address(0);
     }
 
-    // solhint-disable-next-line func-name-mixedcase
-    function RIVER() external view returns (address) {
-        return _river;
+    function getProcessor() external view returns (address) {
+        return _processor;
     }
 }
 
@@ -343,7 +342,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
         // 1. Deploy and init the harness (River-shaped).
         dm = new AttestationDepositHarness(admin);
-        // The buffer's RIVER is the harness: River marks batches processed on the buffer during deposit.
+        // The buffer's processor is the harness: River marks batches processed on the buffer during deposit.
         buffer = new MockDepositDataBuffer(address(dm));
         LibImplementationUnbricker.unbrick(vm, address(dm));
         dm.initialize(address(depositContract), withdrawalCredentials);
@@ -1574,12 +1573,12 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         );
     }
 
-    /// @dev The buffer's `markDepositDataProcessed` is gated by `onlyRiver`.
-    function testRevert_markDepositDataProcessed_notRiver() public {
+    /// @dev The buffer's `markDepositDataProcessed` is gated by `onlyProcessor`.
+    function testRevert_markDepositDataProcessed_notProcessor() public {
         bytes32 bufferId = keccak256("some-id");
         address stranger = address(0xC0FFEE);
         vm.prank(stranger);
-        vm.expectRevert(IDepositDataBuffer.OnlyRiver.selector);
+        vm.expectRevert(IDepositDataBuffer.OnlyProcessor.selector);
         buffer.markDepositDataProcessed(bufferId);
     }
 

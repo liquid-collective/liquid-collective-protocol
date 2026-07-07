@@ -9,9 +9,10 @@ import "../libraries/BLS12_381.sol";
 ///      ever-incrementing `lastQueuedIdx` at submission time. Folding the nonce into the id makes every
 ///      submission unique: byte-identical batches submitted more than once receive distinct,
 ///      individually-addressable ids rather than colliding.
-/// @dev Replay/processed state lives on the buffer itself: River flips a per-batch `processed` flag via
-///      `markDepositDataProcessed`, and the AttestationVerifier reads `isDepositDataProcessed` to reject
-///      replays. The buffer — not the verifier — is the authoritative source for this flag.
+/// @dev Replay/processed state lives on the buffer itself: the processor flips a per-batch `processed`
+///      flag via `markDepositDataProcessed`, and the AttestationVerifier reads `isDepositDataProcessed`
+///      to reject replays. The buffer — not the verifier — is the authoritative source for this flag.
+///      In production the processor is the River deposit-execution contract.
 interface IDepositDataBuffer {
     /// @notice An initial validator deposit. BLS signature is verified by the verifier and
     ///         passed to the official deposit contract; pubkey must NOT already be in
@@ -108,8 +109,8 @@ interface IDepositDataBuffer {
     /// @notice Reverts when caller is not the authorized admin
     error OnlyAdmin();
 
-    /// @notice Reverts when caller is not River (the only account allowed to mark data processed)
-    error OnlyRiver();
+    /// @notice Reverts when caller is not the processor (the only account allowed to mark data processed)
+    error OnlyProcessor();
 
     /// @notice Reverts when an initial-deposit pubkey is not exactly 48 bytes
     error InvalidPubkeyLength(uint256 index, uint256 length);
@@ -145,8 +146,8 @@ interface IDepositDataBuffer {
         returns (DepositObject memory batch, uint256 nonce);
 
     /// @notice Mark a queued batch as processed.
-    /// @dev Restricted to River. Reverts if the batch is unknown or already processed, then emits
-    ///      `DepositDataProcessed`.
+    /// @dev Restricted to the processor. Reverts if the batch is unknown or already processed, then
+    ///      emits `DepositDataProcessed`.
     /// @param depositDataBufferId  The identifier of the batch to mark processed
     function markDepositDataProcessed(bytes32 depositDataBufferId) external;
 
@@ -167,10 +168,9 @@ interface IDepositDataBuffer {
     /// @return The admin address
     function getAdmin() external view returns (address);
 
-    /// @notice The address of River, the only account allowed to mark deposit data processed.
-    /// @return The River address
-    // solhint-disable-next-line func-name-mixedcase
-    function RIVER() external view returns (address);
+    /// @notice The processor address — the only account allowed to mark deposit data processed.
+    /// @return The processor address
+    function getProcessor() external view returns (address);
 
     /// @notice The index (and batch nonce) that will be assigned to the next submitted batch.
     /// @return The next batch nonce

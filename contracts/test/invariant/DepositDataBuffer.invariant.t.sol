@@ -15,11 +15,11 @@ contract DepositDataBufferInvariantTest is Test {
     DepositDataBufferHandler internal handler;
 
     address internal writer = makeAddr("writer");
-    address internal river = makeAddr("river");
+    address internal processor = makeAddr("processor");
 
     function setUp() public {
-        buffer = new DepositDataBuffer(makeAddr("admin"), writer, river);
-        handler = new DepositDataBufferHandler(buffer, writer, river);
+        buffer = new DepositDataBuffer(makeAddr("admin"), writer, processor);
+        handler = new DepositDataBufferHandler(buffer, writer, processor);
 
         targetContract(address(handler));
 
