@@ -3136,9 +3136,9 @@ contract OperatorsRegistryV1ELExitTests is Test {
         assertEq(recordingWithdraw.callAmounts(1)[0], 0, "op1 full exit forwards a wire amount of 0");
     }
 
-    // A combined CL + EL request that overshoots the current demand must revert. Uses a generic
-    // expectRevert so the test is stable across the reorder (which changes the error identity from the
-    // EL-only ExitsGreaterThanExitDemand to the combined ExitsRequestedExceedExitDemand).
+    // A combined CL + EL request that overshoots the current demand must revert through the consolidated
+    // demand check. Pin the exact selector and arguments so a different guard firing (e.g. the per-operator
+    // available-CL check) cannot make the test pass for the wrong reason.
     function testRequestETHExitsRevertsWhenCLPlusELExceedDemand() public {
         // Ample per-operator headroom so the demand check — not the available-CL check — is what fires.
         _setupSingleOperator(64 ether, 64 ether, 8 ether);
@@ -3149,7 +3149,9 @@ contract OperatorsRegistryV1ELExitTests is Test {
         IOperatorsRegistryV1.ELExitETHAllocation[] memory elAllocs = _makeELAlloc(0, EIGHT_ETH_IN_GWEI);
 
         vm.prank(keeper);
-        vm.expectRevert();
+        vm.expectRevert(
+            abi.encodeWithSelector(IOperatorsRegistryV1.ExitsRequestedExceedExitDemand.selector, 16 ether, 8 ether)
+        );
         reg.requestETHExits(clAllocs, elAllocs, 0);
     }
 
@@ -3166,7 +3168,10 @@ contract OperatorsRegistryV1ELExitTests is Test {
         IOperatorsRegistryV1.ELExitETHAllocation[] memory allocs = _makeELAlloc(0, EIGHT_ETH_IN_GWEI); // 8 > 4
 
         vm.prank(keeper);
-        vm.expectRevert();
+        // EL 8 ETH exceeds the 4 ETH demand: pin the consolidated demand check selector and arguments.
+        vm.expectRevert(
+            abi.encodeWithSelector(IOperatorsRegistryV1.ExitsRequestedExceedExitDemand.selector, 8 ether, 4 ether)
+        );
         reg.requestETHExits(empty, allocs, 0);
 
         assertEq(reg.getCurrentETHExitsDemand(), demandBefore, "demand unchanged after revert");
@@ -3189,7 +3194,13 @@ contract OperatorsRegistryV1ELExitTests is Test {
         IOperatorsRegistryV1.ELExitETHAllocation[] memory allocs = _makeELAlloc(0, sixteenEthGwei);
 
         vm.prank(keeper);
-        vm.expectRevert();
+        // EL 16 ETH exceeds the operator's 8 ETH available active CL: pin the per-operator available-CL
+        // check selector and arguments (operatorIndex, requested, available).
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IOperatorsRegistryV1.ELExitsRequestedExceedAvailableActiveCLAmount.selector, 0, 16 ether, 8 ether
+            )
+        );
         reg.requestETHExits(empty, allocs, 0);
 
         assertEq(reg.getCurrentETHExitsDemand(), demandBefore, "demand unchanged after revert");
