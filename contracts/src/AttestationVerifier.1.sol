@@ -683,31 +683,20 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
             if (sourcePubkey.length != CONSOLIDATION_PUBKEY_LENGTH) {
                 revert InvalidConsolidationPubkeyLength(i, sourcePubkey.length, true);
             }
-            for (uint256 j = 0; j < i; ++j) {
-                if (_bytesEqual(consolidation.sourcePubkeys[j], sourcePubkey)) {
-                    revert ConsolidationSourceAlreadyProcessed(sourcePubkey);
-                }
+            if (ProcessedConsolidationSourcePubkeys.isProcessed(sourcePubkey)) {
+                revert ConsolidationSourceAlreadyProcessed(sourcePubkey);
             }
-
             bytes calldata targetPubkey = consolidation.targetPubkeys[i];
             if (targetPubkey.length != CONSOLIDATION_PUBKEY_LENGTH) {
                 revert InvalidConsolidationPubkeyLength(i, targetPubkey.length, false);
             }
         }
 
-        // 5. Distinct requests can share a source while hashing differently, so source
-        //    consumption is checked separately from the request-level replay guard.
-        for (uint256 i = 0; i < sourceLen; ++i) {
-            if (ProcessedConsolidationSourcePubkeys.isProcessed(consolidation.sourcePubkeys[i])) {
-                revert ConsolidationSourceAlreadyProcessed(consolidation.sourcePubkeys[i]);
-            }
-        }
-
-        // 6. Verify the consolidation attestation quorum from the supplied signatures
+        // 5. Verify the consolidation attestation quorum from the supplied signatures
         bytes32 digest = ECDSA.toTypedDataHash(domainSep, structHash);
         _verifyConsolidationAttestationQuorum(digest, consolidation.signatures);
 
-        // 7. Mark the request and all of its sources as processed only after quorum
+        // 6. Mark the request and all of its sources as processed only after quorum
         //    succeeds, so malformed signatures cannot burn a source pubkey.
         ProcessedConsolidations.markProcessed(structHash);
         for (uint256 i = 0; i < sourceLen; ++i) {
