@@ -15,6 +15,13 @@ contract AttestationBufferTest is Test {
     event AttestationSubmitted(
         uint256 indexed idx, bytes32 indexed depositDataBufferId, bytes32 depositRootHash, bytes signature
     );
+    event AttestationError(
+        uint256 indexed idx,
+        bytes32 indexed depositDataBufferId,
+        address indexed raiser,
+        uint256 errorCode,
+        bytes errorMessage
+    );
 
     function setUp() public {
         buffer = new AttestationBuffer();
@@ -161,5 +168,74 @@ contract AttestationBufferTest is Test {
 
         // 7. The recovered address must match the original signer.
         assertEq(_recoverFromSig(recoveredEthSignedHash, emittedSig), signer);
+    }
+
+    // -----------------------------------------------------------------------
+    // raiseError — "unhappy path"
+    // -----------------------------------------------------------------------
+
+    function test_RaiseError_EmitsAndFlags() public {
+        bytes32 depositDataBufferId = keccak256("bad-batch");
+        uint256 errorCode = 42;
+        bytes memory errorMessage = bytes("withdrawal credentials mismatch");
+        address raiser = makeAddr("committeeMember");
+
+        assertFalse(buffer.isBatchErrored(depositDataBufferId));
+
+        vm.expectEmit(true, true, true, true);
+        emit AttestationError(0, depositDataBufferId, raiser, errorCode, errorMessage);
+
+        vm.prank(raiser);
+        buffer.raiseError(depositDataBufferId, errorCode, errorMessage);
+
+        assertTrue(buffer.isBatchErrored(depositDataBufferId));
+        assertEq(buffer.lastErrorIdx(), 1);
+    }
+
+    /// @dev raiseError is open: attribution is by msg.sender, filtering is off-chain.
+    function test_RaiseError_AnyoneCanRaise() public {
+        vm.prank(makeAddr("alice"));
+        buffer.raiseError(keccak256("b1"), 1, hex"01");
+        vm.prank(makeAddr("bob"));
+        buffer.raiseError(keccak256("b2"), 2, hex"02");
+        assertEq(buffer.lastErrorIdx(), 2);
+    }
+
+    /// @dev Once flagged, further attestations for that id revert (aggregation stops on-chain).
+    function test_SubmitAttestation_RevertsAfterFlag() public {
+        bytes32 depositDataBufferId = keccak256("flagged");
+        buffer.raiseError(depositDataBufferId, 1, hex"aa");
+
+        vm.expectRevert(abi.encodeWithSelector(IAttestationBuffer.BatchNotReady.selector, depositDataBufferId));
+        buffer.submitAttestation(depositDataBufferId, keccak256("root"), hex"bb");
+    }
+
+    /// @dev The flag is per-id: an unflagged id (e.g. a re-queue under a new nonce) still accepts attestations.
+    function test_SubmitAttestation_UnflaggedIdStillWorks() public {
+        bytes32 flagged = keccak256("flagged");
+        bytes32 other = keccak256("other");
+        buffer.raiseError(flagged, 1, hex"aa");
+
+        // A different id is unaffected.
+        buffer.submitAttestation(other, keccak256("root"), hex"bb");
+        assertEq(buffer.lastAttestationIdx(), 1);
+        assertFalse(buffer.isBatchErrored(other));
+    }
+
+    /// @dev Re-raising an already-flagged id is allowed: it emits again and the flag stays true.
+    function test_RaiseError_ReRaiseEmitsAgain() public {
+        bytes32 depositDataBufferId = keccak256("bad-batch");
+        buffer.raiseError(depositDataBufferId, 1, hex"01");
+
+        vm.expectEmit(true, true, true, true);
+        emit AttestationError(1, depositDataBufferId, address(this), 2, hex"02");
+        buffer.raiseError(depositDataBufferId, 2, hex"02");
+
+        assertTrue(buffer.isBatchErrored(depositDataBufferId));
+        assertEq(buffer.lastErrorIdx(), 2);
+    }
+
+    function test_IsBatchErrored_UnknownIsFalse() public {
+        assertFalse(buffer.isBatchErrored(keccak256("never-seen")));
     }
 }
