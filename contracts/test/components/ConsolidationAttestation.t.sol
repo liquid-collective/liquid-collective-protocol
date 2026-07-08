@@ -731,6 +731,135 @@ contract ConsolidationAttestationTest is Test {
         );
     }
 
+    /// @dev Sources are marked processed only AFTER quorum succeeds, and the per-source loop
+    ///      reverts on the FIRST already-consumed source. A request whose tainted source sits
+    ///      at a non-zero index must revert without consuming the (valid) sibling sources that
+    ///      precede it — otherwise a failed request would silently burn good source pubkeys.
+    function testValidateConsolidation_revertAtNonZeroIndexDoesNotConsumeSiblingSource() public {
+        address user = address(0xCAFE);
+        bytes memory sourceTainted = _pubkey(830);
+        bytes memory sourceGood = _pubkey(831);
+
+        // Consume `sourceTainted` via a first, valid single-pair request.
+        bytes[] memory firstSources = new bytes[](1);
+        firstSources[0] = sourceTainted;
+        bytes[] memory firstTargets = new bytes[](1);
+        firstTargets[0] = _pubkey(930);
+        uint256 firstAmount = 32 ether;
+        bytes32 firstDigest = _consolidationDigest(user, firstSources, firstTargets, firstAmount);
+        bytes[] memory firstSigs = new bytes[](2);
+        firstSigs[0] = _sign(pk1, firstDigest);
+        firstSigs[1] = _sign(pk2, firstDigest);
+        _validateConsolidationAsRiver(
+            IAttestationVerifierV1.ConsolidationObject({
+                withdrawalAddress: user,
+                sourcePubkeys: firstSources,
+                targetPubkeys: firstTargets,
+                totalAmount: firstAmount,
+                signatures: firstSigs
+            })
+        );
+
+        // Second request: [sourceGood, sourceTainted] — the tainted source is at index 1.
+        // Quorum is valid, so the ONLY reason to revert is the already-consumed source.
+        bytes[] memory secondSources = new bytes[](2);
+        secondSources[0] = sourceGood;
+        secondSources[1] = sourceTainted;
+        bytes[] memory secondTargets = new bytes[](2);
+        secondTargets[0] = _pubkey(931);
+        secondTargets[1] = _pubkey(932);
+        uint256 secondAmount = 64 ether;
+        bytes32 secondDigest = _consolidationDigest(user, secondSources, secondTargets, secondAmount);
+        bytes[] memory secondSigs = new bytes[](2);
+        secondSigs[0] = _sign(pk1, secondDigest);
+        secondSigs[1] = _sign(pk2, secondDigest);
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.ConsolidationSourceAlreadyProcessed.selector, sourceTainted)
+        );
+        _validateConsolidationAsRiver(
+            IAttestationVerifierV1.ConsolidationObject({
+                withdrawalAddress: user,
+                sourcePubkeys: secondSources,
+                targetPubkeys: secondTargets,
+                totalAmount: secondAmount,
+                signatures: secondSigs
+            })
+        );
+
+        // `sourceGood` must still be free: a later request consuming it alone succeeds.
+        bytes[] memory thirdSources = new bytes[](1);
+        thirdSources[0] = sourceGood;
+        bytes[] memory thirdTargets = new bytes[](1);
+        thirdTargets[0] = _pubkey(933);
+        uint256 thirdAmount = 32 ether;
+        bytes32 thirdDigest = _consolidationDigest(user, thirdSources, thirdTargets, thirdAmount);
+        bytes[] memory thirdSigs = new bytes[](2);
+        thirdSigs[0] = _sign(pk1, thirdDigest);
+        thirdSigs[1] = _sign(pk2, thirdDigest);
+        bytes32 thirdStructHash = _consolidationStructHash(user, thirdSources, thirdTargets, thirdAmount);
+        vm.expectEmit(true, false, false, true);
+        emit IAttestationVerifierV1.ConsolidationProcessed(thirdStructHash);
+        _validateConsolidationAsRiver(
+            IAttestationVerifierV1.ConsolidationObject({
+                withdrawalAddress: user,
+                sourcePubkeys: thirdSources,
+                targetPubkeys: thirdTargets,
+                totalAmount: thirdAmount,
+                signatures: thirdSigs
+            })
+        );
+    }
+
+    /// @dev A request that fails quorum verification must not consume its source pubkeys,
+    ///      since marking happens only after quorum succeeds. The same source can then still
+    ///      be consumed by a subsequent, properly-attested request.
+    function testValidateConsolidation_failedQuorumDoesNotConsumeSource() public {
+        address user = address(0xCAFE);
+        bytes memory sourceX = _pubkey(840);
+
+        bytes[] memory sources = new bytes[](1);
+        sources[0] = sourceX;
+        bytes[] memory targets = new bytes[](1);
+        targets[0] = _pubkey(940);
+        uint256 totalAmount = 32 ether;
+        bytes32 digest = _consolidationDigest(user, sources, targets, totalAmount);
+
+        // Only one signature — below the quorum of 2 — so the request reverts at quorum
+        // verification, after the per-source checks but before any source is marked.
+        bytes[] memory underQuorumSigs = new bytes[](1);
+        underQuorumSigs[0] = _sign(pk1, digest);
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.InsufficientConsolidationAttestations.selector, 1, 2)
+        );
+        _validateConsolidationAsRiver(
+            IAttestationVerifierV1.ConsolidationObject({
+                withdrawalAddress: user,
+                sourcePubkeys: sources,
+                targetPubkeys: targets,
+                totalAmount: totalAmount,
+                signatures: underQuorumSigs
+            })
+        );
+
+        // `sourceX` was not burned by the failed attempt: the same request now succeeds
+        // once a full quorum is supplied.
+        bytes[] memory quorumSigs = new bytes[](2);
+        quorumSigs[0] = _sign(pk1, digest);
+        quorumSigs[1] = _sign(pk2, digest);
+        bytes32 structHash = _consolidationStructHash(user, sources, targets, totalAmount);
+        vm.expectEmit(true, false, false, true);
+        emit IAttestationVerifierV1.ConsolidationProcessed(structHash);
+        _validateConsolidationAsRiver(
+            IAttestationVerifierV1.ConsolidationObject({
+                withdrawalAddress: user,
+                sourcePubkeys: sources,
+                targetPubkeys: targets,
+                totalAmount: totalAmount,
+                signatures: quorumSigs
+            })
+        );
+    }
+
     function testValidateConsolidation_emitsConsolidationProcessed() public {
         address user = address(0xBEEF);
         IAttestationVerifierV1.ConsolidationObject memory c = _validConsolidation(user, 99);

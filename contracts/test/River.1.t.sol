@@ -4100,4 +4100,49 @@ contract RiverV1ConsolidationMintTests is RiverV1TestBase {
         assertEq(river.balanceOf(bob), bobSharesBeforeReplay);
         assertEq(river.totalSupply(), totalSupplyBeforeReplay);
     }
+
+    /// @dev Duplicate source pubkeys within a single committee-signed request are allowed;
+    ///      the mint is driven solely by `totalAmount`, not by the source-pair count, so a
+    ///      [sourceA, sourceA] request mints exactly `totalAmount` (never doubled per pair).
+    function testMintLsETHForConsolidationDuplicateSourceWithinRequestMintsTotalAmount() public {
+        _allowConsolidation(bob);
+        bytes memory sourceA = _fakePubkey(2300);
+
+        bytes[] memory sources = new bytes[](2);
+        sources[0] = sourceA;
+        sources[1] = sourceA;
+        bytes[] memory targets = new bytes[](2);
+        targets[0] = _fakePubkey(2400);
+        targets[1] = _fakePubkey(2401);
+        uint256 totalAmount = 64 ether;
+        IAttestationVerifierV1.ConsolidationObject memory consolidation =
+            _buildConsolidationWithPubkeys(bob, sources, targets, totalAmount);
+
+        uint256 bufferBefore = river.getBalanceToConsolidate();
+        uint256 bobSharesBefore = river.balanceOf(bob);
+        uint256 totalSupplyBefore = river.totalSupply();
+
+        vm.prank(consolidator);
+        river.mintLsETHForConsolidation(consolidation);
+
+        // Buffer and minted shares reflect `totalAmount` exactly, regardless of the two
+        // identical sources.
+        assertEq(river.getBalanceToConsolidate(), bufferBefore + totalAmount);
+        assertEq(river.balanceOf(bob), bobSharesBefore + totalAmount);
+        assertEq(river.totalSupply(), totalSupplyBefore + totalAmount);
+
+        // The duplicated source is consumed: any later request reusing it reverts.
+        bytes[] memory replaySources = new bytes[](1);
+        replaySources[0] = sourceA;
+        bytes[] memory replayTargets = new bytes[](1);
+        replayTargets[0] = _fakePubkey(2402);
+        IAttestationVerifierV1.ConsolidationObject memory replay =
+            _buildConsolidationWithPubkeys(bob, replaySources, replayTargets, 32 ether);
+
+        vm.prank(consolidator);
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.ConsolidationSourceAlreadyProcessed.selector, sourceA)
+        );
+        river.mintLsETHForConsolidation(replay);
+    }
 }
