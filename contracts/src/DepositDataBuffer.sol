@@ -7,7 +7,7 @@ import "./libraries/LibSanitize.sol";
 /// @title DepositDataBuffer (v1)
 /// @author Alluvial Finance Inc.
 /// @notice Non-upgradeable contract that buffers pre-committed validator deposit batches on-chain.
-///         A trusted writer submits batches; off-chain daemons and the AttestationVerifier read them
+///         A trusted producer submits batches; off-chain daemons and the AttestationVerifier read them
 ///         back by id. Each submission is uniquely addressable because the batch nonce (`lastQueuedIdx`
 ///         at submit time) is folded into the id, so byte-identical batches submitted twice never
 ///         collide.
@@ -23,11 +23,11 @@ contract DepositDataBuffer is IDepositDataBuffer {
     ///      being the account that consumes batches and flips their `processed` flag.
     address internal immutable _processor;
 
-    /// @notice The admin, able to rotate the writer.
+    /// @notice The admin, able to rotate the producer.
     address internal _admin;
 
-    /// @notice The writer authorized to submit deposit batches.
-    address internal _writer;
+    /// @notice The producer authorized to submit deposit batches.
+    address internal _producer;
 
     /// @notice The index (and batch nonce) assigned to the next submitted batch.
     uint256 public lastQueuedIdx;
@@ -44,15 +44,15 @@ contract DepositDataBuffer is IDepositDataBuffer {
     /// @dev depositDataBufferId => whether the batch has been marked processed by the processor.
     mapping(bytes32 => bool) internal _processed;
 
-    /// @param admin     The admin address, able to rotate the writer.
-    /// @param writer    The writer address authorized to submit deposit batches.
+    /// @param admin     The admin address, able to rotate the producer.
+    /// @param producer  The producer address authorized to submit deposit batches.
     /// @param processor The address permitted to mark deposit data processed.
-    constructor(address admin, address writer, address processor) {
+    constructor(address admin, address producer, address processor) {
         LibSanitize._notZeroAddress(admin);
-        LibSanitize._notZeroAddress(writer);
+        LibSanitize._notZeroAddress(producer);
         LibSanitize._notZeroAddress(processor);
         _admin = admin;
-        _writer = writer;
+        _producer = producer;
         _processor = processor;
     }
 
@@ -62,9 +62,9 @@ contract DepositDataBuffer is IDepositDataBuffer {
         _;
     }
 
-    /// @dev Restricts a function to the writer.
-    modifier onlyWriter() {
-        if (msg.sender != _writer) revert OnlyWriter();
+    /// @dev Restricts a function to the producer.
+    modifier onlyProducer() {
+        if (msg.sender != _producer) revert OnlyProducer();
         _;
     }
 
@@ -75,7 +75,7 @@ contract DepositDataBuffer is IDepositDataBuffer {
     }
 
     /// @inheritdoc IDepositDataBuffer
-    function submitDepositData(bytes32 depositDataBufferId, DepositObject calldata batch) external onlyWriter {
+    function submitDepositData(bytes32 depositDataBufferId, DepositObject calldata batch) external onlyProducer {
         uint256 depositCount = batch.deposits.length;
         uint256 topUpCount = batch.topUps.length;
         if (depositCount == 0 && topUpCount == 0) revert EmptyDepositData();
@@ -138,15 +138,15 @@ contract DepositDataBuffer is IDepositDataBuffer {
     }
 
     /// @inheritdoc IDepositDataBuffer
-    function setWriter(address newWriter) external onlyAdmin {
-        LibSanitize._notZeroAddress(newWriter);
-        _writer = newWriter;
-        emit SetWriter(newWriter);
+    function setProducer(address newProducer) external onlyAdmin {
+        LibSanitize._notZeroAddress(newProducer);
+        _producer = newProducer;
+        emit SetProducer(newProducer);
     }
 
     /// @inheritdoc IDepositDataBuffer
-    function getWriter() external view returns (address) {
-        return _writer;
+    function getProducer() external view returns (address) {
+        return _producer;
     }
 
     /// @inheritdoc IDepositDataBuffer

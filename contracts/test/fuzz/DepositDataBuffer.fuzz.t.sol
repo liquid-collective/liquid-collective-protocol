@@ -13,15 +13,15 @@ import "../shared/DepositDataBufferFixtures.sol";
 contract DepositDataBufferFuzzTest is Test, DepositDataBufferFixtures {
     DepositDataBuffer internal buffer;
 
-    address internal writer = makeAddr("writer");
+    address internal producer = makeAddr("producer");
 
     function setUp() public {
-        buffer = new DepositDataBuffer(makeAddr("admin"), writer, makeAddr("processor"));
+        buffer = new DepositDataBuffer(makeAddr("admin"), producer, makeAddr("processor"));
     }
 
     function _submit(IDepositDataBuffer.DepositObject memory batch) internal returns (bytes32 id) {
         id = keccak256(abi.encode(batch, buffer.lastQueuedIdx()));
-        vm.prank(writer);
+        vm.prank(producer);
         buffer.submitDepositData(id, batch);
     }
 
@@ -96,7 +96,7 @@ contract DepositDataBufferFuzzTest is Test, DepositDataBufferFixtures {
         IDepositDataBuffer.DepositObject memory batch = _batch(1, 0);
         batch.deposits[0].pubkey = new bytes(uint256(len));
 
-        vm.prank(writer);
+        vm.prank(producer);
         vm.expectRevert(abi.encodeWithSelector(IDepositDataBuffer.InvalidPubkeyLength.selector, 0, uint256(len)));
         buffer.submitDepositData(bytes32(0), batch);
     }
@@ -106,7 +106,7 @@ contract DepositDataBufferFuzzTest is Test, DepositDataBufferFixtures {
         IDepositDataBuffer.DepositObject memory batch = _batch(1, 0);
         batch.deposits[0].signature = new bytes(uint256(len));
 
-        vm.prank(writer);
+        vm.prank(producer);
         vm.expectRevert(abi.encodeWithSelector(IDepositDataBuffer.InvalidSignatureLength.selector, 0, uint256(len)));
         buffer.submitDepositData(bytes32(0), batch);
     }
@@ -117,7 +117,7 @@ contract DepositDataBufferFuzzTest is Test, DepositDataBufferFixtures {
         batch.topUps = new IDepositDataBuffer.TopUp[](1);
         batch.topUps[0] = IDepositDataBuffer.TopUp({pubkey: new bytes(uint256(len)), amount: 1 ether, operatorIdx: 0});
 
-        vm.prank(writer);
+        vm.prank(producer);
         vm.expectRevert(abi.encodeWithSelector(IDepositDataBuffer.InvalidTopUpPubkeyLength.selector, 0, uint256(len)));
         buffer.submitDepositData(bytes32(0), batch);
     }
@@ -126,7 +126,7 @@ contract DepositDataBufferFuzzTest is Test, DepositDataBufferFixtures {
         IDepositDataBuffer.DepositObject memory batch = _batch(1, seed);
         batch.deposits[0].amount = 0;
 
-        vm.prank(writer);
+        vm.prank(producer);
         vm.expectRevert(abi.encodeWithSelector(IDepositDataBuffer.InvalidDepositAmount.selector, 0, 0));
         buffer.submitDepositData(bytes32(0), batch);
     }

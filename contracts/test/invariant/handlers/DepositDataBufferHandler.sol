@@ -13,7 +13,7 @@ import "../../shared/DepositDataBufferFixtures.sol";
 ///         processed as the processor — tracking ghost state the invariants assert against.
 contract DepositDataBufferHandler is Test, DepositDataBufferFixtures {
     DepositDataBuffer public buffer;
-    address public writer;
+    address public producer;
     address public processor;
 
     // Ghost state
@@ -23,9 +23,9 @@ contract DepositDataBufferHandler is Test, DepositDataBufferFixtures {
     mapping(bytes32 => bool) public ghost_processed;
     uint256 public ghost_processedCount;
 
-    constructor(DepositDataBuffer _buffer, address _writer, address _processor) {
+    constructor(DepositDataBuffer _buffer, address _producer, address _processor) {
         buffer = _buffer;
-        writer = _writer;
+        producer = _producer;
         processor = _processor;
     }
 
@@ -49,7 +49,7 @@ contract DepositDataBufferHandler is Test, DepositDataBufferFixtures {
 
         // The batch nonce (lastQueuedIdx) is folded into the id, so valid data always succeeds.
         bytes32 id = keccak256(abi.encode(batch, buffer.lastQueuedIdx()));
-        vm.prank(writer);
+        vm.prank(producer);
         buffer.submitDepositData(id, batch);
 
         ghost_successfulQueues++;
@@ -65,7 +65,7 @@ contract DepositDataBufferHandler is Test, DepositDataBufferFixtures {
 
         // Re-submitting byte-identical data succeeds under a fresh, distinct id (nonce folding).
         bytes32 newId = keccak256(abi.encode(batch, buffer.lastQueuedIdx()));
-        vm.prank(writer);
+        vm.prank(producer);
         buffer.submitDepositData(newId, batch);
 
         ghost_successfulQueues++;

@@ -80,9 +80,9 @@ interface IDepositDataBuffer {
     /// @param depositDataBufferId  The identifier of the batch that was flagged
     event DepositDataProcessed(bytes32 indexed depositDataBufferId);
 
-    /// @notice Emitted when the admin rotates the authorized writer.
-    /// @param writer  The new authorized writer address
-    event SetWriter(address indexed writer);
+    /// @notice Emitted when the admin rotates the authorized producer.
+    /// @param producer  The new authorized producer address
+    event SetProducer(address indexed producer);
 
     // -----------------------------------------------------------------------
     // Errors
@@ -103,8 +103,8 @@ interface IDepositDataBuffer {
     /// @notice Reverts when a batch has already been marked processed
     error DepositDataAlreadyProcessed(bytes32 depositDataBufferId);
 
-    /// @notice Reverts when caller is not the authorized writer
-    error OnlyWriter();
+    /// @notice Reverts when caller is not the authorized producer
+    error OnlyProducer();
 
     /// @notice Reverts when caller is not the authorized admin
     error OnlyAdmin();
@@ -129,7 +129,7 @@ interface IDepositDataBuffer {
     // -----------------------------------------------------------------------
 
     /// @notice Submit a deposit batch to the buffer.
-    /// @dev Restricted to the writer. The buffer ID folds in the batch nonce: it MUST equal
+    /// @dev Restricted to the producer. The buffer ID folds in the batch nonce: it MUST equal
     ///      `keccak256(abi.encode(batch, nonce))` where `nonce == lastQueuedIdx` at submit time. The
     ///      nonce is then stored so the AttestationVerifier can reconstruct and re-check the binding.
     /// @param depositDataBufferId  The expected batch ID (must equal keccak256(abi.encode(batch, nonce)))
@@ -156,13 +156,13 @@ interface IDepositDataBuffer {
     /// @return True if the batch has been marked processed
     function isDepositDataProcessed(bytes32 depositDataBufferId) external view returns (bool);
 
-    /// @notice Rotate the authorized writer. Restricted to the admin.
-    /// @param newWriter  The new authorized writer address
-    function setWriter(address newWriter) external;
+    /// @notice Rotate the authorized producer. Restricted to the admin.
+    /// @param newProducer  The new authorized producer address
+    function setProducer(address newProducer) external;
 
-    /// @notice Returns the authorized writer address.
-    /// @return The authorized writer address
-    function getWriter() external view returns (address);
+    /// @notice Returns the authorized producer address.
+    /// @return The authorized producer address
+    function getProducer() external view returns (address);
 
     /// @notice Returns the admin address.
     /// @return The admin address
