@@ -18,10 +18,8 @@ contract AttestationBufferInvariantTest is Test {
 
         targetContract(address(handler));
 
-        bytes4[] memory selectors = new bytes4[](3);
+        bytes4[] memory selectors = new bytes4[](1);
         selectors[0] = AttestationBufferHandler.submit.selector;
-        selectors[1] = AttestationBufferHandler.vetoBatch.selector;
-        selectors[2] = AttestationBufferHandler.submitToVetoed.selector;
         targetSelector(FuzzSelector({addr: address(handler), selectors: selectors}));
     }
 
@@ -33,13 +31,5 @@ contract AttestationBufferInvariantTest is Test {
     /// @notice A2: the buffer never holds ETH (it has no payable entry points).
     function invariant_neverHoldsEth() public {
         assertEq(address(buffer).balance, 0, "A2: buffer holds ETH");
-    }
-
-    /// @notice A3: a vetoed id stays vetoed (the veto is sticky — there is no un-veto).
-    function invariant_vetoedIdsStayVetoed() public {
-        uint256 len = handler.ghost_vetoedIdsLength();
-        for (uint256 i = 0; i < len; i++) {
-            assertTrue(buffer.isBatchVetoed(handler.ghost_vetoedIdAt(i)), "A3: vetoed id became unvetoed");
-        }
     }
 }

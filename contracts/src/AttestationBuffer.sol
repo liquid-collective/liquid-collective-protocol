@@ -9,42 +9,25 @@ import "./interfaces/IAttestationBuffer.sol";
 ///         Anyone can submit attestations; off-chain daemons collect the events. Signature
 ///         recovery (ecrecover) and quorum validation are performed elsewhere — in this protocol
 ///         by the AttestationVerifier, which consumes the collected signatures at deposit time.
-/// @dev Unhappy path: anyone may veto a `depositDataBufferId` as not ready for deposit via
-///      `vetoBatch`. Attribution is by `msg.sender` (emitted as `raiser`); the off-chain backend
-///      decides whether the raiser is one of its daemons/committee members and should be listened to.
-///      A veto is a sticky, hard on-chain stop — `submitAttestation` reverts for a vetoed id, so no
-///      further signatures are aggregated on-chain and the backend won't assemble the deposit.
-///      There is intentionally no un-veto; recovery from a bad/spam veto is to re-queue the same
-///      deposits under a new nonce, which yields a fresh, unvetoed id. This contract is deployed on
-///      an L2 and is self-contained — it holds no dependency on the L1 AttestationVerifier.
+/// @dev The buffer holds no attester-flippable state and does no verification: it is a pure event
+///      relay. There is no separate veto/error channel. To flag a batch as faulty ("unhappy path"),
+///      a committee member submits an ordinary attestation whose `depositRootHash` is zero — a
+///      signature over `Attest(depositDataBufferId, 0)`. Off-chain the signer is recovered and
+///      checked for committee membership, exactly as for a normal attestation, so the flag is
+///      authenticated by the signature rather than by any on-chain access control. Such a signal is
+///      inert on L1: the AttestationVerifier requires the signed root to equal the live deposit root
+///      (never zero), so a zero-root attestation can never contribute to an actual deposit quorum.
+///      This contract is deployed on an L2 and is self-contained — it holds no dependency on the L1
+///      AttestationVerifier.
 contract AttestationBuffer is IAttestationBuffer {
     /// @inheritdoc IAttestationBuffer
     uint256 public lastAttestationIdx;
 
     /// @inheritdoc IAttestationBuffer
-    uint256 public lastErrorIdx;
-
-    /// @dev depositDataBufferId => vetoed not-ready-for-deposit.
-    mapping(bytes32 => bool) internal _vetoed;
-
-    /// @inheritdoc IAttestationBuffer
     function submitAttestation(bytes32 depositDataBufferId, bytes32 depositRootHash, bytes calldata signature)
         external
     {
-        if (_vetoed[depositDataBufferId]) revert BatchVetoed(depositDataBufferId);
         emit AttestationSubmitted(lastAttestationIdx, depositDataBufferId, depositRootHash, signature);
         ++lastAttestationIdx;
-    }
-
-    /// @inheritdoc IAttestationBuffer
-    function vetoBatch(bytes32 depositDataBufferId, uint256 errorCode, bytes calldata errorMessage) external {
-        _vetoed[depositDataBufferId] = true;
-        emit AttestationError(lastErrorIdx, depositDataBufferId, msg.sender, errorCode, errorMessage);
-        ++lastErrorIdx;
-    }
-
-    /// @inheritdoc IAttestationBuffer
-    function isBatchVetoed(bytes32 depositDataBufferId) external view returns (bool) {
-        return _vetoed[depositDataBufferId];
     }
 }

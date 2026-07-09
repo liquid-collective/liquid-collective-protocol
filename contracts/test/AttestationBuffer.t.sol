@@ -15,13 +15,6 @@ contract AttestationBufferTest is Test {
     event AttestationSubmitted(
         uint256 indexed idx, bytes32 indexed depositDataBufferId, bytes32 depositRootHash, bytes signature
     );
-    event AttestationError(
-        uint256 indexed idx,
-        bytes32 indexed depositDataBufferId,
-        address indexed raiser,
-        uint256 errorCode,
-        bytes errorMessage
-    );
 
     function setUp() public {
         buffer = new AttestationBuffer();
@@ -171,71 +164,35 @@ contract AttestationBufferTest is Test {
     }
 
     // -----------------------------------------------------------------------
-    // vetoBatch — "unhappy path"
+    // Faulty-batch signal — "unhappy path" via depositRootHash == 0
+    //
+    // There is no separate veto function. A faulty batch is flagged by submitting an ordinary
+    // attestation whose depositRootHash is zero; the buffer treats it like any other submission
+    // (no special-casing, no revert). Authentication and interpretation happen off-chain.
     // -----------------------------------------------------------------------
 
-    function test_VetoBatch_EmitsAndFlags() public {
+    function test_SubmitAttestation_FaultyRootIsAnOrdinarySubmission() public {
         bytes32 depositDataBufferId = keccak256("bad-batch");
-        uint256 errorCode = 42;
-        bytes memory errorMessage = bytes("withdrawal credentials mismatch");
-        address raiser = makeAddr("committeeMember");
+        bytes memory sig = hex"aabbccdd";
 
-        assertFalse(buffer.isBatchVetoed(depositDataBufferId));
+        // A zero root is emitted as-is and advances the index like any other attestation.
+        vm.expectEmit(true, true, false, true);
+        emit AttestationSubmitted(0, depositDataBufferId, bytes32(0), sig);
 
-        vm.expectEmit(true, true, true, true);
-        emit AttestationError(0, depositDataBufferId, raiser, errorCode, errorMessage);
+        vm.prank(makeAddr("committeeMember"));
+        buffer.submitAttestation(depositDataBufferId, bytes32(0), sig);
 
-        vm.prank(raiser);
-        buffer.vetoBatch(depositDataBufferId, errorCode, errorMessage);
-
-        assertTrue(buffer.isBatchVetoed(depositDataBufferId));
-        assertEq(buffer.lastErrorIdx(), 1);
-    }
-
-    /// @dev vetoBatch is open: attribution is by msg.sender, filtering is off-chain.
-    function test_VetoBatch_AnyoneCanVeto() public {
-        vm.prank(makeAddr("alice"));
-        buffer.vetoBatch(keccak256("b1"), 1, hex"01");
-        vm.prank(makeAddr("bob"));
-        buffer.vetoBatch(keccak256("b2"), 2, hex"02");
-        assertEq(buffer.lastErrorIdx(), 2);
-    }
-
-    /// @dev Once vetoed, further attestations for that id revert (aggregation stops on-chain).
-    function test_SubmitAttestation_RevertsAfterVeto() public {
-        bytes32 depositDataBufferId = keccak256("vetoed");
-        buffer.vetoBatch(depositDataBufferId, 1, hex"aa");
-
-        vm.expectRevert(abi.encodeWithSelector(IAttestationBuffer.BatchVetoed.selector, depositDataBufferId));
-        buffer.submitAttestation(depositDataBufferId, keccak256("root"), hex"bb");
-    }
-
-    /// @dev The veto is per-id: an unvetoed id (e.g. a re-queue under a new nonce) still accepts attestations.
-    function test_SubmitAttestation_UnvetoedIdStillWorks() public {
-        bytes32 vetoed = keccak256("vetoed");
-        bytes32 other = keccak256("other");
-        buffer.vetoBatch(vetoed, 1, hex"aa");
-
-        // A different id is unaffected.
-        buffer.submitAttestation(other, keccak256("root"), hex"bb");
         assertEq(buffer.lastAttestationIdx(), 1);
-        assertFalse(buffer.isBatchVetoed(other));
     }
 
-    /// @dev Re-vetoing an already-vetoed id is allowed: it emits again and the flag stays true.
-    function test_VetoBatch_ReVetoEmitsAgain() public {
-        bytes32 depositDataBufferId = keccak256("bad-batch");
-        buffer.vetoBatch(depositDataBufferId, 1, hex"01");
+    /// @dev A faulty (root=0) attestation does not block later attestations for the same id: the
+    ///      buffer keeps no per-id state, so aggregation is never stopped on-chain.
+    function test_SubmitAttestation_FaultyRootDoesNotBlockLaterSubmissions() public {
+        bytes32 depositDataBufferId = keccak256("batch");
 
-        vm.expectEmit(true, true, true, true);
-        emit AttestationError(1, depositDataBufferId, address(this), 2, hex"02");
-        buffer.vetoBatch(depositDataBufferId, 2, hex"02");
+        buffer.submitAttestation(depositDataBufferId, bytes32(0), hex"aa"); // faulty signal
+        buffer.submitAttestation(depositDataBufferId, keccak256("root"), hex"bb"); // still accepted
 
-        assertTrue(buffer.isBatchVetoed(depositDataBufferId));
-        assertEq(buffer.lastErrorIdx(), 2);
-    }
-
-    function test_IsBatchVetoed_UnknownIsFalse() public {
-        assertFalse(buffer.isBatchVetoed(keccak256("never-seen")));
+        assertEq(buffer.lastAttestationIdx(), 2);
     }
 }
