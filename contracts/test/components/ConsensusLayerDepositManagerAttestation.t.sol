@@ -326,7 +326,14 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         verifier = new AttestationVerifierV1();
         LibImplementationUnbricker.unbrick(vm, address(verifier));
         verifier.initAttestationVerifierV1(
-            address(dm), address(buffer), rootAttesters, 2, bytes4(0), consolidationCommitteeAttesters, 1
+            address(dm),
+            address(buffer),
+            makeAddr("withdraw"),
+            rootAttesters,
+            2,
+            bytes4(0),
+            consolidationCommitteeAttesters,
+            1
         );
 
         // 3. Wire the verifier address into the harness.
@@ -2113,7 +2120,9 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         LibImplementationUnbricker.unbrick(vm, address(freshVerifier));
         address[] memory empty = new address[](0);
         vm.expectRevert(LibErrors.InvalidArgument.selector);
-        freshVerifier.initAttestationVerifierV1(address(dm), address(buffer), empty, 1, bytes4(0), empty, 1);
+        freshVerifier.initAttestationVerifierV1(
+            address(dm), address(buffer), makeAddr("withdraw"), empty, 1, bytes4(0), empty, 1
+        );
     }
 
     /// @dev Cannot init with a root quorum of zero. This is distinct from an empty
@@ -2128,7 +2137,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
         vm.expectRevert(IAttestationVerifierV1.ZeroQuorum.selector);
         freshVerifier.initAttestationVerifierV1(
-            address(dm), address(buffer), rootAttesters, 0, bytes4(0), consolidationAttesters, 1
+            address(dm), address(buffer), makeAddr("withdraw"), rootAttesters, 0, bytes4(0), consolidationAttesters, 1
         );
     }
 
@@ -2147,7 +2156,14 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
         vm.expectRevert(LibErrors.InvalidArgument.selector);
         freshVerifier.initAttestationVerifierV1(
-            address(dm), address(buffer), tooManyRootAttesters, 1, bytes4(0), consolidationAttesters, 1
+            address(dm),
+            address(buffer),
+            makeAddr("withdraw"),
+            tooManyRootAttesters,
+            1,
+            bytes4(0),
+            consolidationAttesters,
+            1
         );
     }
 
@@ -2159,7 +2175,9 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         attesters[0] = rootAttester1;
         attesters[1] = rootAttester2;
         vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.QuorumExceedsRootAttesterCount.selector, 3, 2));
-        freshVerifier.initAttestationVerifierV1(address(dm), address(buffer), attesters, 3, bytes4(0), attesters, 3);
+        freshVerifier.initAttestationVerifierV1(
+            address(dm), address(buffer), makeAddr("withdraw"), attesters, 3, bytes4(0), attesters, 3
+        );
     }
 
     /// @dev Cannot add an attester that would push the total past MAX_ROOT_ATTESTERS.
@@ -2217,7 +2235,9 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(IAttestationVerifierV1.QuorumExceedsMaxSignatures.selector, max + 1, max)
         );
-        fresh.initAttestationVerifierV1(address(dm), address(buffer), atts, max + 1, bytes4(0), atts, max + 1);
+        fresh.initAttestationVerifierV1(
+            address(dm), address(buffer), makeAddr("withdraw"), atts, max + 1, bytes4(0), atts, max + 1
+        );
     }
 
     /// @dev Admin cannot set quorum > MAX_SIGNATURES via the post-init setter. Distinct code
@@ -2344,7 +2364,9 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         atts[0] = makeAddr("a");
         atts[1] = makeAddr("b");
         vm.expectRevert(abi.encodeWithSelector(Initializable.InvalidInitialization.selector, 0, 1));
-        verifier.initAttestationVerifierV1(address(dm), address(buffer), atts, 1, bytes4(0), atts, 1);
+        verifier.initAttestationVerifierV1(
+            address(dm), address(buffer), makeAddr("withdraw"), atts, 1, bytes4(0), atts, 1
+        );
     }
 
     // -----------------------------------------------------------------------

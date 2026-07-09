@@ -164,9 +164,46 @@ abstract contract WithdrawV1TestBase is Test {
         LibImplementationUnbricker.unbrick(vm, address(attestationVerifier));
     }
 
+    function _initAttestationVerifierFor(AttestationVerifierV1 verifier, address withdrawAddress) internal {
+        address[] memory rootAttesters = new address[](1);
+        rootAttesters[0] = makeAddr("rootAttester");
+        address[] memory consolidationAttesters = new address[](1);
+        consolidationAttesters[0] = makeAddr("consolidationAttester");
+
+        verifier.initAttestationVerifierV1(
+            address(river),
+            makeAddr("depositBuffer"),
+            withdrawAddress,
+            rootAttesters,
+            1,
+            bytes4(0),
+            consolidationAttesters,
+            1
+        );
+    }
+
+    function _newWithdrawWithVerifier(address pectraWithdrawal, address pectraConsolidation)
+        internal
+        returns (WithdrawV1 w, AttestationVerifierV1 verifier)
+    {
+        w = new WithdrawV1();
+        LibImplementationUnbricker.unbrick(vm, address(w));
+        w.initializeWithdrawV1(address(river));
+
+        verifier = new AttestationVerifierV1();
+        LibImplementationUnbricker.unbrick(vm, address(verifier));
+        _initAttestationVerifierFor(verifier, address(w));
+
+        w.initWithdrawV1_1(pectraWithdrawal, pectraConsolidation, address(operatorsRegistry), address(verifier));
+    }
+
     function _seedValidatorPubkey(bytes memory pubkey) internal {
+        _seedValidatorPubkeyOn(attestationVerifier, pubkey);
+    }
+
+    function _seedValidatorPubkeyOn(AttestationVerifierV1 verifier, bytes memory pubkey) internal {
         bytes32 slot = keccak256(abi.encode(PECTRA_VALIDATOR_PUBKEY_LOOKUP_SLOT, pubkey));
-        vm.store(address(attestationVerifier), slot, bytes32(uint256(1)));
+        vm.store(address(verifier), slot, bytes32(uint256(1)));
     }
 
     function _seedPrePectraPubkey(bytes memory pubkey) internal {
@@ -330,6 +367,7 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
     function setUp() public override {
         super.setUp();
         withdraw.initializeWithdrawV1(address(river));
+        _initAttestationVerifierFor(attestationVerifier, address(withdraw));
         mockWithdrawal = new MockELWithdrawal();
         mockConsolidation = new MockELConsolidation();
         excessFeeRecipient = makeAddr("excessFeeRecipient");
@@ -773,15 +811,9 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         uint256 maxFeePerConsolidation = 0.1 ether;
         mockConsolidationFails.setFee(maxFeePerConsolidation);
 
-        WithdrawV1 w = new WithdrawV1();
-        LibImplementationUnbricker.unbrick(vm, address(w));
-        w.initializeWithdrawV1(address(river));
-        w.initWithdrawV1_1(
-            address(mockWithdrawal),
-            address(mockConsolidationFails),
-            address(operatorsRegistry),
-            address(attestationVerifier)
-        );
+        (WithdrawV1 w, AttestationVerifierV1 verifier) =
+            _newWithdrawWithVerifier(address(mockWithdrawal), address(mockConsolidationFails));
+        _seedValidatorPubkeyOn(verifier, VALID_PUBKEY_48);
 
         bytes[] memory srcPubkeys = new bytes[](1);
         srcPubkeys[0] = VALID_PUBKEY_48;

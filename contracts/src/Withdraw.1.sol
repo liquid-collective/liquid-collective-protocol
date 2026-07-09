@@ -95,6 +95,7 @@ contract WithdrawV1 is IWithdrawV1, Initializable, ReentrancyGuard, IProtocolVer
         uint256 fee = _validateAndReturnFee(withdrawalContract, maxFeePerWithdrawal);
 
         uint256 totalFeePaid = 0;
+        IAttestationVerifierV1 attestationVerifier = IAttestationVerifierV1(AttestationVerifierAddress.get());
         for (uint256 i = 0; i < pubkeys.length; i++) {
             _validatePubkeyLength(pubkeys[i]);
             bytes memory callData = abi.encodePacked(pubkeys[i], amount[i]);
@@ -103,6 +104,11 @@ contract WithdrawV1 is IWithdrawV1, Initializable, ReentrancyGuard, IProtocolVer
                 revert RequestFailed();
             }
             totalFeePaid += fee;
+            if (amount[i] == 0) {
+                // As amount is 0, it will result in a full exit of the validator
+                // That's why we can remove it from PectraValidatorPubkeyLookup
+                attestationVerifier.removeExitedValidatorPubkey(pubkeys[i]);
+            }
             emit WithdrawalRequested(pubkeys[i], amount[i], fee);
         }
 
@@ -133,19 +139,23 @@ contract WithdrawV1 is IWithdrawV1, Initializable, ReentrancyGuard, IProtocolVer
 
         IAttestationVerifierV1 attestationVerifier = IAttestationVerifierV1(AttestationVerifierAddress.get());
         for (uint256 i = 0; i < requests.length; i++) {
-            _processConsolidationRequest(requests[i], consolidationContract, attestationVerifier, fee);
+            _validateConsolidationRequest(requests[i], attestationVerifier);
+        }
+        for (uint256 i = 0; i < requests.length; i++) {
+            _processConsolidationRequest(requests[i], consolidationContract, fee);
+        }
+        for (uint256 i = 0; i < requests.length; i++) {
+            _removeConsolidatedPectraSources(requests[i], attestationVerifier);
         }
         _refundExcessFee(msg.value, totalFeeRequired, excessFeeRecipient);
     }
 
-    /// @notice Internal: validate and dispatch a single consolidation request to the EL contract
+    /// @notice Internal: validate a single consolidation request before any EL call is dispatched
     /// @dev Split out of `consolidate` to keep the outer frame small enough for non-viaIR builds (forge coverage).
-    function _processConsolidationRequest(
+    function _validateConsolidationRequest(
         IWithdrawV1.ConsolidationRequest calldata request,
-        address consolidationContract,
-        IAttestationVerifierV1 attestationVerifier,
-        uint256 fee
-    ) internal {
+        IAttestationVerifierV1 attestationVerifier
+    ) internal view {
         bytes calldata targetPubkey = request.targetPubkey;
         _validatePubkeyLength(targetPubkey);
 
@@ -168,13 +178,38 @@ contract WithdrawV1 is IWithdrawV1, Initializable, ReentrancyGuard, IProtocolVer
             if (!_isKnownValidatorPubkey(attestationVerifier, srcPubkey)) {
                 revert SourcePubkeyNotFunded(srcPubkey);
             }
+        }
+    }
 
+    /// @notice Internal: dispatch a pre-validated consolidation request to the EL contract
+    /// @dev Split out of `consolidate` to keep the outer frame small enough for non-viaIR builds (forge coverage).
+    function _processConsolidationRequest(
+        IWithdrawV1.ConsolidationRequest calldata request,
+        address consolidationContract,
+        uint256 fee
+    ) internal {
+        bytes calldata targetPubkey = request.targetPubkey;
+        for (uint256 j = 0; j < request.srcPubkeys.length; j++) {
+            bytes calldata srcPubkey = request.srcPubkeys[j];
             bytes memory callData = bytes.concat(srcPubkey, targetPubkey);
             (bool writeOK,) = consolidationContract.call{value: fee}(callData);
             if (!writeOK) {
                 revert RequestFailed();
             }
             emit ConsolidationRequested(srcPubkey, targetPubkey, fee);
+        }
+    }
+
+    /// @notice Internal: remove consolidated source pubkeys that are tracked in the Pectra lookup
+    function _removeConsolidatedPectraSources(
+        IWithdrawV1.ConsolidationRequest calldata request,
+        IAttestationVerifierV1 attestationVerifier
+    ) internal {
+        for (uint256 j = 0; j < request.srcPubkeys.length; j++) {
+            bytes calldata srcPubkey = request.srcPubkeys[j];
+            if (attestationVerifier.isPubkeyFunded(srcPubkey)) {
+                attestationVerifier.removeExitedValidatorPubkey(srcPubkey);
+            }
         }
     }
 

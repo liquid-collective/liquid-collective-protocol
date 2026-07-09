@@ -29,6 +29,7 @@ import "./state/attestationVerifier/ProcessedDepositDataBufferIds.sol";
 import "./state/attestationVerifier/PectraValidatorPubkeyLookup.sol";
 import "./state/attestationVerifier/PrePectraValidatorPubkeyLookup.sol";
 import "./state/attestationVerifier/ProcessedConsolidationSourcePubkeys.sol";
+import "./state/attestationVerifier/WithdrawContractAddress.sol";
 import "./state/shared/RiverAddress.sol";
 
 /// @title AttestationVerifier (v1)
@@ -127,6 +128,13 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
         _;
     }
 
+    modifier onlyWithdrawContract() {
+        if (msg.sender != WithdrawContractAddress.get()) {
+            revert LibErrors.Unauthorized(msg.sender);
+        }
+        _;
+    }
+
     // -----------------------------------------------------------------------
     // Initialization
     // -----------------------------------------------------------------------
@@ -135,6 +143,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
     function initAttestationVerifierV1(
         address _river,
         address _depositDataBuffer,
+        address _withdrawContract,
         address[] calldata _rootAttesters,
         uint256 _quorum,
         bytes4 _genesisForkVersion,
@@ -166,6 +175,9 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
 
         DepositDataBufferAddress.set(_depositDataBuffer);
         emit SetDepositDataBuffer(_depositDataBuffer);
+
+        WithdrawContractAddress.set(_withdrawContract);
+        emit SetWithdrawContract(_withdrawContract);
 
         // Validate + store the BLS deposit domain. On a known chain (mainnet/hoodi) the supplied fork
         // version must match the canonical value, so a misconfigured domain — which would silently
@@ -531,6 +543,14 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
             }
         }
         emit RemovedPectraValidatorPubkeys(pubkeys);
+    }
+
+    /// @notice Internal: remove a validator pubkey from the PectraValidatorPubkeyLookup
+    function removeExitedValidatorPubkey(bytes calldata pubkey) external onlyWithdrawContract {
+        if (!PectraValidatorPubkeyLookup.remove(pubkey)) {
+            revert PectraValidatorPubkeyNotFunded(pubkey);
+        }
+        emit RemovedPectraValidatorPubkey(pubkey);
     }
 
     /// @inheritdoc IAttestationVerifierV1

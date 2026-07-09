@@ -232,6 +232,7 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
         attestationVerifier.initAttestationVerifierV1(
             address(river),
             address(depositBuffer),
+            address(withdraw),
             _initRootAttesters,
             2,
             bytes4(0),

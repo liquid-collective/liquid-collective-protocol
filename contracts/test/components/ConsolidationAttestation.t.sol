@@ -89,7 +89,9 @@ contract ConsolidationAttestationTest is Test {
         cCommittee[0] = attester1;
         cCommittee[1] = attester2;
         cCommittee[2] = attester3;
-        verifier.initAttestationVerifierV1(address(river), depositBufferStub, depCommittee, 1, bytes4(0), cCommittee, 2);
+        verifier.initAttestationVerifierV1(
+            address(river), depositBufferStub, makeAddr("withdraw"), depCommittee, 1, bytes4(0), cCommittee, 2
+        );
     }
 
     /// @dev Deploy + unbrick a fresh verifier.
@@ -109,7 +111,14 @@ contract ConsolidationAttestationTest is Test {
         address[] memory dep = new address[](1);
         dep[0] = depositAttester;
         fresh.initAttestationVerifierV1(
-            address(river), depositBufferStub, dep, 1, bytes4(0), consolidationCommittee, consolidationQuorum
+            address(river),
+            depositBufferStub,
+            makeAddr("withdraw"),
+            dep,
+            1,
+            bytes4(0),
+            consolidationCommittee,
+            consolidationQuorum
         );
     }
 
@@ -330,7 +339,9 @@ contract ConsolidationAttestationTest is Test {
         address[] memory cc = new address[](1);
         cc[0] = attester1;
         vm.expectRevert(abi.encodeWithSignature("InvalidInitialization(uint256,uint256)", 0, 1));
-        verifier.initAttestationVerifierV1(address(river), depositBufferStub, dep, 1, bytes4(0), cc, 1);
+        verifier.initAttestationVerifierV1(
+            address(river), depositBufferStub, makeAddr("withdraw"), dep, 1, bytes4(0), cc, 1
+        );
     }
 
     function testInit_consolidationDomainSeparatorDiffersFromDeposit() public {
@@ -356,7 +367,7 @@ contract ConsolidationAttestationTest is Test {
         cc[0] = attester1;
         // RiverAddress.set calls LibSanitize._notZeroAddress before writing the slot.
         vm.expectRevert(LibErrors.InvalidZeroAddress.selector);
-        fresh.initAttestationVerifierV1(address(0), depositBufferStub, dep, 1, bytes4(0), cc, 1);
+        fresh.initAttestationVerifierV1(address(0), depositBufferStub, makeAddr("withdraw"), dep, 1, bytes4(0), cc, 1);
     }
 
     function testInit_revertZeroAttesterInArray() public {

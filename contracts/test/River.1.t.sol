@@ -517,6 +517,7 @@ contract RiverV1Tests is RiverV1TestBase {
         attestationVerifier.initAttestationVerifierV1(
             address(river),
             address(depositBuffer),
+            address(withdraw),
             _initRootAttesters,
             2,
             bytes4(0),
@@ -1592,6 +1593,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         attestationVerifier.initAttestationVerifierV1(
             address(river),
             address(depositBuffer),
+            address(withdraw),
             _initRootAttesters2,
             2,
             bytes4(0),
@@ -3023,7 +3025,14 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         v = new AttestationVerifierV1();
         LibImplementationUnbricker.unbrick(vm, address(v));
         v.initAttestationVerifierV1(
-            _river, makeAddr("depositBuffer"), _rootAttesters_, 1, bytes4(0), _consolidationCommitteeAttesters_, 1
+            _river,
+            makeAddr("depositBuffer"),
+            address(withdraw),
+            _rootAttesters_,
+            1,
+            bytes4(0),
+            _consolidationCommitteeAttesters_,
+            1
         );
     }
 
@@ -3174,6 +3183,7 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         v.initAttestationVerifierV1(
             address(river),
             makeAddr("depositBuffer"),
+            address(withdraw),
             _rootAttesters_,
             1,
             bytes4(0),
@@ -3198,6 +3208,7 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         v.initAttestationVerifierV1(
             address(river),
             makeAddr("depositBuffer"),
+            address(withdraw),
             _rootAttesters_,
             1,
             bytes4(0),
@@ -3580,6 +3591,7 @@ contract RiverV1PectraTests is RiverV1TestBase {
         attestationVerifier.initAttestationVerifierV1(
             address(river),
             address(depositBuffer),
+            address(withdraw),
             _initRootAttesters,
             2,
             bytes4(0),
@@ -3831,6 +3843,7 @@ contract RiverV1ConsolidationMintTests is RiverV1TestBase {
         attestationVerifier.initAttestationVerifierV1(
             address(river),
             address(depositBuffer),
+            address(withdraw),
             _initRootAttesters,
             2,
             bytes4(0),

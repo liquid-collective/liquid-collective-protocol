@@ -63,6 +63,9 @@ interface IAttestationVerifierV1 {
     /// @notice Emitted when the River address is set on this verifier
     event SetRiver(address indexed river);
 
+    /// @notice Emitted when the Withdraw contract address is set on this verifier
+    event SetWithdrawContract(address indexed withdrawContract);
+
     /// @notice Emitted when a consolidation-committee attester is added or removed
     event SetConsolidationCommitteeAttester(address indexed consolidationCommitteeAttester, bool value);
 
@@ -90,6 +93,10 @@ interface IAttestationVerifierV1 {
     ///         immediately before removal.
     /// @param pubkeys The 48-byte BLS pubkeys that were removed
     event RemovedPectraValidatorPubkeys(bytes[] pubkeys);
+
+    /// @notice Emitted when a validator pubkey is removed from the Pectra lookup.
+    /// @param pubkey The 48-byte BLS pubkey that was removed
+    event RemovedPectraValidatorPubkey(bytes pubkey);
 
     // -----------------------------------------------------------------------
     // Errors
@@ -289,6 +296,7 @@ interface IAttestationVerifierV1 {
     /// @param _river                The River proxy address; used for the EIP-712 verifyingContract
     ///                              binding and for the cross-contract admin lookup.
     /// @param _depositDataBuffer    The pre-commit buffer the keeper writes to.
+    /// @param _withdrawContract     The withdraw contract address of the protocol
     /// @param _rootAttesters Initial set of root attester EOAs.
     /// @param _quorum               Initial attestation quorum (1 ≤ quorum ≤ rootAttesters.length).
     /// @param _genesisForkVersion   Genesis fork version used to derive the BLS deposit domain.
@@ -298,6 +306,7 @@ interface IAttestationVerifierV1 {
     function initAttestationVerifierV1(
         address _river,
         address _depositDataBuffer,
+        address _withdrawContract,
         address[] calldata _rootAttesters,
         uint256 _quorum,
         bytes4 _genesisForkVersion,
@@ -363,6 +372,11 @@ interface IAttestationVerifierV1 {
     /// @dev Once removed, the pubkeys no longer authorize top-up deposits through `fetchAndValidateDeposits()`.
     /// @param pubkeys The 48-byte BLS pubkeys to remove
     function removeExitedValidatorPubkeys(bytes[] calldata pubkeys) external;
+
+    /// @notice Remove an exited validator pubkey from the Pectra lookup. Only callable by the Withdraw contract.
+    /// @dev Once removed, the pubkey no longer authorizes top-up deposits through `fetchAndValidateDeposits()`.
+    /// @param pubkey The 48-byte BLS pubkey to remove
+    function removeExitedValidatorPubkey(bytes calldata pubkey) external;
 
     /// @notice Validate consolidation-committee attestations over a `ConsolidationObject` passed
     ///         in by the caller and mark the request as processed for replay protection.
