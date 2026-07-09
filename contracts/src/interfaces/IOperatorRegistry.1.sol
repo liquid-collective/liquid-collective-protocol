@@ -291,8 +291,8 @@ interface IOperatorsRegistryV1 {
     /// @param _river Address of River system
     function initOperatorsRegistryV1(address _admin, address _river) external;
 
-    /// @notice Initializes the operators registry for V1_1, migrating operators from V1 to V2 storage
-    function initOperatorsRegistryV1_1() external;
+    /// @notice Initializes the operators registry for V1_1
+    // function initOperatorsRegistryV1_1() external;
 
     /// @notice Migrates operators from V2 to V3 storage, dropping key-management fields
     /// @dev    Migrated operators start with `activeCLETH == 0`, which is only populated by the first

@@ -56,6 +56,8 @@ contract OperatorsRegistryStrictRiverV1 is OperatorsRegistryV1 {
 
 /// @dev Extension that exposes internal V1/V2 storage writers
 contract OperatorsRegistryWithMigrationHelpers is OperatorsRegistryV1 {
+    function sudoInitV1_1() external init(1) {}
+
     function sudoPushV2Operator(OperatorsV2.Operator memory op) external {
         OperatorsV2.push(op);
     }
@@ -1901,7 +1903,7 @@ contract OperatorsRegistryV1CoverageTests is OperatorsRegistryV1TestBase, Operat
         stopped[3] = 1;
         reg.sudoSetV2StoppedValidators(stopped);
 
-        reg.initOperatorsRegistryV1_1();
+        reg.sudoInitV1_1();
         reg.initOperatorsRegistryV1_2(makeAddr("withdraw"));
 
         uint256[] memory exited = reg.getExitedETHPerOperator();
