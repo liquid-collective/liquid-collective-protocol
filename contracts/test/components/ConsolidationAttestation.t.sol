@@ -25,6 +25,12 @@ contract MockRiverAdmin {
     }
 }
 
+contract AttestationVerifierBytesEqualHarness is AttestationVerifierV1 {
+    function exposedBytesEqual(bytes calldata a, bytes calldata b) external pure returns (bool) {
+        return _bytesEqual(a, b);
+    }
+}
+
 // ---------------------------------------------------------------------------
 // ConsolidationAttestationTest — exercises the consolidation half of
 // AttestationVerifierV1. The verifier now takes a `ConsolidationObject` directly
@@ -216,6 +222,22 @@ contract ConsolidationAttestationTest is Test {
     function _validateConsolidationAsRiver(IAttestationVerifierV1.ConsolidationObject memory consolidation) internal {
         vm.prank(address(river));
         verifier.validateConsolidation(consolidation);
+    }
+
+    // -----------------------------------------------------------------------
+    // Internal helper coverage
+    // -----------------------------------------------------------------------
+
+    function testBytesEqual_returnsFalseForDifferentLengths() public {
+        AttestationVerifierBytesEqualHarness harness = new AttestationVerifierBytesEqualHarness();
+
+        assertFalse(harness.exposedBytesEqual(hex"0102", hex"010203"));
+    }
+
+    function testBytesEqual_returnsFalseForSameLengthDifferentBytes() public {
+        AttestationVerifierBytesEqualHarness harness = new AttestationVerifierBytesEqualHarness();
+
+        assertFalse(harness.exposedBytesEqual(hex"010203", hex"010204"));
     }
 
     // -----------------------------------------------------------------------
