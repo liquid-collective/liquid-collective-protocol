@@ -3049,6 +3049,12 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         );
     }
 
+    /// @dev Warp to a timestamp at which `epoch` is finalized, honoring the configured genesisTime so
+    ///      these tests stay correct even if the River setup ever uses a non-zero genesisTime.
+    function _warpToFinalizedEpoch(uint256 epoch) private {
+        vm.warp(river.getCLSpec().genesisTime + (epoch + epochsUntilFinal) * slotsPerEpoch * secondsPerSlot);
+    }
+
     /// @dev Helper: deploy and init an AttestationVerifier pointed at this test's River.
     function _deployValidatorFor(address _river) internal returns (AttestationVerifierV1 v) {
         address[] memory _rootAttesters_ = new address[](2);
@@ -3286,7 +3292,7 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         // Set last reported balance so the small increase is within bounds.
         _seedStoredValidatorsBalance(32 ether);
         uint256 epoch = epochsPerFrame;
-        vm.warp((epoch + epochsUntilFinal) * slotsPerEpoch * secondsPerSlot);
+        _warpToFinalizedEpoch(epoch);
         IOracleManagerV1.ConsensusLayerReport memory clr;
         clr.epoch = epoch;
         clr.validatorsBalance = 32 ether + 1 wei;
@@ -3302,7 +3308,7 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         _initRiverMinimalForReporting();
         vm.store(address(river), IN_FLIGHT_DEPOSIT_SLOT, bytes32(uint256(32 ether)));
         uint256 epoch = epochsPerFrame;
-        vm.warp((epoch + epochsUntilFinal) * slotsPerEpoch * secondsPerSlot);
+        _warpToFinalizedEpoch(epoch);
         IOracleManagerV1.ConsensusLayerReport memory clr;
         clr.epoch = epoch;
         clr.validatorsBalance = 32 ether + 1 wei;
@@ -3324,7 +3330,7 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         vm.store(address(redeemManager), BUFFERED_EXCEEDING_ETH_SLOT, bytes32(uint256(1 ether)));
         vm.deal(address(redeemManager), 1 ether);
         uint256 epoch = epochsPerFrame;
-        vm.warp((epoch + epochsUntilFinal) * slotsPerEpoch * secondsPerSlot);
+        _warpToFinalizedEpoch(epoch);
         IOracleManagerV1.ConsensusLayerReport memory clr;
         clr.epoch = epoch;
         clr.validatorsBalance = 0;
@@ -3346,7 +3352,7 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         vm.store(address(river), CONSOLIDATION_BUFFER_SLOT, bytes32(uint256(1 ether)));
 
         uint256 epoch = epochsPerFrame;
-        vm.warp((epoch + epochsUntilFinal) * slotsPerEpoch * secondsPerSlot);
+        _warpToFinalizedEpoch(epoch);
         IOracleManagerV1.ConsensusLayerReport memory clr;
         clr.epoch = epoch;
         clr.validatorsBalance = 0;
@@ -3370,7 +3376,7 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         vm.store(address(river), CONSOLIDATION_BUFFER_SLOT, bytes32(uint256(1 ether)));
 
         uint256 epoch = epochsPerFrame;
-        vm.warp((epoch + epochsUntilFinal) * slotsPerEpoch * secondsPerSlot);
+        _warpToFinalizedEpoch(epoch);
         IOracleManagerV1.ConsensusLayerReport memory clr;
         clr.epoch = epoch;
         clr.validatorsBalance = 0;
@@ -3398,7 +3404,7 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         uint256 committedBalanceBefore = river.getCommittedBalance();
 
         uint256 epoch = epochsPerFrame;
-        vm.warp((epoch + epochsUntilFinal) * slotsPerEpoch * secondsPerSlot);
+        _warpToFinalizedEpoch(epoch);
         IOracleManagerV1.ConsensusLayerReport memory clr;
         clr.epoch = epoch;
         clr.validatorsBalance = 0;
@@ -3434,7 +3440,7 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         uint256 committedBalanceBefore = river.getCommittedBalance();
 
         uint256 epoch = epochsPerFrame;
-        vm.warp((epoch + epochsUntilFinal) * slotsPerEpoch * secondsPerSlot);
+        _warpToFinalizedEpoch(epoch);
         IOracleManagerV1.ConsensusLayerReport memory clr;
         clr.epoch = epoch;
         clr.validatorsBalance = 0;
@@ -3470,7 +3476,7 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         _seedStoredConsolidations(storedConsolidations);
 
         uint256 epoch = epochsPerFrame;
-        vm.warp((epoch + epochsUntilFinal) * slotsPerEpoch * secondsPerSlot);
+        _warpToFinalizedEpoch(epoch);
         IOracleManagerV1.ConsensusLayerReport memory clr;
         clr.epoch = epoch;
         clr.validatorsBalance = 0;
@@ -3515,7 +3521,7 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         // The net increase (reportedConsolidations - B) is bounded by the APR upper bound over the elapsed
         // period; keep it tiny so we exercise the cap without tripping the bound.
         uint256 epoch = epochsPerFrame;
-        vm.warp((epoch + epochsUntilFinal) * slotsPerEpoch * secondsPerSlot);
+        _warpToFinalizedEpoch(epoch);
         IOracleManagerV1.ConsensusLayerReport memory clr;
         clr.epoch = epoch;
         // validatorsBalance increase must accommodate the APR bound. Choose the reported consolidation
@@ -3571,7 +3577,7 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         uint256 totalUnderlyingBefore = river.totalUnderlyingSupply();
 
         uint256 epoch = epochsPerFrame;
-        vm.warp((epoch + epochsUntilFinal) * slotsPerEpoch * secondsPerSlot);
+        _warpToFinalizedEpoch(epoch);
         IOracleManagerV1.ConsensusLayerReport memory clr;
         clr.epoch = epoch;
         // validatorsBalance increases by exactly the consolidation delta (last stored VB = 0).
@@ -3608,7 +3614,7 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         _seedStoredTotalDepositedActivatedETH(lastDeposited);
 
         uint256 epoch = epochsPerFrame;
-        vm.warp((epoch + epochsUntilFinal) * slotsPerEpoch * secondsPerSlot);
+        _warpToFinalizedEpoch(epoch);
         IOracleManagerV1.ConsensusLayerReport memory clr;
         clr.epoch = epoch;
         // New value strictly below the stored one triggers the decrease revert.
@@ -3636,7 +3642,7 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         vm.store(address(river), IN_FLIGHT_DEPOSIT_SLOT, bytes32(inFlight));
 
         uint256 epoch = epochsPerFrame;
-        vm.warp((epoch + epochsUntilFinal) * slotsPerEpoch * secondsPerSlot);
+        _warpToFinalizedEpoch(epoch);
         IOracleManagerV1.ConsensusLayerReport memory clr;
         clr.epoch = epoch;
         // Increase (newDeposited - 0) is strictly greater than the in-flight ETH.
@@ -3665,7 +3671,7 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         _seedStoredValidatorsCount(lastCount);
 
         uint256 epoch = epochsPerFrame;
-        vm.warp((epoch + epochsUntilFinal) * slotsPerEpoch * secondsPerSlot);
+        _warpToFinalizedEpoch(epoch);
         IOracleManagerV1.ConsensusLayerReport memory clr;
         clr.epoch = epoch;
         uint32 newCount = 3; // strictly less than lastCount -> revert
@@ -3693,7 +3699,7 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         _seedStoredConsolidations(lastConsolidations);
 
         uint256 epoch = epochsPerFrame;
-        vm.warp((epoch + epochsUntilFinal) * slotsPerEpoch * secondsPerSlot);
+        _warpToFinalizedEpoch(epoch);
         IOracleManagerV1.ConsensusLayerReport memory clr;
         clr.epoch = epoch;
         clr.totalDepositedActivatedETH = 0;
@@ -3735,7 +3741,7 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         _seedStoredValidatorsBalance(lastValidatorsBalance);
 
         uint256 epoch = epochsPerFrame;
-        vm.warp((epoch + epochsUntilFinal) * slotsPerEpoch * secondsPerSlot);
+        _warpToFinalizedEpoch(epoch);
 
         // Compute the maximum allowed decrease for the current pre-report underlying supply and keep the loss
         // strictly within it so the lower-bound revert is not tripped.
