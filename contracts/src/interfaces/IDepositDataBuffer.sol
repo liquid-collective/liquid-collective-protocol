@@ -10,15 +10,16 @@ import "../libraries/BLS12_381.sol";
 ///      submission unique: byte-identical batches submitted more than once receive distinct,
 ///      individually-addressable ids rather than colliding.
 /// @dev Replay/processed state lives on the buffer itself: the processor flips a per-batch `processed`
-///      flag via `markDepositDataProcessed`, and the AttestationVerifier reads `isDepositDataProcessed`
-///      to reject replays. The buffer — not the verifier — is the authoritative source for this flag.
-///      In production the processor is the River deposit-execution contract.
+///      flag via `markDepositDataProcessed`, and the consumer reads `isDepositDataProcessed` to reject
+///      replays. The buffer — not the consumer — is the authoritative source for this flag. In this
+///      deployment the processor and consumer are LC contracts: the processor is River, the consumer
+///      is the AttestationVerifier.
 interface IDepositDataBuffer {
     /// @notice An initial validator deposit. BLS signature is verified by the verifier and
     ///         passed to the official deposit contract; pubkey must NOT already be in
     ///         `PectraValidatorPubkeyLookup`.
-    /// @dev Withdrawal credentials are NOT stored per-entry. The canonical River WC is
-    ///      passed into `fetchAndValidateDeposits()` at deposit time and used both for BLS signature
+    /// @dev Withdrawal credentials are NOT stored per-entry. The canonical withdrawal credentials are
+    ///      passed in by the consumer at deposit time and used both for BLS signature
     ///      verification and for the official deposit contract call, removing any need
     ///      to trust the buffer producer on this field.
     struct Deposit {
@@ -29,7 +30,7 @@ interface IDepositDataBuffer {
         /// @dev Deposit amount in wei (must be a multiple of 1 gwei). Typically 32 ether.
         uint256 amount;
         /// @dev Index of the node operator this deposit funds, as registered in the
-        ///      OperatorsRegistry. Range-checked by River against the live operator count.
+        ///      OperatorsRegistry. Range-checked by the consumer against the live operator count.
         uint256 operatorIdx;
         /// @dev Y-coordinates for BLS decompression of the pubkey + signature.
         BLS12_381.DepositY depositY;
@@ -76,7 +77,7 @@ interface IDepositDataBuffer {
         bytes32 indexed depositDataBufferId, uint256 nonce, uint256 depositCount, uint256 topUpCount
     );
 
-    /// @notice Emitted when River marks a queued batch as processed.
+    /// @notice Emitted when the processor marks a queued batch as processed.
     /// @param depositDataBufferId  The identifier of the batch that was flagged
     event DepositDataProcessed(bytes32 indexed depositDataBufferId);
 

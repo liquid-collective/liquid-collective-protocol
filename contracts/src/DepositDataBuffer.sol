@@ -11,11 +11,12 @@ import "./libraries/LibSanitize.sol";
 ///         back by id. Each submission is uniquely addressable because the batch nonce (`lastQueuedIdx`
 ///         at submit time) is folded into the id, so byte-identical batches submitted twice never
 ///         collide.
-/// @dev The buffer owns the authoritative `processed` flag: only River may flip it via
-///      `markDepositDataProcessed`, and the AttestationVerifier consults `isDepositDataProcessed`
-///      to reject replays. Withdrawal credentials are intentionally NOT stored — the canonical River
-///      withdrawal credentials are supplied by River at deposit time and used for BLS verification and
-///      the official deposit-contract call, so the buffer producer is never trusted on that field.
+/// @dev The buffer owns the authoritative `processed` flag: only the processor may flip it via
+///      `markDepositDataProcessed`, and the consumer (the AttestationVerifier, in this deployment)
+///      consults `isDepositDataProcessed` to reject replays. Withdrawal credentials are intentionally
+///      NOT stored — the canonical withdrawal credentials are supplied by the consumer at deposit time
+///      and used for BLS verification and the official deposit-contract call, so the buffer producer is
+///      never trusted on that field.
 contract DepositDataBuffer is IDepositDataBuffer {
     /// @notice The processor — the only account allowed to mark deposit data processed.
     /// @dev Immutable: set once at construction and used to gate `markDepositDataProcessed`. In
