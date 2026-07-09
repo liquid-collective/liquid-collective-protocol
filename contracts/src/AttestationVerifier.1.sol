@@ -632,15 +632,11 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
     ///      pubkey byte lengths, and single-use source pubkeys) plus the attestation
     ///      quorum (ECDSA signature recovery against the consolidation committee). It
     ///      does NOT check:
-    ///        - Target pubkey uniqueness.
     ///        - `totalAmount` gwei alignment, upper bound, or correlation with the number
     ///          of (source, target) pairs.
-    ///        - Whether the source validators actually exist on the consensus layer or
-    ///          carry the protocol's withdrawal credentials.
+    ///        - Whether the source validators actually exist on the consensus layer
     ///      These are the responsibility of the caller (off-chain pipeline) and the
-    ///      consolidation committee that signs the request. The eventual
-    ///      `mintLsETHForConsolidation` River integration is the place to enforce any
-    ///      additional financial caps on `totalAmount`.
+    ///      consolidation committee that signs the request.
     function validateConsolidation(IAttestationVerifierV1.ConsolidationObject calldata consolidation)
         external
         onlyRiver
@@ -653,7 +649,19 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
         if (consolidation.totalAmount == 0) revert ZeroConsolidationTotalAmount();
         if (consolidation.withdrawalAddress == address(0)) revert ZeroConsolidationWithdrawalAddress();
 
-        // 2. Compute the EIP-712 digest the committee signed.
+        // 2. Per-pair pubkey length checks, before hashing dynamic bytes.
+        for (uint256 i = 0; i < sourceLen; ++i) {
+            uint256 sourcePubkeyLength = consolidation.sourcePubkeys[i].length;
+            if (sourcePubkeyLength != CONSOLIDATION_PUBKEY_LENGTH) {
+                revert InvalidConsolidationPubkeyLength(i, sourcePubkeyLength, true);
+            }
+            uint256 targetPubkeyLength = consolidation.targetPubkeys[i].length;
+            if (targetPubkeyLength != CONSOLIDATION_PUBKEY_LENGTH) {
+                revert InvalidConsolidationPubkeyLength(i, targetPubkeyLength, false);
+            }
+        }
+
+        // 3. Compute the EIP-712 digest the committee signed.
         //    The struct's `signatures` field is NOT part of the typed data — only the four
         //    request fields are. `bytes[]` arrays follow EIP-712 array rules: each element
         //    becomes `keccak256(element)`, then the array hashes to `keccak256` over the
@@ -672,19 +680,16 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
             )
         );
 
-        // 3. Replay protection — reject any consolidation we've already accepted.
+        // 4. Replay protection — reject any consolidation we've already accepted.
         //    Checked BEFORE quorum verification so a previously-accepted request fails fast
         //    even if the supplied signatures happen to be valid again.
         if (ProcessedConsolidations.isProcessed(structHash)) {
             revert ConsolidationAlreadyProcessed(structHash);
         }
 
-        // 4. Per-pair pubkey checks.
+        // 5. Per-source single-use checks.
         for (uint256 i = 0; i < sourceLen; ++i) {
             bytes calldata sourcePubkey = consolidation.sourcePubkeys[i];
-            if (sourcePubkey.length != CONSOLIDATION_PUBKEY_LENGTH) {
-                revert InvalidConsolidationPubkeyLength(i, sourcePubkey.length, true);
-            }
             if (ProcessedConsolidationSourcePubkeys.isProcessed(sourcePubkey)) {
                 revert ConsolidationSourceAlreadyProcessed(sourcePubkey);
             }
@@ -697,22 +702,16 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
                     revert ConsolidationSourceAlreadyProcessed(sourcePubkey);
                 }
             }
-            bytes calldata targetPubkey = consolidation.targetPubkeys[i];
-            if (targetPubkey.length != CONSOLIDATION_PUBKEY_LENGTH) {
-                revert InvalidConsolidationPubkeyLength(i, targetPubkey.length, false);
-            }
         }
 
-        // 5. Verify the consolidation attestation quorum from the supplied signatures
+        // 6. Verify the consolidation attestation quorum from the supplied signatures
         bytes32 digest = ECDSA.toTypedDataHash(domainSep, structHash);
         _verifyConsolidationAttestationQuorum(digest, consolidation.signatures);
 
-        // 6. Mark the request and all of its sources as processed only after quorum
+        // 7. Mark the request and all of its sources as processed only after quorum
         //    succeeds, so malformed signatures cannot burn a source pubkey.
         ProcessedConsolidations.markProcessed(structHash);
-        for (uint256 i = 0; i < sourceLen; ++i) {
-            ProcessedConsolidationSourcePubkeys.markProcessed(consolidation.sourcePubkeys[i]);
-        }
+        ProcessedConsolidationSourcePubkeys.markProcessed(consolidation.sourcePubkeys);
         emit ConsolidationProcessed(structHash);
     }
 

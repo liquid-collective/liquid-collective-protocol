@@ -379,10 +379,10 @@ interface IAttestationVerifierV1 {
     ///         source. Note that this makes the function state-mutating (not `view`) and
     ///         callable only by River.
     ///
-    ///         Trust boundary: this function only validates structural shape and the attestation
-    ///         quorum. The following are intentionally NOT checked here and are delegated to the
-    ///         caller (off-chain pipeline / consolidation committee) or to the eventual River
-    ///         integration:
+    ///         Trust boundary: this function validates structural shape, single-use source
+    ///         pubkeys, and the attestation quorum. The following are intentionally NOT checked
+    ///         here and are delegated to the caller (off-chain pipeline / consolidation committee)
+    ///         or to the eventual River integration:
     ///           - Target pubkey uniqueness
     ///           - `totalAmount` gwei alignment, upper bound, or correlation with pair count
     ///           - Financial caps (e.g. against committed/in-flight balances)

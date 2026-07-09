@@ -18,10 +18,13 @@ library ProcessedConsolidationSourcePubkeys {
         return LibUnstructuredStorage.getStorageBool(slot);
     }
 
-    /// @notice Mark a consolidation source pubkey as consumed.
-    /// @param sourcePubkey The raw 48-byte BLS source pubkey.
-    function markProcessed(bytes calldata sourcePubkey) internal {
-        bytes32 slot = keccak256(abi.encode(PROCESSED_CONSOLIDATION_SOURCE_PUBKEYS_MAPPING_BASE_SLOT, sourcePubkey));
-        LibUnstructuredStorage.setStorageBool(slot, true);
+    /// @notice Mark consolidation source pubkeys as consumed.
+    /// @param sourcePubkeys The raw 48-byte BLS source pubkeys.
+    function markProcessed(bytes[] calldata sourcePubkeys) internal {
+        for (uint256 i = 0; i < sourcePubkeys.length; i++) {
+            bytes32 slot =
+                keccak256(abi.encode(PROCESSED_CONSOLIDATION_SOURCE_PUBKEYS_MAPPING_BASE_SLOT, sourcePubkeys[i]));
+            LibUnstructuredStorage.setStorageBool(slot, true);
+        }
     }
 }
