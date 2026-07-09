@@ -20,8 +20,8 @@ contract AttestationBufferInvariantTest is Test {
 
         bytes4[] memory selectors = new bytes4[](3);
         selectors[0] = AttestationBufferHandler.submit.selector;
-        selectors[1] = AttestationBufferHandler.raiseError.selector;
-        selectors[2] = AttestationBufferHandler.submitToFlagged.selector;
+        selectors[1] = AttestationBufferHandler.vetoBatch.selector;
+        selectors[2] = AttestationBufferHandler.submitToVetoed.selector;
         targetSelector(FuzzSelector({addr: address(handler), selectors: selectors}));
     }
 
@@ -35,11 +35,11 @@ contract AttestationBufferInvariantTest is Test {
         assertEq(address(buffer).balance, 0, "A2: buffer holds ETH");
     }
 
-    /// @notice A3: a flagged id stays flagged (the veto is sticky — there is no un-flag).
-    function invariant_flaggedIdsStayFlagged() public {
-        uint256 len = handler.ghost_flaggedIdsLength();
+    /// @notice A3: a vetoed id stays vetoed (the veto is sticky — there is no un-veto).
+    function invariant_vetoedIdsStayVetoed() public {
+        uint256 len = handler.ghost_vetoedIdsLength();
         for (uint256 i = 0; i < len; i++) {
-            assertTrue(buffer.isBatchErrored(handler.ghost_flaggedIdAt(i)), "A3: flagged id became unflagged");
+            assertTrue(buffer.isBatchVetoed(handler.ghost_vetoedIdAt(i)), "A3: vetoed id became unvetoed");
         }
     }
 }

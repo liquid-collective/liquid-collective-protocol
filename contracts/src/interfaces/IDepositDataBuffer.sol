@@ -10,15 +10,16 @@ import "../libraries/BLS12_381.sol";
 ///      submission unique: byte-identical batches submitted more than once receive distinct,
 ///      individually-addressable ids rather than colliding.
 /// @dev Replay/processed state lives on the buffer itself: the processor flips a per-batch `processed`
-///      flag via `markDepositDataProcessed`, and the AttestationVerifier reads `isDepositDataProcessed`
-///      to reject replays. The buffer — not the verifier — is the authoritative source for this flag.
-///      In production the processor is the River deposit-execution contract.
+///      flag via `markDepositDataProcessed`, and the consumer reads `isDepositDataProcessed` to reject
+///      replays. The buffer — not the consumer — is the authoritative source for this flag. In this
+///      deployment the processor and consumer are LC contracts: the processor is River, the consumer
+///      is the AttestationVerifier.
 interface IDepositDataBuffer {
     /// @notice An initial validator deposit. BLS signature is verified by the verifier and
     ///         passed to the official deposit contract; pubkey must NOT already be in
     ///         `PectraValidatorPubkeyLookup`.
-    /// @dev Withdrawal credentials are NOT stored per-entry. The canonical River WC is
-    ///      passed into `fetchAndValidateDeposits()` at deposit time and used both for BLS signature
+    /// @dev Withdrawal credentials are NOT stored per-entry. The canonical withdrawal credentials are
+    ///      passed in by the consumer at deposit time and used both for BLS signature
     ///      verification and for the official deposit contract call, removing any need
     ///      to trust the buffer producer on this field.
     struct Deposit {
@@ -29,7 +30,7 @@ interface IDepositDataBuffer {
         /// @dev Deposit amount in wei (must be a multiple of 1 gwei). Typically 32 ether.
         uint256 amount;
         /// @dev Index of the node operator this deposit funds, as registered in the
-        ///      OperatorsRegistry. Range-checked by River against the live operator count.
+        ///      OperatorsRegistry. Range-checked by the consumer against the live operator count.
         uint256 operatorIdx;
         /// @dev Y-coordinates for BLS decompression of the pubkey + signature.
         BLS12_381.DepositY depositY;
@@ -76,13 +77,13 @@ interface IDepositDataBuffer {
         bytes32 indexed depositDataBufferId, uint256 nonce, uint256 depositCount, uint256 topUpCount
     );
 
-    /// @notice Emitted when River marks a queued batch as processed.
+    /// @notice Emitted when the processor marks a queued batch as processed.
     /// @param depositDataBufferId  The identifier of the batch that was flagged
     event DepositDataProcessed(bytes32 indexed depositDataBufferId);
 
-    /// @notice Emitted when the admin rotates the authorized writer.
-    /// @param writer  The new authorized writer address
-    event SetWriter(address indexed writer);
+    /// @notice Emitted when the admin rotates the authorized producer.
+    /// @param producer  The new authorized producer address
+    event SetProducer(address indexed producer);
 
     // -----------------------------------------------------------------------
     // Errors
@@ -103,8 +104,8 @@ interface IDepositDataBuffer {
     /// @notice Reverts when a batch has already been marked processed
     error DepositDataAlreadyProcessed(bytes32 depositDataBufferId);
 
-    /// @notice Reverts when caller is not the authorized writer
-    error OnlyWriter();
+    /// @notice Reverts when caller is not the authorized producer
+    error OnlyProducer();
 
     /// @notice Reverts when caller is not the authorized admin
     error OnlyAdmin();
@@ -129,7 +130,7 @@ interface IDepositDataBuffer {
     // -----------------------------------------------------------------------
 
     /// @notice Submit a deposit batch to the buffer.
-    /// @dev Restricted to the writer. The buffer ID folds in the batch nonce: it MUST equal
+    /// @dev Restricted to the producer. The buffer ID folds in the batch nonce: it MUST equal
     ///      `keccak256(abi.encode(batch, nonce))` where `nonce == lastQueuedIdx` at submit time. The
     ///      nonce is then stored so the AttestationVerifier can reconstruct and re-check the binding.
     /// @param depositDataBufferId  The expected batch ID (must equal keccak256(abi.encode(batch, nonce)))
@@ -156,13 +157,13 @@ interface IDepositDataBuffer {
     /// @return True if the batch has been marked processed
     function isDepositDataProcessed(bytes32 depositDataBufferId) external view returns (bool);
 
-    /// @notice Rotate the authorized writer. Restricted to the admin.
-    /// @param newWriter  The new authorized writer address
-    function setWriter(address newWriter) external;
+    /// @notice Rotate the authorized producer. Restricted to the admin.
+    /// @param newProducer  The new authorized producer address
+    function setProducer(address newProducer) external;
 
-    /// @notice Returns the authorized writer address.
-    /// @return The authorized writer address
-    function getWriter() external view returns (address);
+    /// @notice Returns the authorized producer address.
+    /// @return The authorized producer address
+    function getProducer() external view returns (address);
 
     /// @notice Returns the admin address.
     /// @return The admin address

@@ -171,71 +171,71 @@ contract AttestationBufferTest is Test {
     }
 
     // -----------------------------------------------------------------------
-    // raiseError — "unhappy path"
+    // vetoBatch — "unhappy path"
     // -----------------------------------------------------------------------
 
-    function test_RaiseError_EmitsAndFlags() public {
+    function test_VetoBatch_EmitsAndFlags() public {
         bytes32 depositDataBufferId = keccak256("bad-batch");
         uint256 errorCode = 42;
         bytes memory errorMessage = bytes("withdrawal credentials mismatch");
         address raiser = makeAddr("committeeMember");
 
-        assertFalse(buffer.isBatchErrored(depositDataBufferId));
+        assertFalse(buffer.isBatchVetoed(depositDataBufferId));
 
         vm.expectEmit(true, true, true, true);
         emit AttestationError(0, depositDataBufferId, raiser, errorCode, errorMessage);
 
         vm.prank(raiser);
-        buffer.raiseError(depositDataBufferId, errorCode, errorMessage);
+        buffer.vetoBatch(depositDataBufferId, errorCode, errorMessage);
 
-        assertTrue(buffer.isBatchErrored(depositDataBufferId));
+        assertTrue(buffer.isBatchVetoed(depositDataBufferId));
         assertEq(buffer.lastErrorIdx(), 1);
     }
 
-    /// @dev raiseError is open: attribution is by msg.sender, filtering is off-chain.
-    function test_RaiseError_AnyoneCanRaise() public {
+    /// @dev vetoBatch is open: attribution is by msg.sender, filtering is off-chain.
+    function test_VetoBatch_AnyoneCanVeto() public {
         vm.prank(makeAddr("alice"));
-        buffer.raiseError(keccak256("b1"), 1, hex"01");
+        buffer.vetoBatch(keccak256("b1"), 1, hex"01");
         vm.prank(makeAddr("bob"));
-        buffer.raiseError(keccak256("b2"), 2, hex"02");
+        buffer.vetoBatch(keccak256("b2"), 2, hex"02");
         assertEq(buffer.lastErrorIdx(), 2);
     }
 
-    /// @dev Once flagged, further attestations for that id revert (aggregation stops on-chain).
-    function test_SubmitAttestation_RevertsAfterFlag() public {
-        bytes32 depositDataBufferId = keccak256("flagged");
-        buffer.raiseError(depositDataBufferId, 1, hex"aa");
+    /// @dev Once vetoed, further attestations for that id revert (aggregation stops on-chain).
+    function test_SubmitAttestation_RevertsAfterVeto() public {
+        bytes32 depositDataBufferId = keccak256("vetoed");
+        buffer.vetoBatch(depositDataBufferId, 1, hex"aa");
 
-        vm.expectRevert(abi.encodeWithSelector(IAttestationBuffer.BatchNotReady.selector, depositDataBufferId));
+        vm.expectRevert(abi.encodeWithSelector(IAttestationBuffer.BatchVetoed.selector, depositDataBufferId));
         buffer.submitAttestation(depositDataBufferId, keccak256("root"), hex"bb");
     }
 
-    /// @dev The flag is per-id: an unflagged id (e.g. a re-queue under a new nonce) still accepts attestations.
-    function test_SubmitAttestation_UnflaggedIdStillWorks() public {
-        bytes32 flagged = keccak256("flagged");
+    /// @dev The veto is per-id: an unvetoed id (e.g. a re-queue under a new nonce) still accepts attestations.
+    function test_SubmitAttestation_UnvetoedIdStillWorks() public {
+        bytes32 vetoed = keccak256("vetoed");
         bytes32 other = keccak256("other");
-        buffer.raiseError(flagged, 1, hex"aa");
+        buffer.vetoBatch(vetoed, 1, hex"aa");
 
         // A different id is unaffected.
         buffer.submitAttestation(other, keccak256("root"), hex"bb");
         assertEq(buffer.lastAttestationIdx(), 1);
-        assertFalse(buffer.isBatchErrored(other));
+        assertFalse(buffer.isBatchVetoed(other));
     }
 
-    /// @dev Re-raising an already-flagged id is allowed: it emits again and the flag stays true.
-    function test_RaiseError_ReRaiseEmitsAgain() public {
+    /// @dev Re-vetoing an already-vetoed id is allowed: it emits again and the flag stays true.
+    function test_VetoBatch_ReVetoEmitsAgain() public {
         bytes32 depositDataBufferId = keccak256("bad-batch");
-        buffer.raiseError(depositDataBufferId, 1, hex"01");
+        buffer.vetoBatch(depositDataBufferId, 1, hex"01");
 
         vm.expectEmit(true, true, true, true);
         emit AttestationError(1, depositDataBufferId, address(this), 2, hex"02");
-        buffer.raiseError(depositDataBufferId, 2, hex"02");
+        buffer.vetoBatch(depositDataBufferId, 2, hex"02");
 
-        assertTrue(buffer.isBatchErrored(depositDataBufferId));
+        assertTrue(buffer.isBatchVetoed(depositDataBufferId));
         assertEq(buffer.lastErrorIdx(), 2);
     }
 
-    function test_IsBatchErrored_UnknownIsFalse() public {
-        assertFalse(buffer.isBatchErrored(keccak256("never-seen")));
+    function test_IsBatchVetoed_UnknownIsFalse() public {
+        assertFalse(buffer.isBatchVetoed(keccak256("never-seen")));
     }
 }

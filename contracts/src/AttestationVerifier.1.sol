@@ -425,7 +425,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
         uint256 committedBalance
     ) external view returns (IDepositDataBuffer.DepositObject memory batch, uint256 totalAmount) {
         // 0. Replay protection — reject any batch ID the buffer has already marked processed.
-        //    The buffer is the authoritative source for this flag (River flips it after execution).
+        //    The buffer is the authoritative source for this flag (the processor flips it after execution).
         address depositDataBuffer = DepositDataBufferAddress.get();
         if (IDepositDataBuffer(depositDataBuffer).isDepositDataProcessed(depositDataBufferId)) {
             revert DepositDataBufferIdAlreadyProcessed(depositDataBufferId);
