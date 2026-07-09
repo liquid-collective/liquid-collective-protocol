@@ -741,71 +741,71 @@ contract ConsolidationAttestationTest is Test {
         bytes memory sourceGood = _pubkey(831);
 
         // Consume `sourceTainted` via a first, valid single-pair request.
-        bytes[] memory firstSources = new bytes[](1);
-        firstSources[0] = sourceTainted;
-        bytes[] memory firstTargets = new bytes[](1);
-        firstTargets[0] = _pubkey(930);
-        uint256 firstAmount = 32 ether;
-        bytes32 firstDigest = _consolidationDigest(user, firstSources, firstTargets, firstAmount);
-        bytes[] memory firstSigs = new bytes[](2);
-        firstSigs[0] = _sign(pk1, firstDigest);
-        firstSigs[1] = _sign(pk2, firstDigest);
+        bytes[] memory sources = new bytes[](1);
+        sources[0] = sourceTainted;
+        bytes[] memory targets = new bytes[](1);
+        targets[0] = _pubkey(930);
+        uint256 totalAmount = 32 ether;
+        bytes32 digest = _consolidationDigest(user, sources, targets, totalAmount);
+        bytes[] memory signatures = new bytes[](2);
+        signatures[0] = _sign(pk1, digest);
+        signatures[1] = _sign(pk2, digest);
         _validateConsolidationAsRiver(
             IAttestationVerifierV1.ConsolidationObject({
                 withdrawalAddress: user,
-                sourcePubkeys: firstSources,
-                targetPubkeys: firstTargets,
-                totalAmount: firstAmount,
-                signatures: firstSigs
+                sourcePubkeys: sources,
+                targetPubkeys: targets,
+                totalAmount: totalAmount,
+                signatures: signatures
             })
         );
 
         // Second request: [sourceGood, sourceTainted] — the tainted source is at index 1.
         // Quorum is valid, so the ONLY reason to revert is the already-consumed source.
-        bytes[] memory secondSources = new bytes[](2);
-        secondSources[0] = sourceGood;
-        secondSources[1] = sourceTainted;
-        bytes[] memory secondTargets = new bytes[](2);
-        secondTargets[0] = _pubkey(931);
-        secondTargets[1] = _pubkey(932);
-        uint256 secondAmount = 64 ether;
-        bytes32 secondDigest = _consolidationDigest(user, secondSources, secondTargets, secondAmount);
-        bytes[] memory secondSigs = new bytes[](2);
-        secondSigs[0] = _sign(pk1, secondDigest);
-        secondSigs[1] = _sign(pk2, secondDigest);
+        sources = new bytes[](2);
+        sources[0] = sourceGood;
+        sources[1] = sourceTainted;
+        targets = new bytes[](2);
+        targets[0] = _pubkey(931);
+        targets[1] = _pubkey(932);
+        totalAmount = 64 ether;
+        digest = _consolidationDigest(user, sources, targets, totalAmount);
+        signatures = new bytes[](2);
+        signatures[0] = _sign(pk1, digest);
+        signatures[1] = _sign(pk2, digest);
         vm.expectRevert(
             abi.encodeWithSelector(IAttestationVerifierV1.ConsolidationSourceAlreadyProcessed.selector, sourceTainted)
         );
         _validateConsolidationAsRiver(
             IAttestationVerifierV1.ConsolidationObject({
                 withdrawalAddress: user,
-                sourcePubkeys: secondSources,
-                targetPubkeys: secondTargets,
-                totalAmount: secondAmount,
-                signatures: secondSigs
+                sourcePubkeys: sources,
+                targetPubkeys: targets,
+                totalAmount: totalAmount,
+                signatures: signatures
             })
         );
 
         // `sourceGood` must still be free: a later request consuming it alone succeeds.
-        bytes[] memory thirdSources = new bytes[](1);
-        thirdSources[0] = sourceGood;
-        bytes[] memory thirdTargets = new bytes[](1);
-        thirdTargets[0] = _pubkey(933);
-        uint256 thirdAmount = 32 ether;
-        bytes32 thirdDigest = _consolidationDigest(user, thirdSources, thirdTargets, thirdAmount);
-        bytes[] memory thirdSigs = new bytes[](2);
-        thirdSigs[0] = _sign(pk1, thirdDigest);
-        thirdSigs[1] = _sign(pk2, thirdDigest);
-        bytes32 thirdStructHash = _consolidationStructHash(user, thirdSources, thirdTargets, thirdAmount);
+        sources = new bytes[](1);
+        sources[0] = sourceGood;
+        targets = new bytes[](1);
+        targets[0] = _pubkey(933);
+        totalAmount = 32 ether;
+        digest = _consolidationDigest(user, sources, targets, totalAmount);
+        signatures = new bytes[](2);
+        signatures[0] = _sign(pk1, digest);
+        signatures[1] = _sign(pk2, digest);
+        bytes32 structHash = _consolidationStructHash(user, sources, targets, totalAmount);
         vm.expectEmit(true, false, false, true);
-        emit IAttestationVerifierV1.ConsolidationProcessed(thirdStructHash);
+        emit IAttestationVerifierV1.ConsolidationProcessed(structHash);
         _validateConsolidationAsRiver(
             IAttestationVerifierV1.ConsolidationObject({
                 withdrawalAddress: user,
-                sourcePubkeys: thirdSources,
-                targetPubkeys: thirdTargets,
-                totalAmount: thirdAmount,
-                signatures: thirdSigs
+                sourcePubkeys: sources,
+                targetPubkeys: targets,
+                totalAmount: totalAmount,
+                signatures: signatures
             })
         );
     }
