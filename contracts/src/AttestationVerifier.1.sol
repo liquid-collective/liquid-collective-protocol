@@ -668,13 +668,12 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
         //    concatenation of those 32-byte element hashes.
         bytes32 domainSep = ConsolidationDomainSeparator.get();
         if (domainSep == bytes32(0)) revert ZeroConsolidationDomainSeparator();
-        (bytes32 sourcePubkeysHash, bytes32[] memory sourcePubkeyHashes) =
-            _hashBytesArrayWithElementHashes(consolidation.sourcePubkeys);
+        bytes32[] memory sourcePubkeyHashes = _hashBytesArrayElements(consolidation.sourcePubkeys);
         bytes32 structHash = keccak256(
             abi.encode(
                 ATTEST_CONSOLIDATION_TYPEHASH,
                 consolidation.withdrawalAddress,
-                sourcePubkeysHash,
+                keccak256(abi.encodePacked(sourcePubkeyHashes)),
                 _hashBytesArray(consolidation.targetPubkeys),
                 consolidation.totalAmount
             )
@@ -812,20 +811,14 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
     /// @dev EIP-712 array hash for a `bytes[]` field. Each element is replaced by its
     ///      `keccak256`, and the resulting `bytes32[]` is concatenated and hashed.
     function _hashBytesArray(bytes[] calldata arr) internal pure returns (bytes32) {
-        (bytes32 arrayHash,) = _hashBytesArrayWithElementHashes(arr);
-        return arrayHash;
+        return keccak256(abi.encodePacked(_hashBytesArrayElements(arr)));
     }
 
-    function _hashBytesArrayWithElementHashes(bytes[] calldata arr)
-        internal
-        pure
-        returns (bytes32 arrayHash, bytes32[] memory hashes)
-    {
+    function _hashBytesArrayElements(bytes[] calldata arr) internal pure returns (bytes32[] memory hashes) {
         hashes = new bytes32[](arr.length);
         for (uint256 i = 0; i < arr.length; i++) {
             hashes[i] = keccak256(arr[i]);
         }
-        arrayHash = keccak256(abi.encodePacked(hashes));
     }
 
     function _bytesEqual(bytes calldata a, bytes calldata b) internal pure returns (bool) {
