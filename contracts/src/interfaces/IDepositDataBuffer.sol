@@ -85,6 +85,14 @@ interface IDepositDataBuffer {
     /// @param producer  The new authorized producer address
     event SetProducer(address indexed producer);
 
+    /// @notice Emitted when a new pending admin is proposed.
+    /// @param pendingAdmin  The proposed pending admin address
+    event SetPendingAdmin(address indexed pendingAdmin);
+
+    /// @notice Emitted when the admin is changed (a pending admin accepts the transfer).
+    /// @param admin  The new admin address
+    event SetAdmin(address indexed admin);
+
     // -----------------------------------------------------------------------
     // Errors
     // -----------------------------------------------------------------------
@@ -109,6 +117,9 @@ interface IDepositDataBuffer {
 
     /// @notice Reverts when caller is not the authorized admin
     error OnlyAdmin();
+
+    /// @notice Reverts when caller is not the pending admin
+    error OnlyPendingAdmin();
 
     /// @notice Reverts when caller is not the processor (the only account allowed to mark data processed)
     error OnlyProcessor();
@@ -165,9 +176,24 @@ interface IDepositDataBuffer {
     /// @return The authorized producer address
     function getProducer() external view returns (address);
 
+    /// @notice Propose a new admin. Restricted to the current admin.
+    /// @dev Two-step transfer: the proposed admin must call `acceptAdmin` to take ownership, proving
+    ///      the new address can transact. This prevents an irrecoverable transfer to a wrong address —
+    ///      the buffer is immutable, so a bricked admin could never be recovered by an upgrade.
+    /// @param newAdmin  The proposed pending admin address
+    function proposeAdmin(address newAdmin) external;
+
+    /// @notice Accept the admin transfer. Restricted to the pending admin.
+    /// @dev Promotes the pending admin to admin and clears the pending admin.
+    function acceptAdmin() external;
+
     /// @notice Returns the admin address.
     /// @return The admin address
     function getAdmin() external view returns (address);
+
+    /// @notice Returns the pending admin address (zero if no transfer is in progress).
+    /// @return The pending admin address
+    function getPendingAdmin() external view returns (address);
 
     /// @notice The processor address — the only account allowed to mark deposit data processed.
     /// @return The processor address

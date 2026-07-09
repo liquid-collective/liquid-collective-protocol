@@ -24,8 +24,11 @@ contract DepositDataBuffer is IDepositDataBuffer {
     ///      being the account that consumes batches and flips their `processed` flag.
     address internal immutable _processor;
 
-    /// @notice The admin, able to rotate the producer.
+    /// @notice The admin, able to rotate the producer and transfer its own role.
     address internal _admin;
+
+    /// @notice The pending admin proposed for a two-step transfer (zero when none is in progress).
+    address internal _pendingAdmin;
 
     /// @notice The producer authorized to submit deposit batches.
     address internal _producer;
@@ -60,6 +63,12 @@ contract DepositDataBuffer is IDepositDataBuffer {
     /// @dev Restricts a function to the admin.
     modifier onlyAdmin() {
         if (msg.sender != _admin) revert OnlyAdmin();
+        _;
+    }
+
+    /// @dev Restricts a function to the pending admin.
+    modifier onlyPendingAdmin() {
+        if (msg.sender != _pendingAdmin) revert OnlyPendingAdmin();
         _;
     }
 
@@ -151,8 +160,27 @@ contract DepositDataBuffer is IDepositDataBuffer {
     }
 
     /// @inheritdoc IDepositDataBuffer
+    function proposeAdmin(address newAdmin) external onlyAdmin {
+        LibSanitize._notZeroAddress(newAdmin);
+        _pendingAdmin = newAdmin;
+        emit SetPendingAdmin(newAdmin);
+    }
+
+    /// @inheritdoc IDepositDataBuffer
+    function acceptAdmin() external onlyPendingAdmin {
+        _admin = _pendingAdmin;
+        _pendingAdmin = address(0);
+        emit SetAdmin(msg.sender);
+    }
+
+    /// @inheritdoc IDepositDataBuffer
     function getAdmin() external view returns (address) {
         return _admin;
+    }
+
+    /// @inheritdoc IDepositDataBuffer
+    function getPendingAdmin() external view returns (address) {
+        return _pendingAdmin;
     }
 
     /// @inheritdoc IDepositDataBuffer

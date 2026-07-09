@@ -87,7 +87,15 @@ contract AccountingMockDepositDataBuffer is IDepositDataBuffer {
         return address(0);
     }
 
+    function proposeAdmin(address) external {}
+
+    function acceptAdmin() external {}
+
     function getAdmin() external pure returns (address) {
+        return address(0);
+    }
+
+    function getPendingAdmin() external pure returns (address) {
         return address(0);
     }
 
