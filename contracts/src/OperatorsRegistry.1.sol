@@ -13,6 +13,7 @@ import "./Administrable.sol";
 
 import "openzeppelin-contracts/contracts/security/ReentrancyGuard.sol";
 
+import "./state/operatorsRegistry/Operators.1.sol";
 import "./state/operatorsRegistry/Operators.2.sol";
 import "./state/operatorsRegistry/Operators.3.sol";
 import "./state/operatorsRegistry/ValidatorKeys.sol";
@@ -51,6 +52,33 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         _setAdmin(_admin);
         RiverAddress.set(_river);
         emit SetRiver(_river);
+    }
+
+    /// @inheritdoc IOperatorsRegistryV1
+    function initOperatorsRegistryV1_1() external init(1) {
+        _migrateOperators_V1_1();
+    }
+
+    /// @notice Internal utility to migrate the operators from V1 to V2 format
+    function _migrateOperators_V1_1() internal {
+        uint256 opCount = OperatorsV1.getCount();
+
+        for (uint256 idx = 0; idx < opCount; ++idx) {
+            OperatorsV1.Operator memory oldOperatorValue = OperatorsV1.get(idx);
+
+            OperatorsV2.push(
+                OperatorsV2.Operator({
+                    limit: uint32(oldOperatorValue.limit),
+                    funded: uint32(oldOperatorValue.funded),
+                    requestedExits: 0,
+                    keys: uint32(oldOperatorValue.keys),
+                    latestKeysEditBlockNumber: uint64(oldOperatorValue.latestKeysEditBlockNumber),
+                    active: oldOperatorValue.active,
+                    name: oldOperatorValue.name,
+                    operator: oldOperatorValue.operator
+                })
+            );
+        }
     }
 
     /// @inheritdoc IOperatorsRegistryV1
@@ -252,6 +280,8 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                 revert MisalignedDeltaArrays(operatorIndex, delta.topUpPubkeys.length, delta.topUpAmounts.length);
             }
 
+            // Trusts delta.fundedETH == sum(deposit+topUp amounts) by construction (LibFundingDeltas.build).
+            // Revisit this assumption if any non-builder call path can reach here — see the NatSpec @dev.
             operator.funded += delta.fundedETH;
             // Emit initial-deposit pubkeys and top-up pubkeys on separate events so off-chain
             // indexers do not conflate a top-up (existing key, additional ETH) with a brand-new

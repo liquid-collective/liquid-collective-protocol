@@ -6,45 +6,20 @@ import "forge-std/Test.sol";
 
 import "../../../src/TUPProxy.sol";
 import "../../../src/OperatorsRegistry.1.sol";
-import "../../../src/state/operatorsRegistry/Operators.1.sol";
-import "../../../src/state/operatorsRegistry/Operators.2.sol";
 import {
     ITransparentUpgradeableProxy
 } from "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
-/// @notice Test-only implementation that includes the V1→V2 migration.
-/// @dev initOperatorsRegistryV1_1 was made empty in the production contract because it
-/// @dev "already ran on mainnet". For fork tests against pre-V1_1 blocks we need the
-/// @dev migration to actually execute, so this contract re-implements it.
-contract OperatorsRegistryV1WithFullMigration is OperatorsRegistryV1 {
-    /// @notice Re-implements the V1→V2 operator migration for fork-test use.
-    function migrateV1ToV2() external init(1) {
-        uint256 count = OperatorsV1.getCount();
-        for (uint256 idx = 0; idx < count; ++idx) {
-            OperatorsV1.Operator memory v1op = OperatorsV1.get(idx);
-            OperatorsV2.push(
-                OperatorsV2.Operator({
-                    limit: uint32(v1op.limit),
-                    funded: uint32(v1op.funded),
-                    requestedExits: 0,
-                    keys: uint32(v1op.keys),
-                    latestKeysEditBlockNumber: uint64(v1op.latestKeysEditBlockNumber),
-                    active: v1op.active,
-                    name: v1op.name,
-                    operator: v1op.operator
-                })
-            );
-        }
-    }
-}
-
-contract OperatorsMigrationV1ToV2 is Test {
+/// @notice Drives the full V1 → V2 → V3 operator migration against a pre-V1_1 mainnet fork using the
+/// @notice production initializers: initOperatorsRegistryV1_1 (V1 → V2) then initOperatorsRegistryV1_2
+/// @notice (V2 → V3). Both initializers ship on the mainnet OperatorsRegistryV1 implementation.
+contract OperatorsMigrationV1ToV3 is Test {
     bool internal _skip = false;
 
     function setUp() external {
         try vm.envString("MAINNET_FORK_RPC_URL") returns (string memory rpcUrl) {
             vm.createSelectFork(rpcUrl, 16690000);
-            console.log("1.operatorsMigrationV1ToV2.t.sol is active");
+            console.log("2.operatorsMigrationV1toV3.t.sol is active");
         } catch {
             _skip = true;
         }
@@ -63,14 +38,13 @@ contract OperatorsMigrationV1ToV2 is Test {
     function test_migration() external shouldSkip {
         TUPProxy orProxy = TUPProxy(payable(OPERATORS_REGISTRY_MAINNET_ADDRESS));
 
-        OperatorsRegistryV1WithFullMigration migrationImplementation = new OperatorsRegistryV1WithFullMigration();
+        OperatorsRegistryV1 migrationImplementation = new OperatorsRegistryV1();
 
-        // Run V1→V2 migration (inline in fork-test implementation since initV1_1 is intentionally
-        // empty in production — that migration already ran on mainnet but hasn't run at this block)
+        // Run V1 → V2 migration (initOperatorsRegistryV1_1 migrates the operator structs from V1 to V2)
         vm.prank(OPERATORS_REGISTRY_MAINNET_PROXY_ADMIN_ADDRESS);
         ITransparentUpgradeableProxy(address(orProxy))
             .upgradeToAndCall(
-                address(migrationImplementation), abi.encodeCall(OperatorsRegistryV1WithFullMigration.migrateV1ToV2, ())
+                address(migrationImplementation), abi.encodeCall(OperatorsRegistryV1.initOperatorsRegistryV1_1, ())
             );
 
         OperatorsRegistryV1 or = OperatorsRegistryV1(OPERATORS_REGISTRY_MAINNET_ADDRESS);
