@@ -678,7 +678,7 @@ contract ConsolidationAttestationTest is Test {
         );
     }
 
-    function testValidateConsolidation_duplicateSourceWithinSingleRequestConsumesSource() public {
+    function testRevert_duplicateSourceWithinSingleRequest() public {
         address user = address(0xCAFE);
         bytes memory sourceA = _pubkey(820);
 
@@ -694,9 +694,9 @@ contract ConsolidationAttestationTest is Test {
         sigs[0] = _sign(pk1, digest);
         sigs[1] = _sign(pk2, digest);
 
-        bytes32 structHash = _consolidationStructHash(user, sources, targets, totalAmount);
-        vm.expectEmit(true, false, false, true);
-        emit IAttestationVerifierV1.ConsolidationProcessed(structHash);
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.ConsolidationSourceAlreadyProcessed.selector, sourceA)
+        );
         _validateConsolidationAsRiver(
             IAttestationVerifierV1.ConsolidationObject({
                 withdrawalAddress: user,
@@ -704,29 +704,6 @@ contract ConsolidationAttestationTest is Test {
                 targetPubkeys: targets,
                 totalAmount: totalAmount,
                 signatures: sigs
-            })
-        );
-
-        bytes[] memory replaySources = new bytes[](1);
-        replaySources[0] = sourceA;
-        bytes[] memory replayTargets = new bytes[](1);
-        replayTargets[0] = _pubkey(922);
-        uint256 replayAmount = 32 ether;
-        bytes32 replayDigest = _consolidationDigest(user, replaySources, replayTargets, replayAmount);
-        bytes[] memory replaySigs = new bytes[](2);
-        replaySigs[0] = _sign(pk1, replayDigest);
-        replaySigs[1] = _sign(pk2, replayDigest);
-
-        vm.expectRevert(
-            abi.encodeWithSelector(IAttestationVerifierV1.ConsolidationSourceAlreadyProcessed.selector, sourceA)
-        );
-        _validateConsolidationAsRiver(
-            IAttestationVerifierV1.ConsolidationObject({
-                withdrawalAddress: user,
-                sourcePubkeys: replaySources,
-                targetPubkeys: replayTargets,
-                totalAmount: replayAmount,
-                signatures: replaySigs
             })
         );
     }

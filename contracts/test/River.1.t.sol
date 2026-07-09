@@ -4101,10 +4101,7 @@ contract RiverV1ConsolidationMintTests is RiverV1TestBase {
         assertEq(river.totalSupply(), totalSupplyBeforeReplay);
     }
 
-    /// @dev Duplicate source pubkeys within a single committee-signed request are allowed;
-    ///      the mint is driven solely by `totalAmount`, not by the source-pair count, so a
-    ///      [sourceA, sourceA] request mints exactly `totalAmount` (never doubled per pair).
-    function testMintLsETHForConsolidationDuplicateSourceWithinRequestMintsTotalAmount() public {
+    function testRevert_mintLsETHForConsolidationDuplicateSourceWithinRequestDoesNotMint() public {
         _allowConsolidation(bob);
         bytes memory sourceA = _fakePubkey(2300);
 
@@ -4123,26 +4120,13 @@ contract RiverV1ConsolidationMintTests is RiverV1TestBase {
         uint256 totalSupplyBefore = river.totalSupply();
 
         vm.prank(consolidator);
-        river.mintLsETHForConsolidation(consolidation);
-
-        // Buffer and minted shares reflect `totalAmount` exactly, regardless of the two
-        // identical sources.
-        assertEq(river.getBalanceToConsolidate(), bufferBefore + totalAmount);
-        assertEq(river.balanceOf(bob), bobSharesBefore + totalAmount);
-        assertEq(river.totalSupply(), totalSupplyBefore + totalAmount);
-
-        // The duplicated source is consumed: any later request reusing it reverts.
-        bytes[] memory replaySources = new bytes[](1);
-        replaySources[0] = sourceA;
-        bytes[] memory replayTargets = new bytes[](1);
-        replayTargets[0] = _fakePubkey(2402);
-        IAttestationVerifierV1.ConsolidationObject memory replay =
-            _buildConsolidationWithPubkeys(bob, replaySources, replayTargets, 32 ether);
-
-        vm.prank(consolidator);
         vm.expectRevert(
             abi.encodeWithSelector(IAttestationVerifierV1.ConsolidationSourceAlreadyProcessed.selector, sourceA)
         );
-        river.mintLsETHForConsolidation(replay);
+        river.mintLsETHForConsolidation(consolidation);
+
+        assertEq(river.getBalanceToConsolidate(), bufferBefore);
+        assertEq(river.balanceOf(bob), bobSharesBefore);
+        assertEq(river.totalSupply(), totalSupplyBefore);
     }
 }
