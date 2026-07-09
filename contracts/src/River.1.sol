@@ -449,7 +449,7 @@ contract RiverV1 is
 
     /// @notice Overridden handler called whenever the total balance of ETH is requested
     /// @return The current total asset balance managed by River
-    function _assetBalance() internal view override(SharesManagerV1, OracleManagerV1) returns (uint256) {
+    function _assetBalance() internal view override(SharesManagerV1) returns (uint256) {
         IOracleManagerV1.StoredConsensusLayerReport storage storedReport = LastConsensusLayerReport.get();
         return storedReport.validatorsBalance + BalanceToDeposit.get() + CommittedBalance.get() + BalanceToRedeem.get()
             + InFlightDeposit.get() + ConsolidationBuffer.get();
@@ -506,10 +506,7 @@ contract RiverV1 is
     /// @notice Sets the consolidation buffer
     /// @param _oldConsolidationBuffer The old consolidation buffer value
     /// @param _newConsolidationBuffer The new consolidation buffer value
-    function _setConsolidationBuffer(uint256 _oldConsolidationBuffer, uint256 _newConsolidationBuffer)
-        internal
-        override(OracleManagerV1)
-    {
+    function _setConsolidationBuffer(uint256 _oldConsolidationBuffer, uint256 _newConsolidationBuffer) internal {
         emit SetConsolidationBuffer(_oldConsolidationBuffer, _newConsolidationBuffer);
         ConsolidationBuffer.set(_newConsolidationBuffer);
     }

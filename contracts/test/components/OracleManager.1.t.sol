@@ -36,7 +36,6 @@ import "../../src/components/OracleManager.1.sol";
 import "../../src/libraries/LibUint256.sol";
 import "../../src/state/shared/AdministratorAddress.sol";
 import "../../src/state/river/DepositedValidatorCount.sol";
-import "../../src/state/river/ConsolidationBuffer.sol";
 
 /// @dev Lightweight harness over `OracleManagerV1` used to exercise the parts of the base contract that do NOT
 ///      depend on the full report orchestration: access control, setters, getters and epoch/bounds math, plus
@@ -51,17 +50,6 @@ import "../../src/state/river/ConsolidationBuffer.sol";
 ///      covered by the real-River integration tests in contracts/test/River.1.t.sol (see the file header note
 ///      below for the exact mapping).
 contract OracleManagerV1ExposeInitializer is OracleManagerV1 {
-    event Internal_SetConsolidationBuffer(uint256 oldValue, uint256 newValue);
-
-    function _setConsolidationBuffer(uint256 _oldConsolidationBuffer, uint256 _newConsolidationBuffer)
-        internal
-        override
-    {
-        emit Internal_SetConsolidationBuffer(_oldConsolidationBuffer, _newConsolidationBuffer);
-        // Persist like RiverV1 does so buffer changes are observable in storage and in _assetBalance.
-        ConsolidationBuffer.set(_newConsolidationBuffer);
-    }
-
     function supersedeReportedBalanceSum(uint256 amount) external {
         LastConsensusLayerReport.get().validatorsBalance = amount;
     }
@@ -80,16 +68,6 @@ contract OracleManagerV1ExposeInitializer is OracleManagerV1 {
 
     function _getRiverAdmin() internal view override returns (address) {
         return AdministratorAddress.get();
-    }
-
-    function _assetBalance() internal view override returns (uint256 result) {
-        // Mirror RiverV1._assetBalance by including the consolidation buffer in the total underlying.
-        result = (DepositedValidatorCount.get() - LastConsensusLayerReport.get().validatorsCount) * 32 ether
-            + LastConsensusLayerReport.get().validatorsBalance + ConsolidationBuffer.get();
-    }
-
-    function debug_getTotalUnderlyingBalance() external view returns (uint256) {
-        return _assetBalance();
     }
 
     constructor(

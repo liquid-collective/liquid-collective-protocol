@@ -2,18 +2,12 @@
 pragma solidity 0.8.34;
 
 import "../interfaces/components/IOracleManager.1.sol";
-import "../interfaces/components/IConsensusLayerDepositManager.1.sol";
-import "../interfaces/IRedeemManager.1.sol";
 
 import "../libraries/LibUint256.sol";
 import "../libraries/LibOracleReporting.sol";
 
 import "../state/river/LastConsensusLayerReport.sol";
 import "../state/river/OracleAddress.sol";
-import "../state/river/CLValidatorTotalBalance.sol";
-import "../state/river/LastOracleRoundId.sol";
-import "../state/river/InFlightDeposit.sol";
-import "../state/river/ConsolidationBuffer.sol";
 
 /// @title Oracle Manager (v1)
 /// @author Alluvial Finance Inc.
@@ -28,15 +22,6 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
     /// @dev Must be overridden
     /// @return The system administrator address
     function _getRiverAdmin() internal view virtual returns (address);
-
-    /// @notice Overridden handler called whenever the total balance of ETH is requested
-    /// @return The current total asset balance managed by River
-    function _assetBalance() internal view virtual returns (uint256);
-
-    /// @notice Sets the consolidation buffer
-    /// @param _oldConsolidationBuffer The old consolidation buffer value
-    /// @param _newConsolidationBuffer The new consolidation buffer value
-    function _setConsolidationBuffer(uint256 _oldConsolidationBuffer, uint256 _newConsolidationBuffer) internal virtual;
 
     /// @notice Prevents unauthorized calls
     modifier onlyAdmin_OMV1() {
