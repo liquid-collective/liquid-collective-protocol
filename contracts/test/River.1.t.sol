@@ -2992,15 +2992,9 @@ contract RiverV1CoverageTests is RiverV1TestBase {
 
     bytes32 constant DEPOSITED_VALIDATOR_COUNT_SLOT =
         bytes32(uint256(keccak256("river.state.depositedValidatorCount")) - 1);
-    bytes32 constant LAST_CLR_BASE_SLOT = bytes32(uint256(keccak256("river.state.lastConsensusLayerReport")) - 1);
     bytes32 constant IN_FLIGHT_DEPOSIT_SLOT = bytes32(uint256(keccak256("river.state.inFlightDeposit")) - 1);
     bytes32 constant BUFFERED_EXCEEDING_ETH_SLOT = bytes32(uint256(keccak256("river.state.bufferedExceedingEth")) - 1);
     bytes32 constant CONSOLIDATION_BUFFER_SLOT = bytes32(uint256(keccak256("river.state.consolidationBuffer")) - 1);
-    // Storage offset of StoredConsensusLayerReport.totalExternalConsolidationsAmountReported within the
-    // lastConsensusLayerReport struct: epoch(0) validatorsBalance(1) validatorsSkimmedBalance(2)
-    // validatorsExitedBalance(3) validatorsExitingBalance(4) {validatorsCount,rebalance,slashing}(5)
-    // totalDepositedActivatedETH(6) totalExternalConsolidationsAmountReported(7).
-    uint256 constant LAST_CLR_CONSOLIDATIONS_OFFSET = 7;
     bytes32 constant BALANCE_FOR_CONSOLIDATION_COVERAGE_SLOT =
         bytes32(uint256(keccak256("river.state.balanceForConsolidationCoverage")) - 1);
     bytes32 constant EXTERNAL_CONSOLIDATION_RECIPIENT_MAPPING_ADDRESS_SLOT =
@@ -3009,6 +3003,51 @@ contract RiverV1CoverageTests is RiverV1TestBase {
 
     event PulledConsolidationCoverageFunds(uint256 amount);
     event SetConsolidationBuffer(uint256 oldAmount, uint256 newAmount);
+
+    // ── Layout-safe seeding of river's StoredConsensusLayerReport ──
+    // Rather than hard-code a struct field's slot offset (which silently breaks on any reorder or
+    // repack), each seeder writes the field then reads it back through the typed getter and asserts
+    // it landed correctly, so a layout change fails loudly here instead of corrupting the test. The
+    // base slot is taken from the state library itself, so there is a single source of truth (no
+    // duplicated keccak literal). Note: forge-std's stdstore cannot be used for validatorsCount,
+    // which shares a packed slot with two bools (stdstore reverts on packed slots).
+    function _clrBaseSlot() private view returns (uint256 base) {
+        IOracleManagerV1.StoredConsensusLayerReport storage r = LastConsensusLayerReport.get();
+        // solhint-disable-next-line no-inline-assembly
+        assembly {
+            base := r.slot
+        }
+    }
+
+    function _seedStoredValidatorsBalance(uint256 v) private {
+        vm.store(address(river), bytes32(_clrBaseSlot() + 1), bytes32(v));
+        assertEq(river.getCLValidatorTotalBalance(), v, "clr.validatorsBalance slot drifted");
+    }
+
+    function _seedStoredValidatorsCount(uint32 v) private {
+        // validatorsCount is a uint32 packed at the low bytes of its slot; the two report-mode bools
+        // sharing the slot are reset to false, matching the prior raw-store behaviour.
+        vm.store(address(river), bytes32(_clrBaseSlot() + 5), bytes32(uint256(v)));
+        assertEq(river.getCLValidatorCount(), v, "clr.validatorsCount slot drifted");
+    }
+
+    function _seedStoredTotalDepositedActivatedETH(uint256 v) private {
+        vm.store(address(river), bytes32(_clrBaseSlot() + 6), bytes32(v));
+        assertEq(
+            river.getLastConsensusLayerReport().totalDepositedActivatedETH,
+            v,
+            "clr.totalDepositedActivatedETH slot drifted"
+        );
+    }
+
+    function _seedStoredConsolidations(uint256 v) private {
+        vm.store(address(river), bytes32(_clrBaseSlot() + 7), bytes32(v));
+        assertEq(
+            river.getLastConsensusLayerReport().totalExternalConsolidationsAmountReported,
+            v,
+            "clr.totalExternalConsolidationsAmountReported slot drifted"
+        );
+    }
 
     /// @dev Helper: deploy and init an AttestationVerifier pointed at this test's River.
     function _deployValidatorFor(address _river) internal returns (AttestationVerifierV1 v) {
@@ -3029,7 +3068,7 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         _initRiverAndV1_2();
         // 10 deposited validators, 7 reported -> 3 in flight.
         vm.store(address(river), DEPOSITED_VALIDATOR_COUNT_SLOT, bytes32(uint256(10)));
-        vm.store(address(river), bytes32(uint256(LAST_CLR_BASE_SLOT) + 5), bytes32(uint256(7)));
+        _seedStoredValidatorsCount(7);
         AttestationVerifierV1 v = _deployValidatorFor(address(river));
         bytes32 wc = withdraw.getCredentials();
         vm.prank(admin);
@@ -3054,7 +3093,7 @@ contract RiverV1CoverageTests is RiverV1TestBase {
     function testInitRiverV1_3NoInFlight() public {
         _initRiverAndV1_2();
         vm.store(address(river), DEPOSITED_VALIDATOR_COUNT_SLOT, bytes32(uint256(5)));
-        vm.store(address(river), bytes32(uint256(LAST_CLR_BASE_SLOT) + 5), bytes32(uint256(5)));
+        _seedStoredValidatorsCount(5);
         AttestationVerifierV1 v = _deployValidatorFor(address(river));
         bytes32 wc = withdraw.getCredentials();
         vm.prank(admin);
@@ -3245,7 +3284,7 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         vm.prank(alice);
         river.deposit{value: 32 ether}();
         // Set last reported balance so the small increase is within bounds.
-        vm.store(address(river), bytes32(uint256(LAST_CLR_BASE_SLOT) + 1), bytes32(uint256(32 ether)));
+        _seedStoredValidatorsBalance(32 ether);
         uint256 epoch = epochsPerFrame;
         vm.warp((epoch + epochsUntilFinal) * slotsPerEpoch * secondsPerSlot);
         IOracleManagerV1.ConsensusLayerReport memory clr;
@@ -3428,11 +3467,7 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         uint256 storedConsolidations = 5 ether;
         vm.store(address(river), CONSOLIDATION_BUFFER_SLOT, bytes32(buffer));
         // Seed the last stored report's totalExternalConsolidationsAmountReported = X.
-        vm.store(
-            address(river),
-            bytes32(uint256(LAST_CLR_BASE_SLOT) + LAST_CLR_CONSOLIDATIONS_OFFSET),
-            bytes32(storedConsolidations)
-        );
+        _seedStoredConsolidations(storedConsolidations);
 
         uint256 epoch = epochsPerFrame;
         vm.warp((epoch + epochsUntilFinal) * slotsPerEpoch * secondsPerSlot);
@@ -3506,11 +3541,7 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         assertEq(river.getBalanceToConsolidate(), 0);
         // Confirm the stored report recorded the full reported amount.
         assertEq(
-            uint256(
-                vm.load(
-                    address(river), bytes32(uint256(LAST_CLR_BASE_SLOT) + LAST_CLR_CONSOLIDATIONS_OFFSET)
-                )
-            ),
+            river.getLastConsensusLayerReport().totalExternalConsolidationsAmountReported,
             reportedConsolidations
         );
     }
@@ -3573,8 +3604,8 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         _initRiverMinimalForReporting();
 
         uint256 lastDeposited = 64 ether;
-        // Seed last stored report totalDepositedActivatedETH (offset 6) to a non-zero value.
-        vm.store(address(river), bytes32(uint256(LAST_CLR_BASE_SLOT) + 6), bytes32(lastDeposited));
+        // Seed last stored report totalDepositedActivatedETH to a non-zero value.
+        _seedStoredTotalDepositedActivatedETH(lastDeposited);
 
         uint256 epoch = epochsPerFrame;
         vm.warp((epoch + epochsUntilFinal) * slotsPerEpoch * secondsPerSlot);
@@ -3629,10 +3660,9 @@ contract RiverV1CoverageTests is RiverV1TestBase {
     function testReportingError_InvalidValidatorCountReport() public {
         _initRiverMinimalForReporting();
 
-        // validatorsCount is a uint32 packed at offset 5 (low bytes) of the stored report struct.
-        // Seed it to a value higher than the one we will report.
+        // Seed validatorsCount to a value higher than the one we will report.
         uint32 lastCount = 5;
-        vm.store(address(river), bytes32(uint256(LAST_CLR_BASE_SLOT) + 5), bytes32(uint256(lastCount)));
+        _seedStoredValidatorsCount(lastCount);
 
         uint256 epoch = epochsPerFrame;
         vm.warp((epoch + epochsUntilFinal) * slotsPerEpoch * secondsPerSlot);
@@ -3659,12 +3689,8 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         _initRiverMinimalForReporting();
 
         uint256 lastConsolidations = 5 ether;
-        // Seed last stored report totalExternalConsolidationsAmountReported (offset 7).
-        vm.store(
-            address(river),
-            bytes32(uint256(LAST_CLR_BASE_SLOT) + LAST_CLR_CONSOLIDATIONS_OFFSET),
-            bytes32(lastConsolidations)
-        );
+        // Seed last stored report totalExternalConsolidationsAmountReported.
+        _seedStoredConsolidations(lastConsolidations);
 
         uint256 epoch = epochsPerFrame;
         vm.warp((epoch + epochsUntilFinal) * slotsPerEpoch * secondsPerSlot);
@@ -3704,9 +3730,9 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         vm.prank(alice);
         river.deposit{value: 32 ether}();
 
-        // Seed the last stored report validatorsBalance (offset 1) so this report represents a modest loss.
+        // Seed the last stored report validatorsBalance so this report represents a modest loss.
         uint256 lastValidatorsBalance = 32 ether;
-        vm.store(address(river), bytes32(uint256(LAST_CLR_BASE_SLOT) + 1), bytes32(lastValidatorsBalance));
+        _seedStoredValidatorsBalance(lastValidatorsBalance);
 
         uint256 epoch = epochsPerFrame;
         vm.warp((epoch + epochsUntilFinal) * slotsPerEpoch * secondsPerSlot);
