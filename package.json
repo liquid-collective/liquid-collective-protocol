@@ -36,6 +36,7 @@
     "eslint-plugin-promise": "^5.2.0",
     "ethereum-waffle": "^3.4.0",
     "ethers": "^5.5.3",
+    "foundry-gas-utils": "github:saifyoussuf/foundry-gas-utils",
     "hardhat": "^2.22.18",
     "hardhat-contract-sizer": "^2.4.0",
     "hardhat-deploy": "^0.11.45",
