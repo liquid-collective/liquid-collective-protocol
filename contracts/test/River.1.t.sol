@@ -82,6 +82,8 @@ contract MockDepositDataBuffer is IDepositDataBuffer {
 
     function setProducer(address) external {}
 
+    function setProcessor(address) external {}
+
     function getProducer() external pure returns (address) {
         return address(0);
     }

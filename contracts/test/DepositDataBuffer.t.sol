@@ -23,6 +23,7 @@ contract DepositDataBufferTest is Test, DepositDataBufferFixtures {
     );
     event DepositDataProcessed(bytes32 indexed depositDataBufferId);
     event SetProducer(address indexed producer);
+    event SetProcessor(address indexed processor);
     event SetPendingAdmin(address indexed pendingAdmin);
     event SetAdmin(address indexed admin);
 
@@ -121,9 +122,9 @@ contract DepositDataBufferTest is Test, DepositDataBufferFixtures {
         IDepositDataBuffer.DepositObject memory batch = _batch(1);
         bytes32 id = _id(batch, 0);
 
-        // Storage layout: _admin(0), _pendingAdmin(1), _producer(2), lastQueuedIdx(3), _batches(4),
-        // _nonce(5), _exists(6). (_processor is immutable, so it lives in code, not storage.)
-        bytes32 existsSlot = keccak256(abi.encode(id, uint256(6)));
+        // Storage layout: _processor(0), _admin(1), _pendingAdmin(2), _producer(3), lastQueuedIdx(4),
+        // _batches(5), _nonce(6), _exists(7).
+        bytes32 existsSlot = keccak256(abi.encode(id, uint256(7)));
         vm.store(address(buffer), existsSlot, bytes32(uint256(1)));
         assertTrue(buffer.isDepositDataProcessed(id) == false); // sanity: _processed untouched
 
@@ -436,6 +437,39 @@ contract DepositDataBufferTest is Test, DepositDataBufferFixtures {
         vm.prank(admin);
         vm.expectRevert(LibErrors.InvalidZeroAddress.selector);
         buffer.setProducer(address(0));
+    }
+
+    function test_AdminCanRotateProcessor() public {
+        address newProcessor = makeAddr("newProcessor");
+
+        vm.expectEmit(true, false, false, false);
+        emit SetProcessor(newProcessor);
+        vm.prank(admin);
+        buffer.setProcessor(newProcessor);
+        assertEq(buffer.getProcessor(), newProcessor);
+
+        // Queue a batch, then confirm the old processor can no longer mark it processed and the new one can.
+        bytes32 id = _submit(_batch(1));
+
+        vm.prank(processor);
+        vm.expectRevert(IDepositDataBuffer.OnlyProcessor.selector);
+        buffer.markDepositDataProcessed(id);
+
+        vm.prank(newProcessor);
+        buffer.markDepositDataProcessed(id);
+        assertTrue(buffer.isDepositDataProcessed(id));
+    }
+
+    function test_RevertWhen_NonAdminRotatesProcessor() public {
+        vm.prank(makeAddr("stranger"));
+        vm.expectRevert(IDepositDataBuffer.OnlyAdmin.selector);
+        buffer.setProcessor(makeAddr("newProcessor"));
+    }
+
+    function test_RevertWhen_SetProcessorZero() public {
+        vm.prank(admin);
+        vm.expectRevert(LibErrors.InvalidZeroAddress.selector);
+        buffer.setProcessor(address(0));
     }
 
     // -----------------------------------------------------------------------
