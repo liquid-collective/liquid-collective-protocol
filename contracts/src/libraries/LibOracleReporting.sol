@@ -669,17 +669,23 @@ library LibOracleReporting {
     // -----------------------------------------------------------------------
 
     /// @notice Retrieve the current epoch based on the current timestamp
+    /// @dev Single source of truth for epoch/validity semantics: also consumed by OracleManagerV1's
+    ///      views (getExpectedEpochId / getCurrentEpochId / getCurrentFrame) so the public
+    ///      isValidEpoch() view can never diverge from the report gate below. `internal`, so it
+    ///      inlines into each caller and does not affect deployed bytecode size.
     /// @param _cls The consensus layer spec struct
     /// @return The current epoch
-    function _currentEpoch(CLSpec.CLSpecStruct memory _cls) private view returns (uint256) {
+    function _currentEpoch(CLSpec.CLSpecStruct memory _cls) internal view returns (uint256) {
         return ((block.timestamp - _cls.genesisTime) / _cls.secondsPerSlot) / _cls.slotsPerEpoch;
     }
 
     /// @notice Verifies if the given epoch is valid
+    /// @dev Single source of truth shared with OracleManagerV1's public isValidEpoch() view. `internal`,
+    ///      so it inlines into each caller and does not affect deployed bytecode size.
     /// @param _cls The consensus layer spec struct
     /// @param _epoch The epoch to verify
     /// @return True if valid
-    function _isValidEpoch(CLSpec.CLSpecStruct memory _cls, uint256 _epoch) private view returns (bool) {
+    function _isValidEpoch(CLSpec.CLSpecStruct memory _cls, uint256 _epoch) internal view returns (bool) {
         return (
             _currentEpoch(_cls) >= _epoch + _cls.epochsToAssumedFinality
                 && _epoch > LastConsensusLayerReport.get().epoch && _epoch % _cls.epochsPerFrame == 0

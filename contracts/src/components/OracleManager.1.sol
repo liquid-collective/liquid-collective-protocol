@@ -91,7 +91,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
     /// @inheritdoc IOracleManagerV1
     function getExpectedEpochId() external view returns (uint256) {
         CLSpec.CLSpecStruct memory cls = CLSpec.get();
-        uint256 currentEpoch = _currentEpoch(cls);
+        uint256 currentEpoch = LibOracleReporting._currentEpoch(cls);
         return LibUint256.max(
             LastConsensusLayerReport.get().epoch + cls.epochsPerFrame,
             currentEpoch - (currentEpoch % cls.epochsPerFrame)
@@ -100,7 +100,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
 
     /// @inheritdoc IOracleManagerV1
     function isValidEpoch(uint256 _epoch) external view returns (bool) {
-        return _isValidEpoch(CLSpec.get(), _epoch);
+        return LibOracleReporting._isValidEpoch(CLSpec.get(), _epoch);
     }
 
     /// @inheritdoc IOracleManagerV1
@@ -115,7 +115,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
 
     /// @inheritdoc IOracleManagerV1
     function getCurrentEpochId() external view returns (uint256) {
-        return _currentEpoch(CLSpec.get());
+        return LibOracleReporting._currentEpoch(CLSpec.get());
     }
 
     /// @inheritdoc IOracleManagerV1
@@ -126,7 +126,7 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
     /// @inheritdoc IOracleManagerV1
     function getCurrentFrame() external view returns (uint256 _startEpochId, uint256 _startTime, uint256 _endTime) {
         CLSpec.CLSpecStruct memory cls = CLSpec.get();
-        uint256 currentEpoch = _currentEpoch(cls);
+        uint256 currentEpoch = LibOracleReporting._currentEpoch(cls);
         _startEpochId = currentEpoch - (currentEpoch % cls.epochsPerFrame);
         _startTime = _startEpochId * cls.slotsPerEpoch * cls.secondsPerSlot;
         _endTime = (_startEpochId + cls.epochsPerFrame) * cls.slotsPerEpoch * cls.secondsPerSlot - 1;
@@ -178,21 +178,5 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
         // here via DELEGATECALL, keeping RiverV1's deployed bytecode under EIP-170. Events and
         // storage writes still resolve against River because address(this) is River.
         LibOracleReporting.setConsensusLayerData(_report);
-    }
-
-    /// @notice Retrieve the current epoch based on the current timestamp
-    /// @param _cls The consensus layer spec struct
-    /// @return The current epoch
-    function _currentEpoch(CLSpec.CLSpecStruct memory _cls) internal view returns (uint256) {
-        return ((block.timestamp - _cls.genesisTime) / _cls.secondsPerSlot) / _cls.slotsPerEpoch;
-    }
-
-    /// @notice Verifies if the given epoch is valid
-    /// @param _cls The consensus layer spec struct
-    /// @param _epoch The epoch to verify
-    /// @return True if valid
-    function _isValidEpoch(CLSpec.CLSpecStruct memory _cls, uint256 _epoch) internal view returns (bool) {
-        return (_currentEpoch(_cls) >= _epoch + _cls.epochsToAssumedFinality
-                && _epoch > LastConsensusLayerReport.get().epoch && _epoch % _cls.epochsPerFrame == 0);
     }
 }
