@@ -3,15 +3,15 @@ pragma solidity 0.8.34;
 
 import "forge-std/Test.sol";
 
-import "../../src/AttestationBuffer.sol";
-import "./handlers/AttestationBufferHandler.sol";
+import "../../src/DepositAttestation.sol";
+import "./handlers/DepositAttestationHandler.sol";
 
-/// @title AttestationBufferInvariantTest
-/// @notice Invariants for the AttestationBuffer signature-verifying relay. The handler always submits
+/// @title DepositAttestationInvariantTest
+/// @notice Invariants for the DepositAttestation signature-verifying relay. The handler always submits
 ///         valid, self-signed attestations, so every submission succeeds.
-contract AttestationBufferInvariantTest is Test {
-    AttestationBuffer internal buffer;
-    AttestationBufferHandler internal handler;
+contract DepositAttestationInvariantTest is Test {
+    DepositAttestation internal buffer;
+    DepositAttestationHandler internal handler;
 
     bytes32 internal constant EIP712_DOMAIN_TYPEHASH =
         keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
@@ -22,13 +22,13 @@ contract AttestationBufferInvariantTest is Test {
         bytes32 domainSeparator = keccak256(
             abi.encode(EIP712_DOMAIN_TYPEHASH, NAME_HASH, VERSION_HASH, block.chainid, makeAddr("river"))
         );
-        buffer = new AttestationBuffer(domainSeparator);
-        handler = new AttestationBufferHandler(buffer, 0xA11CE, domainSeparator);
+        buffer = new DepositAttestation(domainSeparator);
+        handler = new DepositAttestationHandler(buffer, 0xA11CE, domainSeparator);
 
         targetContract(address(handler));
 
         bytes4[] memory selectors = new bytes4[](1);
-        selectors[0] = AttestationBufferHandler.submit.selector;
+        selectors[0] = DepositAttestationHandler.submit.selector;
         targetSelector(FuzzSelector({addr: address(handler), selectors: selectors}));
     }
 

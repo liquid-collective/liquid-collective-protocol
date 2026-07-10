@@ -3,15 +3,15 @@ pragma solidity 0.8.34;
 
 import "forge-std/Test.sol";
 
-import "../../../src/AttestationBuffer.sol";
+import "../../../src/DepositAttestation.sol";
 
-/// @title AttestationBufferHandler
-/// @notice Bounded action surface for the AttestationBuffer invariant suite: submit signed attestations
+/// @title DepositAttestationHandler
+/// @notice Bounded action surface for the DepositAttestation invariant suite: submit signed attestations
 ///         (approval when errorData is empty, faulty-batch flag otherwise). The handler holds a known
 ///         signer key and always produces a valid signature that recovers to itself, so every submit
 ///         succeeds and the invariants can assert against `ghost_submissions`.
-contract AttestationBufferHandler is Test {
-    AttestationBuffer public buffer;
+contract DepositAttestationHandler is Test {
+    DepositAttestation public buffer;
 
     bytes32 internal constant ATTEST_TYPEHASH = keccak256("Attest(bytes32 depositDataBufferId,bytes32 depositRootHash)");
     bytes32 internal constant ATTEST_ERROR_TYPEHASH =
@@ -23,7 +23,7 @@ contract AttestationBufferHandler is Test {
     /// @notice Ghost count of successful submissions.
     uint256 public ghost_submissions;
 
-    constructor(AttestationBuffer _buffer, uint256 _signerPk, bytes32 _domainSeparator) {
+    constructor(DepositAttestation _buffer, uint256 _signerPk, bytes32 _domainSeparator) {
         buffer = _buffer;
         signerPk = _signerPk;
         domainSeparator = _domainSeparator;

@@ -3,14 +3,14 @@ pragma solidity 0.8.34;
 
 import "forge-std/Test.sol";
 
-import "../src/AttestationBuffer.sol";
+import "../src/DepositAttestation.sol";
 
-/// @title AttestationBufferTest
-/// @notice Unit coverage for the AttestationBuffer signature-verifying event relay. Signatures are
+/// @title DepositAttestationTest
+/// @notice Unit coverage for the DepositAttestation signature-verifying event relay. Signatures are
 ///         built over the same EIP-712 domain as the L1 AttestationVerifier and must recover to the
 ///         submitter (`msg.sender`).
-contract AttestationBufferTest is Test {
-    AttestationBuffer internal buffer;
+contract DepositAttestationTest is Test {
+    DepositAttestation internal buffer;
 
     // EIP-712 domain, constructed exactly as the L1 AttestationVerifier does.
     bytes32 internal constant EIP712_DOMAIN_TYPEHASH =
@@ -34,7 +34,7 @@ contract AttestationBufferTest is Test {
 
     function setUp() public {
         domainSeparator = keccak256(abi.encode(EIP712_DOMAIN_TYPEHASH, NAME_HASH, VERSION_HASH, block.chainid, river));
-        buffer = new AttestationBuffer(domainSeparator);
+        buffer = new DepositAttestation(domainSeparator);
     }
 
     // -----------------------------------------------------------------------
@@ -135,7 +135,7 @@ contract AttestationBufferTest is Test {
         bytes memory sig = _sign(pk, _approvalStructHash(id, root));
 
         vm.prank(makeAddr("relayer")); // not the signer
-        vm.expectRevert(IAttestationBuffer.InvalidAttestationSignature.selector);
+        vm.expectRevert(IDepositAttestation.InvalidAttestationSignature.selector);
         buffer.submitAttestation(id, root, sig, "");
 
         assertEq(buffer.lastAttestationIdx(), 0); // reverted → no event, index untouched
@@ -154,7 +154,7 @@ contract AttestationBufferTest is Test {
         bytes memory sig = _sign(pk, _approvalStructHash(id, root));
 
         vm.prank(vm.addr(pk));
-        vm.expectRevert(IAttestationBuffer.InvalidAttestationSignature.selector);
+        vm.expectRevert(IDepositAttestation.InvalidAttestationSignature.selector);
         buffer.submitAttestation(id, root, sig, errorData);
 
         // Revert rolls back all state and emits no event.
@@ -172,7 +172,7 @@ contract AttestationBufferTest is Test {
         bytes memory sig = _sign(pk, _errorStructHash(id, root, errorData));
 
         vm.prank(vm.addr(pk));
-        vm.expectRevert(IAttestationBuffer.InvalidAttestationSignature.selector);
+        vm.expectRevert(IDepositAttestation.InvalidAttestationSignature.selector);
         buffer.submitAttestation(id, root, sig, ""); // empty → verified as approval
 
         assertEq(buffer.lastAttestationIdx(), 0);
@@ -239,8 +239,8 @@ contract AttestationBufferTest is Test {
     }
 
     function test_RevertWhen_ConstructorZeroDomainSeparator() public {
-        vm.expectRevert(IAttestationBuffer.ZeroDomainSeparator.selector);
-        new AttestationBuffer(bytes32(0));
+        vm.expectRevert(IDepositAttestation.ZeroDomainSeparator.selector);
+        new DepositAttestation(bytes32(0));
     }
 
     // -----------------------------------------------------------------------
@@ -254,7 +254,7 @@ contract AttestationBufferTest is Test {
         bytes memory badSig = hex"deadbeef"; // 4 bytes
 
         vm.prank(makeAddr("anyone"));
-        vm.expectRevert(IAttestationBuffer.InvalidAttestationSignature.selector);
+        vm.expectRevert(IDepositAttestation.InvalidAttestationSignature.selector);
         buffer.submitAttestation(id, root, badSig, "");
     }
 
@@ -267,7 +267,7 @@ contract AttestationBufferTest is Test {
         bytes memory badSig = abi.encodePacked(r, s, uint8(30)); // v neither 27 nor 28
 
         vm.prank(vm.addr(pk));
-        vm.expectRevert(IAttestationBuffer.InvalidAttestationSignature.selector);
+        vm.expectRevert(IDepositAttestation.InvalidAttestationSignature.selector);
         buffer.submitAttestation(id, root, badSig, "");
     }
 
@@ -298,7 +298,7 @@ contract AttestationBufferTest is Test {
         bytes memory sig = abi.encodePacked(r, sHigh, vFlip);
 
         vm.prank(vm.addr(pk));
-        vm.expectRevert(IAttestationBuffer.InvalidAttestationSignature.selector);
+        vm.expectRevert(IDepositAttestation.InvalidAttestationSignature.selector);
         buffer.submitAttestation(id, root, sig, "");
     }
 }

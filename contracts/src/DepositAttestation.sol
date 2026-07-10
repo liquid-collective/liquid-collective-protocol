@@ -3,9 +3,9 @@ pragma solidity 0.8.34;
 
 import {ECDSA} from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
 
-import "./interfaces/IAttestationBuffer.sol";
+import "./interfaces/IDepositAttestation.sol";
 
-/// @title AttestationBuffer (v1)
+/// @title DepositAttestation (v1)
 /// @author Alluvial Finance Inc.
 /// @notice A non-upgradeable contract that verifies committee attestation signatures on-chain and
 ///         emits them as events for off-chain collection. Each attestation is either an approval or a
@@ -18,7 +18,7 @@ import "./interfaces/IAttestationBuffer.sol";
 ///      `AttestError` typehash, which makes it inert in the L1 deposit quorum (the verifier computes
 ///      the `Attest` struct hash and would recover a different signer). `errorData` is opaque to this
 ///      contract: it is hashed into the signed digest and emitted verbatim for keepers to interpret.
-contract AttestationBuffer is IAttestationBuffer {
+contract DepositAttestation is IDepositAttestation {
     /// @notice EIP-712 typehash for an approval attestation. Identical to the L1 AttestationVerifier's.
     bytes32 public constant ATTEST_TYPEHASH = keccak256("Attest(bytes32 depositDataBufferId,bytes32 depositRootHash)");
 
@@ -31,7 +31,7 @@ contract AttestationBuffer is IAttestationBuffer {
     ///      approval signatures verified here are consumable on L1.
     bytes32 internal immutable _domainSeparator;
 
-    /// @inheritdoc IAttestationBuffer
+    /// @inheritdoc IDepositAttestation
     uint256 public lastAttestationIdx;
 
     /// @param domainSeparator The EIP-712 domain separator (must equal the L1 verifier's).
@@ -40,7 +40,7 @@ contract AttestationBuffer is IAttestationBuffer {
         _domainSeparator = domainSeparator;
     }
 
-    /// @inheritdoc IAttestationBuffer
+    /// @inheritdoc IDepositAttestation
     function submitAttestation(
         bytes32 depositDataBufferId,
         bytes32 depositRootHash,
@@ -61,7 +61,7 @@ contract AttestationBuffer is IAttestationBuffer {
         ++lastAttestationIdx;
     }
 
-    /// @inheritdoc IAttestationBuffer
+    /// @inheritdoc IDepositAttestation
     function getDomainSeparator() external view returns (bytes32) {
         return _domainSeparator;
     }

@@ -1,10 +1,10 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.34;
 
-/// @title IAttestationBuffer
-/// @notice Interface for the AttestationBuffer contract, an on-chain relay that verifies and emits
+/// @title IDepositAttestation
+/// @notice Interface for the DepositAttestation contract, an on-chain relay that verifies and emits
 ///         attestation events for off-chain collection.
-interface IAttestationBuffer {
+interface IDepositAttestation {
     /// @notice Emitted when an attestation is submitted and its signature is verified.
     /// @param idx The auto-incrementing index of the attestation.
     /// @param depositDataBufferId The hash of the deposit data being attested to.
