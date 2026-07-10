@@ -29,7 +29,7 @@ interface IConsolidationAttestationBuffer {
     /// @param targetPubkeys The target validator BLS pubkeys from the consolidation object.
     /// @param totalAmount The total ETH being consolidated, in wei.
     /// @param exitEpoch The exit epoch included in the buffer-local consolidation hash.
-    /// @param error A caller-supplied error payload; empty when the attestation reports no error.
+    /// @param errorData A caller-supplied error payload; empty when the attestation reports no error.
     /// @param signature The attestor's signature.
     event ConsolidationAttestationSubmitted(
         uint256 indexed idx,
@@ -39,7 +39,7 @@ interface IConsolidationAttestationBuffer {
         bytes[] targetPubkeys,
         uint256 totalAmount,
         uint256 exitEpoch,
-        bytes error,
+        bytes errorData,
         bytes signature
     );
 
@@ -47,15 +47,15 @@ interface IConsolidationAttestationBuffer {
     error InvalidSignature();
 
     /// @notice Submit an attestation for a consolidation object.
-    /// @dev The signature must be produced by `msg.sender`. When `error` is empty the signed digest
-    ///      is `keccak256(abi.encode(consolidation))`; when `error` is non-empty it is
-    ///      `keccak256(abi.encode(consolidation, error))`. Reverts `InvalidSignature` otherwise.
+    /// @dev The signature must be produced by `msg.sender`. When `errorData` is empty the signed
+    ///      digest is `keccak256(abi.encode(consolidation))`; when `errorData` is non-empty it is
+    ///      `keccak256(abi.encode(consolidation, errorData))`. Reverts `InvalidSignature` otherwise.
     /// @param consolidation The consolidation object being attested to.
-    /// @param error A caller-supplied error payload; empty when reporting no error.
+    /// @param errorData A caller-supplied error payload; empty when reporting no error.
     /// @param signature The attestor's signature over the attested data.
     function submitAttestation(
         ConsolidationObject calldata consolidation,
-        bytes calldata error,
+        bytes calldata errorData,
         bytes calldata signature
     ) external;
 

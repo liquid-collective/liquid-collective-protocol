@@ -10,10 +10,10 @@ import "./interfaces/IConsolidationAttestationBuffer.sol";
 /// @notice A simple, non-upgradeable contract that emits consolidation attestation events on-chain.
 ///         Anyone can submit attestations; off-chain daemons collect the events. Quorum validation
 ///         is performed elsewhere.
-/// @dev Each submission carries a signature that must be produced by `msg.sender`. When `error` is
-///      empty the signature is over `keccak256(abi.encode(consolidation))`; when `error` is non-empty
-///      it is over `keccak256(abi.encode(consolidation, error))`. This binds the submitter to the
-///      exact consolidation object (and optional error) they are attesting to.
+/// @dev Each submission carries a signature that must be produced by `msg.sender`. When `errorData`
+///      is empty the signature is over `keccak256(abi.encode(consolidation))`; when `errorData` is
+///      non-empty it is over `keccak256(abi.encode(consolidation, errorData))`. This binds the
+///      submitter to the exact consolidation object (and optional error) they are attesting to.
 contract ConsolidationAttestationBuffer is IConsolidationAttestationBuffer {
     /// @dev Buffer-local EIP-712 struct hash including `exitEpoch`.
     bytes32 internal constant ATTEST_CONSOLIDATION_TYPEHASH = keccak256(
@@ -26,13 +26,14 @@ contract ConsolidationAttestationBuffer is IConsolidationAttestationBuffer {
     /// @inheritdoc IConsolidationAttestationBuffer
     function submitAttestation(
         ConsolidationObject calldata consolidation,
-        bytes calldata error,
+        bytes calldata errorData,
         bytes calldata signature
     ) external {
         bytes32 consolidationHash = _computeConsolidationHash(consolidation);
 
-        bytes32 digest =
-            error.length == 0 ? keccak256(abi.encode(consolidation)) : keccak256(abi.encode(consolidation, error));
+        bytes32 digest = errorData.length == 0
+            ? keccak256(abi.encode(consolidation))
+            : keccak256(abi.encode(consolidation, errorData));
         if (_recover(digest, signature) != msg.sender) revert InvalidSignature();
 
         emit ConsolidationAttestationSubmitted(
@@ -43,7 +44,7 @@ contract ConsolidationAttestationBuffer is IConsolidationAttestationBuffer {
             consolidation.targetPubkeys,
             consolidation.totalAmount,
             consolidation.exitEpoch,
-            error,
+            errorData,
             signature
         );
         ++lastAttestationIdx;
