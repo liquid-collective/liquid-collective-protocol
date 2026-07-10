@@ -241,13 +241,13 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
         emit SetDepositDataBuffer(_depositDataBuffer);
     }
 
-    /// @notice Revert unless `buffer` authorizes `expectedProcessor` (River) as its processor.
-    /// @param buffer The DepositDataBuffer to validate
+    /// @notice Revert unless `depositDataBuffer` authorizes `expectedProcessor` (River) as its processor.
+    /// @param depositDataBuffer The DepositDataBuffer to validate
     /// @param expectedProcessor The address that must be authorized to mark deposit data processed
-    function _assertDepositDataBufferProcessor(address buffer, address expectedProcessor) internal view {
-        address actualProcessor = IDepositDataBuffer(buffer).getProcessor();
+    function _assertDepositDataBufferProcessor(address depositDataBuffer, address expectedProcessor) internal view {
+        address actualProcessor = IDepositDataBuffer(depositDataBuffer).getProcessor();
         if (actualProcessor != expectedProcessor) {
-            revert InvalidDepositDataBufferProcessor(buffer, expectedProcessor, actualProcessor);
+            revert InvalidDepositDataBufferProcessor(depositDataBuffer, expectedProcessor, actualProcessor);
         }
     }
 
