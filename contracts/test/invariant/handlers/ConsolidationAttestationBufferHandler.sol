@@ -13,8 +13,13 @@ contract ConsolidationAttestationBufferHandler is Test {
     /// @notice Ghost count of successful submissions.
     uint256 public ghost_submissions;
 
+    /// @dev Fixed submitter whose key signs every attestation so the msg.sender check passes.
+    uint256 internal immutable signerPk;
+    address internal immutable signer;
+
     constructor(ConsolidationAttestationBuffer _buffer) {
         buffer = _buffer;
+        (signer, signerPk) = makeAddrAndKey("consolidation-invariant-signer");
     }
 
     function _pubkey(uint256 seed) internal pure returns (bytes memory) {
@@ -47,12 +52,18 @@ contract ConsolidationAttestationBufferHandler is Test {
     // Actions
     // -----------------------------------------------------------------------
 
-    function submit(uint256 seed, uint256 exitEpoch, bytes calldata sig) external {
-        if (sig.length > 128) return;
+    function submit(uint256 seed, uint256 exitEpoch, bytes calldata error) external {
+        if (error.length > 256) return;
 
         IConsolidationAttestationBuffer.ConsolidationObject memory consolidation = _consolidation(seed, exitEpoch);
 
-        buffer.submitAttestation(consolidation, sig);
+        bytes32 digest =
+            error.length == 0 ? keccak256(abi.encode(consolidation)) : keccak256(abi.encode(consolidation, error));
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPk, digest);
+        bytes memory sig = abi.encodePacked(r, s, v);
+
+        vm.prank(signer);
+        buffer.submitAttestation(consolidation, error, sig);
         ghost_submissions++;
     }
 }
