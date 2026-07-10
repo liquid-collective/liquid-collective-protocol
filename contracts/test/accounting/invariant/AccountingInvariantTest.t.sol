@@ -17,7 +17,7 @@ contract AccountingInvariantTest is AccountingInvariants {
     uint256 internal ghost_lastSkimmedBalance;
     uint256 internal ghost_lastExitedBalance;
     uint256[] internal ghost_lastExitedPerOp;
-    /// @dev I21: the previous report's totalExternalConsolidationsAmountReported, snapshotted at the START of
+    /// @dev I21: the previous report's totalExternalConsolidationETH, snapshotted at the START of
     ///      each report (not the end) so I21 verifies a genuine report-over-report non-decrease rather than a
     ///      same-call tautology.
     uint256 internal ghost_lastConsolidationsAmountReported;
@@ -99,8 +99,7 @@ contract AccountingInvariantTest is AccountingInvariants {
     function handler_oracleReport(bool rebalance, bool slashingContainment) external {
         // I21: capture the prior report's consolidation total BEFORE this report so the invariant verifies a
         // genuine report-over-report non-decrease.
-        ghost_lastConsolidationsAmountReported =
-        river.getLastConsensusLayerReport().totalExternalConsolidationsAmountReported;
+        ghost_lastConsolidationsAmountReported = river.getLastConsensusLayerReport().totalExternalConsolidationETH;
         if (slashingContainment) {
             _setAllowSharePriceDecrease(true);
         }
@@ -114,7 +113,7 @@ contract AccountingInvariantTest is AccountingInvariants {
     }
 
     /// @notice Delegates an external-consolidation report from the handler to the simulator. This is the only
-    ///         path that drives a non-zero, monotonically increasing totalExternalConsolidationsAmountReported,
+    ///         path that drives a non-zero, monotonically increasing totalExternalConsolidationETH,
     ///         so it is what makes invariant I21 a live check rather than a constant-0 tautology.
     ///         Credits the consolidation buffer off-chain (no on-chain increase path exists on this branch —
     ///         this mirrors the LsETH mint for incoming external consolidation, accounting the credited
@@ -129,8 +128,7 @@ contract AccountingInvariantTest is AccountingInvariants {
         uint256 delta = bound(deltaSeed, 1, 32 ether);
 
         // I21: snapshot the prior report's consolidation total BEFORE this report (see handler_oracleReport).
-        ghost_lastConsolidationsAmountReported =
-        river.getLastConsensusLayerReport().totalExternalConsolidationsAmountReported;
+        ghost_lastConsolidationsAmountReported = river.getLastConsensusLayerReport().totalExternalConsolidationETH;
 
         // Credit the consolidation buffer and account the credited principal (keeps I2 conservation intact once
         // the principal lands in validatorsBalance via _buildReport). The buffer starts at 0 between reports, so
@@ -338,7 +336,7 @@ contract AccountingInvariantTest is AccountingInvariants {
         assertEq(river.getTotalDepositedETH(), simSum, "I20: TotalDepositedETH != exact sim sum");
     }
 
-    /// @dev I21: Stored report totalExternalConsolidationsAmountReported is monotonically non-decreasing across
+    /// @dev I21: Stored report totalExternalConsolidationETH is monotonically non-decreasing across
     ///      reports — mirrors the OracleManager InvalidTotalConsolidationsAmountReportedDecrease guard.
     ///      `ghost_lastConsolidationsAmountReported` is snapshotted at the START of each report (in
     ///      handler_oracleReport / handler_consolidationReport), so this compares the post-report value against
@@ -348,14 +346,14 @@ contract AccountingInvariantTest is AccountingInvariants {
     function invariant_I21_consolidationsAmountNonDecreasing() public {
         IOracleManagerV1.StoredConsensusLayerReport memory report = river.getLastConsensusLayerReport();
         assertGe(
-            report.totalExternalConsolidationsAmountReported,
+            report.totalExternalConsolidationETH,
             ghost_lastConsolidationsAmountReported,
-            "I21: totalExternalConsolidationsAmountReported decreased"
+            "I21: totalExternalConsolidationETH decreased"
         );
     }
 
     /// @dev Deterministic regression test backing I21: proves the consolidation-reporting step actually drives a
-    ///      strictly increasing on-chain totalExternalConsolidationsAmountReported and that the I21 non-decrease
+    ///      strictly increasing on-chain totalExternalConsolidationETH and that the I21 non-decrease
     ///      property holds report-over-report (so I21 is a live check on real data, not a constant-0 no-op).
     function test_I21_consolidationReportsDriveMonotonicValue() public {
         // Establish a baseline so getCLValidatorCount() > 0 (the precondition for consolidation reports).
@@ -365,7 +363,7 @@ contract AccountingInvariantTest is AccountingInvariants {
         this.handler_oracleReport(false, false);
         assertGt(river.getCLValidatorCount(), 0, "baseline report did not activate validators");
         assertEq(
-            river.getLastConsensusLayerReport().totalExternalConsolidationsAmountReported,
+            river.getLastConsensusLayerReport().totalExternalConsolidationETH,
             0,
             "consolidation total should start at 0"
         );
@@ -376,7 +374,7 @@ contract AccountingInvariantTest is AccountingInvariants {
         uint256 prev = 0;
         for (uint256 i = 0; i < deltas.length; i++) {
             this.handler_consolidationReport(deltas[i]);
-            uint256 cur = river.getLastConsensusLayerReport().totalExternalConsolidationsAmountReported;
+            uint256 cur = river.getLastConsensusLayerReport().totalExternalConsolidationETH;
             assertEq(cur, prev + deltas[i], "consolidation total must rise by exactly the reported delta");
             invariant_I21_consolidationsAmountNonDecreasing();
             prev = cur;

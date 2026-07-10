@@ -53,7 +53,7 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
     uint256 internal _simTotalDepositedActivatedETH;
     /// @dev Cumulative external-consolidation principal that has landed in validatorsBalance and been reported.
     ///      Monotonically increasing — incremented by the consolidation report step. `_buildReport` adds it to
-    ///      validatorsBalance and reports it as totalExternalConsolidationsAmountReported, so every report
+    ///      validatorsBalance and reports it as totalExternalConsolidationETH, so every report
     ///      carries the current cumulative value (normal reports keep it unchanged → on-chain delta 0).
     uint256 internal _simConsolidatedBalance;
 
@@ -304,7 +304,7 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
         report.validatorsExitedBalance = _simCumulativeExited;
         report.validatorsExitingBalance = validatorsExiting;
         report.totalDepositedActivatedETH = _simTotalDepositedActivatedETH;
-        report.totalExternalConsolidationsAmountReported = _simConsolidatedBalance;
+        report.totalExternalConsolidationETH = _simConsolidatedBalance;
         report.validatorsCount = activatedCount;
         report.exitedETHPerOperator = exitedArr;
         report.activeCLETHPerOperator = activeCLETHArr;

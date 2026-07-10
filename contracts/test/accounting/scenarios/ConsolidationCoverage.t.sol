@@ -78,15 +78,15 @@ contract ConsolidationCoverageScenarioTest is AccountingInvariants {
         // Report a consolidation increase within the available buffer.
         uint256 delta = 1 ether;
         IOracleManagerV1.ConsensusLayerReport memory report = _buildBadReport(false, false);
-        report.totalExternalConsolidationsAmountReported = delta;
+        report.totalExternalConsolidationETH = delta;
         vm.prank(oracleMember);
         oracle.reportConsensusLayerData(report);
 
         // The reported value is persisted into the stored report.
         assertEq(
-            river.getLastConsensusLayerReport().totalExternalConsolidationsAmountReported,
+            river.getLastConsensusLayerReport().totalExternalConsolidationETH,
             delta,
-            "totalExternalConsolidationsAmountReported persisted"
+            "totalExternalConsolidationETH persisted"
         );
         // Buffer: reduced by `delta` on the consolidation increase, then the remaining `buffer - delta`
         // is pulled from the coverage fund (coverage >= remaining), draining it to zero.
@@ -124,12 +124,12 @@ contract ConsolidationCoverageScenarioTest is AccountingInvariants {
         // report; the buffer is drawn down by the same delta (no coverage residual, so no fund pull).
         IOracleManagerV1.ConsensusLayerReport memory report = _buildBadReport(false, false);
         report.validatorsBalance += delta;
-        report.totalExternalConsolidationsAmountReported = delta;
+        report.totalExternalConsolidationETH = delta;
         vm.prank(oracleMember);
         oracle.reportConsensusLayerData(report);
 
         // The reported value is persisted and the buffer is fully drawn down by the consolidation reduction.
-        assertEq(river.getLastConsensusLayerReport().totalExternalConsolidationsAmountReported, delta);
+        assertEq(river.getLastConsensusLayerReport().totalExternalConsolidationETH, delta);
         assertEq(uint256(vm.load(address(river), CONSOLIDATION_BUFFER_SLOT)), 0, "buffer drawn down by delta");
         // Core invariant: the consolidated principal is exactly offset, so the total underlying is UNCHANGED
         // (neither a drop nor an increase) and no fee shares are minted on the principal.
