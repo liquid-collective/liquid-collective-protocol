@@ -7,14 +7,23 @@ import "../../src/AttestationBuffer.sol";
 import "./handlers/AttestationBufferHandler.sol";
 
 /// @title AttestationBufferInvariantTest
-/// @notice Invariants for the AttestationBuffer event relay, ported from the frontrun-mitigation suite.
+/// @notice Invariants for the AttestationBuffer signature-verifying relay. The handler always submits
+///         valid, self-signed attestations, so every submission succeeds.
 contract AttestationBufferInvariantTest is Test {
     AttestationBuffer internal buffer;
     AttestationBufferHandler internal handler;
 
+    bytes32 internal constant EIP712_DOMAIN_TYPEHASH =
+        keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
+    bytes32 internal constant NAME_HASH = keccak256("DepositToConsensusLayerValidation");
+    bytes32 internal constant VERSION_HASH = keccak256("1");
+
     function setUp() public {
-        buffer = new AttestationBuffer();
-        handler = new AttestationBufferHandler(buffer);
+        bytes32 domainSeparator = keccak256(
+            abi.encode(EIP712_DOMAIN_TYPEHASH, NAME_HASH, VERSION_HASH, block.chainid, makeAddr("river"))
+        );
+        buffer = new AttestationBuffer(domainSeparator);
+        handler = new AttestationBufferHandler(buffer, 0xA11CE, domainSeparator);
 
         targetContract(address(handler));
 
