@@ -385,20 +385,4 @@ contract OracleManagerV1CoverageTests is OracleManagerV1Tests {
         );
         oracleManager.setConsensusLayerData(clr);
     }
-
-    // ─────────────────────────────────────────────────────────────────────────────
-    // DROPPED consolidation-buffer report-effect tests (moved to real-River integration).
-    //
-    // The following tests previously drove setConsensusLayerData past the early bound checks and asserted
-    // on consolidation-buffer reduction / consolidation-coverage pulls. Those effects now execute inside
-    // LibOracleReporting via DELEGATECALL, which self-calls River's totalUnderlyingSupply()/totalSupply()
-    // and real collaborators — none of which this isolated OracleManager mock can satisfy. They are covered
-    // by real-River integration tests in contracts/test/River.1.t.sol:
-    //   - testSetConsensusLayerDataConsolidationBufferNonZero          -> RiverV1CoverageTests.testPullConsolidationCoverageFundsHappyPath
-    //   - testSetConsensusLayerDataConsolidationBufferNoPull           -> RiverV1CoverageTests.testPullConsolidationCoverageFundsZeroBalance / testPullConsolidationCoverageFundsZeroAddress
-    //   - testSetConsensusLayerDataConsolidationsIncreaseReducesBuffer -> RiverV1CoverageTests.testPullConsolidationCoverageFundsPartial (buffer-reduction + persistence)
-    //   - testSetConsensusLayerDataConsolidationsUnchangedKeepsBuffer  -> COVERAGE GAP: no integration test asserts the equal-report (`<` not `<=`) branch skips buffer reduction.
-    //   - testFuzzSetConsensusLayerDataConsolidations                  -> partially by the above; the fuzzed decrease-revert / capped-reduction / APR-bound matrix is a COVERAGE GAP at integration level.
-    //   - testSetConsensusLayerDataConsolidationNetsOutAgainstValidatorBalanceIncrease -> COVERAGE GAP: the buffer-reduction ordering regression guard (delta offsets validatorsBalance, not booked as rewards) has no equivalent River integration test.
-    // ─────────────────────────────────────────────────────────────────────────────
 }
