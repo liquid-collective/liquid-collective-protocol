@@ -17,14 +17,6 @@ pragma solidity 0.8.34;
 //   - the EARLY bound-check reverts inside setConsensusLayerData that fire in LibOracleReporting BEFORE the first
 //     self-call (validator-count decrease, totalDepositedActivatedETH increase-over-in-flight / decrease,
 //     totalExternalConsolidationsAmountReported decrease).
-//
-// DROPPED report-orchestration tests and their integration coverage in contracts/test/River.1.t.sol:
-//   - testFuzzedReporting                                    -> RiverV1TestsReport_HEAVY_FUZZING.testReportingFuzzing
-//       (7 scenarios: nothing pulled / EL fees / coverage / exceeding buffer / half EL+coverage / rebalancing /
-//        slashing containment) + testReportingSuccess_AssertCommittedAmountAfter{Skimming,ELFees,Coverage,MultiPulling}
-//   - consolidation-buffer effect tests                      -> RiverV1CoverageTests.testPullConsolidationCoverageFunds*
-//       (HappyPath / Partial / ZeroBalance / ZeroAddress). See the per-test mapping and remaining COVERAGE GAPs
-//       in the note at the end of contract OracleManagerV1CoverageTests.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import "forge-std/Test.sol";
@@ -151,13 +143,6 @@ contract OracleManagerV1Tests is Test {
     function _next(uint256 _salt) internal pure returns (uint256) {
         return uint256(keccak256(abi.encode(_salt)));
     }
-
-    // NOTE: the former `testFuzzedReporting` fuzz test that drove the full report orchestration through the
-    // (now removed) fake handler seam has been deleted — the report path now runs in LibOracleReporting via
-    // DELEGATECALL and self-calls River's share math / collaborators, which this isolated mock cannot satisfy.
-    // Its coverage is provided by the real-River fuzz test `RiverV1TestsReport_HEAVY_FUZZING.testReportingFuzzing`
-    // (contracts/test/River.1.t.sol), which drives setConsensusLayerData across 7 pull/rebalance/slashing
-    // scenarios and asserts real balances, committed amounts, shares/fees and redeem-manager reporting.
 
     function debug_maxIncrease(ReportBounds.ReportBoundsStruct memory rb, uint256 _prevTotalEth, uint256 _timeElapsed)
         internal

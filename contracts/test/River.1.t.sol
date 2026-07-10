@@ -2567,10 +2567,6 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         return _salt;
     }
 
-    // The InvalidValidatorCountReport (decreasing validator count) branch is now covered by
-    // testReportingError_InvalidValidatorCountReport in RiverV1CoverageTests, which seeds the last stored
-    // report's validatorsCount and drives the real river.setConsensusLayerData path.
-
     function testReportingError_InvalidDecreasingValidatorsExitedBalance(uint256 _salt) external {
         uint8 depositCount = uint8(bound(_salt, 2, 32));
         IOracleManagerV1.ConsensusLayerReport memory clr = _generateEmptyReport();
@@ -2724,10 +2720,6 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         _fillReport(clr);
         river.setConsensusLayerData(clr);
     }
-
-    // The decreasing-validator-count validation (formerly ValidatorCountDecreasing) is reinstated as
-    // testReportingError_InvalidValidatorCountReport in RiverV1CoverageTests. The ValidatorCountHigherThanDeposits
-    // validation no longer exists: DepositedValidatorCount is not tracked in the attestation-based flow.
 
     function testReportingError_InvalidPulledClFundsAmount(uint256 _salt) external {
         uint8 depositCount = uint8(bound(_salt, 2, 32));
