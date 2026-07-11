@@ -26,8 +26,8 @@ contract ConsolidationAttestationTest is Test {
         bytes[] targetPubkeys,
         uint256 totalAmount,
         uint256 exitEpoch,
-        bytes error,
-        bytes signature
+        bytes signature,
+        bytes error
     );
 
     function setUp() public {
@@ -108,11 +108,11 @@ contract ConsolidationAttestationTest is Test {
     }
 
     /// @dev Sign the expected digest with `pk` and return a 65-byte `(r,s,v)` signature.
-    function _sign(
-        uint256 pk,
-        IConsolidationAttestation.ConsolidationObject memory consolidation,
-        bytes memory error
-    ) internal view returns (bytes memory) {
+    function _sign(uint256 pk, IConsolidationAttestation.ConsolidationObject memory consolidation, bytes memory error)
+        internal
+        view
+        returns (bytes memory)
+    {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(pk, _digest(consolidation, error));
         return abi.encodePacked(r, s, v);
     }
@@ -146,12 +146,12 @@ contract ConsolidationAttestationTest is Test {
             c.targetPubkeys,
             c.totalAmount,
             c.exitEpoch,
-            error,
-            sig
+            sig,
+            error
         );
 
         vm.prank(signer);
-        buffer.submitAttestation(c, error, sig);
+        buffer.submitAttestation(c, sig, error);
 
         assertEq(buffer.lastAttestationIdx(), 1);
     }
@@ -172,12 +172,12 @@ contract ConsolidationAttestationTest is Test {
             c.targetPubkeys,
             c.totalAmount,
             c.exitEpoch,
-            error,
-            sig
+            sig,
+            error
         );
 
         vm.prank(signer);
-        buffer.submitAttestation(c, error, sig);
+        buffer.submitAttestation(c, sig, error);
 
         assertEq(buffer.lastAttestationIdx(), 1);
     }
@@ -189,17 +189,17 @@ contract ConsolidationAttestationTest is Test {
 
         IConsolidationAttestation.ConsolidationObject memory c1 = _consolidation(address(0x1), 1, 10);
         vm.prank(signer);
-        buffer.submitAttestation(c1, "", _sign(pk, c1, ""));
+        buffer.submitAttestation(c1, _sign(pk, c1, ""), "");
         assertEq(buffer.lastAttestationIdx(), 1);
 
         IConsolidationAttestation.ConsolidationObject memory c2 = _consolidation(address(0x2), 2, 20);
         vm.prank(signer);
-        buffer.submitAttestation(c2, "", _sign(pk, c2, ""));
+        buffer.submitAttestation(c2, _sign(pk, c2, ""), "");
         assertEq(buffer.lastAttestationIdx(), 2);
 
         IConsolidationAttestation.ConsolidationObject memory c3 = _consolidation(address(0x3), 3, 30);
         vm.prank(signer);
-        buffer.submitAttestation(c3, "", _sign(pk, c3, ""));
+        buffer.submitAttestation(c3, _sign(pk, c3, ""), "");
         assertEq(buffer.lastAttestationIdx(), 3);
     }
 
@@ -209,11 +209,11 @@ contract ConsolidationAttestationTest is Test {
         IConsolidationAttestation.ConsolidationObject memory c = _consolidation(makeAddr("withdrawal"), 11, 99);
 
         vm.prank(alice);
-        buffer.submitAttestation(c, "", _sign(alicePk, c, ""));
+        buffer.submitAttestation(c, _sign(alicePk, c, ""), "");
         assertEq(buffer.lastAttestationIdx(), 1);
 
         vm.prank(bob);
-        buffer.submitAttestation(c, "", _sign(bobPk, c, ""));
+        buffer.submitAttestation(c, _sign(bobPk, c, ""), "");
         assertEq(buffer.lastAttestationIdx(), 2);
     }
 
@@ -225,7 +225,7 @@ contract ConsolidationAttestationTest is Test {
 
         vm.expectRevert(IConsolidationAttestation.InvalidSignature.selector);
         vm.prank(other);
-        buffer.submitAttestation(c, "", sig);
+        buffer.submitAttestation(c, sig, "");
 
         assertEq(buffer.lastAttestationIdx(), 0);
     }
@@ -238,7 +238,7 @@ contract ConsolidationAttestationTest is Test {
 
         vm.expectRevert(IConsolidationAttestation.InvalidSignature.selector);
         vm.prank(signer);
-        buffer.submitAttestation(c, bytes("mismatch"), sig);
+        buffer.submitAttestation(c, sig, bytes("mismatch"));
 
         assertEq(buffer.lastAttestationIdx(), 0);
     }
@@ -250,7 +250,7 @@ contract ConsolidationAttestationTest is Test {
 
         vm.expectRevert(IConsolidationAttestation.InvalidSignature.selector);
         vm.prank(signer);
-        buffer.submitAttestation(c, "", sig);
+        buffer.submitAttestation(c, sig, "");
 
         assertEq(buffer.lastAttestationIdx(), 0);
     }
@@ -264,33 +264,31 @@ contract ConsolidationAttestationTest is Test {
 
         vm.expectRevert(IConsolidationAttestation.InvalidSignature.selector);
         vm.prank(signer);
-        buffer.submitAttestation(c, "", abi.encodePacked(r, s, v));
+        buffer.submitAttestation(c, abi.encodePacked(r, s, v), "");
     }
 
     function test_RevertsWhenExitEpochDoesNotMatchSignature() public {
         (address signer, uint256 pk) = makeAddrAndKey("signer");
-        IConsolidationAttestation.ConsolidationObject memory signed =
-            _consolidation(makeAddr("withdrawal"), 17, 105);
+        IConsolidationAttestation.ConsolidationObject memory signed = _consolidation(makeAddr("withdrawal"), 17, 105);
         bytes memory sig = _sign(pk, signed, "");
         IConsolidationAttestation.ConsolidationObject memory submitted = signed;
         submitted.exitEpoch++;
 
         vm.expectRevert(IConsolidationAttestation.InvalidSignature.selector);
         vm.prank(signer);
-        buffer.submitAttestation(submitted, "", sig);
+        buffer.submitAttestation(submitted, sig, "");
     }
 
     function test_RevertsWhenConsolidationDoesNotMatchSignature() public {
         (address signer, uint256 pk) = makeAddrAndKey("signer");
-        IConsolidationAttestation.ConsolidationObject memory signed =
-            _consolidation(makeAddr("withdrawal"), 18, 106);
+        IConsolidationAttestation.ConsolidationObject memory signed = _consolidation(makeAddr("withdrawal"), 18, 106);
         bytes memory sig = _sign(pk, signed, "");
         IConsolidationAttestation.ConsolidationObject memory submitted = signed;
         submitted.totalAmount++;
 
         vm.expectRevert(IConsolidationAttestation.InvalidSignature.selector);
         vm.prank(signer);
-        buffer.submitAttestation(submitted, "", sig);
+        buffer.submitAttestation(submitted, sig, "");
     }
 
     function test_RevertsOnMalformedSignatureLength() public {
@@ -299,14 +297,12 @@ contract ConsolidationAttestationTest is Test {
 
         vm.expectRevert(IConsolidationAttestation.InvalidSignature.selector);
         vm.prank(signer);
-        buffer.submitAttestation(c, "", hex"deadbeef");
+        buffer.submitAttestation(c, hex"deadbeef", "");
     }
 
     function test_HashChangesWhenOnlyExitEpochChanges() public {
-        IConsolidationAttestation.ConsolidationObject memory early =
-            _consolidation(makeAddr("withdrawal"), 21, 1000);
-        IConsolidationAttestation.ConsolidationObject memory late =
-            _consolidation(makeAddr("withdrawal"), 21, 1001);
+        IConsolidationAttestation.ConsolidationObject memory early = _consolidation(makeAddr("withdrawal"), 21, 1000);
+        IConsolidationAttestation.ConsolidationObject memory late = _consolidation(makeAddr("withdrawal"), 21, 1001);
 
         bytes32 earlyHash = buffer.computeConsolidationHash(early);
         bytes32 lateHash = buffer.computeConsolidationHash(late);

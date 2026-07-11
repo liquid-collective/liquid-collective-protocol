@@ -29,8 +29,8 @@ interface IConsolidationAttestation {
     /// @param targetPubkeys The target validator BLS pubkeys from the consolidation object.
     /// @param totalAmount The total ETH being consolidated, in wei.
     /// @param exitEpoch The exit epoch included in the buffer-local consolidation hash.
-    /// @param errorData A caller-supplied error payload; empty when the attestation reports no error.
     /// @param signature The attestor's signature.
+    /// @param errorData A caller-supplied error payload; empty when the attestation reports no error.
     event ConsolidationAttestationSubmitted(
         uint256 indexed idx,
         bytes32 indexed consolidationHash,
@@ -39,8 +39,8 @@ interface IConsolidationAttestation {
         bytes[] targetPubkeys,
         uint256 totalAmount,
         uint256 exitEpoch,
-        bytes errorData,
-        bytes signature
+        bytes signature,
+        bytes errorData
     );
 
     /// @notice Reverts when the recovered signer of the attestation signature is not `msg.sender`.
@@ -54,12 +54,12 @@ interface IConsolidationAttestation {
     ///      domain separator. Empty `errorData` uses `AttestConsolidation`; non-empty `errorData`
     ///      uses the distinct `AttestConsolidationError` type. Reverts `InvalidSignature` otherwise.
     /// @param consolidation The consolidation object being attested to.
-    /// @param errorData A caller-supplied error payload; empty when reporting no error.
     /// @param signature The attestor's signature over the attested data.
+    /// @param errorData A caller-supplied error payload; empty when reporting no error.
     function submitAttestation(
         ConsolidationObject calldata consolidation,
-        bytes calldata errorData,
-        bytes calldata signature
+        bytes calldata signature,
+        bytes calldata errorData
     ) external;
 
     /// @notice Compute the buffer-local struct hash of a consolidation object.

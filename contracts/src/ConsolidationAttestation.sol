@@ -40,8 +40,8 @@ contract ConsolidationAttestation is IConsolidationAttestation {
     /// @inheritdoc IConsolidationAttestation
     function submitAttestation(
         ConsolidationObject calldata consolidation,
-        bytes calldata errorData,
-        bytes calldata signature
+        bytes calldata signature,
+        bytes calldata errorData
     ) external {
         bytes32 consolidationHash = _computeConsolidationHash(consolidation);
 
@@ -58,8 +58,8 @@ contract ConsolidationAttestation is IConsolidationAttestation {
             consolidation.targetPubkeys,
             consolidation.totalAmount,
             consolidation.exitEpoch,
-            errorData,
-            signature
+            signature,
+            errorData
         );
         ++lastAttestationIdx;
     }

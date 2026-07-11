@@ -78,7 +78,7 @@ contract ConsolidationAttestationHandler is Test {
         bytes memory sig = abi.encodePacked(r, s, v);
 
         vm.prank(signer);
-        buffer.submitAttestation(consolidation, error, sig);
+        buffer.submitAttestation(consolidation, sig, error);
         ghost_submissions++;
     }
 

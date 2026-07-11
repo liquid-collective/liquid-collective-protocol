@@ -462,9 +462,8 @@ library LibOracleReporting {
         if (totalSupply > 0) {
             uint256 availableBalanceToRedeem = BalanceToRedeem.get();
             uint256 availableBalanceToDeposit = BalanceToDeposit.get();
-            uint256 redeemManagerDemandInEth = ISharesManagerV1(address(this)).underlyingBalanceFromShares(
-                IRedeemManagerV1(RedeemManagerAddress.get()).getRedeemDemand()
-            );
+            uint256 redeemManagerDemandInEth = ISharesManagerV1(address(this))
+                .underlyingBalanceFromShares(IRedeemManagerV1(RedeemManagerAddress.get()).getRedeemDemand());
 
             // if after all rebalancings, the redeem manager demand is still higher than the balance to redeem and exiting eth, we compute
             // the amount of ETH (wei) to exit in order to cover the remaining demand
@@ -686,10 +685,8 @@ library LibOracleReporting {
     /// @param _epoch The epoch to verify
     /// @return True if valid
     function _isValidEpoch(CLSpec.CLSpecStruct memory _cls, uint256 _epoch) internal view returns (bool) {
-        return (
-            _currentEpoch(_cls) >= _epoch + _cls.epochsToAssumedFinality
-                && _epoch > LastConsensusLayerReport.get().epoch && _epoch % _cls.epochsPerFrame == 0
-        );
+        return (_currentEpoch(_cls) >= _epoch + _cls.epochsToAssumedFinality
+                && _epoch > LastConsensusLayerReport.get().epoch && _epoch % _cls.epochsPerFrame == 0);
     }
 
     /// @notice Retrieves the maximum increase in balance based on current total underlying supply and period since last report
