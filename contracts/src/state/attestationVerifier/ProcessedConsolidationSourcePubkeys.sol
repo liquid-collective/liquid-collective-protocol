@@ -6,7 +6,8 @@ import "../../libraries/LibUnstructuredStorage.sol";
 /// @title ProcessedConsolidationSourcePubkeys
 /// @notice Unstructured-storage set of source pubkeys that have already been
 ///         accepted by `validateConsolidation`.
-/// @dev Please note that pubkeys should be migrated in case of updates if any.
+/// @dev    For upgrades: this mapping starts empty. To preserve replay protection for
+///         sources consolidated prior to this deployment/upgrade, an explicit backfill/migration step is required.
 library ProcessedConsolidationSourcePubkeys {
     bytes32 internal constant PROCESSED_CONSOLIDATION_SOURCE_PUBKEYS_MAPPING_BASE_SLOT =
         bytes32(uint256(keccak256("attestationVerifier.state.processedConsolidationSourcePubkeys.mapping")) - 1);

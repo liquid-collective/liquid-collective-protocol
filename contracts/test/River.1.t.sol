@@ -3538,10 +3538,7 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         assertEq(uint256(vm.load(address(river), CONSOLIDATION_BUFFER_SLOT)), 0);
         assertEq(river.getBalanceToConsolidate(), 0);
         // Confirm the stored report recorded the full reported amount.
-        assertEq(
-            river.getLastConsensusLayerReport().totalExternalConsolidationsAmountReported,
-            reportedConsolidations
-        );
+        assertEq(river.getLastConsensusLayerReport().totalExternalConsolidationsAmountReported, reportedConsolidations);
     }
 
     /// Regression guard: a report whose validatorsBalance increase is exactly matched by a consolidation
@@ -3674,9 +3671,7 @@ contract RiverV1CoverageTests is RiverV1TestBase {
 
         vm.prank(address(oracle));
         // The revert reports (reportedValidatorCount, lastReportedValidatorCount).
-        vm.expectRevert(
-            abi.encodeWithSignature("InvalidValidatorCountReport(uint256,uint256)", newCount, lastCount)
-        );
+        vm.expectRevert(abi.encodeWithSignature("InvalidValidatorCountReport(uint256,uint256)", newCount, lastCount));
         river.setConsensusLayerData(clr);
     }
 
