@@ -4,6 +4,7 @@ pragma solidity 0.8.34;
 import "./BeaconChainSimulator.sol";
 import "../../src/state/operatorsRegistry/Operators.3.sol";
 import "../../src/state/river/ReportBounds.sol";
+import "../../src/state/redeemManager/WithdrawalStack.sol";
 
 abstract contract AccountingInvariants is BeaconChainSimulator {
     uint256 private _snapTotalUnderlying;
@@ -13,6 +14,7 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
     uint256 private _snapExitDemand;
     bool private _allowSharePriceDecrease;
     bool private _lastReportWasContainment;
+    uint256 private _observedWithdrawalEventCount;
 
     /// @dev Snapshot of ReportBounds captured by `_pushRelaxedLowerBound`, restored by `_popBounds`.
     struct BoundsSnapshot {
@@ -29,7 +31,8 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
         vm.prank(admin);
         river.setReportBounds(
             ReportBounds.ReportBoundsStruct({
-                annualAprUpperBound: cur.annualAprUpperBound, relativeLowerBound: relLowerBps
+                annualAprUpperBound: cur.annualAprUpperBound,
+                relativeLowerBound: relLowerBps
             })
         );
         _setAllowSharePriceDecrease(true);
@@ -49,7 +52,7 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
     /// @notice Implements the oracle report step: warps time to the required finality epoch,
     ///         funds the withdrawal contract with newly skimmed/exited ETH, builds the CL report,
     ///         snapshots pre-report state, submits the report as the oracle member, and then
-    ///         asserts all six accounting invariants (I1–I6).
+    ///         asserts the accounting invariants.
     /// @param rebalance            Whether to request deposit-to-redeem rebalancing mode.
     /// @param slashingContainment  Whether to submit the report in slashing-containment mode.
     function sim_oracleReport(bool rebalance, bool slashingContainment) internal virtual override {
@@ -76,7 +79,11 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
 
         _lastReportedSkimmed = _simCumulativeSkimmed;
         _lastReportedExited = _simCumulativeExited;
+        _lastReportedAutocompounded = _simCumulativeAutocompounded;
+        _lastReportedLosses = _simCumulativeLosses;
         _lastReportEpoch = reportEpoch;
+        _simLastReportedValidatorCount = _simActivatedCount();
+        _syncWithdrawnETH();
         // Sync sim in-flight to what the oracle just confirmed: oracle sets InFlightDeposit = _pendingETH().
         _simInFlightDeposit = _pendingETH();
 
@@ -93,7 +100,9 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
         // in-flight value (_simInFlightDeposit), which mirrors what the contract should hold:
         // cumulative ETH sent to the deposit contract minus what the oracle has already confirmed.
         assertEq(
-            river.getInFlightDeposit(), _simInFlightDeposit, "I3 (pre-report): InFlightDeposit != sim in-flight deposit"
+            river.getInFlightDeposit(),
+            _simInFlightDeposit,
+            "I3 (pre-report): InFlightDeposit != sim in-flight deposit"
         );
 
         _snapTotalUnderlying = river.totalUnderlyingSupply();
@@ -111,6 +120,16 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
         _allowSharePriceDecrease = allow;
     }
 
+    /// @dev Accounts independently observable ETH transfers from River to RedeemManager.
+    function _syncWithdrawnETH() internal {
+        uint256 count = redeemManager.getWithdrawalEventCount();
+        for (uint256 i = _observedWithdrawalEventCount; i < count; i++) {
+            WithdrawalStack.WithdrawalEvent memory withdrawal = redeemManager.getWithdrawalEventDetails(uint32(i));
+            _simCumulativeWithdrawn += withdrawal.withdrawnEth;
+        }
+        _observedWithdrawalEventCount = count;
+    }
+
     /// @notice Executes all post-report invariant assertions (I1–I12) in sequence.
     function _assertAllInvariants() internal {
         _assertI1_SharePriceNonDecrease();
@@ -121,7 +140,7 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
         _assertI6_ExitedETHAggregate();
         _assertI7_DepositActivationDecomposition();
         _assertI8_RequestedExitsGeExited();
-        _assertI9_TotalRequestedGeExited();
+        _assertI9_TotalRequestedConsistency();
         _assertI10_ActivatedETHNonDecreasing();
         _assertI11_ActiveCLETHConsistency();
         _assertI12_ContainmentSuppressesDemand();
@@ -140,19 +159,17 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
         assertGe(lhs, rhs, "I1: share price decreased unexpectedly");
     }
 
-    /// @notice I2: Verifies ETH conservation — `totalUnderlyingSupply` must never exceed
-    ///         tracked principal plus cumulative skimmed rewards plus autocompounded rewards.
+    /// @notice I2: Verifies exact ETH conservation against independently tracked simulator state.
     ///         `_simTotalUserDeposited` captures all principal sources (user deposits and
-    ///         consolidation principal). All values are tracked independently of contract
-    ///         storage, making this a non-tautological check. Also asserts non-zero whenever
-    ///         principal has been deposited.
+    ///         consolidation principal), while reported rewards, losses, and ETH transferred
+    ///         to RedeemManager account for every change to River's underlying balance.
     function _assertI2_ETHConservation() internal {
-        uint256 upperBound = _simTotalUserDeposited + _simCumulativeSkimmed + _simCumulativeAutocompounded;
-        assertLe(river.totalUnderlyingSupply(), upperBound, "I2: total underlying exceeds deposited + rewards");
-        // Also: must be > 0 if any user deposited
-        if (_simTotalUserDeposited > 0) {
-            assertGt(river.totalUnderlyingSupply(), 0, "I2: total underlying is zero after deposits");
-        }
+        uint256 expected = _simTotalUserDeposited +
+            _lastReportedSkimmed +
+            _lastReportedAutocompounded -
+            _lastReportedLosses -
+            _simCumulativeWithdrawn;
+        assertEq(river.totalUnderlyingSupply(), expected, "I2: total underlying accounting mismatch");
     }
 
     /// @notice I3: In-flight deposit consistency check.
@@ -167,8 +184,8 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
 
     /// @notice I4: Verifies per-operator ETH consistency — for each operator, the on-chain
     ///         `funded` ETH must equal the simulator's sum of deposited ETH, and the on-chain
-    ///         `exitedETHPerOperator` must match the simulator's sum of exited ETH. Also asserts
-    ///         that `exited <= funded` and `requestedExits <= funded` for every operator.
+    ///         `exitedETHPerOperator` must match the simulator's sum of exited ETH. Exited ETH may
+    ///         exceed principal when 0x02 rewards autocompound before exit.
     function _assertI4_PerOperatorETH() internal {
         uint256 opCount = operatorsRegistry.getOperatorCount();
         uint256[] memory exitedPerOp = operatorsRegistry.getExitedETHPerOperator();
@@ -191,13 +208,7 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
 
             assertEq(op.funded, simFunded, string(abi.encodePacked("I4: op", vm.toString(i), " funded mismatch")));
             uint256 onChainExited = exitedPerOp.length > i ? exitedPerOp[i] : 0;
-            assertLe(onChainExited, op.funded, string(abi.encodePacked("I4: op", vm.toString(i), " exited > funded")));
             assertEq(onChainExited, simExited, string(abi.encodePacked("I4: op", vm.toString(i), " exited mismatch")));
-            assertLe(
-                op.requestedExits,
-                op.funded,
-                string(abi.encodePacked("I4: op", vm.toString(i), " requestedExits > funded"))
-            );
         }
     }
 
@@ -210,7 +221,7 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
     /// @notice I6: Verifies that the aggregate exited ETH returned by `getExitedAndRequestedETHExits`
     ///         equals the sum of all per-operator exited ETH values from `getExitedETHPerOperator`.
     function _assertI6_ExitedETHAggregate() internal {
-        (uint256 totalExited,) = operatorsRegistry.getExitedAndRequestedETHExits();
+        (uint256 totalExited, ) = operatorsRegistry.getExitedAndRequestedETHExits();
         uint256[] memory perOp = operatorsRegistry.getExitedETHPerOperator();
         uint256 sum = 0;
         for (uint256 i = 0; i < perOp.length; i++) {
@@ -258,9 +269,15 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
     ///         the aggregate would not be caught here. Slashed validators are exited via the
     ///         oracle report path; `_setExitedETH` bumps `TotalETHExitsRequested` to match, so
     ///         the invariant holds for slashing scenarios.
-    function _assertI9_TotalRequestedGeExited() internal {
-        (uint256 totalExited,) = operatorsRegistry.getExitedAndRequestedETHExits();
+    function _assertI9_TotalRequestedConsistency() internal {
+        (uint256 totalExited, ) = operatorsRegistry.getExitedAndRequestedETHExits();
         uint256 totalRequested = operatorsRegistry.getTotalETHExitsRequested();
+        uint256 requestedSum;
+        uint256 opCount = operatorsRegistry.getOperatorCount();
+        for (uint256 i = 0; i < opCount; i++) {
+            requestedSum += operatorsRegistry.getOperator(i).requestedExits;
+        }
+        assertEq(totalRequested, requestedSum, "I9: TotalETHExitsRequested aggregate mismatch");
         assertGe(totalRequested, totalExited, "I9: TotalETHExitsRequested < totalExited");
     }
 
