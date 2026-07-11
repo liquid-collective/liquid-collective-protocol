@@ -3,23 +3,25 @@ pragma solidity 0.8.34;
 
 import "forge-std/Test.sol";
 
-import "../../src/ConsolidationAttestationBuffer.sol";
-import "./handlers/ConsolidationAttestationBufferHandler.sol";
+import "../../src/ConsolidationAttestation.sol";
+import "./handlers/ConsolidationAttestationHandler.sol";
 
-/// @title ConsolidationAttestationBufferInvariantTest
+/// @title ConsolidationAttestationInvariantTest
 /// @notice Invariants for the consolidation attestation relay.
-contract ConsolidationAttestationBufferInvariantTest is Test {
-    ConsolidationAttestationBuffer internal buffer;
-    ConsolidationAttestationBufferHandler internal handler;
+contract ConsolidationAttestationInvariantTest is Test {
+    bytes32 internal constant DOMAIN_SEPARATOR = keccak256("consolidation-attestation-invariant-domain");
+
+    ConsolidationAttestation internal buffer;
+    ConsolidationAttestationHandler internal handler;
 
     function setUp() public {
-        buffer = new ConsolidationAttestationBuffer();
-        handler = new ConsolidationAttestationBufferHandler(buffer);
+        buffer = new ConsolidationAttestation(DOMAIN_SEPARATOR);
+        handler = new ConsolidationAttestationHandler(buffer);
 
         targetContract(address(handler));
 
         bytes4[] memory selectors = new bytes4[](1);
-        selectors[0] = ConsolidationAttestationBufferHandler.submit.selector;
+        selectors[0] = ConsolidationAttestationHandler.submit.selector;
         targetSelector(FuzzSelector({addr: address(handler), selectors: selectors}));
     }
 

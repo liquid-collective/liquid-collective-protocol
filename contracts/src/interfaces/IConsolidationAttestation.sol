@@ -1,10 +1,10 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.34;
 
-/// @title IConsolidationAttestationBuffer
-/// @notice Interface for the ConsolidationAttestationBuffer contract, an on-chain relay that emits
+/// @title IConsolidationAttestation
+/// @notice Interface for the ConsolidationAttestation contract, an on-chain relay that emits
 ///         consolidation attestation events.
-interface IConsolidationAttestationBuffer {
+interface IConsolidationAttestation {
     /// @notice Buffer-local consolidation object used for off-chain attestation collection.
     /// @dev `exitEpoch` is intentionally scoped to this buffer hash/event surface and is not part of
     ///      `IAttestationVerifierV1.ConsolidationObject`.
@@ -46,10 +46,13 @@ interface IConsolidationAttestationBuffer {
     /// @notice Reverts when the recovered signer of the attestation signature is not `msg.sender`.
     error InvalidSignature();
 
+    /// @notice Reverts when the buffer is constructed with a zero domain separator.
+    error ZeroDomainSeparator();
+
     /// @notice Submit an attestation for a consolidation object.
-    /// @dev The signature must be produced by `msg.sender`. When `errorData` is empty the signed
-    ///      digest is `keccak256(abi.encode(consolidation))`; when `errorData` is non-empty it is
-    ///      `keccak256(abi.encode(consolidation, errorData))`. Reverts `InvalidSignature` otherwise.
+    /// @dev The signature must be produced by `msg.sender` over an EIP-712 digest using this buffer's
+    ///      domain separator. Empty `errorData` uses `AttestConsolidation`; non-empty `errorData`
+    ///      uses the distinct `AttestConsolidationError` type. Reverts `InvalidSignature` otherwise.
     /// @param consolidation The consolidation object being attested to.
     /// @param errorData A caller-supplied error payload; empty when reporting no error.
     /// @param signature The attestor's signature over the attested data.
@@ -63,6 +66,10 @@ interface IConsolidationAttestationBuffer {
     /// @param consolidation The consolidation object to hash.
     /// @return The struct hash used for event indexing.
     function computeConsolidationHash(ConsolidationObject calldata consolidation) external pure returns (bytes32);
+
+    /// @notice The EIP-712 domain separator used to verify attestation signatures.
+    /// @return The domain separator supplied at construction.
+    function getDomainSeparator() external view returns (bytes32);
 
     /// @notice The index that will be assigned to the next attestation.
     function lastAttestationIdx() external view returns (uint256);

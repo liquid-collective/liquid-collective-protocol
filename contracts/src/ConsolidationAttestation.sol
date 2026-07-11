@@ -3,27 +3,41 @@ pragma solidity 0.8.34;
 
 import {ECDSA} from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
 
-import "./interfaces/IConsolidationAttestationBuffer.sol";
+import "./interfaces/IConsolidationAttestation.sol";
 
-/// @title ConsolidationAttestationBuffer (v1)
+/// @title ConsolidationAttestation (v1)
 /// @author Alluvial Finance Inc.
 /// @notice A simple, non-upgradeable contract that emits consolidation attestation events on-chain.
 ///         Anyone can submit attestations; off-chain daemons collect the events. Quorum validation
 ///         is performed elsewhere.
 /// @dev Each submission carries a signature that must be produced by `msg.sender`. When `errorData`
-///      is empty the signature is over `keccak256(abi.encode(consolidation))`; when `errorData` is
-///      non-empty it is over `keccak256(abi.encode(consolidation, errorData))`. This binds the
-///      submitter to the exact consolidation object (and optional error) they are attesting to.
-contract ConsolidationAttestationBuffer is IConsolidationAttestationBuffer {
-    /// @dev Buffer-local EIP-712 struct hash including `exitEpoch`.
-    bytes32 internal constant ATTEST_CONSOLIDATION_TYPEHASH = keccak256(
+///      is empty the signature is over an `AttestConsolidation` EIP-712 struct; when `errorData` is
+///      non-empty it is over a distinct `AttestConsolidationError` struct. This binds the submitter
+///      to the exact consolidation object (and optional error) they are attesting to.
+contract ConsolidationAttestation is IConsolidationAttestation {
+    /// @notice EIP-712 typehash for a consolidation approval, including `exitEpoch`.
+    bytes32 public constant ATTEST_CONSOLIDATION_TYPEHASH = keccak256(
         "AttestConsolidation(address withdrawalAddress,bytes[] sourcePubkeys,bytes[] targetPubkeys,uint256 totalAmount,uint256 exitEpoch)"
     );
 
-    /// @inheritdoc IConsolidationAttestationBuffer
+    /// @notice EIP-712 typehash for a consolidation error attestation carrying an error payload.
+    bytes32 public constant ATTEST_CONSOLIDATION_ERROR_TYPEHASH = keccak256(
+        "AttestConsolidationError(address withdrawalAddress,bytes[] sourcePubkeys,bytes[] targetPubkeys,uint256 totalAmount,uint256 exitEpoch,bytes errorData)"
+    );
+
+    /// @notice The EIP-712 domain separator used to verify attestation signatures.
+    bytes32 internal immutable _domainSeparator;
+
+    /// @inheritdoc IConsolidationAttestation
     uint256 public lastAttestationIdx;
 
-    /// @inheritdoc IConsolidationAttestationBuffer
+    /// @param domainSeparator The EIP-712 domain separator used for consolidation attestations.
+    constructor(bytes32 domainSeparator) {
+        if (domainSeparator == bytes32(0)) revert ZeroDomainSeparator();
+        _domainSeparator = domainSeparator;
+    }
+
+    /// @inheritdoc IConsolidationAttestation
     function submitAttestation(
         ConsolidationObject calldata consolidation,
         bytes calldata errorData,
@@ -31,9 +45,9 @@ contract ConsolidationAttestationBuffer is IConsolidationAttestationBuffer {
     ) external {
         bytes32 consolidationHash = _computeConsolidationHash(consolidation);
 
-        bytes32 digest = errorData.length == 0
-            ? keccak256(abi.encode(consolidation))
-            : keccak256(abi.encode(consolidation, errorData));
+        bytes32 structHash =
+            errorData.length == 0 ? consolidationHash : _computeConsolidationErrorHash(consolidation, errorData);
+        bytes32 digest = ECDSA.toTypedDataHash(_domainSeparator, structHash);
         if (_recover(digest, signature) != msg.sender) revert InvalidSignature();
 
         emit ConsolidationAttestationSubmitted(
@@ -50,9 +64,14 @@ contract ConsolidationAttestationBuffer is IConsolidationAttestationBuffer {
         ++lastAttestationIdx;
     }
 
-    /// @inheritdoc IConsolidationAttestationBuffer
+    /// @inheritdoc IConsolidationAttestation
     function computeConsolidationHash(ConsolidationObject calldata consolidation) external pure returns (bytes32) {
         return _computeConsolidationHash(consolidation);
+    }
+
+    /// @inheritdoc IConsolidationAttestation
+    function getDomainSeparator() external view returns (bytes32) {
+        return _domainSeparator;
     }
 
     function _computeConsolidationHash(ConsolidationObject calldata consolidation) internal pure returns (bytes32) {
@@ -64,6 +83,24 @@ contract ConsolidationAttestationBuffer is IConsolidationAttestationBuffer {
                 _hashBytesArray(consolidation.targetPubkeys),
                 consolidation.totalAmount,
                 consolidation.exitEpoch
+            )
+        );
+    }
+
+    function _computeConsolidationErrorHash(ConsolidationObject calldata consolidation, bytes calldata errorData)
+        internal
+        pure
+        returns (bytes32)
+    {
+        return keccak256(
+            abi.encode(
+                ATTEST_CONSOLIDATION_ERROR_TYPEHASH,
+                consolidation.withdrawalAddress,
+                _hashBytesArray(consolidation.sourcePubkeys),
+                _hashBytesArray(consolidation.targetPubkeys),
+                consolidation.totalAmount,
+                consolidation.exitEpoch,
+                keccak256(errorData)
             )
         );
     }
