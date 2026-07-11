@@ -4,10 +4,7 @@ pragma solidity 0.8.34;
 import "./interfaces/IRiver.1.sol";
 import "./interfaces/IWithdraw.1.sol";
 import "./interfaces/IAllowlist.1.sol";
-import "./interfaces/ICoverageFund.1.sol";
-import "./interfaces/IELFeeRecipient.1.sol";
 import "./interfaces/IProtocolVersion.sol";
-import "./interfaces/IELFeeRecipient.1.sol";
 import "./interfaces/IOperatorRegistry.1.sol";
 import "./interfaces/IAttestationVerifier.1.sol";
 import "./interfaces/IAttestationVerifierPectraMigration.1.sol";
@@ -450,83 +447,9 @@ contract RiverV1 is
         }
     }
 
-    /// @notice Overridden handler to pull funds from the execution layer fee recipient to River and return the delta in the balance
-    /// @param _max The maximum amount to pull from the execution layer fee recipient
-    /// @return The amount pulled from the execution layer fee recipient
-    function _pullELFees(uint256 _max) internal override returns (uint256) {
-        address elFeeRecipient = ELFeeRecipientAddress.get();
-        uint256 initialBalance = address(this).balance;
-        IELFeeRecipientV1(payable(elFeeRecipient)).pullELFees(_max);
-        uint256 collectedELFees = address(this).balance - initialBalance;
-        if (collectedELFees > 0) {
-            _setBalanceToDeposit(BalanceToDeposit.get() + collectedELFees);
-        }
-        emit PulledELFees(collectedELFees);
-        return collectedELFees;
-    }
-
-    /// @notice Overridden handler to pull funds from the coverage fund to River and return the delta in the balance
-    /// @param _max The maximum amount to pull from the coverage fund
-    /// @return collectedCoverageFunds The amount pulled from the coverage fund
-    function _pullCoverageFunds(uint256 _max) internal override returns (uint256 collectedCoverageFunds) {
-        collectedCoverageFunds = _pullFundsFromCoverageFund(CoverageFundAddress.get(), _max);
-        emit PulledCoverageFunds(collectedCoverageFunds);
-    }
-
-    /// @notice Overridden handler to pull funds from the consolidation coverage fund to River and return the delta in the balance
-    /// @param _max The maximum amount to pull from the consolidation coverage fund
-    /// @return collectedConsolidationCoverageFunds The amount pulled from the consolidation coverage fund
-    function _pullConsolidationCoverageFunds(uint256 _max)
-        internal
-        override
-        returns (uint256 collectedConsolidationCoverageFunds)
-    {
-        collectedConsolidationCoverageFunds = _pullFundsFromCoverageFund(ConsolidationCoverageFundAddress.get(), _max);
-        emit PulledConsolidationCoverageFunds(collectedConsolidationCoverageFunds);
-    }
-
-    /// @notice Internal utility to pull funds from a coverage fund to River and return the delta in the balance
-    /// @param _coverageFund The address of the coverage fund
-    /// @param _max The maximum amount to pull from the coverage fund
-    /// @return The amount pulled from the coverage fund
-    function _pullFundsFromCoverageFund(address _coverageFund, uint256 _max) internal returns (uint256) {
-        if (_coverageFund == address(0)) {
-            return 0;
-        }
-        uint256 initialBalance = address(this).balance;
-        ICoverageFundV1(payable(_coverageFund)).pullCoverageFunds(_max);
-        uint256 collected = address(this).balance - initialBalance;
-        if (collected > 0) {
-            _setBalanceToDeposit(BalanceToDeposit.get() + collected);
-        }
-        return collected;
-    }
-
-    /// @notice Overridden handler called whenever the balance of ETH handled by the system increases. Computes the fees paid to the collector
-    /// @param _amount Additional ETH received
-    function _onEarnings(uint256 _amount) internal override {
-        uint256 oldTotalSupply = _totalSupply();
-        if (oldTotalSupply == 0) {
-            revert ZeroMintedShares();
-        }
-        uint256 newTotalBalance = _assetBalance();
-        uint256 globalFee = GlobalFee.get();
-        uint256 numerator = _amount * oldTotalSupply * globalFee;
-        uint256 denominator = (newTotalBalance * LibBasisPoints.BASIS_POINTS_MAX) - (_amount * globalFee);
-        uint256 sharesToMint = denominator == 0 ? 0 : (numerator / denominator);
-
-        if (sharesToMint > 0) {
-            address collector = CollectorAddress.get();
-            _mintRawShares(collector, sharesToMint);
-            uint256 newTotalSupply = _totalSupply();
-            uint256 oldTotalBalance = newTotalBalance - _amount;
-            emit RewardsEarned(collector, oldTotalBalance, oldTotalSupply, newTotalBalance, newTotalSupply);
-        }
-    }
-
     /// @notice Overridden handler called whenever the total balance of ETH is requested
     /// @return The current total asset balance managed by River
-    function _assetBalance() internal view override(SharesManagerV1, OracleManagerV1) returns (uint256) {
+    function _assetBalance() internal view override(SharesManagerV1) returns (uint256) {
         IOracleManagerV1.StoredConsensusLayerReport storage storedReport = LastConsensusLayerReport.get();
         return storedReport.validatorsBalance + BalanceToDeposit.get() + CommittedBalance.get() + BalanceToRedeem.get()
             + InFlightDeposit.get() + ConsolidationBuffer.get();
@@ -544,13 +467,6 @@ contract RiverV1 is
     function _setBalanceToDeposit(uint256 _newBalanceToDeposit) internal override(UserDepositManagerV1) {
         emit SetBalanceToDeposit(BalanceToDeposit.get(), _newBalanceToDeposit);
         BalanceToDeposit.set(_newBalanceToDeposit);
-    }
-
-    /// @notice Sets the balance to redeem, to be used to satisfy redeem requests on the redeem manager
-    /// @param _newBalanceToRedeem The new balance to redeem value
-    function _setBalanceToRedeem(uint256 _newBalanceToRedeem) internal {
-        emit SetBalanceToRedeem(BalanceToRedeem.get(), _newBalanceToRedeem);
-        BalanceToRedeem.set(_newBalanceToRedeem);
     }
 
     /// @notice Returns whether slashing containment mode is currently active
@@ -590,208 +506,9 @@ contract RiverV1 is
     /// @notice Sets the consolidation buffer
     /// @param _oldConsolidationBuffer The old consolidation buffer value
     /// @param _newConsolidationBuffer The new consolidation buffer value
-    function _setConsolidationBuffer(uint256 _oldConsolidationBuffer, uint256 _newConsolidationBuffer)
-        internal
-        override(OracleManagerV1)
-    {
+    function _setConsolidationBuffer(uint256 _oldConsolidationBuffer, uint256 _newConsolidationBuffer) internal {
         emit SetConsolidationBuffer(_oldConsolidationBuffer, _newConsolidationBuffer);
         ConsolidationBuffer.set(_newConsolidationBuffer);
-    }
-
-    /// @notice Pulls funds from the Withdraw contract, and adds funds to deposit and redeem balances
-    /// @param _skimmedEthAmount The new amount of skimmed eth to pull
-    /// @param _exitedEthAmount The new amount of exited eth to pull
-    function _pullCLFunds(uint256 _skimmedEthAmount, uint256 _exitedEthAmount) internal override {
-        uint256 currentBalance = address(this).balance;
-        uint256 totalAmountToPull = _skimmedEthAmount + _exitedEthAmount;
-        IWithdrawV1(WithdrawalCredentials.getAddress()).pullEth(totalAmountToPull);
-        uint256 collectedCLFunds = address(this).balance - currentBalance;
-        if (collectedCLFunds != _skimmedEthAmount + _exitedEthAmount) {
-            revert InvalidPulledClFundsAmount(_skimmedEthAmount + _exitedEthAmount, collectedCLFunds);
-        }
-        if (_skimmedEthAmount > 0) {
-            _setBalanceToDeposit(BalanceToDeposit.get() + _skimmedEthAmount);
-        }
-        if (_exitedEthAmount > 0) {
-            _setBalanceToRedeem(BalanceToRedeem.get() + _exitedEthAmount);
-        }
-        emit PulledCLFunds(_skimmedEthAmount, _exitedEthAmount);
-    }
-
-    /// @notice Pulls funds from the redeem manager exceeding eth buffer
-    /// @param _max The maximum amount to pull
-    function _pullRedeemManagerExceedingEth(uint256 _max) internal override returns (uint256) {
-        uint256 currentBalance = address(this).balance;
-        IRedeemManagerV1(RedeemManagerAddress.get()).pullExceedingEth(_max);
-        uint256 collectedExceedingEth = address(this).balance - currentBalance;
-        if (collectedExceedingEth > 0) {
-            _setBalanceToDeposit(BalanceToDeposit.get() + collectedExceedingEth);
-        }
-        emit PulledRedeemManagerExceedingEth(collectedExceedingEth);
-        return collectedExceedingEth;
-    }
-
-    /// @notice Use the balance to redeem to report a withdrawal event on the redeem manager
-    function _reportWithdrawToRedeemManager() internal override {
-        IRedeemManagerV1 redeemManager_ = IRedeemManagerV1(RedeemManagerAddress.get());
-        uint256 underlyingAssetBalance = _assetBalance();
-        uint256 totalSupply = _totalSupply();
-
-        if (underlyingAssetBalance > 0 && totalSupply > 0) {
-            // we compute the redeem manager demands in eth and lsEth based on current conversion rate
-            uint256 redeemManagerDemand = redeemManager_.getRedeemDemand();
-            uint256 suppliedRedeemManagerDemand = redeemManagerDemand;
-            uint256 suppliedRedeemManagerDemandInEth = _balanceFromShares(suppliedRedeemManagerDemand);
-            uint256 availableBalanceToRedeem = BalanceToRedeem.get();
-
-            // if demand is higher than available eth, we update demand values to use the available eth
-            if (suppliedRedeemManagerDemandInEth > availableBalanceToRedeem) {
-                suppliedRedeemManagerDemandInEth = availableBalanceToRedeem;
-                suppliedRedeemManagerDemand = _sharesFromBalance(suppliedRedeemManagerDemandInEth);
-            }
-
-            emit ReportedRedeemManager(
-                redeemManagerDemand, suppliedRedeemManagerDemand, suppliedRedeemManagerDemandInEth
-            );
-
-            if (suppliedRedeemManagerDemandInEth > 0) {
-                // the available balance to redeem is updated
-                unchecked {
-                    _setBalanceToRedeem(availableBalanceToRedeem - suppliedRedeemManagerDemandInEth);
-                }
-
-                // we burn the shares of the redeem manager associated with the amount of eth provided
-                _burnRawShares(address(redeemManager_), suppliedRedeemManagerDemand);
-
-                // perform a report withdraw call to the redeem manager
-                redeemManager_.reportWithdraw{value: suppliedRedeemManagerDemandInEth}(suppliedRedeemManagerDemand);
-            }
-        }
-    }
-
-    /// @notice Reports the ETH that is currently active on the consensus layer for the operators
-    /// @param _activeCLETH The array of active ETH amounts
-    function _reportCLETH(uint256[] memory _activeCLETH) internal override {
-        IOperatorsRegistryV1(OperatorsRegistryAddress.get()).reportCLETH(_activeCLETH);
-    }
-
-    /// @notice Requests exits of validators after possibly rebalancing deposit and redeem balances
-    /// @param _exitingBalance The currently exiting funds, soon to be received on the execution layer
-    /// @param _exitedETH The exited ETH(wei)
-    /// @param _totalAvailableCLETH The total available ETH(wei) on the consensus layer that can be used to exit validators, this value includes the InFlightDeposit amount & excludes the exiting balance
-    /// @param _depositToRedeemRebalancingAllowed True if rebalancing from deposit to redeem is allowed
-    /// @param _slashingContainmentModeEnabled True if slashing containment mode is enabled
-    function _requestExitsBasedOnRedeemDemandAfterRebalancings(
-        uint256 _exitingBalance,
-        uint256[] memory _exitedETH,
-        uint256 _totalAvailableCLETH,
-        bool _depositToRedeemRebalancingAllowed,
-        bool _slashingContainmentModeEnabled
-    ) internal override {
-        IOperatorsRegistryV1(OperatorsRegistryAddress.get()).reportExitedETH(_exitedETH);
-
-        // When slashing containment mode is active, skip exit demand logic to avoid forcing additional
-        // validator exits during a slashing event. The reward-pull pipeline is unaffected by this check.
-        if (_slashingContainmentModeEnabled) {
-            emit SkippedExitRequestsDueToSlashingContainment();
-            return;
-        }
-
-        uint256 totalSupply = _totalSupply();
-        if (totalSupply > 0) {
-            uint256 availableBalanceToRedeem = BalanceToRedeem.get();
-            uint256 availableBalanceToDeposit = BalanceToDeposit.get();
-            uint256 redeemManagerDemandInEth =
-                _balanceFromShares(IRedeemManagerV1(RedeemManagerAddress.get()).getRedeemDemand());
-
-            // if after all rebalancings, the redeem manager demand is still higher than the balance to redeem and exiting eth, we compute
-            // the amount of ETH (wei) to exit in order to cover the remaining demand
-            if (availableBalanceToRedeem + _exitingBalance < redeemManagerDemandInEth) {
-                // if rebalancing is enabled and the redeem manager demand is higher than exiting eth, we add eth for deposit buffer to redeem buffer
-                if (_depositToRedeemRebalancingAllowed && availableBalanceToDeposit > 0) {
-                    uint256 rebalancingAmount = LibUint256.min(
-                        availableBalanceToDeposit, redeemManagerDemandInEth - _exitingBalance - availableBalanceToRedeem
-                    );
-                    if (rebalancingAmount > 0) {
-                        availableBalanceToRedeem += rebalancingAmount;
-                        _setBalanceToRedeem(availableBalanceToRedeem);
-                        _setBalanceToDeposit(availableBalanceToDeposit - rebalancingAmount);
-                    }
-                }
-
-                IOperatorsRegistryV1 or = IOperatorsRegistryV1(OperatorsRegistryAddress.get());
-
-                (uint256 totalExitedETH, uint256 totalRequestedETHExits) = or.getExitedAndRequestedETHExits();
-
-                // what we are calling pre-exiting balance is the amount of ETH (wei) the protocol has committed to exit
-                // but not yet received — covering both dispatched exit requests and demand not yet sent to operators
-                // we take them into account to not over-request exits across oracle cycles
-                uint256 preExitingBalance =
-                    totalRequestedETHExits > totalExitedETH ? (totalRequestedETHExits - totalExitedETH) : 0;
-
-                if (availableBalanceToRedeem + _exitingBalance + preExitingBalance < redeemManagerDemandInEth) {
-                    uint256 exitAmountToRequest = LibUint256.max(
-                        redeemManagerDemandInEth - (availableBalanceToRedeem + _exitingBalance + preExitingBalance),
-                        1 ether
-                    );
-
-                    // we demand the exits based on the total available ETH on the consensus layer
-                    // we don't include the ETH that is present on river as have already rebalanced it
-                    or.demandETHExits(exitAmountToRequest, _totalAvailableCLETH);
-                }
-            }
-        }
-    }
-
-    /// @notice Skims the redeem balance and sends remaining funds to the deposit balance
-    function _skimExcessBalanceToRedeem() internal override {
-        uint256 availableBalanceToRedeem = BalanceToRedeem.get();
-
-        // if the available balance to redeem is not 0, it means that all the redeem requests are fulfilled, we should redirect funds for deposits
-        if (availableBalanceToRedeem > 0) {
-            _setBalanceToDeposit(BalanceToDeposit.get() + availableBalanceToRedeem);
-            _setBalanceToRedeem(0);
-        }
-    }
-
-    /// @notice Commits the deposit balance up to the allowed daily limit in batches of 32 ETH.
-    /// @notice Committed funds are funds waiting to be deposited but that cannot be used to fund the redeem manager anymore
-    /// @notice This two step process is required to prevent possible out of gas issues we would have from actually funding the validators at this point
-    /// @param _period The period between current and last report
-    function _commitBalanceToDeposit(uint256 _period, bool _slashingContainmentModeEnabled) internal override {
-        // When slashing containment mode is active, skip new validator funding to prevent compounding
-        // losses. The deposit buffer remains available for redeem rebalancing but nothing is committed.
-        if (_slashingContainmentModeEnabled) {
-            emit SkippedCommitToDepositDueToSlashingContainment();
-            return;
-        }
-
-        uint256 underlyingAssetBalance = _assetBalance();
-        uint256 currentBalanceToDeposit = BalanceToDeposit.get();
-        DailyCommittableLimits.DailyCommittableLimitsStruct memory dcl = DailyCommittableLimits.get();
-
-        // we compute the max daily committable amount by taking the asset balance without the balance to deposit into account
-        // this value is the daily maximum amount we can commit for deposits
-        // we take the maximum value between a net amount and an amount relative to the asset balance
-        // this ensures that the amount we can commit is not too low in the beginning and that it is not too high when volumes grow
-        // the relative amount is computed from the committed and activated funds (on the CL or committed to be on the CL soon) and not
-        // the deposit balance
-        // this value is computed by subtracting the current balance to deposit from the underlying asset balance
-        uint256 currentMaxDailyCommittableAmount = LibUint256.max(
-            dcl.minDailyNetCommittableAmount,
-            (uint256(dcl.maxDailyRelativeCommittableAmount) * (underlyingAssetBalance - currentBalanceToDeposit))
-                / LibBasisPoints.BASIS_POINTS_MAX
-        );
-        // we adapt the value for the reporting period by using the asset balance as upper bound
-        uint256 currentMaxCommittableAmount =
-            LibUint256.min((currentMaxDailyCommittableAmount * _period) / 1 days, currentBalanceToDeposit);
-
-        currentMaxCommittableAmount = (currentMaxCommittableAmount / 1 gwei) * 1 gwei;
-
-        if (currentMaxCommittableAmount > 0) {
-            _setCommittedBalance(CommittedBalance.get() + currentMaxCommittableAmount);
-            _setBalanceToDeposit(currentBalanceToDeposit - currentMaxCommittableAmount);
-        }
     }
 
     function version() external pure returns (string memory) {
