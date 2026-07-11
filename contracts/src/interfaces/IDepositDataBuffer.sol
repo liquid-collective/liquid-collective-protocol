@@ -9,17 +9,16 @@ import "../libraries/BLS12_381.sol";
 ///      ever-incrementing `lastQueuedIdx` at submission time. Folding the nonce into the id makes every
 ///      submission unique: byte-identical batches submitted more than once receive distinct,
 ///      individually-addressable ids rather than colliding.
-/// @dev Replay/processed state lives on the buffer itself: the processor flips a per-batch `processed`
-///      flag via `markDepositDataProcessed`, and the consumer reads `isDepositDataProcessed` to reject
-///      replays. The buffer — not the consumer — is the authoritative source for this flag. In this
-///      deployment the processor and consumer are LC contracts: the processor is River, the consumer
-///      is the AttestationVerifier.
+/// @dev Replay/processed state lives on the buffer itself: the processor marks a per-batch `processed`
+///      flag via `markDepositDataProcessed`, and `isDepositDataProcessed` is consulted to reject
+///      replays. The buffer — not the processor — is the authoritative source for this flag. In this
+///      deployment the processor is River.
 interface IDepositDataBuffer {
     /// @notice An initial validator deposit. BLS signature is verified by the verifier and
     ///         passed to the official deposit contract; pubkey must NOT already be in
     ///         `PectraValidatorPubkeyLookup`.
     /// @dev Withdrawal credentials are NOT stored per-entry. The canonical withdrawal credentials are
-    ///      passed in by the consumer at deposit time and used both for BLS signature
+    ///      passed in by the processor at deposit time and used both for BLS signature
     ///      verification and for the official deposit contract call, removing any need
     ///      to trust the buffer producer on this field.
     struct Deposit {
@@ -30,7 +29,7 @@ interface IDepositDataBuffer {
         /// @dev Deposit amount in wei (must be a multiple of 1 gwei). Typically 32 ether.
         uint256 amount;
         /// @dev Index of the node operator this deposit funds, as registered in the
-        ///      OperatorsRegistry. Range-checked by the consumer against the live operator count.
+        ///      OperatorsRegistry. Range-checked by the processor against the live operator count.
         uint256 operatorIdx;
         /// @dev Y-coordinates for BLS decompression of the pubkey + signature.
         BLS12_381.DepositY depositY;
@@ -39,7 +38,7 @@ interface IDepositDataBuffer {
     /// @notice A top-up to an already-funded validator. BLS verification is skipped; pubkey
     ///         must already be in `PectraValidatorPubkeyLookup`.
     /// @dev No `signature` field: the beacon chain ignores BLS signatures on subsequent
-    ///      deposits to an existing validator, so the consumer hardcodes 96 zero bytes
+    ///      deposits to an existing validator, so the processor hardcodes 96 zero bytes
     ///      when forwarding the call to the official deposit contract.
     /// @dev No `depositY` field: BLS verification is skipped entirely for top-ups.
     struct TopUp {
@@ -85,6 +84,18 @@ interface IDepositDataBuffer {
     /// @param producer  The new authorized producer address
     event SetProducer(address indexed producer);
 
+    /// @notice Emitted when the admin rotates the authorized processor.
+    /// @param processor  The new authorized processor address
+    event SetProcessor(address indexed processor);
+
+    /// @notice Emitted when a new pending admin is proposed.
+    /// @param pendingAdmin  The proposed pending admin address
+    event SetPendingAdmin(address indexed pendingAdmin);
+
+    /// @notice Emitted when the admin is changed (a pending admin accepts the transfer).
+    /// @param admin  The new admin address
+    event SetAdmin(address indexed admin);
+
     // -----------------------------------------------------------------------
     // Errors
     // -----------------------------------------------------------------------
@@ -109,6 +120,9 @@ interface IDepositDataBuffer {
 
     /// @notice Reverts when caller is not the authorized admin
     error OnlyAdmin();
+
+    /// @notice Reverts when caller is not the pending admin
+    error OnlyPendingAdmin();
 
     /// @notice Reverts when caller is not the processor (the only account allowed to mark data processed)
     error OnlyProcessor();
@@ -165,9 +179,32 @@ interface IDepositDataBuffer {
     /// @return The authorized producer address
     function getProducer() external view returns (address);
 
+    /// @notice Rotate the authorized processor. Restricted to the admin.
+    /// @dev In this deployment the AttestationVerifier binds the buffer to River as its processor at
+    ///      wiring time (`_assertDepositDataBufferProcessor`); rotating the processor away from that
+    ///      account will make the deposit flow's `markDepositDataProcessed` call revert, so this is an
+    ///      admin-trusted operation.
+    /// @param newProcessor  The new authorized processor address
+    function setProcessor(address newProcessor) external;
+
+    /// @notice Propose a new admin. Restricted to the current admin.
+    /// @dev Two-step transfer: the proposed admin must call `acceptAdmin` to take ownership, proving
+    ///      the new address can transact. This prevents an irrecoverable transfer to a wrong address —
+    ///      the buffer is immutable, so a bricked admin could never be recovered by an upgrade.
+    /// @param newAdmin  The proposed pending admin address
+    function proposeAdmin(address newAdmin) external;
+
+    /// @notice Accept the admin transfer. Restricted to the pending admin.
+    /// @dev Promotes the pending admin to admin and clears the pending admin.
+    function acceptAdmin() external;
+
     /// @notice Returns the admin address.
     /// @return The admin address
     function getAdmin() external view returns (address);
+
+    /// @notice Returns the pending admin address (zero if no transfer is in progress).
+    /// @return The pending admin address
+    function getPendingAdmin() external view returns (address);
 
     /// @notice The processor address — the only account allowed to mark deposit data processed.
     /// @return The processor address

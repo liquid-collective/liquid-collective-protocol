@@ -74,11 +74,21 @@ contract MockDepositDataBuffer is IDepositDataBuffer {
 
     function setProducer(address) external {}
 
+    function setProcessor(address) external {}
+
     function getProducer() external pure returns (address) {
         return address(0);
     }
 
+    function proposeAdmin(address) external {}
+
+    function acceptAdmin() external {}
+
     function getAdmin() external pure returns (address) {
+        return address(0);
+    }
+
+    function getPendingAdmin() external pure returns (address) {
         return address(0);
     }
 
@@ -455,6 +465,31 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         return abi.encodePacked(r, s, v);
     }
 
+    /// @dev Recover the signer of an EIP-712 attestation from its raw signature — exactly what an
+    ///      off-chain daemon does to attribute an emitted attestation (incl. a `depositRootHash == 0`
+    ///      veto). Mirrors `_signAttestation`'s digest construction.
+    function _recoverAttestation(bytes32 bufferId, bytes32 rootHash, bytes memory sig)
+        internal
+        view
+        returns (address)
+    {
+        bytes32 domainSep =
+            keccak256(abi.encode(EIP712_DOMAIN_TYPEHASH, NAME_HASH, VERSION_HASH, block.chainid, address(dm)));
+        bytes32 structHash = keccak256(abi.encode(ATTEST_TYPEHASH, bufferId, rootHash));
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSep, structHash));
+        (bytes32 r, bytes32 s, uint8 v) = _split(sig);
+        return ecrecover(digest, v, r, s);
+    }
+
+    /// @dev Split a 65-byte signature into (r, s, v).
+    function _split(bytes memory sig) internal pure returns (bytes32 r, bytes32 s, uint8 v) {
+        assembly {
+            r := mload(add(sig, 0x20))
+            s := mload(add(sig, 0x40))
+            v := byte(0, mload(add(sig, 0x60)))
+        }
+    }
+
     /// @dev The buffer id folds the batch nonce (the buffer's `lastQueuedIdx` at submit time) into
     ///      the hash, so byte-identical batches submitted more than once receive distinct ids. Read
     ///      immediately before submitting so the nonce matches what the buffer stores.
@@ -740,6 +775,63 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         vm.prank(keeper);
         vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InsufficientAttestations.selector, 1, 2));
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+    }
+
+    // -----------------------------------------------------------------------
+    // `depositRootHash == 0` "veto" signal
+    //
+    // A committee member can signal a faulty batch by signing a normal attestation over
+    // `Attest(bufferId, 0)` (depositRootHash == 0) instead of the live deposit root. These tests
+    // prove the two properties that makes this safe:
+    //   1. the veto is a genuine committee signature, attributable off-chain by recovering over the
+    //      (id, 0) digest, yet
+    //   2. it can never count toward a real (non-zero-root) deposit quorum — the verifier rebuilds
+    //      the digest from the live root, against which a root=0 signature recovers to a non-attester.
+    // -----------------------------------------------------------------------
+
+    function test_vetoSignatureIsAuthenticatableButNotCountedForRealQuorum() public {
+        IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](1);
+        deposits[0] = _makeDeposit(0, 700);
+
+        bytes32 bufferId = _bid(_batchOf(deposits));
+        buffer.submitDepositData(bufferId, _batchOf(deposits));
+        bytes32 realRoot = depositContract.get_deposit_root();
+        assertTrue(realRoot != bytes32(0), "precondition: live deposit root is never zero");
+
+        bytes memory goodSig = _signAttestation(rootAttesterPk1, bufferId, realRoot);
+        bytes memory vetoSig = _signAttestation(rootAttesterPk2, bufferId, bytes32(0)); // root = 0 veto
+
+        // (1) The veto IS a real committee signature over (bufferId, 0): off-chain recovery attributes it.
+        assertEq(_recoverAttestation(bufferId, bytes32(0), vetoSig), rootAttester2, "veto not attributable");
+
+        // (2) Against the real-root digest the verifier builds, the veto recovers to a non-attester,
+        //     so only 1 of the required 2 sigs counts -> InsufficientAttestations(1, 2).
+        bytes[] memory sigs = new bytes[](2);
+        sigs[0] = goodSig;
+        sigs[1] = vetoSig;
+
+        vm.prank(keeper);
+        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InsufficientAttestations.selector, 1, 2));
+        dm.depositToConsensusLayerWithAttestation(bufferId, realRoot, sigs);
+    }
+
+    function test_vetoSignatureIsInertWhenMixedIntoValidQuorum() public {
+        IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](1);
+        deposits[0] = _makeDeposit(0, 701);
+
+        bytes32 bufferId = _bid(_batchOf(deposits));
+        buffer.submitDepositData(bufferId, _batchOf(deposits));
+        bytes32 realRoot = depositContract.get_deposit_root();
+
+        bytes[] memory sigs = new bytes[](3);
+        sigs[0] = _signAttestation(rootAttesterPk1, bufferId, realRoot);
+        sigs[1] = _signAttestation(rootAttesterPk2, bufferId, realRoot);
+        sigs[2] = _signAttestation(rootAttesterPk3, bufferId, bytes32(0)); // veto — ignored
+
+        vm.prank(keeper);
+        dm.depositToConsensusLayerWithAttestation(bufferId, realRoot, sigs);
+
+        assertEq(depositContract.deposit_count(), 1, "valid quorum deposits; veto sig is inert");
     }
 
     // Regression test for the defense-in-depth bufferId check in fetchAndValidateDeposits().

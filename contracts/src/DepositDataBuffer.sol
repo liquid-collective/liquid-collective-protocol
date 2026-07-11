@@ -12,20 +12,22 @@ import "./libraries/LibSanitize.sol";
 ///         at submit time) is folded into the id, so byte-identical batches submitted twice never
 ///         collide.
 /// @dev The buffer owns the authoritative `processed` flag: only the processor may flip it via
-///      `markDepositDataProcessed`, and the consumer (the AttestationVerifier, in this deployment)
-///      consults `isDepositDataProcessed` to reject replays. Withdrawal credentials are intentionally
-///      NOT stored — the canonical withdrawal credentials are supplied by the consumer at deposit time
-///      and used for BLS verification and the official deposit-contract call, so the buffer producer is
-///      never trusted on that field.
+///      `markDepositDataProcessed`, and `isDepositDataProcessed` is consulted before each deposit to
+///      reject replays. Withdrawal credentials are intentionally NOT stored — the canonical withdrawal
+///      credentials are supplied by the processor at deposit time and used for BLS verification and the
+///      official deposit-contract call, so the buffer producer is never trusted on that field.
 contract DepositDataBuffer is IDepositDataBuffer {
     /// @notice The processor — the only account allowed to mark deposit data processed.
-    /// @dev Immutable: set once at construction and used to gate `markDepositDataProcessed`. In
-    ///      production this is the River deposit-execution contract, but the buffer only relies on it
-    ///      being the account that consumes batches and flips their `processed` flag.
-    address internal immutable _processor;
+    /// @dev Set at construction and rotatable by the admin via `setProcessor`. In production this is
+    ///      the River deposit-execution contract, but the buffer only relies on it being the account
+    ///      that consumes batches and flips their `processed` flag.
+    address internal _processor;
 
-    /// @notice The admin, able to rotate the producer.
+    /// @notice The admin, able to rotate the producer, the processor, and transfer its own role.
     address internal _admin;
+
+    /// @notice The pending admin proposed for a two-step transfer (zero when none is in progress).
+    address internal _pendingAdmin;
 
     /// @notice The producer authorized to submit deposit batches.
     address internal _producer;
@@ -60,6 +62,12 @@ contract DepositDataBuffer is IDepositDataBuffer {
     /// @dev Restricts a function to the admin.
     modifier onlyAdmin() {
         if (msg.sender != _admin) revert OnlyAdmin();
+        _;
+    }
+
+    /// @dev Restricts a function to the pending admin.
+    modifier onlyPendingAdmin() {
+        if (msg.sender != _pendingAdmin) revert OnlyPendingAdmin();
         _;
     }
 
@@ -151,8 +159,34 @@ contract DepositDataBuffer is IDepositDataBuffer {
     }
 
     /// @inheritdoc IDepositDataBuffer
+    function setProcessor(address newProcessor) external onlyAdmin {
+        LibSanitize._notZeroAddress(newProcessor);
+        _processor = newProcessor;
+        emit SetProcessor(newProcessor);
+    }
+
+    /// @inheritdoc IDepositDataBuffer
+    function proposeAdmin(address newAdmin) external onlyAdmin {
+        LibSanitize._notZeroAddress(newAdmin);
+        _pendingAdmin = newAdmin;
+        emit SetPendingAdmin(newAdmin);
+    }
+
+    /// @inheritdoc IDepositDataBuffer
+    function acceptAdmin() external onlyPendingAdmin {
+        _admin = _pendingAdmin;
+        _pendingAdmin = address(0);
+        emit SetAdmin(msg.sender);
+    }
+
+    /// @inheritdoc IDepositDataBuffer
     function getAdmin() external view returns (address) {
         return _admin;
+    }
+
+    /// @inheritdoc IDepositDataBuffer
+    function getPendingAdmin() external view returns (address) {
+        return _pendingAdmin;
     }
 
     /// @inheritdoc IDepositDataBuffer

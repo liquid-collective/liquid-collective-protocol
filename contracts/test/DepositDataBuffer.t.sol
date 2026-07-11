@@ -23,6 +23,9 @@ contract DepositDataBufferTest is Test, DepositDataBufferFixtures {
     );
     event DepositDataProcessed(bytes32 indexed depositDataBufferId);
     event SetProducer(address indexed producer);
+    event SetProcessor(address indexed processor);
+    event SetPendingAdmin(address indexed pendingAdmin);
+    event SetAdmin(address indexed admin);
 
     function setUp() public {
         buffer = new DepositDataBuffer(admin, producer, processor);
@@ -119,8 +122,9 @@ contract DepositDataBufferTest is Test, DepositDataBufferFixtures {
         IDepositDataBuffer.DepositObject memory batch = _batch(1);
         bytes32 id = _id(batch, 0);
 
-        // Storage layout: _admin(0), _producer(1), lastQueuedIdx(2), _batches(3), _nonce(4), _exists(5).
-        bytes32 existsSlot = keccak256(abi.encode(id, uint256(5)));
+        // Storage layout: _processor(0), _admin(1), _pendingAdmin(2), _producer(3), lastQueuedIdx(4),
+        // _batches(5), _nonce(6), _exists(7).
+        bytes32 existsSlot = keccak256(abi.encode(id, uint256(7)));
         vm.store(address(buffer), existsSlot, bytes32(uint256(1)));
         assertTrue(buffer.isDepositDataProcessed(id) == false); // sanity: _processed untouched
 
@@ -381,6 +385,7 @@ contract DepositDataBufferTest is Test, DepositDataBufferFixtures {
 
     function test_ConstructorSetsRoles() public {
         assertEq(buffer.getAdmin(), admin);
+        assertEq(buffer.getPendingAdmin(), address(0));
         assertEq(buffer.getProducer(), producer);
         assertEq(buffer.getProcessor(), processor);
         assertEq(buffer.lastQueuedIdx(), 0);
@@ -432,5 +437,136 @@ contract DepositDataBufferTest is Test, DepositDataBufferFixtures {
         vm.prank(admin);
         vm.expectRevert(LibErrors.InvalidZeroAddress.selector);
         buffer.setProducer(address(0));
+    }
+
+    function test_AdminCanRotateProcessor() public {
+        address newProcessor = makeAddr("newProcessor");
+
+        vm.expectEmit(true, false, false, false);
+        emit SetProcessor(newProcessor);
+        vm.prank(admin);
+        buffer.setProcessor(newProcessor);
+        assertEq(buffer.getProcessor(), newProcessor);
+
+        // Queue a batch, then confirm the old processor can no longer mark it processed and the new one can.
+        bytes32 id = _submit(_batch(1));
+
+        vm.prank(processor);
+        vm.expectRevert(IDepositDataBuffer.OnlyProcessor.selector);
+        buffer.markDepositDataProcessed(id);
+
+        vm.prank(newProcessor);
+        buffer.markDepositDataProcessed(id);
+        assertTrue(buffer.isDepositDataProcessed(id));
+    }
+
+    function test_RevertWhen_NonAdminRotatesProcessor() public {
+        vm.prank(makeAddr("stranger"));
+        vm.expectRevert(IDepositDataBuffer.OnlyAdmin.selector);
+        buffer.setProcessor(makeAddr("newProcessor"));
+    }
+
+    function test_RevertWhen_SetProcessorZero() public {
+        vm.prank(admin);
+        vm.expectRevert(LibErrors.InvalidZeroAddress.selector);
+        buffer.setProcessor(address(0));
+    }
+
+    // -----------------------------------------------------------------------
+    // Two-step admin transfer (propose / accept)
+    // -----------------------------------------------------------------------
+
+    function test_AdminTransfer_ProposeThenAccept() public {
+        address newAdmin = makeAddr("newAdmin");
+
+        vm.expectEmit(true, false, false, false);
+        emit SetPendingAdmin(newAdmin);
+        vm.prank(admin);
+        buffer.proposeAdmin(newAdmin);
+
+        // Proposing does not transfer power yet: admin unchanged, pending set.
+        assertEq(buffer.getAdmin(), admin);
+        assertEq(buffer.getPendingAdmin(), newAdmin);
+
+        vm.expectEmit(true, false, false, false);
+        emit SetAdmin(newAdmin);
+        vm.prank(newAdmin);
+        buffer.acceptAdmin();
+
+        // Transfer complete: admin promoted, pending cleared.
+        assertEq(buffer.getAdmin(), newAdmin);
+        assertEq(buffer.getPendingAdmin(), address(0));
+    }
+
+    function test_AdminTransfer_NewAdminCanActOldCannot() public {
+        address newAdmin = makeAddr("newAdmin");
+        vm.prank(admin);
+        buffer.proposeAdmin(newAdmin);
+        vm.prank(newAdmin);
+        buffer.acceptAdmin();
+
+        // Old admin has lost admin power.
+        vm.prank(admin);
+        vm.expectRevert(IDepositDataBuffer.OnlyAdmin.selector);
+        buffer.setProducer(makeAddr("x"));
+
+        // New admin can rotate the producer.
+        address newProducer = makeAddr("newProducer");
+        vm.prank(newAdmin);
+        buffer.setProducer(newProducer);
+        assertEq(buffer.getProducer(), newProducer);
+    }
+
+    function test_RevertWhen_NonAdminProposes() public {
+        vm.prank(makeAddr("stranger"));
+        vm.expectRevert(IDepositDataBuffer.OnlyAdmin.selector);
+        buffer.proposeAdmin(makeAddr("newAdmin"));
+    }
+
+    function test_RevertWhen_ProposeAdminZero() public {
+        vm.prank(admin);
+        vm.expectRevert(LibErrors.InvalidZeroAddress.selector);
+        buffer.proposeAdmin(address(0));
+    }
+
+    function test_RevertWhen_NonPendingAdminAccepts() public {
+        vm.prank(admin);
+        buffer.proposeAdmin(makeAddr("newAdmin"));
+
+        // Neither a stranger nor the current admin may accept — only the pending admin.
+        vm.prank(makeAddr("stranger"));
+        vm.expectRevert(IDepositDataBuffer.OnlyPendingAdmin.selector);
+        buffer.acceptAdmin();
+
+        vm.prank(admin);
+        vm.expectRevert(IDepositDataBuffer.OnlyPendingAdmin.selector);
+        buffer.acceptAdmin();
+    }
+
+    function test_RevertWhen_AcceptWithNoPending() public {
+        // No transfer in progress: pending admin is zero, so nobody can accept.
+        vm.prank(makeAddr("anyone"));
+        vm.expectRevert(IDepositDataBuffer.OnlyPendingAdmin.selector);
+        buffer.acceptAdmin();
+    }
+
+    function test_AdminTransfer_ProposeCanBeOverwritten() public {
+        address first = makeAddr("first");
+        address second = makeAddr("second");
+
+        vm.prank(admin);
+        buffer.proposeAdmin(first);
+        vm.prank(admin);
+        buffer.proposeAdmin(second);
+        assertEq(buffer.getPendingAdmin(), second);
+
+        // The superseded proposal can no longer accept.
+        vm.prank(first);
+        vm.expectRevert(IDepositDataBuffer.OnlyPendingAdmin.selector);
+        buffer.acceptAdmin();
+
+        vm.prank(second);
+        buffer.acceptAdmin();
+        assertEq(buffer.getAdmin(), second);
     }
 }
