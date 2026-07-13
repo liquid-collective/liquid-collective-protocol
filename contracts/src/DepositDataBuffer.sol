@@ -17,6 +17,14 @@ import "./libraries/LibSanitize.sol";
 ///      credentials are supplied by the processor at deposit time and used for BLS verification and the
 ///      official deposit-contract call, so the buffer producer is never trusted on that field.
 contract DepositDataBuffer is IDepositDataBuffer {
+    /// @notice Minimum amount for an initial validator deposit. Below 32 ETH a brand-new validator
+    ///         never activates on the consensus layer, yet the deposit would still inflate downstream
+    ///         accounting. Mirrors `AttestationVerifier`'s initial-deposit floor.
+    uint256 internal constant MIN_INITIAL_DEPOSIT_AMOUNT = 32 ether;
+
+    /// @notice Maximum deposit amount — the Pectra 0x02 maximum effective balance.
+    uint256 internal constant MAX_DEPOSIT_AMOUNT = 2048 ether;
+
     /// @notice The processor — the only account allowed to mark deposit data processed.
     /// @dev Set at construction and rotatable by the admin via `setProcessor`. In production this is
     ///      the River deposit-execution contract, but the buffer only relies on it being the account
@@ -96,7 +104,12 @@ contract DepositDataBuffer is IDepositDataBuffer {
             Deposit calldata d = batch.deposits[i];
             if (d.pubkey.length != 48) revert InvalidPubkeyLength(i, d.pubkey.length);
             if (d.signature.length != 96) revert InvalidSignatureLength(i, d.signature.length);
-            if (d.amount == 0 || d.amount % 1 gwei != 0) revert InvalidDepositAmount(i, d.amount);
+            // Initial deposits must be gwei-aligned and within [32 ETH, 2048 ETH]: a sub-32-ETH deposit
+            // never activates a validator, and 2048 ETH is the Pectra 0x02 max effective balance. This
+            // mirrors the bound enforced in `AttestationVerifier.fetchAndValidateDeposits`.
+            if (d.amount < MIN_INITIAL_DEPOSIT_AMOUNT || d.amount > MAX_DEPOSIT_AMOUNT || d.amount % 1 gwei != 0) {
+                revert InvalidDepositAmount(i, d.amount);
+            }
         }
         for (uint256 i = 0; i < topUpCount; i++) {
             TopUp calldata t = batch.topUps[i];
