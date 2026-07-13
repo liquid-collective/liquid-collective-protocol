@@ -136,7 +136,7 @@ interface IDepositDataBuffer {
     /// @notice Reverts when a top-up pubkey is not exactly 48 bytes
     error InvalidTopUpPubkeyLength(uint256 index, uint256 length);
 
-    /// @notice Reverts when a deposit or top-up amount is zero or not gwei-aligned
+    /// @notice Reverts when a deposit or top-up amount is outside its allowed range or not gwei-aligned
     error InvalidDepositAmount(uint256 index, uint256 amount);
 
     // -----------------------------------------------------------------------

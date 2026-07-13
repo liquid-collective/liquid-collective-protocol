@@ -22,6 +22,9 @@ contract DepositDataBuffer is IDepositDataBuffer {
     ///         accounting. Mirrors `AttestationVerifier`'s initial-deposit floor.
     uint256 internal constant MIN_INITIAL_DEPOSIT_AMOUNT = 32 ether;
 
+    /// @notice Minimum amount for a top-up deposit. Mirrors `AttestationVerifier`'s top-up floor.
+    uint256 internal constant MIN_TOP_UP_AMOUNT = 1 ether;
+
     /// @notice Maximum deposit amount — the Pectra 0x02 maximum effective balance.
     uint256 internal constant MAX_DEPOSIT_AMOUNT = 2048 ether;
 
@@ -97,9 +100,9 @@ contract DepositDataBuffer is IDepositDataBuffer {
         uint256 topUpCount = batch.topUps.length;
         if (depositCount == 0 && topUpCount == 0) revert EmptyDepositData();
 
-        // Amounts must be non-zero and gwei-aligned: the beacon-chain deposit contract encodes
+        // Amounts must be bounded and gwei-aligned: the beacon-chain deposit contract encodes
         // amounts in gwei, so a non-aligned amount would be silently truncated downstream. Rejecting
-        // here keeps the buffer consistent with the `InvalidDepositAmount` contract and the verifier.
+        // here keeps the buffer consistent with the `InvalidDepositAmount` error and the verifier.
         for (uint256 i = 0; i < depositCount; i++) {
             Deposit calldata d = batch.deposits[i];
             if (d.pubkey.length != 48) revert InvalidPubkeyLength(i, d.pubkey.length);
@@ -114,7 +117,9 @@ contract DepositDataBuffer is IDepositDataBuffer {
         for (uint256 i = 0; i < topUpCount; i++) {
             TopUp calldata t = batch.topUps[i];
             if (t.pubkey.length != 48) revert InvalidTopUpPubkeyLength(i, t.pubkey.length);
-            if (t.amount == 0 || t.amount % 1 gwei != 0) revert InvalidDepositAmount(i, t.amount);
+            if (t.amount < MIN_TOP_UP_AMOUNT || t.amount > MAX_DEPOSIT_AMOUNT || t.amount % 1 gwei != 0) {
+                revert InvalidDepositAmount(i, t.amount);
+            }
         }
 
         // The batch nonce (lastQueuedIdx) is folded into the id, so two batches with byte-identical

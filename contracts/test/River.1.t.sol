@@ -3096,10 +3096,11 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         _rootAttesters_[1] = makeAddr("rootAttester2");
         address[] memory _consolidationCommitteeAttesters_ = new address[](1);
         _consolidationCommitteeAttesters_[0] = makeAddr("consolidationCommitteeAttesterStub");
+        MockDepositDataBuffer mockBuffer = new MockDepositDataBuffer(_river);
         v = new AttestationVerifierV1();
         LibImplementationUnbricker.unbrick(vm, address(v));
         v.initAttestationVerifierV1(
-            _river, makeAddr("depositBuffer"), _rootAttesters_, 1, bytes4(0), _consolidationCommitteeAttesters_, 1
+            _river, address(mockBuffer), _rootAttesters_, 1, bytes4(0), _consolidationCommitteeAttesters_, 1
         );
     }
 

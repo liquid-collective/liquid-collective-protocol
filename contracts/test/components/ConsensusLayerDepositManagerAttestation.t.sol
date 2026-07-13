@@ -2313,6 +2313,31 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         freshVerifier.initAttestationVerifierV1(address(dm), address(buffer), attesters, 3, bytes4(0), attesters, 3);
     }
 
+    /// @dev Init enforces the same River-as-buffer-processor invariant as the admin setter.
+    function testRevert_init_depositDataBufferProcessorMismatch() public {
+        AttestationVerifierV1 freshVerifier = new AttestationVerifierV1();
+        LibImplementationUnbricker.unbrick(vm, address(freshVerifier));
+
+        address wrongProcessor = makeAddr("init-notRiver");
+        address badBuffer = address(new MockDepositDataBuffer(wrongProcessor));
+        address[] memory rootAttesters = new address[](1);
+        rootAttesters[0] = rootAttester1;
+        address[] memory consolidationAttesters = new address[](1);
+        consolidationAttesters[0] = makeAddr("init-consolidation-attester");
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAttestationVerifierV1.InvalidDepositDataBufferProcessor.selector,
+                badBuffer,
+                address(dm),
+                wrongProcessor
+            )
+        );
+        freshVerifier.initAttestationVerifierV1(
+            address(dm), badBuffer, rootAttesters, 1, bytes4(0), consolidationAttesters, 1
+        );
+    }
+
     /// @dev Cannot add an attester that would push the total past MAX_ROOT_ATTESTERS.
     ///      Fills the registry to the cap (32), then tries to add one more.
     function testRevert_setRootAttester_exceedsMax() public {
