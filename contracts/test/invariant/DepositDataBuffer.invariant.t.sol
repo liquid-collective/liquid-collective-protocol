@@ -64,4 +64,9 @@ contract DepositDataBufferInvariantTest is Test {
             assertEq(buffer.isDepositDataProcessed(id), handler.ghost_processed(id), "B6: processed flag diverges");
         }
     }
+
+    /// @notice B7: marking a ghost-unprocessed queued id should never fail.
+    function invariant_noUnexpectedProcessFailures() public {
+        assertEq(handler.ghost_unexpectedProcessFailures(), 0, "B7: unexpected mark-processed failure");
+    }
 }

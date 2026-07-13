@@ -22,6 +22,7 @@ contract DepositDataBufferHandler is Test, DepositDataBufferFixtures {
     mapping(bytes32 => uint256) public ghost_depositCounts;
     mapping(bytes32 => bool) public ghost_processed;
     uint256 public ghost_processedCount;
+    uint256 public ghost_unexpectedProcessFailures;
 
     constructor(DepositDataBuffer _buffer, address _producer, address _processor) {
         buffer = _buffer;
@@ -76,16 +77,15 @@ contract DepositDataBufferHandler is Test, DepositDataBufferFixtures {
     function markProcessed(uint256 idx) external {
         if (ghost_queuedIds.length == 0) return;
         bytes32 id = ghost_queuedIds[bound(idx, 0, ghost_queuedIds.length - 1)];
+        if (ghost_processed[id]) return;
 
-        // Only the processor may mark processed; re-marking an already-processed batch reverts.
+        // Only the processor may mark processed; every unprocessed ghost id should succeed.
         vm.prank(processor);
         try buffer.markDepositDataProcessed(id) {
-            if (!ghost_processed[id]) {
-                ghost_processed[id] = true;
-                ghost_processedCount++;
-            }
+            ghost_processed[id] = true;
+            ghost_processedCount++;
         } catch {
-            // Expected when the batch was already processed.
+            ghost_unexpectedProcessFailures++;
         }
     }
 }
