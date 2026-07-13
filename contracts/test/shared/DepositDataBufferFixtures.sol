@@ -7,8 +7,8 @@ import "../../src/libraries/BLS12_381.sol";
 /// @title DepositDataBufferFixtures
 /// @notice Shared deterministic builders for DepositDataBuffer test suites (unit, fuzz, invariant),
 ///         so the pubkey/signature/deposit/top-up/batch fixtures are defined once. Amounts are
-///         non-zero and gwei-aligned (bounded by `seed % 1 gwei` so arbitrarily large fuzz seeds
-///         never overflow), satisfying the buffer's submit-time validation.
+///         within the verifier bounds and gwei-aligned (bounded by `seed % 1 gwei` so arbitrarily
+///         large fuzz seeds never overflow), satisfying the buffer's submit-time validation.
 abstract contract DepositDataBufferFixtures {
     function _pubkey(uint256 seed) internal pure returns (bytes memory) {
         return abi.encodePacked(sha256(abi.encode("pubkey", seed)), bytes16(0));

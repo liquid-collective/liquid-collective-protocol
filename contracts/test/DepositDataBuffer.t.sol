@@ -248,6 +248,47 @@ contract DepositDataBufferTest is Test, DepositDataBufferFixtures {
         buffer.submitDepositData(id, batch);
     }
 
+    /// @dev Top-ups below the verifier's 1 ETH floor are rejected at buffer submission time.
+    function test_RevertWhen_TopUpAmountBelowMin() public {
+        IDepositDataBuffer.DepositObject memory batch;
+        batch.topUps = new IDepositDataBuffer.TopUp[](1);
+        batch.topUps[0] = _topUp(1);
+        uint256 tooLow = 1 ether - 1 gwei;
+        batch.topUps[0].amount = tooLow;
+        bytes32 id = _id(batch, 0);
+        vm.prank(producer);
+        vm.expectRevert(abi.encodeWithSelector(IDepositDataBuffer.InvalidDepositAmount.selector, 0, tooLow));
+        buffer.submitDepositData(id, batch);
+    }
+
+    /// @dev Top-ups above the Pectra max effective balance are rejected at buffer submission time.
+    function test_RevertWhen_TopUpAmountAboveMax() public {
+        IDepositDataBuffer.DepositObject memory batch;
+        batch.topUps = new IDepositDataBuffer.TopUp[](1);
+        batch.topUps[0] = _topUp(1);
+        uint256 tooHigh = 2048 ether + 1 gwei;
+        batch.topUps[0].amount = tooHigh;
+        bytes32 id = _id(batch, 0);
+        vm.prank(producer);
+        vm.expectRevert(abi.encodeWithSelector(IDepositDataBuffer.InvalidDepositAmount.selector, 0, tooHigh));
+        buffer.submitDepositData(id, batch);
+    }
+
+    /// @dev The inclusive [1, 2048] ETH top-up bounds are accepted at both extremes.
+    function test_SubmitAcceptsTopUpAmountBoundaries() public {
+        IDepositDataBuffer.DepositObject memory batch;
+        batch.topUps = new IDepositDataBuffer.TopUp[](2);
+        batch.topUps[0] = _topUp(10);
+        batch.topUps[0].amount = 1 ether;
+        batch.topUps[1] = _topUp(11);
+        batch.topUps[1].amount = 2048 ether;
+
+        bytes32 id = _id(batch, 0);
+        vm.prank(producer);
+        buffer.submitDepositData(id, batch);
+        assertEq(buffer.lastQueuedIdx(), 1);
+    }
+
     /// @dev A batch of only top-ups (no initial deposits) is valid.
     function test_SubmitTopUpsOnly() public {
         IDepositDataBuffer.DepositObject memory batch;
