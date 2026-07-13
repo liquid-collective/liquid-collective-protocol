@@ -9,7 +9,7 @@ import "../src/ConsolidationAttestation.sol";
 /// @notice Unit coverage for the consolidation attestation event relay and its msg.sender signature check.
 contract ConsolidationAttestationTest is Test {
     bytes32 internal constant ATTEST_CONSOLIDATION_TYPEHASH = keccak256(
-        "AttestConsolidation(address withdrawalAddress,bytes[] sourcePubkeys,bytes[] targetPubkeys,uint256 totalAmount,uint256 exitEpoch)"
+        "AttestConsolidation(address withdrawalAddress,bytes[] sourcePubkeys,bytes[] targetPubkeys,uint256 totalAmount)"
     );
     bytes32 internal constant ATTEST_CONSOLIDATION_ERROR_TYPEHASH = keccak256(
         "AttestConsolidationError(address withdrawalAddress,bytes[] sourcePubkeys,bytes[] targetPubkeys,uint256 totalAmount,uint256 exitEpoch,bytes errorData)"
@@ -57,8 +57,7 @@ contract ConsolidationAttestationTest is Test {
                 consolidation.withdrawalAddress,
                 _hashBytesArray(consolidation.sourcePubkeys),
                 _hashBytesArray(consolidation.targetPubkeys),
-                consolidation.totalAmount,
-                consolidation.exitEpoch
+                consolidation.totalAmount
             )
         );
     }
@@ -267,16 +266,30 @@ contract ConsolidationAttestationTest is Test {
         buffer.submitAttestation(c, abi.encodePacked(r, s, v), "");
     }
 
-    function test_RevertsWhenExitEpochDoesNotMatchSignature() public {
+    function test_ApprovalSignatureDoesNotBindExitEpoch() public {
         (address signer, uint256 pk) = makeAddrAndKey("signer");
         IConsolidationAttestation.ConsolidationObject memory signed = _consolidation(makeAddr("withdrawal"), 17, 105);
         bytes memory sig = _sign(pk, signed, "");
         IConsolidationAttestation.ConsolidationObject memory submitted = signed;
         submitted.exitEpoch++;
 
-        vm.expectRevert(IConsolidationAttestation.InvalidSignature.selector);
         vm.prank(signer);
         buffer.submitAttestation(submitted, sig, "");
+
+        assertEq(buffer.lastAttestationIdx(), 1);
+    }
+
+    function test_ErrorSignatureBindsExitEpoch() public {
+        (address signer, uint256 pk) = makeAddrAndKey("signer");
+        bytes memory error = bytes("source pubkey not exited");
+        IConsolidationAttestation.ConsolidationObject memory signed = _consolidation(makeAddr("withdrawal"), 19, 107);
+        bytes memory sig = _sign(pk, signed, error);
+        IConsolidationAttestation.ConsolidationObject memory submitted = signed;
+        submitted.exitEpoch++;
+
+        vm.expectRevert(IConsolidationAttestation.InvalidSignature.selector);
+        vm.prank(signer);
+        buffer.submitAttestation(submitted, sig, error);
     }
 
     function test_RevertsWhenConsolidationDoesNotMatchSignature() public {
@@ -300,7 +313,7 @@ contract ConsolidationAttestationTest is Test {
         buffer.submitAttestation(c, hex"deadbeef", "");
     }
 
-    function test_HashChangesWhenOnlyExitEpochChanges() public {
+    function test_HashDoesNotChangeWhenOnlyExitEpochChanges() public {
         IConsolidationAttestation.ConsolidationObject memory early = _consolidation(makeAddr("withdrawal"), 21, 1000);
         IConsolidationAttestation.ConsolidationObject memory late = _consolidation(makeAddr("withdrawal"), 21, 1001);
 
@@ -309,6 +322,6 @@ contract ConsolidationAttestationTest is Test {
 
         assertEq(earlyHash, _expectedHash(early));
         assertEq(lateHash, _expectedHash(late));
-        assertTrue(earlyHash != lateHash);
+        assertEq(earlyHash, lateHash);
     }
 }

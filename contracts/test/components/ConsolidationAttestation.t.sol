@@ -4,7 +4,9 @@ pragma solidity 0.8.34;
 import "forge-std/Test.sol";
 
 import "../../src/AttestationVerifier.1.sol";
+import "../../src/ConsolidationAttestation.sol";
 import "../../src/interfaces/IAttestationVerifier.1.sol";
+import "../../src/interfaces/IConsolidationAttestation.sol";
 import "../../src/libraries/LibErrors.sol";
 import "../utils/LibImplementationUnbricker.sol";
 
@@ -226,6 +228,50 @@ contract ConsolidationAttestationTest is Test {
         address user = address(0xBEEF);
         IAttestationVerifierV1.ConsolidationObject memory c = _validConsolidation(user, 1);
         _validateConsolidationAsRiver(c);
+    }
+
+    /// @dev Approval signatures accepted and emitted by the L2 relay must be consumable byte-for-byte
+    ///      by the L1 verifier. `exitEpoch` remains relay metadata and is not part of the shared digest.
+    function testL2ApprovalSignaturesAreAcceptedByL1() public {
+        address withdrawalAddress = address(0xBEEF);
+        bytes[] memory sources = new bytes[](1);
+        sources[0] = _pubkey(101);
+        bytes[] memory targets = new bytes[](1);
+        targets[0] = _pubkey(1101);
+        uint256 totalAmount = 32 ether;
+
+        ConsolidationAttestation relay = new ConsolidationAttestation(verifier.getConsolidationDomainSeparator());
+        IConsolidationAttestation.ConsolidationObject memory relayConsolidation =
+            IConsolidationAttestation.ConsolidationObject({
+                withdrawalAddress: withdrawalAddress,
+                sourcePubkeys: sources,
+                targetPubkeys: targets,
+                totalAmount: totalAmount,
+                exitEpoch: 12345
+            });
+
+        bytes32 structHash = _consolidationStructHash(withdrawalAddress, sources, targets, totalAmount);
+        bytes32 digest = _consolidationDigest(withdrawalAddress, sources, targets, totalAmount);
+        bytes[] memory signatures = new bytes[](2);
+        signatures[0] = _sign(pk1, digest);
+        signatures[1] = _sign(pk2, digest);
+
+        assertEq(relay.computeConsolidationHash(relayConsolidation), structHash);
+
+        vm.prank(attester1);
+        relay.submitAttestation(relayConsolidation, signatures[0], "");
+        vm.prank(attester2);
+        relay.submitAttestation(relayConsolidation, signatures[1], "");
+        assertEq(relay.lastAttestationIdx(), 2);
+
+        IAttestationVerifierV1.ConsolidationObject memory l1Consolidation = IAttestationVerifierV1.ConsolidationObject({
+            withdrawalAddress: withdrawalAddress,
+            sourcePubkeys: sources,
+            targetPubkeys: targets,
+            totalAmount: totalAmount,
+            signatures: signatures
+        });
+        _validateConsolidationAsRiver(l1Consolidation);
     }
 
     function testValidateConsolidation_multiplePairs_succeeds() public {

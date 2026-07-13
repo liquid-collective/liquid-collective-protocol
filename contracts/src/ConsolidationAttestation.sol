@@ -11,13 +11,14 @@ import "./interfaces/IConsolidationAttestation.sol";
 ///         Anyone can submit attestations; off-chain daemons collect the events. Quorum validation
 ///         is performed elsewhere.
 /// @dev Each submission carries a signature that must be produced by `msg.sender`. When `errorData`
-///      is empty the signature is over an `AttestConsolidation` EIP-712 struct; when `errorData` is
-///      non-empty it is over a distinct `AttestConsolidationError` struct. This binds the submitter
-///      to the exact consolidation object (and optional error) they are attesting to.
+///      is empty the signature is over the same four-field `AttestConsolidation` EIP-712 struct that
+///      the L1 AttestationVerifier consumes. `exitEpoch` remains event metadata and is intentionally
+///      excluded from approval signatures. When `errorData` is non-empty the signature is over a
+///      distinct L2-only `AttestConsolidationError` struct that binds both `exitEpoch` and the error.
 contract ConsolidationAttestation is IConsolidationAttestation {
-    /// @notice EIP-712 typehash for a consolidation approval, including `exitEpoch`.
+    /// @notice EIP-712 typehash for a consolidation approval. Identical to the L1 verifier's.
     bytes32 public constant ATTEST_CONSOLIDATION_TYPEHASH = keccak256(
-        "AttestConsolidation(address withdrawalAddress,bytes[] sourcePubkeys,bytes[] targetPubkeys,uint256 totalAmount,uint256 exitEpoch)"
+        "AttestConsolidation(address withdrawalAddress,bytes[] sourcePubkeys,bytes[] targetPubkeys,uint256 totalAmount)"
     );
 
     /// @notice EIP-712 typehash for a consolidation error attestation carrying an error payload.
@@ -81,8 +82,7 @@ contract ConsolidationAttestation is IConsolidationAttestation {
                 consolidation.withdrawalAddress,
                 _hashBytesArray(consolidation.sourcePubkeys),
                 _hashBytesArray(consolidation.targetPubkeys),
-                consolidation.totalAmount,
-                consolidation.exitEpoch
+                consolidation.totalAmount
             )
         );
     }
