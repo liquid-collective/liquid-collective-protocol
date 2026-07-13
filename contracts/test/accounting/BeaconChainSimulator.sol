@@ -235,20 +235,20 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
     ///      `bufferedPrincipal` is the principal minted into the consolidation buffer at request time (counted in
     ///      `_simTotalUserDeposited` for I2 ETH-conservation).
     ///      `reportedAmount` is the delta to add to the cumulative `totalExternalConsolidationsAmountReported` for this report.
-    ///      `validatorBalanceSurplus` is extra CL balance above `reportedAmount` that lands in validatorsBalance (counted as rewards).
+    ///      `consolidationRewardSurplus` is extra CL balance above `reportedAmount` that lands in validatorsBalance (counted as rewards).
     function sim_reportExternalConsolidation(
         uint256 bufferedPrincipal,
         uint256 reportedAmount,
-        uint256 validatorBalanceSurplus
+        uint256 consolidationRewardSurplus
     ) internal {
         _simConsolidatedBalance += reportedAmount;
-        _simConsolidationRewardSurplus += validatorBalanceSurplus;
+        _simConsolidationRewardSurplus += consolidationRewardSurplus;
         _simTotalUserDeposited += bufferedPrincipal;
 
         if (reportedAmount > bufferedPrincipal) {
             _simCumulativeAutocompounded += reportedAmount - bufferedPrincipal;
         }
-        _simCumulativeAutocompounded += validatorBalanceSurplus;
+        _simCumulativeAutocompounded += consolidationRewardSurplus;
     }
 
     /// @dev Convenience overload — delegates to the two-argument variant.
