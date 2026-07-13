@@ -13,6 +13,7 @@ import "./Administrable.sol";
 
 import "openzeppelin-contracts/contracts/security/ReentrancyGuard.sol";
 
+import "./state/operatorsRegistry/Operators.1.sol";
 import "./state/operatorsRegistry/Operators.2.sol";
 import "./state/operatorsRegistry/Operators.3.sol";
 import "./state/operatorsRegistry/ValidatorKeys.sol";
@@ -34,13 +35,50 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
     uint256 private constant MIN_ETH_AMOUNT = 1 ether;
 
+    // The maximum effective validator balance (MaxEB) under EIP-7251. A full exit's reserved amount
+    // (the projected total balance) cannot exceed this.
     uint64 private constant MAX_EL_EXIT_AMOUNT_GWEI = 2_048_000_000_000; // 2048 ETH
+
+    // The minimum balance an active validator must retain (the activation floor). A full exit's reserved
+    // projected balance cannot realistically be below this for an active validator.
+    uint64 private constant MIN_VALIDATOR_BALANCE_GWEI = 32_000_000_000; // 32 ETH
+
+    // A partial withdrawal cannot drop a validator below the activation floor, so the most it can wire
+    // (and reserve) is MaxEB minus the 32 ETH floor.
+    uint64 private constant MAX_PARTIAL_EL_EXIT_AMOUNT_GWEI = 2_016_000_000_000; // 2048 - 32 ETH
 
     /// @inheritdoc IOperatorsRegistryV1
     function initOperatorsRegistryV1(address _admin, address _river) external init(0) {
         _setAdmin(_admin);
         RiverAddress.set(_river);
         emit SetRiver(_river);
+    }
+
+    /// @inheritdoc IOperatorsRegistryV1
+    function initOperatorsRegistryV1_1() external init(1) {
+        _migrateOperators_V1_1();
+    }
+
+    /// @notice Internal utility to migrate the operators from V1 to V2 format
+    function _migrateOperators_V1_1() internal {
+        uint256 opCount = OperatorsV1.getCount();
+
+        for (uint256 idx = 0; idx < opCount; ++idx) {
+            OperatorsV1.Operator memory oldOperatorValue = OperatorsV1.get(idx);
+
+            OperatorsV2.push(
+                OperatorsV2.Operator({
+                    limit: uint32(oldOperatorValue.limit),
+                    funded: uint32(oldOperatorValue.funded),
+                    requestedExits: 0,
+                    keys: uint32(oldOperatorValue.keys),
+                    latestKeysEditBlockNumber: uint64(oldOperatorValue.latestKeysEditBlockNumber),
+                    active: oldOperatorValue.active,
+                    name: oldOperatorValue.name,
+                    operator: oldOperatorValue.operator
+                })
+            );
+        }
     }
 
     /// @inheritdoc IOperatorsRegistryV1
@@ -226,8 +264,10 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             if (!operator.active) {
                 revert InactiveOperator(operatorIndex);
             }
-            if (operator.requestedExits > OperatorsV3.getExitedETH(operatorIndex)) {
-                revert OperatorIgnoredExitRequests(operatorIndex);
+
+            uint256 exitedETH = OperatorsV3.getExitedETH(operatorIndex);
+            if (operator.requestedExits > exitedETH) {
+                emit FundedOperatorWithPendingExits(operatorIndex, operator.requestedExits, exitedETH);
             }
 
             // Defense-in-depth: enforce the per-class pubkey/amount alignment that
@@ -240,6 +280,8 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                 revert MisalignedDeltaArrays(operatorIndex, delta.topUpPubkeys.length, delta.topUpAmounts.length);
             }
 
+            // Trusts delta.fundedETH == sum(deposit+topUp amounts) by construction (LibFundingDeltas.build).
+            // Revisit this assumption if any non-builder call path can reach here — see the NatSpec @dev.
             operator.funded += delta.fundedETH;
             // Emit initial-deposit pubkeys and top-up pubkeys on separate events so off-chain
             // indexers do not conflate a top-up (existing key, additional ETH) with a brand-new
@@ -397,50 +439,80 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         IWithdrawV1 withdraw = IWithdrawV1(WithdrawAddress.get());
 
         for (uint256 i = 0; i < _elAllocations.length; ++i) {
-            uint256 operatorIndex = _elAllocations[i].operatorIndex;
-
-            if (i > 0 && operatorIndex <= _elAllocations[i - 1].operatorIndex) {
+            if (i > 0 && _elAllocations[i].operatorIndex <= _elAllocations[i - 1].operatorIndex) {
                 revert UnorderedOperatorList();
             }
 
-            if (
-                _elAllocations[i].pubkeys.length != _elAllocations[i].isFullExit.length
-                    || _elAllocations[i].pubkeys.length != _elAllocations[i].amounts.length
-            ) {
-                revert InvalidELExitETHAllocationLength();
-            }
-
-            OperatorsV3.Operator storage operator = OperatorsV3.get(operatorIndex);
-            if (!operator.active) {
-                revert InactiveOperator(operatorIndex);
-            }
-
-            uint256 elExitAmount;
-            uint64[] memory cachedAmounts = _elAllocations[i].amounts;
-            for (uint256 j = 0; j < _elAllocations[i].amounts.length; ++j) {
-                uint64 amount = _elAllocations[i].amounts[j];
-                bool isFullExit = _elAllocations[i].isFullExit[j];
-                if (amount == 0 || amount > MAX_EL_EXIT_AMOUNT_GWEI) {
-                    revert InvalidELExitETHAllocationAmount(operatorIndex, isFullExit, amount);
-                }
-                elExitAmount += uint256(amount) * 1 gwei;
-                if (isFullExit) {
-                    cachedAmounts[j] = 0;
-                }
-            }
-
-            _reserveOperatorExit(operator, operatorIndex, elExitAmount, true);
+            (uint256 elExitAmount, uint256 feePaid) =
+                _requestOperatorELETHExits(withdraw, _elAllocations[i], _maxFeePerWithdrawal);
             requestedETHAmount += elExitAmount;
-
-            withdraw.withdraw{value: _maxFeePerWithdrawal * _elAllocations[i].pubkeys.length}(
-                _elAllocations[i].pubkeys, cachedAmounts, _maxFeePerWithdrawal, msg.sender
-            );
-            totalFeePaid += _maxFeePerWithdrawal * _elAllocations[i].pubkeys.length;
-            emit RequestedELETHExits(operatorIndex, _elAllocations[i].pubkeys, _elAllocations[i].amounts);
+            totalFeePaid += feePaid;
         }
         if (requestedETHAmount > _remainingETHExitsDemand) {
             revert ExitsGreaterThanExitDemand(requestedETHAmount, _remainingETHExitsDemand);
         }
+    }
+
+    /// @notice Validates a single operator's EL exit allocation, reserves it, triggers the withdrawal and emits.
+    /// @return elExitAmount The total reserved exit amount (wei) for this operator
+    /// @return feePaid The withdrawal fee paid for this operator
+    function _requestOperatorELETHExits(
+        IWithdrawV1 _withdraw,
+        ELExitETHAllocation calldata _operatorAllocation,
+        uint256 _maxFeePerWithdrawal
+    ) private returns (uint256 elExitAmount, uint256 feePaid) {
+        uint256 operatorIndex = _operatorAllocation.operatorIndex;
+
+        if (
+            _operatorAllocation.pubkeys.length != _operatorAllocation.withdrawalAmounts.length
+                || _operatorAllocation.pubkeys.length != _operatorAllocation.reservedExitAmounts.length
+        ) {
+            revert InvalidELExitETHAllocationLength();
+        }
+
+        OperatorsV3.Operator storage operator = OperatorsV3.get(operatorIndex);
+        if (!operator.active) {
+            revert InactiveOperator(operatorIndex);
+        }
+
+        for (uint256 j = 0; j < _operatorAllocation.reservedExitAmounts.length; ++j) {
+            uint64 withdrawalAmount = _operatorAllocation.withdrawalAmounts[j];
+            uint64 reservedExitAmount = _operatorAllocation.reservedExitAmounts[j];
+            // The reserved amount feeds the per-operator headroom cap, so it must always sit within the
+            // bound that matches the kind of exit. The bound differs for full vs partial exits.
+            if (withdrawalAmount == 0) {
+                // A zero wire amount denotes a full exit. Its reserved value is keeper-supplied accounting
+                // data (typically the projected balance) and is not validated against the real balance here,
+                // but for an active validator it lies within [32 ETH activation floor, 2048 ETH MaxEB].
+                if (reservedExitAmount < MIN_VALIDATOR_BALANCE_GWEI || reservedExitAmount > MAX_EL_EXIT_AMOUNT_GWEI) {
+                    revert InvalidELExitETHAllocationAmount(operatorIndex, withdrawalAmount, reservedExitAmount);
+                }
+            } else {
+                // A non-zero wire amount denotes a partial exit. It cannot drop the validator below the
+                // 32 ETH activation floor, so the wire value is bounded by MaxEB - 32 ETH, and it must
+                // reserve exactly what it withdraws.
+                if (reservedExitAmount == 0 || reservedExitAmount > MAX_PARTIAL_EL_EXIT_AMOUNT_GWEI) {
+                    revert InvalidELExitETHAllocationAmount(operatorIndex, withdrawalAmount, reservedExitAmount);
+                }
+                if (withdrawalAmount != reservedExitAmount) {
+                    revert ELExitReservedWithdrawalMismatch(operatorIndex, withdrawalAmount, reservedExitAmount);
+                }
+            }
+            elExitAmount += uint256(reservedExitAmount) * 1 gwei;
+        }
+
+        _reserveOperatorExit(operator, operatorIndex, elExitAmount, true);
+
+        feePaid = _maxFeePerWithdrawal * _operatorAllocation.pubkeys.length;
+        _withdraw.withdraw{value: feePaid}(
+            _operatorAllocation.pubkeys, _operatorAllocation.withdrawalAmounts, _maxFeePerWithdrawal, msg.sender
+        );
+        emit RequestedELETHExits(
+            operatorIndex,
+            _operatorAllocation.pubkeys,
+            _operatorAllocation.withdrawalAmounts,
+            _operatorAllocation.reservedExitAmounts
+        );
     }
 
     /// @notice Internal utility to reserve an exit against an operator's available ETH.
