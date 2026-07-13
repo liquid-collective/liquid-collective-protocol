@@ -75,7 +75,12 @@ interface IAttestationVerifierV1 {
     /// @notice Emitted when a consolidation request is successfully validated and
     ///         marked as processed for replay protection.
     /// @param consolidationHash The EIP-712 structHash of the consolidation request
-    event ConsolidationProcessed(bytes32 indexed consolidationHash);
+    /// @param sourcePubkeys The source pubkeys that were consolidated
+    /// @param targetPubkeys The target pubkeys that were consolidated
+    /// @param totalAmount The total amount that was consolidated
+    event ConsolidationProcessed(
+        bytes32 indexed consolidationHash, bytes[] sourcePubkeys, bytes[] targetPubkeys, uint256 totalAmount
+    );
 
     /// @notice Emitted when a batch of validator pubkeys is added to the Pectra lookup.
     /// @dev    Fires on every path that records membership in `PectraValidatorPubkeyLookup`:
@@ -220,6 +225,10 @@ interface IAttestationVerifierV1 {
     /// @param length The observed length
     /// @param isSource True if the offending pubkey is the source pubkey, false if it is the target pubkey
     error InvalidConsolidationPubkeyLength(uint256 index, uint256 length, bool isSource);
+
+    /// @notice A consolidation source pubkey is the all-zero 48-byte value.
+    /// @param index The pair index of the offending source pubkey
+    error ZeroConsolidationSourcePubkey(uint256 index);
 
     /// @notice The EIP-712 consolidation domain separator has not been initialized
     error ZeroConsolidationDomainSeparator();

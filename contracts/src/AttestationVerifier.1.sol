@@ -104,6 +104,11 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
     /// @dev Expected length for BLS pubkeys in a ConsolidationObject (source or target).
     uint256 internal constant CONSOLIDATION_PUBKEY_LENGTH = 48;
 
+    /// @dev keccak256 of an all-zero 48-byte pubkey; used to reject zero source pubkeys.
+    bytes32 internal constant ZERO_CONSOLIDATION_PUBKEY_HASH = keccak256(
+        hex"000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    );
+
     // -----------------------------------------------------------------------
     // Modifiers
     // -----------------------------------------------------------------------
@@ -693,6 +698,9 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
                 revert ConsolidationSourceAlreadyProcessed(sourcePubkey);
             }
             bytes32 sourcePubkeyHash = sourcePubkeyHashes[i];
+            if (sourcePubkeyHash == ZERO_CONSOLIDATION_PUBKEY_HASH) {
+                revert ZeroConsolidationSourcePubkey(i);
+            }
             for (uint256 j = 0; j < i; ++j) {
                 if (
                     sourcePubkeyHash == sourcePubkeyHashes[j]
@@ -711,7 +719,9 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
         //    succeeds, so malformed signatures cannot burn a source pubkey.
         ProcessedConsolidations.markProcessed(structHash);
         ProcessedConsolidationSourcePubkeys.markProcessed(consolidation.sourcePubkeys);
-        emit ConsolidationProcessed(structHash);
+        emit ConsolidationProcessed(
+            structHash, consolidation.sourcePubkeys, consolidation.targetPubkeys, consolidation.totalAmount
+        );
     }
 
     // -----------------------------------------------------------------------

@@ -481,6 +481,23 @@ contract ConsolidationAttestationTest is Test {
         _validateConsolidationAsRiver(c);
     }
 
+    function testRevert_zeroSourcePubkey() public {
+        bytes[] memory sources = new bytes[](1);
+        sources[0] = new bytes(48);
+        bytes[] memory targets = new bytes[](1);
+        targets[0] = _pubkey(2);
+
+        IAttestationVerifierV1.ConsolidationObject memory c = IAttestationVerifierV1.ConsolidationObject({
+            withdrawalAddress: address(0xAA),
+            sourcePubkeys: sources,
+            targetPubkeys: targets,
+            totalAmount: 32 ether,
+            signatures: new bytes[](0)
+        });
+        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.ZeroConsolidationSourcePubkey.selector, 0));
+        _validateConsolidationAsRiver(c);
+    }
+
     function testRevert_targetPubkeyWrongLength() public {
         bytes[] memory sources = new bytes[](1);
         sources[0] = _pubkey(1);
@@ -884,7 +901,7 @@ contract ConsolidationAttestationTest is Test {
         signatures[1] = _sign(pk2, digest);
         bytes32 structHash = _consolidationStructHash(user, sources, targets, totalAmount);
         vm.expectEmit(true, false, false, true);
-        emit IAttestationVerifierV1.ConsolidationProcessed(structHash);
+        emit IAttestationVerifierV1.ConsolidationProcessed(structHash, sources, targets, totalAmount);
         _validateConsolidationAsRiver(
             IAttestationVerifierV1.ConsolidationObject({
                 withdrawalAddress: user,
@@ -934,7 +951,7 @@ contract ConsolidationAttestationTest is Test {
         quorumSigs[1] = _sign(pk2, digest);
         bytes32 structHash = _consolidationStructHash(user, sources, targets, totalAmount);
         vm.expectEmit(true, false, false, true);
-        emit IAttestationVerifierV1.ConsolidationProcessed(structHash);
+        emit IAttestationVerifierV1.ConsolidationProcessed(structHash, sources, targets, totalAmount);
         _validateConsolidationAsRiver(
             IAttestationVerifierV1.ConsolidationObject({
                 withdrawalAddress: user,
@@ -959,7 +976,7 @@ contract ConsolidationAttestationTest is Test {
             )
         );
         vm.expectEmit(true, false, false, true);
-        emit IAttestationVerifierV1.ConsolidationProcessed(structHash);
+        emit IAttestationVerifierV1.ConsolidationProcessed(structHash, c.sourcePubkeys, c.targetPubkeys, c.totalAmount);
         _validateConsolidationAsRiver(c);
     }
 
