@@ -2646,7 +2646,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
     }
 
-    /// @dev A top-up amount outside the [1 ether, 2048 ether] gwei-aligned range must revert in
+    /// @dev A top-up amount outside the [1 ether, 2016 ether] gwei-aligned range must revert in
     ///      fetchAndValidateDeposits()'s top-up loop with InvalidTopUpAmount. The amount bound is checked
     ///      before the funded-membership check, so no pubkey seeding is required.
     function testRevert_validate_topUp_invalidDepositAmount() public {
@@ -2667,13 +2667,13 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InvalidTopUpAmount.selector, 0, 32 ether + 1));
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
 
-        // Above maximum (2048 ether + 1 gwei).
+        // Above maximum (2016 ether + 1 gwei).
         topUps[0] = _makeTopUpDeposit(0, 713);
-        topUps[0].amount = 2048 ether + 1 gwei;
+        topUps[0].amount = 2016 ether + 1 gwei;
         (bufferId, rootHash, sigs) = _prepareTopUps(topUps);
         vm.prank(keeper);
         vm.expectRevert(
-            abi.encodeWithSelector(IAttestationVerifierV1.InvalidTopUpAmount.selector, 0, 2048 ether + 1 gwei)
+            abi.encodeWithSelector(IAttestationVerifierV1.InvalidTopUpAmount.selector, 0, 2016 ether + 1 gwei)
         );
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
     }

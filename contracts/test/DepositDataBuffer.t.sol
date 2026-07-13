@@ -266,7 +266,7 @@ contract DepositDataBufferTest is Test, DepositDataBufferFixtures {
         IDepositDataBuffer.DepositObject memory batch;
         batch.topUps = new IDepositDataBuffer.TopUp[](1);
         batch.topUps[0] = _topUp(1);
-        uint256 tooHigh = 2048 ether + 1 gwei;
+        uint256 tooHigh = 2016 ether + 1 gwei;
         batch.topUps[0].amount = tooHigh;
         bytes32 id = _id(batch, 0);
         vm.prank(producer);
@@ -274,14 +274,14 @@ contract DepositDataBufferTest is Test, DepositDataBufferFixtures {
         buffer.submitDepositData(id, batch);
     }
 
-    /// @dev The inclusive [1, 2048] ETH top-up bounds are accepted at both extremes.
+    /// @dev The inclusive [1, 2016] ETH top-up bounds are accepted at both extremes.
     function test_SubmitAcceptsTopUpAmountBoundaries() public {
         IDepositDataBuffer.DepositObject memory batch;
         batch.topUps = new IDepositDataBuffer.TopUp[](2);
         batch.topUps[0] = _topUp(10);
         batch.topUps[0].amount = 1 ether;
         batch.topUps[1] = _topUp(11);
-        batch.topUps[1].amount = 2048 ether;
+        batch.topUps[1].amount = 2016 ether;
 
         bytes32 id = _id(batch, 0);
         vm.prank(producer);

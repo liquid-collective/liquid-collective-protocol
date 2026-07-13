@@ -99,6 +99,15 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
     ///         they credit already-activated validators and may be below this amount.
     uint256 internal constant MIN_INITIAL_DEPOSIT_AMOUNT = 32 ether;
 
+    /// @notice Minimum top-up amount accepted by the consensus-layer deposit path.
+    uint256 internal constant MIN_TOP_UP_AMOUNT = 1 ether;
+
+    /// @notice Maximum deposit amount — the Pectra 0x02 maximum effective balance.
+    uint256 internal constant MAX_DEPOSIT_AMOUNT = 2048 ether;
+
+    /// @notice Maximum stateless top-up: a funded validator should already have at least 32 ETH.
+    uint256 internal constant MAX_TOP_UP_AMOUNT = MAX_DEPOSIT_AMOUNT - MIN_INITIAL_DEPOSIT_AMOUNT;
+
     /// @dev Expected length for BLS pubkeys in a ConsolidationObject (source or target).
     uint256 internal constant CONSOLIDATION_PUBKEY_LENGTH = 48;
 
@@ -465,7 +474,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
             // InFlightDeposit / _assetBalance() (issue #441/#309). The upper bound and gwei-alignment
             // mirror `_depositValidator`; the 32-ETH floor is stricter here because this loop only
             // covers initial deposits (top-ups are validated separately below and stay >= 1 ETH).
-            if (d.amount < MIN_INITIAL_DEPOSIT_AMOUNT || d.amount > 2048 ether || d.amount % 1 gwei != 0) {
+            if (d.amount < MIN_INITIAL_DEPOSIT_AMOUNT || d.amount > MAX_DEPOSIT_AMOUNT || d.amount % 1 gwei != 0) {
                 revert InvalidDepositAmount(i, d.amount);
             }
             totalAmount += d.amount;
@@ -497,7 +506,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
             if (t.pubkey.length != DEPOSIT_PUBKEY_LENGTH) {
                 revert InvalidTopUpPubkeyLength(i, t.pubkey.length);
             }
-            if (t.amount < 1 ether || t.amount > 2048 ether || t.amount % 1 gwei != 0) {
+            if (t.amount < MIN_TOP_UP_AMOUNT || t.amount > MAX_TOP_UP_AMOUNT || t.amount % 1 gwei != 0) {
                 revert InvalidTopUpAmount(i, t.amount);
             }
             totalAmount += t.amount;
