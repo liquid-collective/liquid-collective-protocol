@@ -50,7 +50,7 @@ contract OracleManagerV1ExposeInitializer is OracleManagerV1 {
         LastConsensusLayerReport.get().validatorsCount = uint32(amount);
     }
 
-    function supersedeTotalConsolidationsAmountReported(uint256 amount) external {
+    function supersedeTotalExternalConsolidationETH(uint256 amount) external {
         LastConsensusLayerReport.get().totalExternalConsolidationETH = amount;
     }
 
@@ -353,7 +353,7 @@ contract OracleManagerV1CoverageTests is OracleManagerV1Tests {
     /// reported totalExternalConsolidationETH is lower than the previously stored value.
     function testSetConsensusLayerDataRevertsOnConsolidationsAmountDecrease() public {
         OracleManagerV1ExposeInitializer om = OracleManagerV1ExposeInitializer(address(oracleManager));
-        om.supersedeTotalConsolidationsAmountReported(5 ether);
+        om.supersedeTotalExternalConsolidationETH(5 ether);
 
         uint256 epoch = epochsPerFrame;
         vm.warp(genesisTime + (epoch + epochsToAssumedFinality) * slotsPerEpoch * secondsPerSlot);
