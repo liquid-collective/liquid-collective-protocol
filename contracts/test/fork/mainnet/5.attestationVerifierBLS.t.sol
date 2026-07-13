@@ -16,11 +16,21 @@ import "../../utils/LibImplementationUnbricker.sol";
 
 contract RealBLSForkDepositDataBuffer is IDepositDataBuffer {
     mapping(bytes32 => DepositObject) internal _batches;
+    mapping(bytes32 => uint256) internal _nonce;
     mapping(bytes32 => bool) internal _exists;
+    mapping(bytes32 => bool) internal _processed;
+    address internal _processor;
+    uint256 public lastQueuedIdx;
+
+    constructor(address processor) {
+        _processor = processor;
+    }
 
     function submitDepositData(bytes32 depositDataBufferId, DepositObject calldata batch) external {
         if (_exists[depositDataBufferId]) revert DepositDataBufferIdAlreadyExists(depositDataBufferId);
+        uint256 nonce = lastQueuedIdx;
         _exists[depositDataBufferId] = true;
+        _nonce[depositDataBufferId] = nonce;
         DepositObject storage stored = _batches[depositDataBufferId];
         for (uint256 i = 0; i < batch.deposits.length; ++i) {
             stored.deposits.push(batch.deposits[i]);
@@ -28,20 +38,52 @@ contract RealBLSForkDepositDataBuffer is IDepositDataBuffer {
         for (uint256 i = 0; i < batch.topUps.length; ++i) {
             stored.topUps.push(batch.topUps[i]);
         }
-        emit DepositDataSubmitted(depositDataBufferId, batch.deposits.length, batch.topUps.length);
+        emit DepositDataSubmitted(depositDataBufferId, nonce, batch.deposits.length, batch.topUps.length);
+        ++lastQueuedIdx;
     }
 
-    function getDepositData(bytes32 depositDataBufferId) external view returns (DepositObject memory) {
+    function getDepositData(bytes32 depositDataBufferId) external view returns (DepositObject memory, uint256 nonce) {
         if (!_exists[depositDataBufferId]) revert DepositDataBufferIdNotFound(depositDataBufferId);
-        return _batches[depositDataBufferId];
+        return (_batches[depositDataBufferId], _nonce[depositDataBufferId]);
     }
 
-    function getWriter() external pure returns (address) {
+    function markDepositDataProcessed(bytes32 depositDataBufferId) external {
+        if (msg.sender != _processor) revert OnlyProcessor();
+        if (!_exists[depositDataBufferId]) revert DepositDataBufferIdNotFound(depositDataBufferId);
+        if (_processed[depositDataBufferId]) revert DepositDataAlreadyProcessed(depositDataBufferId);
+        _processed[depositDataBufferId] = true;
+        emit DepositDataProcessed(depositDataBufferId);
+    }
+
+    function isDepositDataProcessed(bytes32 depositDataBufferId) external view returns (bool) {
+        return _processed[depositDataBufferId];
+    }
+
+    function setProducer(address) external {}
+
+    function setProcessor(address newProcessor) external {
+        _processor = newProcessor;
+        emit SetProcessor(newProcessor);
+    }
+
+    function getProducer() external pure returns (address) {
         return address(0);
     }
+
+    function proposeAdmin(address) external {}
+
+    function acceptAdmin() external {}
 
     function getAdmin() external pure returns (address) {
         return address(0);
+    }
+
+    function getPendingAdmin() external pure returns (address) {
+        return address(0);
+    }
+
+    function getProcessor() external view returns (address) {
+        return _processor;
     }
 }
 
@@ -138,12 +180,11 @@ contract AttestationVerifierRealBLSForkTest is Test {
         rootAttester2 = vm.addr(rootAttesterPk2);
 
         depositContract = new DepositContractEnhancedMock();
-        buffer = new RealBLSForkDepositDataBuffer();
-
         dm = new RealBLSForkDepositHarness(admin);
         LibImplementationUnbricker.unbrick(vm, address(dm));
         dm.initialize(address(depositContract), withdrawalCredentials);
         dm.sudoSetKeeper(keeper);
+        buffer = new RealBLSForkDepositDataBuffer(address(dm));
 
         address[] memory rootAttesters = new address[](2);
         rootAttesters[0] = rootAttester1;
@@ -179,7 +220,7 @@ contract AttestationVerifierRealBLSForkTest is Test {
         assertEq(depositContract.deposit_count(), 1, "deposit should execute");
         assertEq(dm.getCommittedBalance(), 96 ether, "committed balance should decrease");
         assertEq(dm.getTotalDepositedETH(), 32 ether, "total deposited should increase");
-        assertTrue(verifier.isDepositDataBufferIdProcessed(bufferId), "buffer id should be processed");
+        assertTrue(buffer.isDepositDataProcessed(bufferId), "buffer id should be processed");
         assertTrue(verifier.isPubkeyFunded(deposit.pubkey), "pubkey should be marked funded");
     }
 
@@ -201,7 +242,7 @@ contract AttestationVerifierRealBLSForkTest is Test {
         batch.deposits = new IDepositDataBuffer.Deposit[](1);
         batch.deposits[0] = deposit;
 
-        bufferId = keccak256(abi.encode(batch));
+        bufferId = keccak256(abi.encode(batch, buffer.lastQueuedIdx()));
         buffer.submitDepositData(bufferId, batch);
         rootHash = depositContract.get_deposit_root();
 
