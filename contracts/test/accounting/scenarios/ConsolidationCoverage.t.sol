@@ -138,10 +138,9 @@ contract ConsolidationCoverageScenarioTest is AccountingInvariants {
     }
 
     /// @notice End-to-end regression for source-validator rewards earned after the external-consolidation
-    ///         request was buffered. The simulator report exceeds the buffer, and also lands extra CL balance
-    ///         above the reported amount in validatorsBalance. The buffer is drawn to zero, the surplus is
-    ///         booked as APR-bounded rewards, and the Oracle -> River flow does not revert.
-    function testConsolidationReportWithSimulatorRewardSurplusBooksRewards() public {
+    ///         request was buffered. The simulator report exceeds the buffer, the buffer is drawn to zero,
+    ///         the surplus is booked as APR-bounded rewards, and the Oracle -> River flow does not revert.
+    function testConsolidationReportAboveBufferedPrincipalBooksRewards() public {
         _baseline();
 
         uint256 bufferedPrincipal = DEPOSIT_SIZE;
@@ -152,17 +151,14 @@ contract ConsolidationCoverageScenarioTest is AccountingInvariants {
 
         uint256 rewardSurplus = _maxIncreaseForNextReport(underlyingBefore);
         assertGt(rewardSurplus, 0, "test setup: reward surplus must be non-zero");
-        uint256 reportedSurplus = rewardSurplus / 2;
-        assertGt(reportedSurplus, 0, "test setup: reported surplus must be non-zero");
-        uint256 validatorBalanceSurplus = rewardSurplus - reportedSurplus;
 
-        sim_reportExternalConsolidation(bufferedPrincipal, bufferedPrincipal + reportedSurplus, validatorBalanceSurplus);
+        sim_reportExternalConsolidation(bufferedPrincipal, bufferedPrincipal + rewardSurplus);
         sim_oracleReport();
 
         IOracleManagerV1.StoredConsensusLayerReport memory stored = river.getLastConsensusLayerReport();
         assertEq(
             stored.totalExternalConsolidationsAmountReported,
-            bufferedPrincipal + reportedSurplus,
+            bufferedPrincipal + rewardSurplus,
             "reported principal plus surplus"
         );
         assertEq(stored.validatorsBalance, 4 * DEPOSIT_SIZE + rewardSurplus, "surplus landed in validatorsBalance");
@@ -171,10 +167,10 @@ contract ConsolidationCoverageScenarioTest is AccountingInvariants {
         assertGt(river.totalSupply(), sharesBefore, "fee shares minted only on rewards");
     }
 
-    /// @notice Pins the other side of the same boundary: if the simulator lands a consolidation reward
-    ///         surplus above the APR ceiling, the report reverts through the Oracle -> River flow with
+    /// @notice Pins the other side of the same boundary: if the reported consolidation surplus exceeds
+    ///         the APR ceiling, the report reverts through the Oracle -> River flow with
     ///         `TotalValidatorBalanceIncreaseOutOfBound`.
-    function testConsolidationReportWithSimulatorRewardSurplusAboveAprCeilingReverts() public {
+    function testConsolidationReportAboveBufferedPrincipalAndAprCeilingReverts() public {
         _baseline();
 
         uint256 bufferedPrincipal = DEPOSIT_SIZE;
@@ -182,9 +178,7 @@ contract ConsolidationCoverageScenarioTest is AccountingInvariants {
 
         uint256 preReportUnderlying = river.totalUnderlyingSupply();
         uint256 excessiveRewardSurplus = _maxIncreaseForNextReport(preReportUnderlying) + 1;
-        uint256 reportedSurplus = 1;
-        uint256 validatorBalanceSurplus = excessiveRewardSurplus - reportedSurplus;
-        sim_reportExternalConsolidation(bufferedPrincipal, bufferedPrincipal + reportedSurplus, validatorBalanceSurplus);
+        sim_reportExternalConsolidation(bufferedPrincipal, bufferedPrincipal + excessiveRewardSurplus);
 
         ReportBounds.ReportBoundsStruct memory rb = river.getReportBounds();
         IOracleManagerV1.ConsensusLayerReport memory report = _buildBadReport(false, false);

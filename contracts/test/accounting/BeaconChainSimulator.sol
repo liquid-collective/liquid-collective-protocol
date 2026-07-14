@@ -55,10 +55,6 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
     ///      Monotonically increasing — incremented by the consolidation report step. `_buildReport` reports it
     ///      as totalExternalConsolidationsAmountReported and adds it to validatorsBalance.
     uint256 internal _simConsolidatedBalance;
-    /// @dev Cumulative CL rewards that landed above the externally reported consolidation amount.
-    ///      Added to validatorsBalance, but not to totalExternalConsolidationsAmountReported, so scenario tests
-    ///      can model source validators earning while queued before consolidation processing.
-    uint256 internal _simConsolidationRewardSurplus;
 
     uint256 internal _lastReportedSkimmed;
     uint256 internal _lastReportedExited;
@@ -235,20 +231,13 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
     ///      `bufferedPrincipal` is the principal minted into the consolidation buffer at request time (counted in
     ///      `_simTotalUserDeposited` for I2 ETH-conservation).
     ///      `reportedAmount` is the delta to add to the cumulative `totalExternalConsolidationsAmountReported` for this report.
-    ///      `consolidationRewardSurplus` is extra CL balance above `reportedAmount` that lands in validatorsBalance (counted as rewards).
-    function sim_reportExternalConsolidation(
-        uint256 bufferedPrincipal,
-        uint256 reportedAmount,
-        uint256 consolidationRewardSurplus
-    ) internal {
+    function sim_reportExternalConsolidation(uint256 bufferedPrincipal, uint256 reportedAmount) internal {
         _simConsolidatedBalance += reportedAmount;
-        _simConsolidationRewardSurplus += consolidationRewardSurplus;
         _simTotalUserDeposited += bufferedPrincipal;
 
         if (reportedAmount > bufferedPrincipal) {
             _simCumulativeAutocompounded += reportedAmount - bufferedPrincipal;
         }
-        _simCumulativeAutocompounded += consolidationRewardSurplus;
     }
 
     /// @dev Convenience overload — delegates to the two-argument variant.
@@ -321,8 +310,8 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
             exitedArr[0] += exitedArr[i];
         }
 
-        // The consolidated amount and any queue-earned surplus have landed on the CL.
-        report.validatorsBalance = validatorsBalance + _simConsolidatedBalance + _simConsolidationRewardSurplus;
+        // The consolidated amount has landed on the CL.
+        report.validatorsBalance = validatorsBalance + _simConsolidatedBalance;
         report.validatorsSkimmedBalance = _simCumulativeSkimmed;
         report.validatorsExitedBalance = _simCumulativeExited;
         report.validatorsExitingBalance = validatorsExiting;
