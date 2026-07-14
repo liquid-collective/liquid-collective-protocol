@@ -55,17 +55,20 @@ contract ExitDemandTest is AccountingInvariants {
     function _requestETHExits(uint256[] memory opIdxs, uint256[] memory ethAmounts) internal {
         require(opIdxs.length == ethAmounts.length, "exit allocation length mismatch");
 
-        IOperatorsRegistryV1.ExitETHAllocation[] memory allocations =
-            new IOperatorsRegistryV1.ExitETHAllocation[](opIdxs.length);
+        IOperatorsRegistryV1.ExitETHAllocation[] memory allocations = new IOperatorsRegistryV1.ExitETHAllocation[](
+            opIdxs.length
+        );
         for (uint256 i = 0; i < opIdxs.length; i++) {
-            allocations[i] =
-                IOperatorsRegistryV1.ExitETHAllocation({operatorIndex: opIdxs[i], ethAmount: ethAmounts[i]});
+            allocations[i] = IOperatorsRegistryV1.ExitETHAllocation({
+                operatorIndex: opIdxs[i],
+                ethAmount: ethAmounts[i]
+            });
         }
 
         // Post-Pectra requestETHExits takes EL allocations + a max fee. This test only exercises the
         // CL-exit path, so the EL allocation array is empty and the fee is zero (no msg.value needed).
-        IOperatorsRegistryV1.ELExitETHAllocation[] memory elAllocations =
-            new IOperatorsRegistryV1.ELExitETHAllocation[](0);
+        IOperatorsRegistryV1.ELExitETHAllocation[]
+            memory elAllocations = new IOperatorsRegistryV1.ELExitETHAllocation[](0);
 
         vm.prank(keeper);
         operatorsRegistry.requestETHExits(allocations, elAllocations, 0);
@@ -90,7 +93,9 @@ contract ExitDemandTest is AccountingInvariants {
         _requestETHExit(operatorOneIndex, requestedExitAmount);
         uint256 demandAfterRequest = operatorsRegistry.getCurrentETHExitsDemand();
         assertEq(
-            demandAfterRequest, demandAfterFirst - requestedExitAmount, "keeper request should consume current demand"
+            demandAfterRequest,
+            demandAfterFirst - requestedExitAmount,
+            "keeper request should consume current demand"
         );
 
         sim_requestExit(operatorOneIndex, DEPOSIT_SIZE);
@@ -202,7 +207,11 @@ contract ExitDemandTest is AccountingInvariants {
         assertEq(redeemManager.getWithdrawalEventCount(), withdrawalCountBefore + 1, "rebalancing should service part");
         assertLt(redeemDemandAfter, redeemDemandBefore, "redeem demand should be partially serviced");
         assertEq(redeemDemandAfter, 2 * DEPOSIT_SIZE, "residual redeem demand");
-        assertEq(operatorsRegistry.getCurrentETHExitsDemand(), 2 * DEPOSIT_SIZE, "residual demand should require exits");
+        assertEq(
+            operatorsRegistry.getCurrentETHExitsDemand(),
+            2 * DEPOSIT_SIZE,
+            "residual demand should require exits"
+        );
     }
 
     /// @notice When rebalancing is disabled, an available deposit buffer is left untouched and the
@@ -217,13 +226,19 @@ contract ExitDemandTest is AccountingInvariants {
         _depositAndRedeem(2 * DEPOSIT_SIZE);
 
         assertGt(river.getBalanceToDeposit(), 0, "should have balance to deposit");
+        uint256 depositSideBefore = river.getBalanceToDeposit() + river.getCommittedBalance();
         uint256 withdrawalCountBefore = redeemManager.getWithdrawalEventCount();
 
         // Rebalancing disabled (false), no containment (false): the deposit buffer must NOT be used to
         // service redeem demand via rebalancing; instead the shortfall is covered by demanding exits.
         sim_oracleReport(false, false);
 
-        assertGt(operatorsRegistry.getCurrentETHExitsDemand(), 0, "shortfall covered by exit demand");
+        assertEq(operatorsRegistry.getCurrentETHExitsDemand(), 2 * DEPOSIT_SIZE, "exact shortfall demanded as exits");
+        assertEq(
+            river.getBalanceToDeposit() + river.getCommittedBalance(),
+            depositSideBefore,
+            "disabled rebalancing must preserve deposit-side funds"
+        );
         assertEq(
             redeemManager.getWithdrawalEventCount(),
             withdrawalCountBefore,

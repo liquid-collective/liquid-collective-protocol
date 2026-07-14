@@ -17,8 +17,10 @@ interface IAccountingActions {
 
     function handler_pendingCount() external view returns (uint256);
     function handler_activeAvailableETH(uint256 opIdx) external view returns (uint256);
+    function handler_slashableETH(uint256 opIdx) external view returns (uint256);
     function handler_exitingETH(uint256 opIdx) external view returns (uint256);
     function handler_operatorIndex(uint256 which) external view returns (uint256);
+    function handler_depositsAllowed() external view returns (bool);
 }
 
 /// @title AccountingHandler
@@ -65,10 +67,13 @@ contract AccountingHandler is StdUtils {
     /// @param nSeed      Seed used to derive the number of validators to deposit, bounded to [1, 4].
     /// @param amountSeed Seed used to derive the per-validator deposit amount, bounded to [32, 2048] ETH.
     function deposit(uint256 opSeed, uint256 nSeed, uint256 amountSeed) external {
+        if (!_test.handler_depositsAllowed()) return;
         // Step 1: Select operator and bound the validator count and deposit amount to safe ranges.
         uint256 opIdx = (opSeed % 2 == 0) ? _opOne : _opTwo;
         uint256 n = bound(nSeed, 1, 4);
         uint256 amountEach = bound(amountSeed, MIN_DEPOSIT, MAX_DEPOSIT);
+        // AttestationVerifier rejects deposits that are not denominated in whole gwei.
+        amountEach = (amountEach / 1 gwei) * 1 gwei;
         // Step 2: Delegate the deposit to the test contract and update ghost/call counters.
         _test.handler_deposit(opIdx, n, amountEach);
         ghost_depositCount += n;
@@ -160,10 +165,11 @@ contract AccountingHandler is StdUtils {
     function slash(uint256 opSeed, uint256 penaltySeed) external {
         // Step 1: Select operator and guard — skip if no active validators exist.
         uint256 opIdx = (opSeed % 2 == 0) ? _opOne : _opTwo;
-        uint256 active = _test.handler_activeAvailableETH(opIdx);
-        if (active == 0) return;
+        uint256 slashable = _test.handler_slashableETH(opIdx);
+        if (slashable < 0.01 ether) return;
         // Step 2: Bound the penalty and delegate the slash to the test contract.
-        uint256 penalty = bound(penaltySeed, 0.01 ether, 16 ether);
+        uint256 maxPenalty = slashable < 16 ether ? slashable : 16 ether;
+        uint256 penalty = bound(penaltySeed, 0.01 ether, maxPenalty);
         _test.handler_slash(opIdx, penalty);
         // Step 3: Record that a slash occurred so the next oracle report uses containment mode.
         ghost_slashOccurred = true;

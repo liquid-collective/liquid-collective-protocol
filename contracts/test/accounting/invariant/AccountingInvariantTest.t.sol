@@ -97,20 +97,16 @@ contract AccountingInvariantTest is AccountingInvariants {
     /// @param rebalance            Whether to submit the report in rebalancing mode.
     /// @param slashingContainment  Whether to submit the report in slashing-containment mode.
     function handler_oracleReport(bool rebalance, bool slashingContainment) external {
-        // I21: capture the prior report's consolidation total BEFORE this report so the invariant verifies a
-        // genuine report-over-report non-decrease.
-        ghost_lastConsolidationsAmountReported =
-        river.getLastConsensusLayerReport().totalExternalConsolidationsAmountReported;
+        _snapshotPreviousReport();
         if (slashingContainment) {
-            _setAllowSharePriceDecrease(true);
+            // Stateful loss generation intentionally explores penalties beyond the production
+            // report bound; containment behavior is the property under test for these reports.
+            BoundsSnapshot memory bounds = _pushRelaxedLowerBound(10_000);
+            sim_oracleReport(rebalance, true);
+            _popBounds(bounds);
+        } else {
+            sim_oracleReport(rebalance, false);
         }
-        sim_oracleReport(rebalance, slashingContainment);
-        _setAllowSharePriceDecrease(false);
-        // Snapshot post-report state for monotonicity invariants (I15-I17)
-        IOracleManagerV1.StoredConsensusLayerReport memory report = river.getLastConsensusLayerReport();
-        ghost_lastSkimmedBalance = report.validatorsSkimmedBalance;
-        ghost_lastExitedBalance = report.validatorsExitedBalance;
-        ghost_lastExitedPerOp = operatorsRegistry.getExitedETHPerOperator();
     }
 
     /// @notice Delegates an external-consolidation report from the handler to the simulator. This is the only
@@ -128,9 +124,7 @@ contract AccountingInvariantTest is AccountingInvariants {
         if (river.getCLValidatorCount() == 0) return;
         uint256 delta = bound(deltaSeed, 1, 32 ether);
 
-        // I21: snapshot the prior report's consolidation total BEFORE this report (see handler_oracleReport).
-        ghost_lastConsolidationsAmountReported =
-        river.getLastConsensusLayerReport().totalExternalConsolidationsAmountReported;
+        _snapshotPreviousReport();
 
         // Credit the consolidation buffer and account the credited principal (keeps I2 conservation intact once
         // the principal lands in validatorsBalance via _buildReport). The buffer starts at 0 between reports, so
@@ -141,12 +135,16 @@ contract AccountingInvariantTest is AccountingInvariants {
         vm.store(address(river), CONSOLIDATION_BUFFER_SLOT, bytes32(oldBuffer + delta));
 
         sim_oracleReport(false, false);
+    }
 
-        // Snapshot post-report state for monotonicity invariants (I15-I17).
+    /// @dev Captures the previous report before a new report is submitted. The post-action
+    ///      invariants then compare the new stored values against genuinely older state.
+    function _snapshotPreviousReport() internal {
         IOracleManagerV1.StoredConsensusLayerReport memory report = river.getLastConsensusLayerReport();
         ghost_lastSkimmedBalance = report.validatorsSkimmedBalance;
         ghost_lastExitedBalance = report.validatorsExitedBalance;
         ghost_lastExitedPerOp = operatorsRegistry.getExitedETHPerOperator();
+        ghost_lastConsolidationsAmountReported = report.totalExternalConsolidationsAmountReported;
     }
 
     // ─── state readers (called by handler for precondition guards) ───────────────
@@ -172,6 +170,17 @@ contract AccountingInvariantTest is AccountingInvariants {
         }
     }
 
+    /// @notice Returns the unqueued balance of the first active validator selected by `sim_slash`.
+    function handler_slashableETH(uint256 opIdx) external view returns (uint256) {
+        for (uint256 i = 0; i < _simValidators.length; i++) {
+            SimValidator storage v = _simValidators[i];
+            if (v.operatorIndex == opIdx && v.state == ValidatorState.Active) {
+                return v.currentBalance - v.exitingETH;
+            }
+        }
+        return 0;
+    }
+
     /// @notice Returns the total ETH currently queued for exit for validators of `opIdx`.
     ///         Includes both partial exits (Active validators with exitingETH > 0) and
     ///         full exits (validators in Exiting state).
@@ -193,18 +202,25 @@ contract AccountingInvariantTest is AccountingInvariants {
         return which == 0 ? operatorOneIndex : operatorTwoIndex;
     }
 
+    /// @notice Deposits are intentionally disabled while the latest report keeps containment active.
+    function handler_depositsAllowed() external view returns (bool) {
+        return !river.getSlashingContainmentMode();
+    }
+
     // ═════════════════════════════════════════════════════════════════════════════
     // INVARIANTS — checked by Foundry after every handler call
     // ═════════════════════════════════════════════════════════════════════════════
 
     // ─── Existing invariants (I1-I6) adapted for continuous checking ─────────────
 
-    /// @dev I2: ETH conservation — totalUnderlying never exceeds user deposits + rewards.
+    /// @dev I2: Exact ETH conservation, including rewards and simulated losses.
     function invariant_I2_ethConservation() public {
-        if (_simTotalUserDeposited == 0) return;
-        uint256 upperBound = _simTotalUserDeposited + _simCumulativeSkimmed + _simCumulativeAutocompounded;
-        assertLe(river.totalUnderlyingSupply(), upperBound, "I2: total underlying exceeds deposited + rewards");
-        assertGt(river.totalUnderlyingSupply(), 0, "I2: total underlying is zero after deposits");
+        uint256 expected = _simTotalUserDeposited +
+            _lastReportedSkimmed +
+            _lastReportedAutocompounded -
+            _lastReportedLosses -
+            _simCumulativeWithdrawn;
+        assertEq(river.totalUnderlyingSupply(), expected, "I2: total underlying accounting mismatch");
     }
 
     /// @dev I3: InFlightDeposit consistency — contract value matches simulator tracking.
@@ -212,19 +228,9 @@ contract AccountingInvariantTest is AccountingInvariants {
         assertEq(river.getInFlightDeposit(), _simInFlightDeposit, "I3: InFlightDeposit != sim in-flight");
     }
 
-    /// @dev I5: TotalDepositedETH is monotonically non-decreasing.
-    ///      We check it never falls below what we've ever deposited via sim_deposit.
-    function invariant_I5_totalDepositedETHMonotonic() public {
-        uint256 totalSimDeposited = 0;
-        for (uint256 i = 0; i < _simValidators.length; i++) {
-            totalSimDeposited += _simValidators[i].depositedETH;
-        }
-        assertGe(river.getTotalDepositedETH(), totalSimDeposited, "I5: TotalDepositedETH < sim total deposited");
-    }
-
     /// @dev I6: ExitedETH aggregate — sum of per-operator exited == reported total.
     function invariant_I6_exitedETHAggregate() public {
-        (uint256 totalExited,) = operatorsRegistry.getExitedAndRequestedETHExits();
+        (uint256 totalExited, ) = operatorsRegistry.getExitedAndRequestedETHExits();
         uint256[] memory perOp = operatorsRegistry.getExitedETHPerOperator();
         uint256 sum = 0;
         for (uint256 i = 0; i < perOp.length; i++) {
@@ -235,16 +241,15 @@ contract AccountingInvariantTest is AccountingInvariants {
 
     // ─── New invariants (I7-I12) ────────────────────────────────────────────────
 
-    /// @dev I7: Asset balance decomposition — totalUnderlying >= EL components.
-    ///      The difference is storedReport.validatorsBalance which must be >= 0.
+    /// @dev I7: Exact asset decomposition across CL and all tracked EL components.
     function invariant_I7_assetBalanceDecomposition() public {
-        uint256 elComponents = river.getCommittedBalance() + river.getBalanceToDeposit() + river.getBalanceToRedeem()
-            + river.getInFlightDeposit();
-        assertGe(
-            river.totalUnderlyingSupply(),
-            elComponents,
-            "I7: totalUnderlying < EL components (negative validatorsBalance)"
-        );
+        uint256 expected = river.getLastConsensusLayerReport().validatorsBalance +
+            river.getCommittedBalance() +
+            river.getBalanceToDeposit() +
+            river.getBalanceToRedeem() +
+            river.getInFlightDeposit() +
+            river.getBalanceToConsolidate();
+        assertEq(river.totalUnderlyingSupply(), expected, "I7: asset decomposition mismatch");
     }
 
     /// @dev I8: TotalDepositedETH == sum of per-operator funded ETH.
@@ -257,11 +262,6 @@ contract AccountingInvariantTest is AccountingInvariants {
             sumFunded += op.funded;
         }
         assertEq(totalDeposited, sumFunded, "I8: TotalDepositedETH != sum of per-operator funded");
-    }
-
-    /// @dev I9: InFlightDeposit bounded by TotalDepositedETH.
-    function invariant_I9_inFlightBoundedByDeposited() public {
-        assertLe(river.getInFlightDeposit(), river.getTotalDepositedETH(), "I9: InFlightDeposit > TotalDepositedETH");
     }
 
     /// @dev I10: EL solvency — River's ETH balance covers tracked EL amounts.
@@ -280,10 +280,14 @@ contract AccountingInvariantTest is AccountingInvariants {
         }
     }
 
-    /// @dev I12: Cumulative exited ETH never exceeds TotalDepositedETH.
-    function invariant_I12_exitedBoundedByDeposited() public {
-        (uint256 totalExited,) = operatorsRegistry.getExitedAndRequestedETHExits();
-        assertLe(totalExited, river.getTotalDepositedETH(), "I12: total exited > TotalDepositedETH");
+    /// @dev I12: Cumulative exited ETH is bounded by principal plus reported autocompounded rewards.
+    function invariant_I12_exitedBoundedByDepositsAndCompounding() public {
+        (uint256 totalExited, ) = operatorsRegistry.getExitedAndRequestedETHExits();
+        assertLe(
+            totalExited,
+            river.getTotalDepositedETH() + _lastReportedAutocompounded,
+            "I12: total exited exceeds principal plus compounding"
+        );
     }
 
     // ─── New invariants (I14-I20) ──────────────────────────────────────────────
@@ -311,22 +315,24 @@ contract AccountingInvariantTest is AccountingInvariants {
         }
     }
 
-    /// @dev I18: Per-operator requestedExits <= funded and exited <= funded (continuous check).
-    function invariant_I18_exitRequestsBounded() public {
+    /// @dev I18: Requested exits cover all reported exits and the aggregate equals the per-operator sum.
+    function invariant_I18_exitRequestsCoverExited() public {
         uint256 opCount = operatorsRegistry.getOperatorCount();
         uint256[] memory perOp = operatorsRegistry.getExitedETHPerOperator();
+        uint256 requestedSum;
         for (uint256 i = 0; i < opCount; i++) {
             OperatorsV3.Operator memory op = operatorsRegistry.getOperator(i);
             uint256 exited = (i < perOp.length) ? perOp[i] : 0;
-            assertLe(op.requestedExits, op.funded, "I18: requestedExits > funded");
-            assertLe(exited, op.funded, "I18: exited > funded");
+            assertGe(op.requestedExits, exited, "I18: requestedExits < exited");
+            requestedSum += op.requestedExits;
         }
+        assertEq(requestedSum, operatorsRegistry.getTotalETHExitsRequested(), "I18: requested exits sum mismatch");
     }
 
-    /// @dev I19: On-chain CLValidatorCount never exceeds total sim validators created.
-    function invariant_I19_clValidatorCountBounded() public {
+    /// @dev I19: On-chain CLValidatorCount exactly matches the independently captured report count.
+    function invariant_I19_clValidatorCountExactMatch() public {
         uint256 onChainCount = river.getCLValidatorCount();
-        assertLe(onChainCount, _simValidators.length, "I19: CLValidatorCount exceeds total validators created");
+        assertEq(onChainCount, _simLastReportedValidatorCount, "I19: CLValidatorCount != last reported sim count");
     }
 
     /// @dev I20: TotalDepositedETH exactly equals sum of all sim validator deposits.

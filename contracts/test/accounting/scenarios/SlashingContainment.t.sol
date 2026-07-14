@@ -5,7 +5,7 @@ import "../AccountingInvariants.sol";
 
 contract SlashingContainmentTest is AccountingInvariants {
     /// @notice Verifies that a slashing event followed by an oracle report in slashing-containment
-    ///         mode correctly reduces `totalUnderlyingSupply` below the original principal.
+    ///         mode reduces `totalUnderlyingSupply` by the exact simulated penalty.
     ///         The share price is allowed to decrease during this test to reflect the penalty.
     function testSlashingContainmentModeActive() public {
         // Step 1: Fund river with enough ETH for 4 validators and deposit them for operator one.
@@ -14,6 +14,7 @@ contract SlashingContainmentTest is AccountingInvariants {
         // Step 2: Activate all 4 validators and submit the initial oracle report.
         sim_activateValidators(4);
         sim_oracleReport();
+        uint256 underlyingBefore = river.totalUnderlyingSupply();
         // Step 3: Apply a 4 ETH slash penalty to an active validator of operator one.
         sim_slash(operatorOneIndex, 4 ether);
         // Step 4: Submit an oracle report in slashing-containment mode (slashingContainment=true),
@@ -21,30 +22,9 @@ contract SlashingContainmentTest is AccountingInvariants {
         _setAllowSharePriceDecrease(true);
         sim_oracleReport(false, true);
         _setAllowSharePriceDecrease(false);
-        // Step 5: Assert that the total underlying supply has decreased below the original principal.
-        assertLt(river.totalUnderlyingSupply(), 4 * DEPOSIT_SIZE, "underlying reduced by slash");
-    }
-
-    /// @notice Verifies that no new validator exit requests are generated during a slashing-
-    ///         containment oracle report. The protocol must suppress exits while in containment
-    ///         mode to avoid compounding the impact of a slashing event.
-    function testNoExitRequestsDuringContainment() public {
-        // Step 1: Fund river with enough ETH for 4 validators and deposit them for operator one.
-        _fundRiver(4 * DEPOSIT_SIZE);
-        sim_deposit(operatorOneIndex, _amounts(4, DEPOSIT_SIZE));
-        // Step 2: Activate all 4 validators and submit the initial oracle report.
-        sim_activateValidators(4);
-        sim_oracleReport();
-        // Step 3: Snapshot the current total ETH exits requested before the slash.
-        uint256 exitsBefore = operatorsRegistry.getTotalETHExitsRequested();
-        // Step 4: Apply a 4 ETH slash penalty to operator one.
-        sim_slash(operatorOneIndex, 4 ether);
-        // Step 5: Submit the containment-mode oracle report and confirm no exits were created.
-        _setAllowSharePriceDecrease(true);
-        sim_oracleReport(false, true);
-        _setAllowSharePriceDecrease(false);
-        uint256 exitsAfter = operatorsRegistry.getTotalETHExitsRequested();
-        assertEq(exitsBefore, exitsAfter, "no exits during slashing containment");
+        // Step 5: Assert the exact loss and persisted containment mode.
+        assertEq(river.totalUnderlyingSupply(), underlyingBefore - 4 ether, "slash applied exactly");
+        assertTrue(river.getLastConsensusLayerReport().slashingContainmentMode, "containment mode persisted");
     }
 
     /// @notice Verifies that SkippedCommitToDepositDueToSlashingContainment is emitted when
@@ -56,14 +36,25 @@ contract SlashingContainmentTest is AccountingInvariants {
         // Step 2: Activate all 4 validators and submit the initial oracle report.
         sim_activateValidators(4);
         sim_oracleReport();
-        // Step 3: Apply a 4 ETH slash penalty to operator one.
+
+        address depositor = makeAddr("containmentCommitDepositor");
+        _allowUser(depositor);
+        _simTotalUserDeposited += DEPOSIT_SIZE;
+        vm.deal(depositor, DEPOSIT_SIZE);
+        vm.prank(depositor);
+        river.deposit{value: DEPOSIT_SIZE}();
+        uint256 depositBefore = river.getBalanceToDeposit();
+        uint256 committedBefore = river.getCommittedBalance();
+
+        // Apply a slash and prove an otherwise committable deposit remains untouched.
         sim_slash(operatorOneIndex, 4 ether);
-        // Step 4: Expect the SkippedCommitToDepositDueToSlashingContainment event when reporting in containment mode.
         vm.expectEmit(false, false, false, false, address(river));
         emit IRiverV1.SkippedCommitToDepositDueToSlashingContainment();
         _setAllowSharePriceDecrease(true);
         sim_oracleReport(false, true);
         _setAllowSharePriceDecrease(false);
+        assertEq(river.getBalanceToDeposit(), depositBefore, "containment must preserve deposit buffer");
+        assertEq(river.getCommittedBalance(), committedBefore, "containment must suppress commitment");
     }
 
     /// @notice Verifies that SkippedExitRequestsDueToSlashingContainment is emitted when
@@ -153,13 +144,26 @@ contract SlashingContainmentTest is AccountingInvariants {
         // Step 2: Activate all 4 validators and submit the initial oracle report.
         sim_activateValidators(4);
         sim_oracleReport();
-        // Step 3: Apply a 2 ETH slash penalty to operator one.
+
+        address depositor = makeAddr("resumeDepositor");
+        _allowUser(depositor);
+        _simTotalUserDeposited += DEPOSIT_SIZE;
+        vm.deal(depositor, DEPOSIT_SIZE);
+        vm.prank(depositor);
+        river.deposit{value: DEPOSIT_SIZE}();
+        uint256 depositBefore = river.getBalanceToDeposit();
+        uint256 committedBefore = river.getCommittedBalance();
+
         sim_slash(operatorOneIndex, 2 ether);
-        // Step 4: Submit a slashing-containment oracle report, allowing share price to decrease.
         _setAllowSharePriceDecrease(true);
         sim_oracleReport(false, true);
         _setAllowSharePriceDecrease(false);
-        // Step 5: Submit a follow-up normal oracle report to verify the protocol resumes correctly.
+        assertEq(river.getBalanceToDeposit(), depositBefore, "containment must defer commitment");
+        assertEq(river.getCommittedBalance(), committedBefore, "nothing committed during containment");
+
+        // A normal report must resume the previously suppressed commitment path.
         sim_oracleReport(false, false);
+        assertLt(river.getBalanceToDeposit(), depositBefore, "normal reporting consumes deposit buffer");
+        assertGt(river.getCommittedBalance(), committedBefore, "normal reporting resumes commitment");
     }
 }

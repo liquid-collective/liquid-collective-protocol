@@ -6,6 +6,8 @@ import "../../../src/OperatorsRegistry.1.sol";
 import "../../../src/interfaces/IOperatorRegistry.1.sol";
 import "../../../src/state/operatorsRegistry/Operators.2.sol";
 import "../../../src/state/operatorsRegistry/Operators.3.sol";
+import "../../../src/state/operatorsRegistry/CurrentValidatorExitsDemand.sol";
+import "../../../src/state/operatorsRegistry/TotalValidatorExitsRequested.sol";
 import "../../utils/LibImplementationUnbricker.sol";
 
 /// @dev Subclass of OperatorsRegistryV1 that exposes internal V2 storage writes for migration testing.
@@ -38,6 +40,11 @@ contract MigrationOperatorsRegistry is OperatorsRegistryV1 {
     function sudoSetStoppedValidators(uint32[] calldata _stoppedValidators) external {
         OperatorsV2.setRawStoppedValidators(_stoppedValidators);
     }
+
+    function sudoSetLegacyExitTotals(uint256 currentDemand, uint256 totalRequested) external {
+        CurrentValidatorExitsDemand.set(currentDemand);
+        TotalValidatorExitsRequested.set(totalRequested);
+    }
 }
 
 contract MigrationTest is Test {
@@ -69,10 +76,13 @@ contract MigrationTest is Test {
         uint32 op1Funded = 5;
         uint32 op0Stopped = 1;
         uint32 op1Stopped = 2;
+        uint32 op0Requested = 1;
+        uint32 op1Requested = 2;
 
         // Push two V2 operators directly
-        registry.sudoPushV2Operator("OpAlpha", op1Addr, op0Funded, 0, op0Funded, op0Funded);
-        registry.sudoPushV2Operator("OpBeta", op2Addr, op1Funded, 0, op1Funded, op1Funded);
+        registry.sudoPushV2Operator("OpAlpha", op1Addr, op0Funded, op0Requested, op0Funded, op0Funded);
+        registry.sudoPushV2Operator("OpBeta", op2Addr, op1Funded, op1Requested, op1Funded, op1Funded);
+        registry.sudoSetLegacyExitTotals(1, op0Requested + op1Requested);
 
         // Set stopped validators array: [total, op0Stopped, op1Stopped]
         uint32 totalStopped = op0Stopped + op1Stopped;
@@ -93,13 +103,19 @@ contract MigrationTest is Test {
 
         OperatorsV3.Operator memory v3Op0 = registry.getOperator(0);
         assertEq(v3Op0.funded, uint256(op0Funded) * 32 ether, "op0 funded ETH");
+        assertEq(v3Op0.requestedExits, uint256(op0Requested) * 32 ether, "op0 requested exits ETH");
         assertEq(v3Op0.active, true, "op0 active");
         assertEq(v3Op0.activeCLETH, 0, "op0 activeCLETH must be zero post-migration");
+        assertEq(v3Op0.name, "OpAlpha", "op0 name");
+        assertEq(v3Op0.operator, op1Addr, "op0 address");
 
         OperatorsV3.Operator memory v3Op1 = registry.getOperator(1);
         assertEq(v3Op1.funded, uint256(op1Funded) * 32 ether, "op1 funded ETH");
+        assertEq(v3Op1.requestedExits, uint256(op1Requested) * 32 ether, "op1 requested exits ETH");
         assertEq(v3Op1.active, true, "op1 active");
         assertEq(v3Op1.activeCLETH, 0, "op1 activeCLETH must be zero post-migration");
+        assertEq(v3Op1.name, "OpBeta", "op1 name");
+        assertEq(v3Op1.operator, op2Addr, "op1 address");
 
         // Validate exited ETH per operator
         uint256[] memory exitedPerOp = registry.getExitedETHPerOperator();
@@ -108,8 +124,19 @@ contract MigrationTest is Test {
         assertEq(exitedPerOp[1], uint256(op1Stopped) * 32 ether, "op1 exited ETH");
 
         // Validate aggregate exited ETH
-        (uint256 totalExited,) = registry.getExitedAndRequestedETHExits();
+        (uint256 totalExited, uint256 totalRequestedAndDemanded) = registry.getExitedAndRequestedETHExits();
         assertEq(totalExited, uint256(totalStopped) * 32 ether, "total exited ETH");
+        assertEq(
+            registry.getTotalETHExitsRequested(),
+            uint256(op0Requested + op1Requested) * 32 ether,
+            "aggregate requested exits"
+        );
+        assertEq(registry.getCurrentETHExitsDemand(), 32 ether, "current exit demand");
+        assertEq(
+            totalRequestedAndDemanded,
+            uint256(op0Requested + op1Requested + 1) * 32 ether,
+            "total requested plus current demand"
+        );
     }
 
     /// @notice Verifies that running the full V1_1 → V1_2 migration on an empty registry
@@ -140,7 +167,11 @@ contract MigrationTest is Test {
         assertEq(registry.getOperatorCount(), 1, "one operator");
         OperatorsV3.Operator memory op = registry.getOperator(0);
         assertEq(op.funded, uint256(funded) * 32 ether, "funded scaled");
+        assertEq(op.requestedExits, 0, "no requested exits");
         assertEq(op.activeCLETH, 0, "activeCLETH must be zero post-migration");
+        assertEq(op.active, true, "operator active");
+        assertEq(op.name, "Solo", "operator name");
+        assertEq(op.operator, op1Addr, "operator address");
 
         uint256[] memory exitedPerOp = registry.getExitedETHPerOperator();
         assertEq(exitedPerOp.length, 1, "one entry");
@@ -180,7 +211,10 @@ contract MigrationTest is Test {
         uint256 op1RequestedExitETH = uint256(op1RequestedExitCount) * 32 ether;
         vm.expectRevert(
             abi.encodeWithSelector(
-                IOperatorsRegistryV1.InvalidOperatorState.selector, 1, op1FundedETH, op1RequestedExitETH
+                IOperatorsRegistryV1.InvalidOperatorState.selector,
+                1,
+                op1FundedETH,
+                op1RequestedExitETH
             )
         );
         registry.initOperatorsRegistryV1_2(makeAddr("withdraw"));

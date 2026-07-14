@@ -47,8 +47,7 @@ contract HappyPathTest is AccountingInvariants {
         //         Expected rewards: 10 validators × 0.008 ETH × 2 epochs = 0.16 ETH.
         uint256 expectedRewards = 10 * 0.008 ether * 2;
         uint256 totalUnderlying = river.totalUnderlyingSupply();
-        assertGt(totalUnderlying, 10 * DEPOSIT_SIZE, "rewards accrued");
-        assertLe(totalUnderlying, 10 * DEPOSIT_SIZE + expectedRewards, "underlying within expected reward bound");
+        assertEq(totalUnderlying, 10 * DEPOSIT_SIZE + expectedRewards, "rewards credited exactly");
     }
 
     /// @notice Verifies that multiple sequential deposit batches for the same operator

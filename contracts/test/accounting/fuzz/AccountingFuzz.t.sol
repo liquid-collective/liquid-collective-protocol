@@ -38,8 +38,14 @@ contract AccountingFuzzTest is AccountingInvariants {
         sim_activateValidators(n);
         sim_oracleReport();
         // Step 3: Accrue rewards and submit the oracle report.
+        uint256 underlyingBefore = river.totalUnderlyingSupply();
         sim_accrueSkimmedRewards(rewardWei);
         sim_oracleReport();
+        assertEq(
+            river.totalUnderlyingSupply(),
+            underlyingBefore + uint256(n) * uint256(rewardWei),
+            "skimmed rewards must be credited exactly"
+        );
     }
 
     /// @notice Fuzz test covering the full deposit → activate → report → exit → report flow

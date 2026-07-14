@@ -43,6 +43,10 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
     /// @dev Cumulative autocompounded ETH (monotonically increasing).
     ///      Tracks 0x02 rewards that increase validator CL balances rather than being swept.
     uint256 internal _simCumulativeAutocompounded;
+    /// @dev Cumulative principal lost to slashing and exit-time penalties.
+    uint256 internal _simCumulativeLosses;
+    /// @dev Cumulative ETH transferred from River to RedeemManager withdrawal events.
+    uint256 internal _simCumulativeWithdrawn;
     /// @dev Cumulative exited ETH (monotonically increasing).
     uint256 internal _simCumulativeExited;
     /// @dev Mirrors the contract's InFlightDeposit: ETH sent to the deposit contract
@@ -59,7 +63,11 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
 
     uint256 internal _lastReportedSkimmed;
     uint256 internal _lastReportedExited;
+    uint256 internal _lastReportedAutocompounded;
+    uint256 internal _lastReportedLosses;
     uint256 internal _lastReportEpoch;
+    /// @dev Simulator validator count captured when the latest report was submitted.
+    uint32 internal _simLastReportedValidatorCount;
 
     // ─── step functions ───────────────────────────────────────────────────────
 
@@ -139,8 +147,8 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
             SimValidator storage v = _simValidators[i];
             if (v.state != ValidatorState.Active && v.state != ValidatorState.Exiting) continue;
             if (
-                (v.isCompounding && v.currentBalance >= MAX_EFFECTIVE_BALANCE)
-                    || (!v.isCompounding && v.currentBalance >= MIN_ACTIVATION_BALANCE)
+                (v.isCompounding && v.currentBalance >= MAX_EFFECTIVE_BALANCE) ||
+                (!v.isCompounding && v.currentBalance >= MIN_ACTIVATION_BALANCE)
             ) {
                 _simCumulativeSkimmed += rewardsPerValidator;
             }
@@ -155,8 +163,9 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
             SimValidator storage v = _simValidators[i];
             if (v.state != ValidatorState.Active && v.state != ValidatorState.Exiting) continue;
             if (
-                !v.isCompounding || v.currentBalance >= MAX_EFFECTIVE_BALANCE
-                    || v.currentBalance < MIN_ACTIVATION_BALANCE
+                !v.isCompounding ||
+                v.currentBalance >= MAX_EFFECTIVE_BALANCE ||
+                v.currentBalance < MIN_ACTIVATION_BALANCE
             ) continue;
 
             uint256 space = MAX_EFFECTIVE_BALANCE - v.currentBalance;
@@ -209,6 +218,7 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
             v.exitingETH -= toComplete;
             v.exitedETH += actualExited;
             _simCumulativeExited += actualExited;
+            _simCumulativeLosses += thisPenalty;
             remaining -= toComplete;
 
             if (v.currentBalance == 0) v.state = ValidatorState.Exited;
@@ -222,6 +232,7 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
             if (v.operatorIndex == opIdx && v.state == ValidatorState.Active) {
                 require(penalty <= v.currentBalance, "sim_slash: penalty exceeds balance");
                 v.currentBalance -= penalty;
+                _simCumulativeLosses += penalty;
                 return;
             }
         }
@@ -258,12 +269,10 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
 
     // ─── report builder ───────────────────────────────────────────────────────
 
-    function _buildReport(bool rebalance, bool slashingContainment)
-        internal
-        view
-        virtual
-        returns (IOracleManagerV1.ConsensusLayerReport memory report)
-    {
+    function _buildReport(
+        bool rebalance,
+        bool slashingContainment
+    ) internal view virtual returns (IOracleManagerV1.ConsensusLayerReport memory report) {
         uint256 validatorsBalance = 0;
         uint256 validatorsExiting = 0;
         uint32 activatedCount = 0;
@@ -317,11 +326,10 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
     ///      to post-finality. Intended for adversarial tests that mutate the returned struct and
     ///      submit the mutated report directly via `oracle.reportConsensusLayerData(report)` with
     ///      `vm.prank(oracleMember)` + `vm.expectRevert(...)`. Does NOT submit the report itself.
-    function _buildBadReport(bool rebalance, bool slashingContainment)
-        internal
-        virtual
-        returns (IOracleManagerV1.ConsensusLayerReport memory report)
-    {
+    function _buildBadReport(
+        bool rebalance,
+        bool slashingContainment
+    ) internal virtual returns (IOracleManagerV1.ConsensusLayerReport memory report) {
         uint256 reportEpoch = river.getExpectedEpochId();
         uint256 targetTime = (SECONDS_PER_SLOT * SLOTS_PER_EPOCH) * (reportEpoch + EPOCHS_UNTIL_FINAL) + 1;
         if (block.timestamp < targetTime) {
