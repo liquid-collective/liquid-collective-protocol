@@ -28,6 +28,9 @@ contract DepositDataBuffer is IDepositDataBuffer {
     /// @notice Maximum deposit amount — the Pectra 0x02 maximum effective balance.
     uint256 internal constant MAX_DEPOSIT_AMOUNT = 2048 ether;
 
+    /// @notice Maximum stateless top-up: a funded validator should already have at least 32 ETH.
+    uint256 internal constant MAX_TOP_UP_AMOUNT = MAX_DEPOSIT_AMOUNT - MIN_INITIAL_DEPOSIT_AMOUNT;
+
     /// @notice The processor — the only account allowed to mark deposit data processed.
     /// @dev Set at construction and rotatable by the admin via `setProcessor`. In production this is
     ///      the River deposit-execution contract, but the buffer only relies on it being the account
@@ -117,7 +120,7 @@ contract DepositDataBuffer is IDepositDataBuffer {
         for (uint256 i = 0; i < topUpCount; i++) {
             TopUp calldata t = batch.topUps[i];
             if (t.pubkey.length != 48) revert InvalidTopUpPubkeyLength(i, t.pubkey.length);
-            if (t.amount < MIN_TOP_UP_AMOUNT || t.amount > MAX_DEPOSIT_AMOUNT || t.amount % 1 gwei != 0) {
+            if (t.amount < MIN_TOP_UP_AMOUNT || t.amount > MAX_TOP_UP_AMOUNT || t.amount % 1 gwei != 0) {
                 revert InvalidDepositAmount(i, t.amount);
             }
         }

@@ -162,11 +162,12 @@ interface IAttestationVerifierV1 {
     error InvalidDepositAmount(uint256 index, uint256 amount);
 
     /// @notice A top-up's `amount` is outside the protocol-accepted range
-    ///         [1 ether, 2048 ether] or is not gwei-aligned. Top-ups credit already-activated
+    ///         [1 ether, 2016 ether] or is not gwei-aligned. Top-ups credit already-activated
     ///         validators, so the lower bound is 1 ether — intentionally below the 32 ether floor
-    ///         that initial deposits require (see `InvalidDepositAmount`). Enforced here in
-    ///         `fetchAndValidateDeposits()` so producer bugs fail before the heavy BLS path runs;
-    ///         downstream `_depositValidator` trusts this check.
+    ///         that initial deposits require (see `InvalidDepositAmount`). The 2016 ether upper bound
+    ///         is the stateless headroom from a 32 ether funded validator to the 2048 ether Pectra max
+    ///         effective balance. Enforced here in `fetchAndValidateDeposits()` so producer bugs fail
+    ///         before the heavy BLS path runs; downstream `_depositValidator` trusts this check.
     /// @param index Index into `batch.topUps`
     /// @param amount The offending amount in wei
     error InvalidTopUpAmount(uint256 index, uint256 amount);

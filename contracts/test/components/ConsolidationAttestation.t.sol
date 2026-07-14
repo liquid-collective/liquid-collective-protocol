@@ -25,6 +25,18 @@ contract MockRiverAdmin {
     }
 }
 
+contract ConsolidationDepositBufferStub {
+    address internal immutable _processor;
+
+    constructor(address processor_) {
+        _processor = processor_;
+    }
+
+    function getProcessor() external view returns (address) {
+        return _processor;
+    }
+}
+
 // ---------------------------------------------------------------------------
 // ConsolidationAttestationTest — exercises the consolidation half of
 // AttestationVerifierV1. The verifier now takes a `ConsolidationObject` directly
@@ -76,9 +88,9 @@ contract ConsolidationAttestationTest is Test {
         attester3 = vm.addr(pk3);
 
         river = new MockRiverAdmin(admin);
-        // The consolidation tests do not exercise the deposit `validate` path; a non-zero
-        // EOA satisfies the deposit buffer's LibSanitize._notZeroAddress check at init.
-        depositBufferStub = makeAddr("depositDataBufferStub");
+        // The consolidation tests do not exercise the deposit validation path. The verifier
+        // init guard only needs a buffer-shaped contract whose processor is River.
+        depositBufferStub = address(new ConsolidationDepositBufferStub(address(river)));
 
         verifier = new AttestationVerifierV1();
         LibImplementationUnbricker.unbrick(vm, address(verifier));
