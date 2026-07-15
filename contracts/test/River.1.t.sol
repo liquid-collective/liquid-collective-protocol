@@ -4399,7 +4399,7 @@ contract RiverV1ConsolidationMintTests is RiverV1TestBase {
         assertEq(river.totalSupply(), totalSupplyBeforeReplay);
     }
 
-    function testMintLsETHForConsolidationOverlappingSourceDistinctRequestsIsCommitteeInvariant() public {
+    function testRevert_mintLsETHForConsolidationOverlappingSourceDistinctRequestsDoesNotMint() public {
         _allowConsolidation(bob);
         bytes memory sourceA = _fakePubkey(2000);
         bytes memory sourceB = _fakePubkey(2001);
@@ -4430,9 +4430,46 @@ contract RiverV1ConsolidationMintTests is RiverV1TestBase {
         assertEq(river.getBalanceToConsolidate(), 32 ether);
         assertEq(river.balanceOf(bob), 32 ether);
 
+        uint256 bufferBeforeReplay = river.getBalanceToConsolidate();
+        uint256 bobSharesBeforeReplay = river.balanceOf(bob);
+        uint256 totalSupplyBeforeReplay = river.totalSupply();
+
         vm.prank(consolidator);
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.ConsolidationSourceAlreadyProcessed.selector, sourceA)
+        );
         river.mintLsETHForConsolidation(secondConsolidation);
-        assertEq(river.getBalanceToConsolidate(), 96 ether);
-        assertEq(river.balanceOf(bob), 96 ether);
+        assertEq(river.getBalanceToConsolidate(), bufferBeforeReplay);
+        assertEq(river.balanceOf(bob), bobSharesBeforeReplay);
+        assertEq(river.totalSupply(), totalSupplyBeforeReplay);
+    }
+
+    function testRevert_mintLsETHForConsolidationDuplicateSourceWithinRequestDoesNotMint() public {
+        _allowConsolidation(bob);
+        bytes memory sourceA = _fakePubkey(2300);
+
+        bytes[] memory sources = new bytes[](2);
+        sources[0] = sourceA;
+        sources[1] = sourceA;
+        bytes[] memory targets = new bytes[](2);
+        targets[0] = _fakePubkey(2400);
+        targets[1] = _fakePubkey(2401);
+        uint256 totalAmount = 64 ether;
+        IAttestationVerifierV1.ConsolidationObject memory consolidation =
+            _buildConsolidationWithPubkeys(bob, sources, targets, totalAmount);
+
+        uint256 bufferBefore = river.getBalanceToConsolidate();
+        uint256 bobSharesBefore = river.balanceOf(bob);
+        uint256 totalSupplyBefore = river.totalSupply();
+
+        vm.prank(consolidator);
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.ConsolidationSourceAlreadyProcessed.selector, sourceA)
+        );
+        river.mintLsETHForConsolidation(consolidation);
+
+        assertEq(river.getBalanceToConsolidate(), bufferBefore);
+        assertEq(river.balanceOf(bob), bobSharesBefore);
+        assertEq(river.totalSupply(), totalSupplyBefore);
     }
 }
