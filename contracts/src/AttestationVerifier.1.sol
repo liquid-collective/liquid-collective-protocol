@@ -20,7 +20,6 @@ import "./state/attestationVerifier/ConsolidationCommitteeAttestationQuorum.sol"
 import "./state/attestationVerifier/ConsolidationCommitteeAttesters.sol";
 import "./state/attestationVerifier/ConsolidationDomainSeparator.sol";
 import "./state/attestationVerifier/ProcessedConsolidations.sol";
-import "./state/attestationVerifier/ProcessedDepositDataBufferIds.sol";
 import "./state/attestationVerifier/RootAttestationQuorum.sol";
 import "./state/attestationVerifier/RootAttesters.sol";
 import "./state/attestationVerifier/DepositDataBufferAddress.sol";
@@ -649,16 +648,6 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
             PrePectraValidatorPubkeyLookup.remove(pubkey);
         }
         emit RemovedPrePectraValidatorPubkeys(pubkeys);
-    }
-
-    /// @inheritdoc IAttestationVerifierV1
-    function markDepositDataBufferIdProcessed(bytes32 depositDataBufferId) external onlyRiver {
-        ProcessedDepositDataBufferIds.markProcessed(depositDataBufferId);
-    }
-
-    /// @inheritdoc IAttestationVerifierV1
-    function isDepositDataBufferIdProcessed(bytes32 depositDataBufferId) external view returns (bool) {
-        return ProcessedDepositDataBufferIds.isProcessed(depositDataBufferId);
     }
 
     /// @inheritdoc IAttestationVerifierV1

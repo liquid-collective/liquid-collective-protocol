@@ -357,11 +357,6 @@ interface IAttestationVerifierV1 {
         uint256 committedBalance
     ) external view returns (IDepositDataBuffer.DepositObject memory batch, uint256 totalAmount);
 
-    /// @notice Mark a `depositDataBufferId` as processed. Only callable by River.
-    /// @dev Called by River after the deposit-execution loop; consulted by `fetchAndValidateDeposits()` to reject replays.
-    /// @param depositDataBufferId The batch identifier to mark processed.
-    function markDepositDataBufferIdProcessed(bytes32 depositDataBufferId) external;
-
     // -----------------------------------------------------------------------
     // Initial-deposit recording (called by River after a successful deposit batch)
     // -----------------------------------------------------------------------
@@ -474,11 +469,6 @@ interface IAttestationVerifierV1 {
     /// @return The BLS deposit domain
     /// solhint-disable-next-line func-name-mixedcase
     function DEPOSIT_DOMAIN() external view returns (bytes32);
-
-    /// @notice Check whether a `depositDataBufferId` has already been processed.
-    /// @param depositDataBufferId The batch identifier
-    /// @return True if the ID has already been executed
-    function isDepositDataBufferIdProcessed(bytes32 depositDataBufferId) external view returns (bool);
 
     /// @notice The River address this verifier is bound to (verifyingContract + admin source)
     /// @return The River address
