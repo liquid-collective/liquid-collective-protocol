@@ -5,6 +5,7 @@ import "../AccountingInvariants.sol";
 import "../../utils/LibImplementationUnbricker.sol";
 import "../../../src/ConsolidationCoverageFund.1.sol";
 import "../../../src/interfaces/components/IOracleManager.1.sol";
+import "../../../src/state/river/ReportBounds.sol";
 
 /// @title ConsolidationCoverageScenarioTest
 /// @notice Scenario tests for the consolidation-reporting accounting path, exercised against the real
@@ -12,7 +13,6 @@ import "../../../src/interfaces/components/IOracleManager.1.sol";
 ///         (1) reporting a consolidation increase reduces the consolidation buffer by the delta,
 ///         (2) the remaining buffer is then drained by pulling matching ETH from the coverage fund,
 ///         (3) the total underlying supply never increases as the buffer decreases,
-///         (4) a consolidation increase larger than the buffer reverts.
 ///
 ///         The consolidation buffer has no on-chain increase path on this branch — its value is
 ///         "computed off-chain and provided manually" (see ConsolidationCoverageFundV1) — so the
@@ -135,5 +135,68 @@ contract ConsolidationCoverageScenarioTest is AccountingInvariants {
         // (neither a drop nor an increase) and no fee shares are minted on the principal.
         assertEq(river.totalUnderlyingSupply(), underlyingBefore, "total underlying unchanged (netted out)");
         assertEq(river.totalSupply(), sharesBefore, "no fee shares minted on consolidated principal");
+    }
+
+    /// @notice End-to-end regression for source-validator rewards earned after the external-consolidation
+    ///         request was buffered. The simulator report exceeds the buffer, the buffer is drawn to zero,
+    ///         the surplus is booked as APR-bounded rewards, and the Oracle -> River flow does not revert.
+    function testConsolidationReportAboveBufferedPrincipalBooksRewards() public {
+        _baseline();
+
+        uint256 bufferedPrincipal = DEPOSIT_SIZE;
+        vm.store(address(river), CONSOLIDATION_BUFFER_SLOT, bytes32(bufferedPrincipal));
+
+        uint256 underlyingBefore = river.totalUnderlyingSupply();
+        uint256 sharesBefore = river.totalSupply();
+
+        uint256 rewardSurplus = _maxIncreaseForNextReport(underlyingBefore);
+        assertGt(rewardSurplus, 0, "test setup: reward surplus must be non-zero");
+
+        sim_reportExternalConsolidation(bufferedPrincipal, bufferedPrincipal + rewardSurplus);
+        sim_oracleReport();
+
+        IOracleManagerV1.StoredConsensusLayerReport memory stored = river.getLastConsensusLayerReport();
+        assertEq(
+            stored.totalExternalConsolidationsAmountReported,
+            bufferedPrincipal + rewardSurplus,
+            "reported principal plus surplus"
+        );
+        assertEq(stored.validatorsBalance, 4 * DEPOSIT_SIZE + rewardSurplus, "surplus landed in validatorsBalance");
+        assertEq(uint256(vm.load(address(river), CONSOLIDATION_BUFFER_SLOT)), 0, "buffer drawn to zero");
+        assertEq(river.totalUnderlyingSupply(), underlyingBefore + rewardSurplus, "surplus booked as rewards");
+        assertGt(river.totalSupply(), sharesBefore, "fee shares minted only on rewards");
+    }
+
+    /// @notice Pins the other side of the same boundary: if the reported consolidation surplus exceeds
+    ///         the APR ceiling, the report reverts through the Oracle -> River flow with
+    ///         `TotalValidatorBalanceIncreaseOutOfBound`.
+    function testConsolidationReportAboveBufferedPrincipalAndAprCeilingReverts() public {
+        _baseline();
+
+        uint256 bufferedPrincipal = DEPOSIT_SIZE;
+        vm.store(address(river), CONSOLIDATION_BUFFER_SLOT, bytes32(bufferedPrincipal));
+
+        uint256 preReportUnderlying = river.totalUnderlyingSupply();
+        uint256 excessiveRewardSurplus = _maxIncreaseForNextReport(preReportUnderlying) + 1;
+        sim_reportExternalConsolidation(bufferedPrincipal, bufferedPrincipal + excessiveRewardSurplus);
+
+        ReportBounds.ReportBoundsStruct memory rb = river.getReportBounds();
+        IOracleManagerV1.ConsensusLayerReport memory report = _buildBadReport(false, false);
+        vm.prank(oracleMember);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IOracleManagerV1.TotalValidatorBalanceIncreaseOutOfBound.selector,
+                preReportUnderlying,
+                preReportUnderlying + excessiveRewardSurplus,
+                _frameDuration(),
+                rb.annualAprUpperBound
+            )
+        );
+        oracle.reportConsensusLayerData(report);
+    }
+
+    function _maxIncreaseForNextReport(uint256 preReportUnderlying) internal view returns (uint256) {
+        ReportBounds.ReportBoundsStruct memory rb = river.getReportBounds();
+        return (preReportUnderlying * rb.annualAprUpperBound * _frameDuration()) / (10_000 * 365 days);
     }
 }
