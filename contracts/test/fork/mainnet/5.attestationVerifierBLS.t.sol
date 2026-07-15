@@ -141,9 +141,8 @@ contract RealBLSForkDepositHarness is ConsensusLayerDepositManagerV1 {
     receive() external payable {}
 }
 
-/// @notice Fork-gated regression coverage for issue #499: the initial-deposit path
-///         must execute the real BLS12-381/EIP-2537 pairing verification, not a Foundry mock.
-contract AttestationVerifierRealBLSForkTest is Test {
+/// @dev Shared fixture and helpers for the real BLS mainnet-fork regression tests.
+abstract contract AttestationVerifierRealBLSForkBase is Test {
     bool internal _skip;
 
     RealBLSForkDepositHarness internal dm;
@@ -167,7 +166,7 @@ contract AttestationVerifierRealBLSForkTest is Test {
     bytes32 internal constant ATTEST_TYPEHASH =
         keccak256("Attest(bytes32 depositDataBufferId,bytes32 depositRootHash)");
 
-    function setUp() external {
+    function setUp() public virtual {
         try vm.envString("MAINNET_FORK_RPC_URL") returns (string memory rpcUrl) {
             vm.createSelectFork(rpcUrl);
             console.log("5.attestationVerifierBLS.t.sol is active");
@@ -208,30 +207,6 @@ contract AttestationVerifierRealBLSForkTest is Test {
         if (!_skip) {
             _;
         }
-    }
-
-    function testInitialDeposit_executesRealBLSVerification() external shouldSkip {
-        IDepositDataBuffer.Deposit memory deposit = _validBLSDeposit();
-        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposit);
-
-        vm.prank(keeper);
-        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
-
-        assertEq(depositContract.deposit_count(), 1, "deposit should execute");
-        assertEq(dm.getCommittedBalance(), 96 ether, "committed balance should decrease");
-        assertEq(dm.getTotalDepositedETH(), 32 ether, "total deposited should increase");
-        assertTrue(buffer.isDepositDataProcessed(bufferId), "buffer id should be processed");
-        assertTrue(verifier.isPubkeyFunded(deposit.pubkey), "pubkey should be marked funded");
-    }
-
-    function testInitialDeposit_rejectsTamperedBLSMessage() external shouldSkip {
-        IDepositDataBuffer.Deposit memory deposit = _validBLSDeposit();
-        deposit.amount = 33 ether;
-        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposit);
-
-        vm.expectRevert(BLS12_381.InvalidSignature.selector);
-        vm.prank(keeper);
-        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
     }
 
     function _prepareDeposit(IDepositDataBuffer.Deposit memory deposit)
@@ -279,5 +254,33 @@ contract AttestationVerifierRealBLSForkTest is Test {
                 })
             })
         });
+    }
+}
+
+/// @notice Fork-gated regression coverage for issue #499: the initial-deposit path
+///         must execute the real BLS12-381/EIP-2537 pairing verification, not a Foundry mock.
+contract AttestationVerifierRealBLSForkTest is AttestationVerifierRealBLSForkBase {
+    function testInitialDeposit_executesRealBLSVerification() external shouldSkip {
+        IDepositDataBuffer.Deposit memory deposit = _validBLSDeposit();
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposit);
+
+        vm.prank(keeper);
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+
+        assertEq(depositContract.deposit_count(), 1, "deposit should execute");
+        assertEq(dm.getCommittedBalance(), 96 ether, "committed balance should decrease");
+        assertEq(dm.getTotalDepositedETH(), 32 ether, "total deposited should increase");
+        assertTrue(buffer.isDepositDataProcessed(bufferId), "buffer id should be processed");
+        assertTrue(verifier.isPubkeyFunded(deposit.pubkey), "pubkey should be marked funded");
+    }
+
+    function testInitialDeposit_rejectsTamperedBLSMessage() external shouldSkip {
+        IDepositDataBuffer.Deposit memory deposit = _validBLSDeposit();
+        deposit.amount = 33 ether;
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposit);
+
+        vm.expectRevert(BLS12_381.InvalidSignature.selector);
+        vm.prank(keeper);
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
     }
 }
