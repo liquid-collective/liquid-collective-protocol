@@ -17,7 +17,6 @@ import "../state/river/OracleAddress.sol";
 /// @notice values: the sum of all balances of all deposited validators and the count of
 /// @notice validators that have been activated on the consensus layer.
 abstract contract OracleManagerV1 is IOracleManagerV1 {
-
     /// @notice Handler called to retrieve the system administrator address
     /// @dev Must be overridden
     /// @return The system administrator address
