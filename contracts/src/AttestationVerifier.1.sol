@@ -20,6 +20,7 @@ import "./state/attestationVerifier/ConsolidationCommitteeAttestationQuorum.sol"
 import "./state/attestationVerifier/ConsolidationCommitteeAttesters.sol";
 import "./state/attestationVerifier/ConsolidationDomainSeparator.sol";
 import "./state/attestationVerifier/ProcessedConsolidations.sol";
+import "./state/attestationVerifier/ProcessedDepositDataBufferIds.sol";
 import "./state/attestationVerifier/RootAttestationQuorum.sol";
 import "./state/attestationVerifier/RootAttesters.sol";
 import "./state/attestationVerifier/DepositDataBufferAddress.sol";

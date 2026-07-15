@@ -34,6 +34,9 @@ contract ConsolidationDepositBufferStub {
 
     function getProcessor() external view returns (address) {
         return _processor;
+    }
+}
+
 contract AttestationVerifierBytesEqualHarness is AttestationVerifierV1 {
     function exposedBytesEqual(bytes calldata a, bytes calldata b) external pure returns (bool) {
         return _bytesEqual(a, b);
