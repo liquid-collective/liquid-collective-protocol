@@ -32,17 +32,41 @@ const func: DeployFunction = async function ({
 
   const { proxyAdministrator } = await getNamedAccounts();
 
+  // FORK=true signals a local anvil mainnet fork (set by the Deploy Scripts
+  // Checks CI job, which runs `--network mainnet` against anvil). In that case
+  // we impersonate the on-chain admin and broadcast, exercising the real
+  // upgrade. A real `--network mainnet` run (no FORK) stays print-only because
+  // the proxyAdministrator is the Governor Safe multisig, not an EOA — the
+  // deliverable there is the Defender proposal block, not a broadcast tx.
+  const isFork = process.env.FORK === "true";
+  const printOnly = network.name === "mainnet" && !isFork;
+
   const proxyTransparentArtifact = await deployments.getArtifact("ITransparentUpgradeableProxy");
   const proxyTransparentInterface = new ethers.utils.Interface(proxyTransparentArtifact.abi);
 
-  // On a Tenderly mainnet fork the proxies' on-chain admin is the real mainnet
-  // proxyAdministrator, not the tenderly-configured named account. Impersonate
-  // that address directly via the RPC so upgradeTo calls are accepted.
+  // On a forked mainnet the proxies' on-chain admin is the real mainnet
+  // proxyAdministrator, not a locally-configured named account. Impersonate and
+  // fund that address so upgradeTo calls are accepted.
   let signer: EthersType.Signer;
 
   if (network.name === "tenderly") {
     await network.provider.request({
       method: "tenderly_setBalance",
+      params: [MAINNET_PROXY_ADMINISTRATOR, "0x56BC75E2D63100000"], // 100 ETH
+    });
+    const directProvider = new EthersType.providers.JsonRpcProvider(
+      (network.config as any).url
+    );
+    signer = directProvider.getSigner(MAINNET_PROXY_ADMINISTRATOR);
+  } else if (isFork) {
+    // anvil equivalent of the tenderly branch above: impersonate + fund the
+    // real Governor Safe admin on the fork so the upgradeTo txs are accepted.
+    await network.provider.request({
+      method: "anvil_impersonateAccount",
+      params: [MAINNET_PROXY_ADMINISTRATOR],
+    });
+    await network.provider.request({
+      method: "anvil_setBalance",
       params: [MAINNET_PROXY_ADMINISTRATOR, "0x56BC75E2D63100000"], // 100 ETH
     });
     const directProvider = new EthersType.providers.JsonRpcProvider(
@@ -103,10 +127,10 @@ const func: DeployFunction = async function ({
       currentImpl.toLowerCase() === newImplAddress.toLowerCase() ? " — MATCHES new impl, upgrade is a no-op" : ""
     })`);
 
-    if (network.name === "mainnet") {
-      // Print-only on mainnet: the proxyAdministrator is the Governor Safe,
-      // not an EOA. Broadcasting would either fail outright or waste gas on
-      // a guaranteed-revert tx. The block above is the deliverable.
+    if (printOnly) {
+      // Real mainnet: the proxyAdministrator is the Governor Safe multisig, not
+      // an EOA. Broadcasting would revert; the proposal block above is the
+      // deliverable to paste into Defender.
       return;
     }
 
@@ -127,7 +151,7 @@ const func: DeployFunction = async function ({
   // River at InitVersion 3). Calling upgradeToAndCall with those init selectors
   // would revert at the Solidity version guard.
 
-  if (network.name === "mainnet") {
+  if (printOnly) {
     console.log(
       "\nMainnet detected — print-only mode. No transactions will be broadcast.\n" +
       "Paste each printed block into the Defender multisig proposal builder."
