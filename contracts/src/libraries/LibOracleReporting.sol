@@ -61,7 +61,7 @@ library LibOracleReporting {
         uint256 inFlightDepositedETH;
         uint256 totalDepositedActivatedETHIncrease;
         uint256 lastConsolidationBuffer;
-        uint256 totalExternalConsolidationsAmountReportedIncrease;
+        uint256 totalExternalConsolidationETHIncrease;
         uint256 timeElapsedSinceLastReport;
         uint256 availableAmountToUpperBound;
         IOracleManagerV1.ConsensusLayerDataReportingTrace trace;
@@ -137,31 +137,24 @@ library LibOracleReporting {
                 );
             }
 
-            if (
-                _report.totalExternalConsolidationsAmountReported
-                    < lastStoredReport.totalExternalConsolidationsAmountReported
-            ) {
+            if (_report.totalExternalConsolidationETH < lastStoredReport.totalExternalConsolidationETH) {
                 revert IOracleManagerV1.InvalidTotalConsolidationsAmountReportedDecrease(
-                    lastStoredReport.totalExternalConsolidationsAmountReported,
-                    _report.totalExternalConsolidationsAmountReported
+                    lastStoredReport.totalExternalConsolidationETH, _report.totalExternalConsolidationETH
                 );
             }
 
-            if (
-                _report.totalExternalConsolidationsAmountReported
-                    > lastStoredReport.totalExternalConsolidationsAmountReported
-            ) {
+            if (_report.totalExternalConsolidationETH > lastStoredReport.totalExternalConsolidationETH) {
                 // the total consolidation amount reported has increased so we need to reduce the buffer
-                uint256 increaseInConsolidation = _report.totalExternalConsolidationsAmountReported
-                    - lastStoredReport.totalExternalConsolidationsAmountReported;
+                uint256 increaseInConsolidation =
+                    _report.totalExternalConsolidationETH - lastStoredReport.totalExternalConsolidationETH;
                 vars.lastConsolidationBuffer = ConsolidationBuffer.get();
 
                 if (increaseInConsolidation > vars.lastConsolidationBuffer) {
                     // this means that the buffer is completely covered and the extra amount will go to rewards
                     // as they would have already been accounted for in the validators balance increase we don't need to account for it
-                    vars.totalExternalConsolidationsAmountReportedIncrease = vars.lastConsolidationBuffer;
+                    vars.totalExternalConsolidationETHIncrease = vars.lastConsolidationBuffer;
                 } else {
-                    vars.totalExternalConsolidationsAmountReportedIncrease = increaseInConsolidation;
+                    vars.totalExternalConsolidationETHIncrease = increaseInConsolidation;
                 }
             }
 
@@ -181,10 +174,9 @@ library LibOracleReporting {
         }
 
         // if we have new external consolidation funds that were reported, we reduce the consolidation buffer
-        if (vars.totalExternalConsolidationsAmountReportedIncrease > 0) {
+        if (vars.totalExternalConsolidationETHIncrease > 0) {
             _setConsolidationBuffer(
-                vars.lastConsolidationBuffer,
-                vars.lastConsolidationBuffer - vars.totalExternalConsolidationsAmountReportedIncrease
+                vars.lastConsolidationBuffer, vars.lastConsolidationBuffer - vars.totalExternalConsolidationETHIncrease
             );
         }
 
@@ -208,7 +200,7 @@ library LibOracleReporting {
             storedReport.rebalanceDepositToRedeemMode = _report.rebalanceDepositToRedeemMode;
             storedReport.slashingContainmentMode = _report.slashingContainmentMode;
             storedReport.totalDepositedActivatedETH = _report.totalDepositedActivatedETH;
-            storedReport.totalExternalConsolidationsAmountReported = _report.totalExternalConsolidationsAmountReported;
+            storedReport.totalExternalConsolidationETH = _report.totalExternalConsolidationETH;
             LastConsensusLayerReport.set(storedReport);
         }
 
@@ -462,9 +454,8 @@ library LibOracleReporting {
         if (totalSupply > 0) {
             uint256 availableBalanceToRedeem = BalanceToRedeem.get();
             uint256 availableBalanceToDeposit = BalanceToDeposit.get();
-            uint256 redeemManagerDemandInEth = ISharesManagerV1(address(this)).underlyingBalanceFromShares(
-                IRedeemManagerV1(RedeemManagerAddress.get()).getRedeemDemand()
-            );
+            uint256 redeemManagerDemandInEth = ISharesManagerV1(address(this))
+                .underlyingBalanceFromShares(IRedeemManagerV1(RedeemManagerAddress.get()).getRedeemDemand());
 
             // if after all rebalancings, the redeem manager demand is still higher than the balance to redeem and exiting eth, we compute
             // the amount of ETH (wei) to exit in order to cover the remaining demand
@@ -686,10 +677,8 @@ library LibOracleReporting {
     /// @param _epoch The epoch to verify
     /// @return True if valid
     function _isValidEpoch(CLSpec.CLSpecStruct memory _cls, uint256 _epoch) internal view returns (bool) {
-        return (
-            _currentEpoch(_cls) >= _epoch + _cls.epochsToAssumedFinality
-                && _epoch > LastConsensusLayerReport.get().epoch && _epoch % _cls.epochsPerFrame == 0
-        );
+        return (_currentEpoch(_cls) >= _epoch + _cls.epochsToAssumedFinality
+                && _epoch > LastConsensusLayerReport.get().epoch && _epoch % _cls.epochsPerFrame == 0);
     }
 
     /// @notice Retrieves the maximum increase in balance based on current total underlying supply and period since last report
