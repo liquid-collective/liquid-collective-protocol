@@ -17,7 +17,7 @@ import "../../src/ELFeeRecipient.1.sol";
 import "../../src/CoverageFund.1.sol";
 import "../../src/RedeemManager.1.sol";
 import "../../src/Withdraw.1.sol";
-import "../../src/ExternalConsolidationRecipientMapping.sol";
+import "../../src/ExternalConsolidationRecipientMapping.1.sol";
 
 import "../../src/interfaces/IOperatorRegistry.1.sol";
 import "../../src/interfaces/IDepositDataBuffer.sol";
