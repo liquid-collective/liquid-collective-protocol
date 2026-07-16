@@ -157,9 +157,7 @@ contract ConsolidationCoverageScenarioTest is AccountingInvariants {
 
         IOracleManagerV1.StoredConsensusLayerReport memory stored = river.getLastConsensusLayerReport();
         assertEq(
-            stored.totalExternalConsolidationsAmountReported,
-            bufferedPrincipal + rewardSurplus,
-            "reported principal plus surplus"
+            stored.totalExternalConsolidationETH, bufferedPrincipal + rewardSurplus, "reported principal plus surplus"
         );
         assertEq(stored.validatorsBalance, 4 * DEPOSIT_SIZE + rewardSurplus, "surplus landed in validatorsBalance");
         assertEq(uint256(vm.load(address(river), CONSOLIDATION_BUFFER_SLOT)), 0, "buffer drawn to zero");
