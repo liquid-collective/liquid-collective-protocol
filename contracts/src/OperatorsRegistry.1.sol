@@ -396,18 +396,27 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             _requestELETHExits(_elAllocations, _maxFeePerWithdrawal, remainingETHExitsDemand);
         requestedETHAmount += elRequestedETHAmount;
 
-        remainingETHExitsDemand =
-            requestedETHAmount >= currentETHExitsDemand ? 0 : currentETHExitsDemand - requestedETHAmount;
+        if (_consolidationAllocations.consolidationRequests.length > 0) {
+            remainingETHExitsDemand =
+                requestedETHAmount >= currentETHExitsDemand ? 0 : currentETHExitsDemand - requestedETHAmount;
+            if (_consolidationAllocations.ethAmount > remainingETHExitsDemand) {
+                revert ExitsGreaterThanExitDemand(_consolidationAllocations.ethAmount, remainingETHExitsDemand);
+            }
 
-        uint256 totalConsolidationFeePaid =
-            _requestExitsViaConsolidation(_consolidationAllocations, _maxFeePerConsolidation, remainingETHExitsDemand);
-        requestedETHAmount += _consolidationAllocations.ethAmount;
-        totalFeePaid += totalConsolidationFeePaid;
+            // Forward the value remaining after EL fees; the Withdraw contract refunds any excess to the
+            // keeper directly, so the whole budget is counted as spent here and the outer refund is a no-op.
+            uint256 consolidationValueBudget = msg.value - totalFeePaid;
+            IWithdrawV1(WithdrawAddress.get()).consolidateForExit{value: consolidationValueBudget}(
+                _consolidationAllocations.consolidationRequests, _maxFeePerConsolidation, msg.sender
+            );
+            totalFeePaid += consolidationValueBudget;
+            requestedETHAmount += _consolidationAllocations.ethAmount;
 
-        // Update the Buffer Amount for ETH to be received via consolidation
-        uint256 old = ExitConsolidationBuffer.get();
-        ExitConsolidationBuffer.set(old + _consolidationAllocations.ethAmount);
-        emit ExitConsolidationBufferSet(old, old + _consolidationAllocations.ethAmount);
+            // Update the buffer for ETH to be received via consolidation
+            uint256 old = ExitConsolidationBuffer.get();
+            ExitConsolidationBuffer.set(old + _consolidationAllocations.ethAmount);
+            emit ExitConsolidationBufferSet(old, old + _consolidationAllocations.ethAmount);
+        }
 
         // Check that the exits requested do not exceed the current ETH exits demand
         if (requestedETHAmount > currentETHExitsDemand) {
@@ -478,20 +487,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         if (requestedETHAmount > _remainingETHExitsDemand) {
             revert ExitsGreaterThanExitDemand(requestedETHAmount, _remainingETHExitsDemand);
         }
-    }
-
-    function _requestExitsViaConsolidation(
-        ExitsViaConsolidationAllocation calldata _consolidationAllocation,
-        uint256 _maxFeePerConsolidation,
-        uint256 _remainingETHExitsDemand
-    ) private returns (uint256 totalFeePaid) {
-        if (_consolidationAllocation.ethAmount > _remainingETHExitsDemand) {
-            revert ExitsGreaterThanExitDemand(_consolidationAllocation.ethAmount, _remainingETHExitsDemand);
-        }
-        // Send the request to the Withdraw Contract
-        (totalFeePaid) = IWithdrawV1(WithdrawAddress.get()).consolidate{value: msg.value}(
-            _consolidationAllocation.consolidationRequests, _maxFeePerConsolidation
-        );
     }
 
     /// @notice Validates a single operator's EL exit allocation, reserves it, triggers the withdrawal and emits.

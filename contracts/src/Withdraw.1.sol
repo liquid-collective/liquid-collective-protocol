@@ -120,17 +120,20 @@ contract WithdrawV1 is IWithdrawV1, Initializable, ReentrancyGuard, IProtocolVer
     }
 
     /// @inheritdoc IWithdrawV1
-    function consolidate(IWithdrawV1.ConsolidationRequest[] calldata requests, uint256 maxFeePerConsolidation)
-        external
-        payable
-        onlyRiver
-        nonReentrant
-        returns (uint256 totalConsolidationFeePaid)
-    {
-        totalConsolidationFeePaid = _consolidate(requests, maxFeePerConsolidation);
+    function consolidateForExit(
+        IWithdrawV1.ConsolidationRequest[] calldata requests,
+        uint256 maxFeePerConsolidation,
+        address excessFeeRecipient
+    ) external payable nonReentrant {
+        if (msg.sender != OperatorsRegistryAddress.get()) {
+            revert LibErrors.Unauthorized(msg.sender);
+        }
+        uint256 totalFeeRequired = _consolidate(requests, maxFeePerConsolidation);
+        _refundExcessFee(msg.value, totalFeeRequired, excessFeeRecipient);
     }
 
-    /// @notice 
+    /// @notice Internal: shared consolidation logic. Validates fees, dispatches every request to the
+    /// EL consolidation contract and returns the total fee consumed. Refunds are handled by the caller.
     function _consolidate(IWithdrawV1.ConsolidationRequest[] calldata requests, uint256 maxFeePerConsolidation)
         internal
         returns (uint256 totalConsolidationFeePaid)
