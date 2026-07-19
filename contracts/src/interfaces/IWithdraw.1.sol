@@ -118,4 +118,12 @@ interface IWithdrawV1 {
         uint256 maxFeePerConsolidation,
         address excessFeeRecipient
     ) external payable;
+
+    /// @notice Request consolidations (Pectra). Callable only by River. Fee paid via msg.value; excess refunded to excessFeeRecipient.
+    /// @param requests Consolidation requests (each: src pubkeys -> target pubkey)
+    /// @param maxFeePerConsolidation Maximum fee per consolidation to accept
+    function consolidate(ConsolidationRequest[] calldata requests, uint256 maxFeePerConsolidation)
+        external
+        payable
+        returns (uint256 totalConsolidationFeePaid);
 }

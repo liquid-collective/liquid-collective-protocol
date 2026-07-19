@@ -2,6 +2,7 @@
 pragma solidity 0.8.34;
 
 import "../state/operatorsRegistry/Operators.3.sol";
+import "./IWithdraw.1.sol";
 
 /// @title Operators Registry Interface (v1)
 /// @author Alluvial Finance Inc.
@@ -40,6 +41,11 @@ interface IOperatorsRegistryV1 {
         bytes[] pubkeys; // 48 bytes
         uint64[] withdrawalAmounts; // gwei, wire value to the predeploy; 0 == full exit
         uint64[] reservedExitAmounts; // gwei, accounting value reserved against headroom; always set
+    }
+
+    struct ExitsViaConsolidationAllocation {
+        uint256 ethAmount;
+        IWithdrawV1.ConsolidationRequest[] consolidationRequests;
     }
 
     /// @notice Structure representing a per-operator funded ETH update
@@ -160,6 +166,8 @@ interface IOperatorsRegistryV1 {
     /// @param requestedExits The cumulative amount of exits requested for the operator
     /// @param exitedETH The cumulative amount of exited ETH(wei) reported for the operator
     event FundedOperatorWithPendingExits(uint256 indexed index, uint256 requestedExits, uint256 exitedETH);
+
+    event ExitConsolidationBufferSet(uint256 indexed oldValue, uint256 indexed newValue);
 
     /// @notice The calling operator is inactive
     /// @param index The operator index
@@ -385,6 +393,10 @@ interface IOperatorsRegistryV1 {
     /// @param _exitedETH The new exited ETH(wei) array per operator
     function reportExitedETH(uint256[] calldata _exitedETH) external;
 
+    /// @notice Allows river to adjust the buffer for ETH exited via consolidation
+    /// @param _exitedAmount The amount that was reported
+    function reportExitViaConsolidation(uint256 _exitedAmount) external;
+
     /// @notice Adds an operator to the registry
     /// @dev Only callable by the administrator
     /// @param _name The name identifying the operator
@@ -424,11 +436,15 @@ interface IOperatorsRegistryV1 {
     /// @dev Reverts with NoExitRequestsToPerform if there is no pending exit demand
     /// @param _allocations The proposed per-operator exit ETH allocations, sorted by operator index
     /// @param _elAllocations The proposed per-operator per-pubkey EL exit ETH allocations, sorted by operator index
+    /// @param _consolidationAllocations Exits via internal consolidations exits
     /// @param _maxFeePerWithdrawal The maximum fee for per withdrawal request
+    /// @param _maxFeePerConsolidation The maximum fee for per consolidation request
     function requestETHExits(
         ExitETHAllocation[] calldata _allocations,
         ELExitETHAllocation[] calldata _elAllocations,
-        uint256 _maxFeePerWithdrawal
+        ExitsViaConsolidationAllocation calldata _consolidationAllocations,
+        uint256 _maxFeePerWithdrawal,
+        uint256 _maxFeePerConsolidation
     ) external payable;
 
     /// @notice Increases the exit request demand

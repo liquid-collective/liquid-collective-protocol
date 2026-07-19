@@ -115,6 +115,26 @@ contract WithdrawV1 is IWithdrawV1, Initializable, ReentrancyGuard, IProtocolVer
         uint256 maxFeePerConsolidation,
         address excessFeeRecipient
     ) external payable onlyRiver nonReentrant {
+        uint256 totalFeeRequired = _consolidate(requests, maxFeePerConsolidation);
+        _refundExcessFee(msg.value, totalFeeRequired, excessFeeRecipient);
+    }
+
+    /// @inheritdoc IWithdrawV1
+    function consolidate(IWithdrawV1.ConsolidationRequest[] calldata requests, uint256 maxFeePerConsolidation)
+        external
+        payable
+        onlyRiver
+        nonReentrant
+        returns (uint256 totalConsolidationFeePaid)
+    {
+        totalConsolidationFeePaid = _consolidate(requests, maxFeePerConsolidation);
+    }
+
+    /// @notice 
+    function _consolidate(IWithdrawV1.ConsolidationRequest[] calldata requests, uint256 maxFeePerConsolidation)
+        internal
+        returns (uint256 totalConsolidationFeePaid)
+    {
         if (requests.length == 0) {
             revert InvalidEmptyArray();
         }
@@ -128,14 +148,13 @@ contract WithdrawV1 is IWithdrawV1, Initializable, ReentrancyGuard, IProtocolVer
             }
             totalNumOfConsolidationOperations += requests[i].srcPubkeys.length;
         }
-        uint256 totalFeeRequired = fee * totalNumOfConsolidationOperations;
-        _validateSufficientValueForFee(msg.value, totalFeeRequired);
+        totalConsolidationFeePaid = fee * totalNumOfConsolidationOperations;
+        _validateSufficientValueForFee(msg.value, totalConsolidationFeePaid);
 
         IAttestationVerifierV1 attestationVerifier = IAttestationVerifierV1(AttestationVerifierAddress.get());
         for (uint256 i = 0; i < requests.length; i++) {
             _processConsolidationRequest(requests[i], consolidationContract, attestationVerifier, fee);
         }
-        _refundExcessFee(msg.value, totalFeeRequired, excessFeeRecipient);
     }
 
     /// @notice Internal: validate and dispatch a single consolidation request to the EL contract

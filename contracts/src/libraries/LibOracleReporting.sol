@@ -62,6 +62,7 @@ library LibOracleReporting {
         uint256 totalDepositedActivatedETHIncrease;
         uint256 lastConsolidationBuffer;
         uint256 totalExternalConsolidationETHIncrease;
+        uint256 totalExitViaConsolidationETHIncrease;
         uint256 timeElapsedSinceLastReport;
         uint256 availableAmountToUpperBound;
         IOracleManagerV1.ConsensusLayerDataReportingTrace trace;
@@ -156,6 +157,11 @@ library LibOracleReporting {
                 } else {
                     vars.totalExternalConsolidationETHIncrease = increaseInConsolidation;
                 }
+            }
+
+            if (_report.totalExitViaConsolidationETH > lastStoredReport.totalExitViaConsolidationETH) {
+                vars.totalExitViaConsolidationETHIncrease =
+                    _report.totalExitViaConsolidationETH - lastStoredReport.totalExitViaConsolidationETH;
             }
 
             // we compute the new skimmed amount by taking the delta between reports
@@ -295,6 +301,14 @@ library LibOracleReporting {
                 // we do not update the rewards as consolidation coverage is not considered rewards
             }
         }
+
+        // TODO: Consolidation Exit Buffer Adjustment
+        if (vars.totalExitViaConsolidationETHIncrease > 0) {
+            IOperatorsRegistryV1(OperatorsRegistryAddress.get())
+                .reportExitViaConsolidation(vars.totalExitViaConsolidationETHIncrease);
+        }
+
+        // TODO:
 
         // if our rewards are not null, we dispatch the fee to the collector
         if (vars.trace.rewards > 0) {
