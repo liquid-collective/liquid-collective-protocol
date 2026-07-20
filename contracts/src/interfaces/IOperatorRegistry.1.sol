@@ -397,6 +397,10 @@ interface IOperatorsRegistryV1 {
     /// @param _exitedAmount The amount that was reported
     function reportExitViaConsolidation(uint256 _exitedAmount) external;
 
+    /// @notice Retrieve the amount of ETH(wei) expected to be received via consolidation exits
+    /// @return The current exit consolidation buffer
+    function getExitConsolidationBuffer() external view returns (uint256);
+
     /// @notice Adds an operator to the registry
     /// @dev Only callable by the administrator
     /// @param _name The name identifying the operator

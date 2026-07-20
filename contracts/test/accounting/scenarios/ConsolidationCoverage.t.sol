@@ -22,6 +22,10 @@ contract ConsolidationCoverageScenarioTest is AccountingInvariants {
     bytes32 internal constant CONSOLIDATION_BUFFER_SLOT =
         bytes32(uint256(keccak256("river.state.consolidationBuffer")) - 1);
 
+    /// @dev Storage slot of the OperatorsRegistry exit consolidation buffer (mirrors ExitConsolidationBuffer.sol).
+    bytes32 internal constant EXIT_CONSOLIDATION_BUFFER_SLOT =
+        bytes32(uint256(keccak256("river.state.exitConsolidationBuffer")) - 1);
+
     ConsolidationCoverageFundV1 internal consolidationCoverageFund;
 
     /// @notice Extends the base setup by replacing the consolidation-coverage-fund stub with a real,
@@ -191,6 +195,106 @@ contract ConsolidationCoverageScenarioTest is AccountingInvariants {
             )
         );
         oracle.reportConsensusLayerData(report);
+    }
+
+    /// @dev Seeds the OperatorsRegistry exit consolidation buffer (stands in for a redemption-via-consolidation
+    ///      request that credited the buffer in requestETHExits).
+    function _seedExitConsolidationBuffer(uint256 amount) internal {
+        vm.store(address(operatorsRegistry), EXIT_CONSOLIDATION_BUFFER_SLOT, bytes32(amount));
+    }
+
+    /// @notice When only the exit consolidation buffer is non-zero, the report pulls matching ETH from the
+    ///         (shared) consolidation coverage fund and drains the buffer by the pulled amount.
+    function testExitConsolidationBufferPulledFromCoverageFund() public {
+        _baseline();
+
+        uint256 coverage = 5 ether;
+        _donateConsolidationCoverage(coverage);
+
+        uint256 exitBuffer = 4 ether;
+        _seedExitConsolidationBuffer(exitBuffer);
+        assertEq(operatorsRegistry.getExitConsolidationBuffer(), exitBuffer, "exit buffer seeded");
+
+        uint256 fundBefore = address(consolidationCoverageFund).balance;
+
+        // Plain report: no external consolidation, no arrival — only the coverage pull for the exit buffer runs.
+        IOracleManagerV1.ConsensusLayerReport memory report = _buildBadReport(false, false);
+        vm.prank(oracleMember);
+        oracle.reportConsensusLayerData(report);
+
+        assertEq(operatorsRegistry.getExitConsolidationBuffer(), 0, "exit buffer drained by coverage pull");
+        assertEq(address(consolidationCoverageFund).balance, fundBefore - exitBuffer, "coverage pulled == exit buffer");
+    }
+
+    /// @notice When both buffers are non-zero and the shared fund cannot cover both, the external
+    ///         ConsolidationBuffer is paid down first and the remainder covers the exit buffer.
+    function testCombinedPullPrioritizesExternalBufferThenExit() public {
+        _baseline();
+
+        uint256 consolidationBuffer = 3 ether;
+        uint256 exitBuffer = 3 ether;
+        vm.store(address(river), CONSOLIDATION_BUFFER_SLOT, bytes32(consolidationBuffer));
+        _seedExitConsolidationBuffer(exitBuffer);
+
+        // Only enough to fully cover the external buffer (3) plus 1 ETH of the exit buffer.
+        uint256 coverage = 4 ether;
+        _donateConsolidationCoverage(coverage);
+
+        IOracleManagerV1.ConsensusLayerReport memory report = _buildBadReport(false, false);
+        vm.prank(oracleMember);
+        oracle.reportConsensusLayerData(report);
+
+        assertEq(uint256(vm.load(address(river), CONSOLIDATION_BUFFER_SLOT)), 0, "external buffer paid first");
+        assertEq(operatorsRegistry.getExitConsolidationBuffer(), 2 ether, "exit buffer receives only the remainder");
+        assertEq(address(consolidationCoverageFund).balance, 0, "fund fully drained");
+    }
+
+    /// @notice Regression guard: with the exit buffer at zero, the combined pull behaves exactly like the
+    ///         pre-existing external-only path and never touches the exit buffer.
+    function testExternalOnlyPullUnaffectedWhenExitBufferZero() public {
+        _baseline();
+
+        uint256 buffer = 2 ether;
+        vm.store(address(river), CONSOLIDATION_BUFFER_SLOT, bytes32(buffer));
+        _donateConsolidationCoverage(5 ether);
+
+        uint256 fundBefore = address(consolidationCoverageFund).balance;
+
+        IOracleManagerV1.ConsensusLayerReport memory report = _buildBadReport(false, false);
+        vm.prank(oracleMember);
+        oracle.reportConsensusLayerData(report);
+
+        assertEq(uint256(vm.load(address(river), CONSOLIDATION_BUFFER_SLOT)), 0, "external buffer drained");
+        assertEq(operatorsRegistry.getExitConsolidationBuffer(), 0, "exit buffer untouched");
+        assertEq(address(consolidationCoverageFund).balance, fundBefore - buffer, "only external buffer pulled");
+    }
+
+    /// @notice Reporting an arrival (cumulative totalExitViaConsolidationETH increase) debits the exit buffer by
+    ///         the PER-REPORT delta, not the cumulative total. This pins the stored-report persistence fix:
+    ///         without persisting totalExitViaConsolidationETH, the second report would debit by the cumulative
+    ///         value (5) instead of the delta (2).
+    function testExitViaConsolidationArrivalDebitsBufferByPerReportDelta() public {
+        _baseline();
+
+        // No coverage donated, so the (empty) fund pull is a no-op and only the arrival adjustment moves the buffer.
+        _seedExitConsolidationBuffer(10 ether);
+
+        IOracleManagerV1.ConsensusLayerReport memory r1 = _buildBadReport(false, false);
+        r1.totalExitViaConsolidationETH = 3 ether;
+        vm.prank(oracleMember);
+        oracle.reportConsensusLayerData(r1);
+        assertEq(operatorsRegistry.getExitConsolidationBuffer(), 7 ether, "debited by first-report delta (3)");
+        assertEq(river.getLastConsensusLayerReport().totalExitViaConsolidationETH, 3 ether, "arrival total persisted");
+
+        IOracleManagerV1.ConsensusLayerReport memory r2 = _buildBadReport(false, false);
+        r2.totalExitViaConsolidationETH = 5 ether; // cumulative -> delta of 2
+        vm.prank(oracleMember);
+        oracle.reportConsensusLayerData(r2);
+        assertEq(
+            operatorsRegistry.getExitConsolidationBuffer(),
+            5 ether,
+            "debited only by the per-report delta (2), not the cumulative total"
+        );
     }
 
     function _maxIncreaseForNextReport(uint256 preReportUnderlying) internal view returns (uint256) {

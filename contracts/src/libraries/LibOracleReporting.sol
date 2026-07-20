@@ -207,6 +207,7 @@ library LibOracleReporting {
             storedReport.slashingContainmentMode = _report.slashingContainmentMode;
             storedReport.totalDepositedActivatedETH = _report.totalDepositedActivatedETH;
             storedReport.totalExternalConsolidationETH = _report.totalExternalConsolidationETH;
+            storedReport.totalExitViaConsolidationETH = _report.totalExitViaConsolidationETH;
             LastConsensusLayerReport.set(storedReport);
         }
 
@@ -288,27 +289,37 @@ library LibOracleReporting {
             // we do not update the rewards as coverage is not considered rewards
         }
 
-        uint256 consolidationBuffer = ConsolidationBuffer.get();
-        // if the consolidation buffer is greater than 0, we attempt to pull the funds from the consolidation coverage fund
-        // we always attempt to pull the funds as we don't track on-chain if a consolidation failure has occurred
-        if (consolidationBuffer > 0) {
-            vars.trace.pulledConsolidationCoverageFunds = _pullConsolidationCoverageFunds(consolidationBuffer);
-            if (vars.trace.pulledConsolidationCoverageFunds > 0) {
-                // we update the consolidation buffer
-                _setConsolidationBuffer(
-                    consolidationBuffer, consolidationBuffer - vars.trace.pulledConsolidationCoverageFunds
-                );
-                // we do not update the rewards as consolidation coverage is not considered rewards
-            }
-        }
-
-        // TODO: Consolidation Exit Buffer Adjustment
+        // reduce the exit consolidation buffer by the ETH that actually arrived via consolidation this report,
+        // before attempting coverage so we only cover the amount still pending
         if (vars.totalExitViaConsolidationETHIncrease > 0) {
             IOperatorsRegistryV1(OperatorsRegistryAddress.get())
                 .reportExitViaConsolidation(vars.totalExitViaConsolidationETHIncrease);
         }
 
-        // TODO:
+        // both the external consolidation buffer and the exit consolidation buffer are backed by the same
+        // consolidation coverage fund, so we pull once for their combined demand and split the proceeds.
+        // we always attempt to pull the funds as we don't track on-chain if a consolidation failure has occurred
+        uint256 consolidationBuffer = ConsolidationBuffer.get();
+        uint256 exitConsolidationBuffer =
+            IOperatorsRegistryV1(OperatorsRegistryAddress.get()).getExitConsolidationBuffer();
+        uint256 totalConsolidationCoverageDemand = consolidationBuffer + exitConsolidationBuffer;
+        if (totalConsolidationCoverageDemand > 0) {
+            vars.trace.pulledConsolidationCoverageFunds =
+                _pullConsolidationCoverageFunds(totalConsolidationCoverageDemand);
+            uint256 pulled = vars.trace.pulledConsolidationCoverageFunds;
+            if (pulled > 0) {
+                // external consolidation buffer is paid down first, any remainder covers the exit buffer
+                uint256 toConsolidation = LibUint256.min(pulled, consolidationBuffer);
+                if (toConsolidation > 0) {
+                    _setConsolidationBuffer(consolidationBuffer, consolidationBuffer - toConsolidation);
+                }
+                uint256 toExit = pulled - toConsolidation;
+                if (toExit > 0) {
+                    IOperatorsRegistryV1(OperatorsRegistryAddress.get()).reportExitViaConsolidation(toExit);
+                }
+                // we do not update the rewards as consolidation coverage is not considered rewards
+            }
+        }
 
         // if our rewards are not null, we dispatch the fee to the collector
         if (vars.trace.rewards > 0) {

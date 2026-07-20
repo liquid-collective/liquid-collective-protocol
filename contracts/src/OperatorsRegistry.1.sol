@@ -186,6 +186,10 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         return (_getTotalExitedETH(), TotalETHExitsRequested.get() + CurrentETHExitsDemand.get());
     }
 
+    function getExitConsolidationBuffer() external view returns (uint256) {
+        return ExitConsolidationBuffer.get();
+    }
+
     /// @inheritdoc IOperatorsRegistryV1
     function getOperatorCount() external view returns (uint256) {
         return OperatorsV3.getCount();
