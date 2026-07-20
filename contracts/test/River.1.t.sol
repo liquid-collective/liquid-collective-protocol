@@ -177,7 +177,7 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
         keccak256("Attest(bytes32 depositDataBufferId,bytes32 depositRootHash)");
     bytes32 internal constant CONSOLIDATION_NAME_HASH = keccak256("ConsolidationValidation");
     bytes32 internal constant ATTEST_CONSOLIDATION_TYPEHASH = keccak256(
-        "AttestConsolidation(address withdrawalAddress,bytes[] sourcePubkeys,bytes[] targetPubkeys,uint256 totalAmount)"
+        "AttestConsolidation(address withdrawalAddress,bytes[] sourcePubkeys,bytes[] targetPubkeys,uint256 totalAmount,uint256[] exitEpoch)"
     );
 
     address internal admin;
@@ -327,6 +327,15 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
         return keccak256(abi.encodePacked(hashes));
     }
 
+    function _hashUintArray(uint256[] memory arr) internal pure returns (bytes32) {
+        return keccak256(abi.encodePacked(arr));
+    }
+
+    /// @dev Canonical per-pair exit-epoch array: one zero entry per consolidation pair.
+    function _defaultEpochs(uint256 count) internal pure returns (uint256[] memory arr) {
+        arr = new uint256[](count);
+    }
+
     function _consolidationDigest(
         address withdrawalAddress,
         bytes[] memory sources,
@@ -342,7 +351,8 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
                 withdrawalAddress,
                 _hashBytesArray(sources),
                 _hashBytesArray(targets),
-                totalAmount
+                totalAmount,
+                _hashUintArray(_defaultEpochs(sources.length))
             )
         );
         return keccak256(abi.encodePacked("\x19\x01", domainSep, structHash));
@@ -373,6 +383,7 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
             sourcePubkeys: sources,
             targetPubkeys: targets,
             totalAmount: totalAmount,
+            exitEpoch: _defaultEpochs(sources.length),
             signatures: sigs
         });
     }
@@ -4253,6 +4264,7 @@ contract RiverV1ConsolidationMintTests is RiverV1TestBase {
             sourcePubkeys: sources,
             targetPubkeys: targets,
             totalAmount: totalAmount,
+            exitEpoch: _defaultEpochs(sources.length),
             signatures: sigs
         });
     }
@@ -4268,7 +4280,8 @@ contract RiverV1ConsolidationMintTests is RiverV1TestBase {
                 consolidation.withdrawalAddress,
                 _hashBytesArray(consolidation.sourcePubkeys),
                 _hashBytesArray(consolidation.targetPubkeys),
-                consolidation.totalAmount
+                consolidation.totalAmount,
+                _hashUintArray(consolidation.exitEpoch)
             )
         );
     }

@@ -11,19 +11,19 @@ import "./interfaces/IConsolidationAttestation.sol";
 ///         Anyone can submit attestations; off-chain daemons collect the events. Quorum validation
 ///         is performed elsewhere.
 /// @dev Each submission carries a signature that must be produced by `msg.sender`. When `errorData`
-///      is empty the signature is over the same four-field `AttestConsolidation` EIP-712 struct that
-///      the L1 AttestationVerifier consumes. `exitEpoch` remains event metadata and is intentionally
-///      excluded from approval signatures. When `errorData` is non-empty the signature is over a
-///      distinct L2-only `AttestConsolidationError` struct that binds both `exitEpoch` and the error.
+///      is empty the signature is over the same five-field `AttestConsolidation` EIP-712 struct that
+///      the L1 AttestationVerifier consumes, which binds the per-consolidation `exitEpoch` array.
+///      When `errorData` is non-empty the signature is over a distinct L2-only
+///      `AttestConsolidationError` struct that additionally binds the error payload.
 contract ConsolidationAttestation is IConsolidationAttestation {
     /// @notice EIP-712 typehash for a consolidation approval. Identical to the L1 verifier's.
     bytes32 public constant ATTEST_CONSOLIDATION_TYPEHASH = keccak256(
-        "AttestConsolidation(address withdrawalAddress,bytes[] sourcePubkeys,bytes[] targetPubkeys,uint256 totalAmount)"
+        "AttestConsolidation(address withdrawalAddress,bytes[] sourcePubkeys,bytes[] targetPubkeys,uint256 totalAmount,uint256[] exitEpoch)"
     );
 
     /// @notice EIP-712 typehash for a consolidation error attestation carrying an error payload.
     bytes32 public constant ATTEST_CONSOLIDATION_ERROR_TYPEHASH = keccak256(
-        "AttestConsolidationError(address withdrawalAddress,bytes[] sourcePubkeys,bytes[] targetPubkeys,uint256 totalAmount,uint256 exitEpoch,bytes errorData)"
+        "AttestConsolidationError(address withdrawalAddress,bytes[] sourcePubkeys,bytes[] targetPubkeys,uint256 totalAmount,uint256[] exitEpoch,bytes errorData)"
     );
 
     /// @notice The EIP-712 domain separator used to verify attestation signatures.
@@ -82,7 +82,8 @@ contract ConsolidationAttestation is IConsolidationAttestation {
                 consolidation.withdrawalAddress,
                 _hashBytesArray(consolidation.sourcePubkeys),
                 _hashBytesArray(consolidation.targetPubkeys),
-                consolidation.totalAmount
+                consolidation.totalAmount,
+                _hashUintArray(consolidation.exitEpoch)
             )
         );
     }
@@ -99,7 +100,7 @@ contract ConsolidationAttestation is IConsolidationAttestation {
                 _hashBytesArray(consolidation.sourcePubkeys),
                 _hashBytesArray(consolidation.targetPubkeys),
                 consolidation.totalAmount,
-                consolidation.exitEpoch,
+                _hashUintArray(consolidation.exitEpoch),
                 keccak256(errorData)
             )
         );
@@ -113,6 +114,12 @@ contract ConsolidationAttestation is IConsolidationAttestation {
             hashes[i] = keccak256(arr[i]);
         }
         return keccak256(abi.encodePacked(hashes));
+    }
+
+    /// @dev EIP-712 array hash for a `uint256[]` field. Each element is already an atomic
+    ///      32-byte value, so the array hashes to `keccak256` over their concatenation.
+    function _hashUintArray(uint256[] calldata arr) internal pure returns (bytes32) {
+        return keccak256(abi.encodePacked(arr));
     }
 
     /// @dev Recover signer from a 65-byte signature, normalizing v. Returns `address(0)` on any

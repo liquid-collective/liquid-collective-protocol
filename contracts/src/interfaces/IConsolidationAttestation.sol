@@ -6,8 +6,8 @@ pragma solidity 0.8.34;
 ///         consolidation attestation events.
 interface IConsolidationAttestation {
     /// @notice Buffer-local consolidation object used for off-chain attestation collection.
-    /// @dev `exitEpoch` is L2 event metadata and is not part of the approval EIP-712 struct consumed
-    ///      by L1. L2-only error attestations do bind it in their distinct signed struct.
+    /// @dev The per-consolidation `exitEpoch` array is part of the approval EIP-712 struct consumed
+    ///      by L1, so it is bound by both approval and error attestation signatures.
     struct ConsolidationObject {
         /// @dev Address of the withdrawal credential that initiated the consolidation request.
         address withdrawalAddress;
@@ -17,18 +17,18 @@ interface IConsolidationAttestation {
         bytes[] targetPubkeys;
         /// @dev Total ETH being consolidated, in wei.
         uint256 totalAmount;
-        /// @dev L2 event metadata. Excluded from approval signatures; included in error signatures.
-        uint256 exitEpoch;
+        /// @dev The exit epoch marked for each consolidation present in the object (one per pair).
+        uint256[] exitEpoch;
     }
 
     /// @notice Emitted when a consolidation attestation is submitted.
     /// @param idx The auto-incrementing index of the attestation.
-    /// @param consolidationHash The L1-compatible four-field consolidation struct hash.
+    /// @param consolidationHash The L1-compatible five-field consolidation struct hash.
     /// @param withdrawalAddress The withdrawal credential address from the consolidation object.
     /// @param sourcePubkeys The source validator BLS pubkeys from the consolidation object.
     /// @param targetPubkeys The target validator BLS pubkeys from the consolidation object.
     /// @param totalAmount The total ETH being consolidated, in wei.
-    /// @param exitEpoch L2 metadata excluded from approval signatures and hashes.
+    /// @param exitEpoch The exit epoch marked for each consolidation present in the object (one per pair).
     /// @param signature The attestor's signature.
     /// @param errorData A caller-supplied error payload; empty when the attestation reports no error.
     event ConsolidationAttestationSubmitted(
@@ -38,7 +38,7 @@ interface IConsolidationAttestation {
         bytes[] sourcePubkeys,
         bytes[] targetPubkeys,
         uint256 totalAmount,
-        uint256 exitEpoch,
+        uint256[] exitEpoch,
         bytes signature,
         bytes errorData
     );
@@ -51,8 +51,8 @@ interface IConsolidationAttestation {
 
     /// @notice Submit an attestation for a consolidation object.
     /// @dev The signature must be produced by `msg.sender` over an EIP-712 digest using this buffer's
-    ///      domain separator. Empty `errorData` uses the L1-compatible four-field
-    ///      `AttestConsolidation` type and excludes `exitEpoch`. Non-empty `errorData` uses the
+    ///      domain separator. Empty `errorData` uses the L1-compatible five-field
+    ///      `AttestConsolidation` type and binds `exitEpoch`. Non-empty `errorData` uses the
     ///      distinct L2-only `AttestConsolidationError` type and binds both `exitEpoch` and
     ///      `errorData`. Reverts `InvalidSignature` otherwise.
     /// @param consolidation The consolidation object being attested to.
@@ -64,7 +64,7 @@ interface IConsolidationAttestation {
         bytes calldata errorData
     ) external;
 
-    /// @notice Compute the L1-compatible four-field struct hash of a consolidation object.
+    /// @notice Compute the L1-compatible five-field struct hash of a consolidation object.
     /// @param consolidation The consolidation object to hash.
     /// @return The approval struct hash used for L1 verification and event indexing.
     function computeConsolidationHash(ConsolidationObject calldata consolidation) external pure returns (bytes32);

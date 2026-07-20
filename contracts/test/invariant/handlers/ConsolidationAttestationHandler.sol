@@ -26,7 +26,7 @@ contract ConsolidationAttestationHandler is Test {
         return abi.encodePacked(sha256(abi.encode("consolidation-invariant-pubkey", seed)), bytes16(0));
     }
 
-    function _consolidation(uint256 seed, uint256 exitEpoch)
+    function _consolidation(uint256 seed, uint256[] memory exitEpoch)
         internal
         pure
         returns (IConsolidationAttestation.ConsolidationObject memory consolidation)
@@ -52,7 +52,7 @@ contract ConsolidationAttestationHandler is Test {
     // Actions
     // -----------------------------------------------------------------------
 
-    function submit(uint256 seed, uint256 exitEpoch, bytes calldata error) external {
+    function submit(uint256 seed, uint256[] calldata exitEpoch, bytes calldata error) external {
         if (error.length > 256) return;
 
         IConsolidationAttestation.ConsolidationObject memory consolidation = _consolidation(seed, exitEpoch);
@@ -68,7 +68,7 @@ contract ConsolidationAttestationHandler is Test {
                     _hashBytesArray(consolidation.sourcePubkeys),
                     _hashBytesArray(consolidation.targetPubkeys),
                     consolidation.totalAmount,
-                    consolidation.exitEpoch,
+                    _hashUintArray(consolidation.exitEpoch),
                     keccak256(error)
                 )
             );
@@ -88,5 +88,9 @@ contract ConsolidationAttestationHandler is Test {
             hashes[i] = keccak256(arr[i]);
         }
         return keccak256(abi.encodePacked(hashes));
+    }
+
+    function _hashUintArray(uint256[] memory arr) internal pure returns (bytes32) {
+        return keccak256(abi.encodePacked(arr));
     }
 }
