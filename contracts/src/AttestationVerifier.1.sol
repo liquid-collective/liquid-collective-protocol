@@ -672,6 +672,9 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
         if (sourceLen != targetLen) revert ConsolidationArrayLengthMismatch(sourceLen, targetLen);
         if (consolidation.totalAmount == 0) revert ZeroConsolidationTotalAmount();
         if (consolidation.withdrawalAddress == address(0)) revert ZeroConsolidationWithdrawalAddress();
+        if (consolidation.exitEpoch.length != sourceLen) {
+            revert ExitEpochArrayLengthMismatch();
+        }
 
         // 2. Per-pair pubkey length checks, before hashing dynamic bytes.
         for (uint256 i = 0; i < sourceLen; ++i) {
@@ -683,11 +686,6 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
             if (targetPubkeyLength != CONSOLIDATION_PUBKEY_LENGTH) {
                 revert InvalidConsolidationPubkeyLength(i, targetPubkeyLength, false);
             }
-        }
-
-        // 2b. One exit epoch is expected per (source, target) consolidation pair.
-        if (consolidation.exitEpoch.length != sourceLen) {
-            revert ConsolidationArrayLengthMismatch(sourceLen, consolidation.exitEpoch.length);
         }
 
         // 3. Compute the EIP-712 digest the committee signed.

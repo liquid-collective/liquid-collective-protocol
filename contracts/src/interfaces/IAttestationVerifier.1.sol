@@ -230,6 +230,9 @@ interface IAttestationVerifierV1 {
     /// @param targetLength The length of the target pubkey array
     error ConsolidationArrayLengthMismatch(uint256 sourceLength, uint256 targetLength);
 
+    /// @notice The exit epoch array is different from source pubkey array
+    error ExitEpochArrayLengthMismatch();
+
     /// @notice A pubkey field has an unexpected byte length
     /// @param index The pair index
     /// @param length The observed length
