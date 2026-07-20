@@ -172,7 +172,17 @@ contract ConsolidationAttestationTest is Test {
         IConsolidationAttestation.ConsolidationObject memory c = _consolidation(makeAddr("withdrawal"), 5, _epochs(42));
         bytes memory error = bytes("source pubkey not exited");
         bytes memory sig = _sign(pk, c, error);
-        bytes32 consolidationHash = _expectedHash(c);
+        bytes32 consolidationHash = keccak256(
+            abi.encode(
+                ATTEST_CONSOLIDATION_ERROR_TYPEHASH,
+                c.withdrawalAddress,
+                _hashBytesArray(c.sourcePubkeys),
+                _hashBytesArray(c.targetPubkeys),
+                c.totalAmount,
+                _hashUintArray(c.exitEpoch),
+                keccak256(error)
+            )
+        );
 
         vm.expectEmit(true, true, true, true);
         emit ConsolidationAttestationSubmitted(

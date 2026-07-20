@@ -44,16 +44,15 @@ contract ConsolidationAttestation is IConsolidationAttestation {
         bytes calldata signature,
         bytes calldata errorData
     ) external {
-        bytes32 consolidationHash = _computeConsolidationHash(consolidation);
-
-        bytes32 structHash =
-            errorData.length == 0 ? consolidationHash : _computeConsolidationErrorHash(consolidation, errorData);
+        bytes32 structHash = errorData.length == 0
+            ? _computeConsolidationHash(consolidation)
+            : _computeConsolidationErrorHash(consolidation, errorData);
         bytes32 digest = ECDSA.toTypedDataHash(_domainSeparator, structHash);
         if (_recover(digest, signature) != msg.sender) revert InvalidSignature();
 
         emit ConsolidationAttestationSubmitted(
             lastAttestationIdx,
-            consolidationHash,
+            structHash,
             consolidation.withdrawalAddress,
             consolidation.sourcePubkeys,
             consolidation.targetPubkeys,
