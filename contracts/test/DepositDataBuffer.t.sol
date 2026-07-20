@@ -181,6 +181,39 @@ contract DepositDataBufferTest is Test, DepositDataBufferFixtures {
         buffer.submitDepositData(id, batch);
     }
 
+    /// @dev Initial deposits below the 32 ETH activation floor are rejected (gwei-aligned but too low).
+    function test_RevertWhen_DepositAmountBelowMin() public {
+        IDepositDataBuffer.DepositObject memory batch = _batch(1);
+        uint256 tooLow = 31 ether; // gwei-aligned, below MIN_INITIAL_DEPOSIT_AMOUNT
+        batch.deposits[0].amount = tooLow;
+        bytes32 id = _id(batch, 0);
+        vm.prank(producer);
+        vm.expectRevert(abi.encodeWithSelector(IDepositDataBuffer.InvalidDepositAmount.selector, 0, tooLow));
+        buffer.submitDepositData(id, batch);
+    }
+
+    /// @dev Initial deposits above the 2048 ETH max effective balance are rejected.
+    function test_RevertWhen_DepositAmountAboveMax() public {
+        IDepositDataBuffer.DepositObject memory batch = _batch(1);
+        uint256 tooHigh = 2049 ether; // gwei-aligned, above MAX_DEPOSIT_AMOUNT
+        batch.deposits[0].amount = tooHigh;
+        bytes32 id = _id(batch, 0);
+        vm.prank(producer);
+        vm.expectRevert(abi.encodeWithSelector(IDepositDataBuffer.InvalidDepositAmount.selector, 0, tooHigh));
+        buffer.submitDepositData(id, batch);
+    }
+
+    /// @dev The inclusive [32, 2048] ETH bounds are accepted at both extremes.
+    function test_SubmitAcceptsDepositAmountBoundaries() public {
+        IDepositDataBuffer.DepositObject memory batch = _batch(2);
+        batch.deposits[0].amount = 32 ether; // min boundary
+        batch.deposits[1].amount = 2048 ether; // max boundary
+        bytes32 id = _id(batch, 0);
+        vm.prank(producer);
+        buffer.submitDepositData(id, batch);
+        assertEq(buffer.lastQueuedIdx(), 1);
+    }
+
     function test_RevertWhen_InvalidTopUpPubkeyLength() public {
         IDepositDataBuffer.DepositObject memory batch;
         batch.topUps = new IDepositDataBuffer.TopUp[](1);
@@ -213,6 +246,47 @@ contract DepositDataBufferTest is Test, DepositDataBufferFixtures {
         vm.prank(producer);
         vm.expectRevert(abi.encodeWithSelector(IDepositDataBuffer.InvalidDepositAmount.selector, 0, misaligned));
         buffer.submitDepositData(id, batch);
+    }
+
+    /// @dev Top-ups below the verifier's 1 ETH floor are rejected at buffer submission time.
+    function test_RevertWhen_TopUpAmountBelowMin() public {
+        IDepositDataBuffer.DepositObject memory batch;
+        batch.topUps = new IDepositDataBuffer.TopUp[](1);
+        batch.topUps[0] = _topUp(1);
+        uint256 tooLow = 1 ether - 1 gwei;
+        batch.topUps[0].amount = tooLow;
+        bytes32 id = _id(batch, 0);
+        vm.prank(producer);
+        vm.expectRevert(abi.encodeWithSelector(IDepositDataBuffer.InvalidDepositAmount.selector, 0, tooLow));
+        buffer.submitDepositData(id, batch);
+    }
+
+    /// @dev Top-ups above the Pectra max effective balance are rejected at buffer submission time.
+    function test_RevertWhen_TopUpAmountAboveMax() public {
+        IDepositDataBuffer.DepositObject memory batch;
+        batch.topUps = new IDepositDataBuffer.TopUp[](1);
+        batch.topUps[0] = _topUp(1);
+        uint256 tooHigh = 2016 ether + 1 gwei;
+        batch.topUps[0].amount = tooHigh;
+        bytes32 id = _id(batch, 0);
+        vm.prank(producer);
+        vm.expectRevert(abi.encodeWithSelector(IDepositDataBuffer.InvalidDepositAmount.selector, 0, tooHigh));
+        buffer.submitDepositData(id, batch);
+    }
+
+    /// @dev The inclusive [1, 2016] ETH top-up bounds are accepted at both extremes.
+    function test_SubmitAcceptsTopUpAmountBoundaries() public {
+        IDepositDataBuffer.DepositObject memory batch;
+        batch.topUps = new IDepositDataBuffer.TopUp[](2);
+        batch.topUps[0] = _topUp(10);
+        batch.topUps[0].amount = 1 ether;
+        batch.topUps[1] = _topUp(11);
+        batch.topUps[1].amount = 2016 ether;
+
+        bytes32 id = _id(batch, 0);
+        vm.prank(producer);
+        buffer.submitDepositData(id, batch);
+        assertEq(buffer.lastQueuedIdx(), 1);
     }
 
     /// @dev A batch of only top-ups (no initial deposits) is valid.

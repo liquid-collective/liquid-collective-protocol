@@ -44,9 +44,9 @@ interface IDepositDataBuffer {
     struct TopUp {
         /// @dev 48-byte BLS public key of the already-funded validator
         bytes pubkey;
-        /// @dev Deposit amount in wei (must be a multiple of 1 gwei). Under Pectra 0x02
-        ///      credentials, may be any gwei-aligned amount up to the validator's max
-        ///      effective balance.
+        /// @dev Deposit amount in wei (must be a multiple of 1 gwei). Since the validator
+        ///      is already funded, the stateless upper bound is the 2048 ETH max effective
+        ///      balance minus the 32 ETH activation balance.
         uint256 amount;
         /// @dev Index of the node operator this top-up funds.
         uint256 operatorIdx;
@@ -136,7 +136,7 @@ interface IDepositDataBuffer {
     /// @notice Reverts when a top-up pubkey is not exactly 48 bytes
     error InvalidTopUpPubkeyLength(uint256 index, uint256 length);
 
-    /// @notice Reverts when a deposit or top-up amount is zero or not gwei-aligned
+    /// @notice Reverts when a deposit or top-up amount is outside its allowed range or not gwei-aligned
     error InvalidDepositAmount(uint256 index, uint256 amount);
 
     // -----------------------------------------------------------------------

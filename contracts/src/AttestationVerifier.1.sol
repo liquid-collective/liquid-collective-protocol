@@ -27,6 +27,7 @@ import "./state/attestationVerifier/DepositDomainValue.sol";
 import "./state/attestationVerifier/DomainSeparator.sol";
 import "./state/attestationVerifier/PectraValidatorPubkeyLookup.sol";
 import "./state/attestationVerifier/PrePectraValidatorPubkeyLookup.sol";
+import "./state/attestationVerifier/ProcessedConsolidationSourcePubkeys.sol";
 import "./state/shared/RiverAddress.sol";
 
 /// @title AttestationVerifier (v1)
@@ -100,8 +101,22 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
     ///         they credit already-activated validators and may be below this amount.
     uint256 internal constant MIN_INITIAL_DEPOSIT_AMOUNT = 32 ether;
 
+    /// @notice Minimum top-up amount accepted by the consensus-layer deposit path.
+    uint256 internal constant MIN_TOP_UP_AMOUNT = 1 ether;
+
+    /// @notice Maximum deposit amount — the Pectra 0x02 maximum effective balance.
+    uint256 internal constant MAX_DEPOSIT_AMOUNT = 2048 ether;
+
+    /// @notice Maximum stateless top-up: a funded validator should already have at least 32 ETH.
+    uint256 internal constant MAX_TOP_UP_AMOUNT = MAX_DEPOSIT_AMOUNT - MIN_INITIAL_DEPOSIT_AMOUNT;
+
     /// @dev Expected length for BLS pubkeys in a ConsolidationObject (source or target).
     uint256 internal constant CONSOLIDATION_PUBKEY_LENGTH = 48;
+
+    /// @dev keccak256 of an all-zero 48-byte pubkey; used to reject zero source pubkeys.
+    bytes32 internal constant ZERO_CONSOLIDATION_PUBKEY_HASH = keccak256(
+        hex"000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    );
 
     // -----------------------------------------------------------------------
     // Modifiers
@@ -163,6 +178,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
         RiverAddress.set(_river);
         emit SetRiver(_river);
 
+        _assertDepositDataBufferProcessor(_depositDataBuffer, _river);
         DepositDataBufferAddress.set(_depositDataBuffer);
         emit SetDepositDataBuffer(_depositDataBuffer);
 
@@ -233,9 +249,8 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
     /// @inheritdoc IAttestationVerifierV1
     /// @dev Validates that the new buffer authorizes River as its processor before storing it. A buffer
     ///      whose processor is not River would let attested deposits pass validation only to revert at
-    ///      `markDepositDataProcessed` — this rejects such a misconfiguration up front. The check lives
-    ///      on this admin setter (the runtime buffer-swap vector), not on `initAttestationVerifierV1`:
-    ///      init is deploy-script-controlled and stays permissive (mirroring the fork-version handling).
+    ///      `markDepositDataProcessed` — this rejects such a misconfiguration up front. The same
+    ///      invariant is enforced during initialization.
     function setDepositDataBuffer(address _depositDataBuffer) external onlyRiverAdmin {
         _assertDepositDataBufferProcessor(_depositDataBuffer, RiverAddress.get());
         DepositDataBufferAddress.set(_depositDataBuffer);
@@ -466,7 +481,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
             // InFlightDeposit / _assetBalance() (issue #441/#309). The upper bound and gwei-alignment
             // mirror `_depositValidator`; the 32-ETH floor is stricter here because this loop only
             // covers initial deposits (top-ups are validated separately below and stay >= 1 ETH).
-            if (d.amount < MIN_INITIAL_DEPOSIT_AMOUNT || d.amount > 2048 ether || d.amount % 1 gwei != 0) {
+            if (d.amount < MIN_INITIAL_DEPOSIT_AMOUNT || d.amount > MAX_DEPOSIT_AMOUNT || d.amount % 1 gwei != 0) {
                 revert InvalidDepositAmount(i, d.amount);
             }
             totalAmount += d.amount;
@@ -498,7 +513,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
             if (t.pubkey.length != DEPOSIT_PUBKEY_LENGTH) {
                 revert InvalidTopUpPubkeyLength(i, t.pubkey.length);
             }
-            if (t.amount < 1 ether || t.amount > 2048 ether || t.amount % 1 gwei != 0) {
+            if (t.amount < MIN_TOP_UP_AMOUNT || t.amount > MAX_TOP_UP_AMOUNT || t.amount % 1 gwei != 0) {
                 revert InvalidTopUpAmount(i, t.amount);
             }
             totalAmount += t.amount;
@@ -637,20 +652,15 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
     }
 
     /// @inheritdoc IAttestationVerifierV1
-    /// @dev Trust boundary: this function only validates structural shape (array shapes
-    ///      and pubkey byte lengths) and the attestation quorum (ECDSA signature recovery
-    ///      against the consolidation committee). It does NOT check:
-    ///        - Source/target pubkey uniqueness within the request (EIP-7251 single-use
-    ///          source rule). A source pubkey appearing twice, or a pubkey appearing in
-    ///          both source and target arrays, is not rejected here.
+    /// @dev Trust boundary: this function validates structural shape (array shapes,
+    ///      pubkey byte lengths, and single-use source pubkeys) plus the attestation
+    ///      quorum (ECDSA signature recovery against the consolidation committee). It
+    ///      does NOT check:
     ///        - `totalAmount` gwei alignment, upper bound, or correlation with the number
     ///          of (source, target) pairs.
-    ///        - Whether the source validators actually exist on the consensus layer or
-    ///          carry the protocol's withdrawal credentials.
+    ///        - Whether the source validators actually exist on the consensus layer
     ///      These are the responsibility of the caller (off-chain pipeline) and the
-    ///      consolidation committee that signs the request. The eventual
-    ///      `mintLsETHForConsolidation` River integration is the place to enforce any
-    ///      additional financial caps on `totalAmount`.
+    ///      consolidation committee that signs the request.
     function validateConsolidation(IAttestationVerifierV1.ConsolidationObject calldata consolidation)
         external
         onlyRiver
@@ -663,13 +673,15 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
         if (consolidation.totalAmount == 0) revert ZeroConsolidationTotalAmount();
         if (consolidation.withdrawalAddress == address(0)) revert ZeroConsolidationWithdrawalAddress();
 
-        // 2. Per-pair pubkey length checks
-        for (uint256 i = 0; i < sourceLen; i++) {
-            if (consolidation.sourcePubkeys[i].length != CONSOLIDATION_PUBKEY_LENGTH) {
-                revert InvalidConsolidationPubkeyLength(i, consolidation.sourcePubkeys[i].length, true);
+        // 2. Per-pair pubkey length checks, before hashing dynamic bytes.
+        for (uint256 i = 0; i < sourceLen; ++i) {
+            uint256 sourcePubkeyLength = consolidation.sourcePubkeys[i].length;
+            if (sourcePubkeyLength != CONSOLIDATION_PUBKEY_LENGTH) {
+                revert InvalidConsolidationPubkeyLength(i, sourcePubkeyLength, true);
             }
-            if (consolidation.targetPubkeys[i].length != CONSOLIDATION_PUBKEY_LENGTH) {
-                revert InvalidConsolidationPubkeyLength(i, consolidation.targetPubkeys[i].length, false);
+            uint256 targetPubkeyLength = consolidation.targetPubkeys[i].length;
+            if (targetPubkeyLength != CONSOLIDATION_PUBKEY_LENGTH) {
+                revert InvalidConsolidationPubkeyLength(i, targetPubkeyLength, false);
             }
         }
 
@@ -686,11 +698,12 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
         //    hashes to `keccak256` over the concatenation of its 32-byte elements.
         bytes32 domainSep = ConsolidationDomainSeparator.get();
         if (domainSep == bytes32(0)) revert ZeroConsolidationDomainSeparator();
+        bytes32[] memory sourcePubkeyHashes = _hashBytesArrayElements(consolidation.sourcePubkeys);
         bytes32 structHash = keccak256(
             abi.encode(
                 ATTEST_CONSOLIDATION_TYPEHASH,
                 consolidation.withdrawalAddress,
-                _hashBytesArray(consolidation.sourcePubkeys),
+                keccak256(abi.encodePacked(sourcePubkeyHashes)),
                 _hashBytesArray(consolidation.targetPubkeys),
                 consolidation.totalAmount,
                 _hashUintArray(consolidation.exitEpoch)
@@ -704,13 +717,37 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
             revert ConsolidationAlreadyProcessed(structHash);
         }
 
-        // 5. Verify the consolidation attestation quorum from the supplied signatures
+        // 5. Per-source single-use checks.
+        for (uint256 i = 0; i < sourceLen; ++i) {
+            bytes calldata sourcePubkey = consolidation.sourcePubkeys[i];
+            if (ProcessedConsolidationSourcePubkeys.isProcessed(sourcePubkey)) {
+                revert ConsolidationSourceAlreadyProcessed(sourcePubkey);
+            }
+            bytes32 sourcePubkeyHash = sourcePubkeyHashes[i];
+            if (sourcePubkeyHash == ZERO_CONSOLIDATION_PUBKEY_HASH) {
+                revert ZeroConsolidationSourcePubkey(i);
+            }
+            for (uint256 j = 0; j < i; ++j) {
+                if (
+                    sourcePubkeyHash == sourcePubkeyHashes[j]
+                        && _bytesEqual(sourcePubkey, consolidation.sourcePubkeys[j])
+                ) {
+                    revert ConsolidationSourceAlreadyProcessed(sourcePubkey);
+                }
+            }
+        }
+
+        // 6. Verify the consolidation attestation quorum from the supplied signatures
         bytes32 digest = ECDSA.toTypedDataHash(domainSep, structHash);
         _verifyConsolidationAttestationQuorum(digest, consolidation.signatures);
 
-        // 6. Mark as processed and emit
+        // 7. Mark the request and all of its sources as processed only after quorum
+        //    succeeds, so malformed signatures cannot burn a source pubkey.
         ProcessedConsolidations.markProcessed(structHash);
-        emit ConsolidationProcessed(structHash);
+        ProcessedConsolidationSourcePubkeys.markProcessed(consolidation.sourcePubkeys);
+        emit ConsolidationProcessed(
+            structHash, consolidation.sourcePubkeys, consolidation.targetPubkeys, consolidation.totalAmount
+        );
     }
 
     // -----------------------------------------------------------------------
@@ -810,11 +847,22 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
     /// @dev EIP-712 array hash for a `bytes[]` field. Each element is replaced by its
     ///      `keccak256`, and the resulting `bytes32[]` is concatenated and hashed.
     function _hashBytesArray(bytes[] calldata arr) internal pure returns (bytes32) {
-        bytes32[] memory hashes = new bytes32[](arr.length);
+        return keccak256(abi.encodePacked(_hashBytesArrayElements(arr)));
+    }
+
+    function _hashBytesArrayElements(bytes[] calldata arr) internal pure returns (bytes32[] memory hashes) {
+        hashes = new bytes32[](arr.length);
         for (uint256 i = 0; i < arr.length; i++) {
             hashes[i] = keccak256(arr[i]);
         }
-        return keccak256(abi.encodePacked(hashes));
+    }
+
+    function _bytesEqual(bytes calldata a, bytes calldata b) internal pure returns (bool) {
+        if (a.length != b.length) return false;
+        for (uint256 i = 0; i < a.length; ++i) {
+            if (a[i] != b[i]) return false;
+        }
+        return true;
     }
 
     /// @dev EIP-712 array hash for a `uint256[]` field. Each element is already an atomic
