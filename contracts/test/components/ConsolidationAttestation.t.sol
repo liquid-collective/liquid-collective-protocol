@@ -593,6 +593,7 @@ contract ConsolidationAttestationTest is Test {
             sourcePubkeys: sources,
             targetPubkeys: targets,
             totalAmount: 32 ether,
+            exitEpoch: _defaultEpochs(sources.length),
             signatures: new bytes[](0)
         });
         vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.ZeroConsolidationSourcePubkey.selector, 0));
@@ -632,6 +633,7 @@ contract ConsolidationAttestationTest is Test {
             sourcePubkeys: sources,
             targetPubkeys: targets,
             totalAmount: 32 ether,
+            exitEpoch: _defaultEpochs(sources.length),
             signatures: new bytes[](0)
         });
         vm.expectRevert(
@@ -653,6 +655,7 @@ contract ConsolidationAttestationTest is Test {
             sourcePubkeys: sources,
             targetPubkeys: targets,
             totalAmount: 32 ether,
+            exitEpoch: _defaultEpochs(sources.length),
             signatures: new bytes[](0)
         });
         vm.expectRevert(
@@ -842,6 +845,7 @@ contract ConsolidationAttestationTest is Test {
                 sourcePubkeys: firstSources,
                 targetPubkeys: firstTargets,
                 totalAmount: firstAmount,
+                exitEpoch: _defaultEpochs(firstSources.length),
                 signatures: firstSigs
             })
         );
@@ -855,6 +859,7 @@ contract ConsolidationAttestationTest is Test {
                 sourcePubkeys: secondSources,
                 targetPubkeys: secondTargets,
                 totalAmount: secondAmount,
+                exitEpoch: _defaultEpochs(secondSources.length),
                 signatures: firstSigs
             })
         );
@@ -893,6 +898,7 @@ contract ConsolidationAttestationTest is Test {
                 sourcePubkeys: firstSources,
                 targetPubkeys: firstTargets,
                 totalAmount: firstAmount,
+                exitEpoch: _defaultEpochs(firstSources.length),
                 signatures: firstSigs
             })
         );
@@ -906,6 +912,7 @@ contract ConsolidationAttestationTest is Test {
                 sourcePubkeys: secondSources,
                 targetPubkeys: secondTargets,
                 totalAmount: secondAmount,
+                exitEpoch: _defaultEpochs(secondSources.length),
                 signatures: secondSigs
             })
         );
@@ -936,6 +943,7 @@ contract ConsolidationAttestationTest is Test {
                 sourcePubkeys: sources,
                 targetPubkeys: targets,
                 totalAmount: totalAmount,
+                exitEpoch: _defaultEpochs(sources.length),
                 signatures: sigs
             })
         );
@@ -966,6 +974,7 @@ contract ConsolidationAttestationTest is Test {
                 sourcePubkeys: sources,
                 targetPubkeys: targets,
                 totalAmount: totalAmount,
+                exitEpoch: _defaultEpochs(sources.length),
                 signatures: signatures
             })
         );
@@ -992,6 +1001,7 @@ contract ConsolidationAttestationTest is Test {
                 sourcePubkeys: sources,
                 targetPubkeys: targets,
                 totalAmount: totalAmount,
+                exitEpoch: _defaultEpochs(sources.length),
                 signatures: signatures
             })
         );
@@ -1015,6 +1025,7 @@ contract ConsolidationAttestationTest is Test {
                 sourcePubkeys: sources,
                 targetPubkeys: targets,
                 totalAmount: totalAmount,
+                exitEpoch: _defaultEpochs(sources.length),
                 signatures: signatures
             })
         );
@@ -1047,6 +1058,7 @@ contract ConsolidationAttestationTest is Test {
                 sourcePubkeys: sources,
                 targetPubkeys: targets,
                 totalAmount: totalAmount,
+                exitEpoch: _defaultEpochs(sources.length),
                 signatures: underQuorumSigs
             })
         );
@@ -1065,6 +1077,7 @@ contract ConsolidationAttestationTest is Test {
                 sourcePubkeys: sources,
                 targetPubkeys: targets,
                 totalAmount: totalAmount,
+                exitEpoch: _defaultEpochs(sources.length),
                 signatures: quorumSigs
             })
         );
