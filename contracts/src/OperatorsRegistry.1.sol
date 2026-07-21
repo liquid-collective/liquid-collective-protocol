@@ -389,6 +389,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         if (
             _allocations.length == 0 && _elAllocations.length == 0
                 && _consolidationAllocations.consolidationRequests.length == 0
+                && _consolidationAllocations.ethPerOperator.length == 0
         ) {
             revert InvalidEmptyArray();
         }
@@ -400,11 +401,28 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             _requestELETHExits(_elAllocations, _maxFeePerWithdrawal, remainingETHExitsDemand);
         requestedETHAmount += elRequestedETHAmount;
 
-        if (_consolidationAllocations.consolidationRequests.length > 0) {
+        if (
+            _consolidationAllocations.consolidationRequests.length > 0
+                || _consolidationAllocations.ethPerOperator.length > 0
+        ) {
+            // Reservations and dispatch must come together: a one-sided allocation would either reserve
+            // exit demand for consolidations that never dispatch, or dispatch consolidations whose exited
+            // ETH is never reserved/reconciled.
+            if (
+                _consolidationAllocations.consolidationRequests.length == 0
+                    || _consolidationAllocations.ethPerOperator.length == 0
+            ) {
+                revert InvalidEmptyArray();
+            }
+
+            // Reserve the projected exited ETH per operator (against each operator's active-CL headroom),
+            // exactly like CL exits; emits RequestedETHExitsViaConsolidation per operator.
+            uint256 consolidationReserved = _reserveExitAllocations(_consolidationAllocations.ethPerOperator, true);
+
             remainingETHExitsDemand =
                 requestedETHAmount >= currentETHExitsDemand ? 0 : currentETHExitsDemand - requestedETHAmount;
-            if (_consolidationAllocations.ethAmount > remainingETHExitsDemand) {
-                revert ExitsGreaterThanExitDemand(_consolidationAllocations.ethAmount, remainingETHExitsDemand);
+            if (consolidationReserved > remainingETHExitsDemand) {
+                revert ExitsGreaterThanExitDemand(consolidationReserved, remainingETHExitsDemand);
             }
 
             // Forward the value remaining after EL fees; the Withdraw contract refunds any excess to the
@@ -414,12 +432,12 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
                 _consolidationAllocations.consolidationRequests, _maxFeePerConsolidation, msg.sender
             );
             totalFeePaid += consolidationValueBudget;
-            requestedETHAmount += _consolidationAllocations.ethAmount;
+            requestedETHAmount += consolidationReserved;
 
             // Update the buffer for ETH to be received via consolidation
             uint256 old = ExitConsolidationBuffer.get();
-            ExitConsolidationBuffer.set(old + _consolidationAllocations.ethAmount);
-            emit ExitConsolidationBufferSet(old, old + _consolidationAllocations.ethAmount);
+            ExitConsolidationBuffer.set(old + consolidationReserved);
+            emit ExitConsolidationBufferSet(old, old + consolidationReserved);
         }
 
         // Check that the exits requested do not exceed the current ETH exits demand
@@ -444,6 +462,18 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         private
         returns (uint256 requestedETHAmount)
     {
+        return _reserveExitAllocations(_allocations, false);
+    }
+
+    /// @notice Reserves full ETH exits per operator from an allocation array against each operator's exit
+    ///         headroom, and returns the total requested amount. Shared by the CL exit path and the
+    ///         internal-consolidation exit path; `_viaConsolidation` only selects which event is emitted.
+    /// @param _allocations Per-operator {operatorIndex, ethAmount}, strictly increasing by operatorIndex
+    /// @param _viaConsolidation When true, emit RequestedETHExitsViaConsolidation; otherwise RequestedETHExits
+    function _reserveExitAllocations(ExitETHAllocation[] calldata _allocations, bool _viaConsolidation)
+        private
+        returns (uint256 requestedETHAmount)
+    {
         for (uint256 i = 0; i < _allocations.length; ++i) {
             uint256 operatorIndex = _allocations[i].operatorIndex;
             uint256 ethAmount = _allocations[i].ethAmount;
@@ -462,7 +492,11 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
             _reserveOperatorExit(operator, operatorIndex, ethAmount, false);
             requestedETHAmount += ethAmount;
-            emit RequestedETHExits(operatorIndex, operator.requestedExits);
+            if (_viaConsolidation) {
+                emit RequestedETHExitsViaConsolidation(operatorIndex, operator.requestedExits);
+            } else {
+                emit RequestedETHExits(operatorIndex, operator.requestedExits);
+            }
         }
     }
 

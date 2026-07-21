@@ -2279,6 +2279,7 @@ contract OperatorsRegistryV1CoverageTests is OperatorsRegistryV1TestBase, Operat
 
 contract MockWithdrawForELExits {
     uint256 public withdrawCallCount;
+    uint256 public consolidateForExitCallCount;
     uint64[] public lastAmounts;
 
     function withdraw(bytes[] calldata, uint64[] calldata amounts, uint256, address excessFeeRecipient)
@@ -2287,6 +2288,17 @@ contract MockWithdrawForELExits {
     {
         ++withdrawCallCount;
         lastAmounts = amounts;
+        if (msg.value > 0) {
+            (bool ok,) = excessFeeRecipient.call{value: msg.value}("");
+            require(ok, "MockWithdraw: refund failed");
+        }
+    }
+
+    function consolidateForExit(IWithdrawV1.ConsolidationRequest[] calldata, uint256, address excessFeeRecipient)
+        external
+        payable
+    {
+        ++consolidateForExitCallCount;
         if (msg.value > 0) {
             (bool ok,) = excessFeeRecipient.call{value: msg.value}("");
             require(ok, "MockWithdraw: refund failed");
@@ -3065,5 +3077,183 @@ contract OperatorsRegistryV1ELExitTests is Test {
             )
         );
         reg.requestETHExits(empty, allocs, _noConsolidation, 0, 0);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Per-operator exit reservation for the consolidation exit path
+    // ─────────────────────────────────────────────────────────────────────────
+
+    event RequestedETHExits(uint256 indexed index, uint256 amount);
+    event RequestedETHExitsViaConsolidation(uint256 indexed index, uint256 amount);
+
+    IOperatorsRegistryV1.ExitETHAllocation[] internal _noCL;
+    IOperatorsRegistryV1.ELExitETHAllocation[] internal _noEL;
+
+    /// @dev Add `count` operators each with `activeCLETHEach` funded+active CL ETH, and set exit demand.
+    ///      A huge totalAvailableCLETH keeps demand uncapped so per-operator activeCLETH governs headroom.
+    function _setupConsolidationOperators(uint256 count, uint256 activeCLETHEach, uint256 demand) internal {
+        vm.startPrank(admin);
+        for (uint256 i; i < count; ++i) {
+            reg.addOperator(
+                string(abi.encodePacked("Op", vm.toString(i))), makeAddr(string(abi.encodePacked("op", vm.toString(i))))
+            );
+        }
+        vm.stopPrank();
+        for (uint256 i; i < count; ++i) {
+            reg.sudoSetFundedV3(i, activeCLETHEach);
+            reg.sudoSetActiveCLETH(i, activeCLETHEach);
+        }
+        vm.prank(river);
+        reg.demandETHExits(demand, type(uint128).max);
+    }
+
+    function _makeConsolidationAlloc(uint256[] memory opIdxs, uint256[] memory ethAmounts)
+        internal
+        pure
+        returns (IOperatorsRegistryV1.ExitsViaConsolidationAllocation memory alloc)
+    {
+        IOperatorsRegistryV1.ExitETHAllocation[] memory perOp =
+            new IOperatorsRegistryV1.ExitETHAllocation[](opIdxs.length);
+        for (uint256 i; i < opIdxs.length; ++i) {
+            perOp[i] = IOperatorsRegistryV1.ExitETHAllocation({operatorIndex: opIdxs[i], ethAmount: ethAmounts[i]});
+        }
+        IWithdrawV1.ConsolidationRequest[] memory reqs = new IWithdrawV1.ConsolidationRequest[](1);
+        bytes[] memory src = new bytes[](1);
+        src[0] = PUBKEY_48;
+        reqs[0] = IWithdrawV1.ConsolidationRequest({srcPubkeys: src, targetPubkey: PUBKEY_48});
+        alloc =
+            IOperatorsRegistryV1.ExitsViaConsolidationAllocation({ethPerOperator: perOp, consolidationRequests: reqs});
+    }
+
+    function _ops2(uint256 a, uint256 b) internal pure returns (uint256[] memory ops) {
+        ops = new uint256[](2);
+        ops[0] = a;
+        ops[1] = b;
+    }
+
+    function _amts2(uint256 a, uint256 b) internal pure returns (uint256[] memory amts) {
+        amts = new uint256[](2);
+        amts[0] = a;
+        amts[1] = b;
+    }
+
+    function _ops1(uint256 a) internal pure returns (uint256[] memory ops) {
+        ops = new uint256[](1);
+        ops[0] = a;
+    }
+
+    function _amts1(uint256 a) internal pure returns (uint256[] memory amts) {
+        amts = new uint256[](1);
+        amts[0] = a;
+    }
+
+    /// @notice Consolidation exits reserve per-operator (like CL/EL), bump the buffer by the sum, and
+    ///         decrement demand / increment total by the same amount.
+    function testConsolidationExitReservesPerOperator() public {
+        _setupConsolidationOperators(2, 100 ether, 100 ether);
+
+        vm.prank(keeper);
+        reg.requestETHExits(_noCL, _noEL, _makeConsolidationAlloc(_ops2(0, 1), _amts2(30 ether, 20 ether)), 0, 0);
+
+        assertEq(reg.getOperator(0).requestedExits, 30 ether, "op0 reserved");
+        assertEq(reg.getOperator(1).requestedExits, 20 ether, "op1 reserved");
+        assertEq(reg.getExitConsolidationBuffer(), 50 ether, "buffer sums the reservations");
+        assertEq(reg.getCurrentETHExitsDemand(), 50 ether, "demand reduced by 50");
+        assertEq(reg.getTotalETHExitsRequested(), 50 ether, "total requested = 50");
+        assertEq(mockWithdraw.consolidateForExitCallCount(), 1, "dispatched to Withdraw once");
+    }
+
+    /// @notice The consolidation reservation emits RequestedETHExitsViaConsolidation, distinct from the
+    ///         CL RequestedETHExits event.
+    function testConsolidationExitEmitsDistinctEvent() public {
+        _setupConsolidationOperators(1, 100 ether, 100 ether);
+
+        vm.expectEmit(true, true, true, true);
+        emit RequestedETHExitsViaConsolidation(0, 40 ether);
+        vm.prank(keeper);
+        reg.requestETHExits(_noCL, _noEL, _makeConsolidationAlloc(_ops1(0), _amts1(40 ether)), 0, 0);
+    }
+
+    /// @notice A CL exit still emits RequestedETHExits (not the consolidation variant) — confirms the two
+    ///         paths are distinguishable in logs.
+    function testCLExitStillEmitsRequestedETHExits() public {
+        IOperatorsRegistryV1.ExitsViaConsolidationAllocation memory _noConsolidation;
+        _setupConsolidationOperators(1, 100 ether, 100 ether);
+
+        IOperatorsRegistryV1.ExitETHAllocation[] memory cl = new IOperatorsRegistryV1.ExitETHAllocation[](1);
+        cl[0] = IOperatorsRegistryV1.ExitETHAllocation({operatorIndex: 0, ethAmount: 40 ether});
+
+        vm.expectEmit(true, true, true, true);
+        emit RequestedETHExits(0, 40 ether);
+        vm.prank(keeper);
+        reg.requestETHExits(cl, _noEL, _noConsolidation, 0, 0);
+    }
+
+    /// @notice ethPerOperator must be strictly increasing by operator index.
+    function testConsolidationExitRevertsUnorderedOperators() public {
+        _setupConsolidationOperators(2, 100 ether, 100 ether);
+
+        vm.prank(keeper);
+        vm.expectRevert(IOperatorsRegistryV1.UnorderedOperatorList.selector);
+        reg.requestETHExits(_noCL, _noEL, _makeConsolidationAlloc(_ops2(1, 0), _amts2(10 ether, 10 ether)), 0, 0);
+    }
+
+    /// @notice A per-operator reservation exceeding the operator's active-CL headroom reverts.
+    function testConsolidationExitRevertsExceedsHeadroom() public {
+        _setupConsolidationOperators(1, 10 ether, 100 ether);
+
+        vm.prank(keeper);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IOperatorsRegistryV1.ExitsRequestedExceedAvailableActiveCLAmount.selector,
+                uint256(0),
+                20 ether,
+                10 ether
+            )
+        );
+        reg.requestETHExits(_noCL, _noEL, _makeConsolidationAlloc(_ops1(0), _amts1(20 ether)), 0, 0);
+    }
+
+    /// @notice The summed consolidation reservation cannot exceed the remaining exit demand.
+    function testConsolidationExitRevertsExceedsDemand() public {
+        _setupConsolidationOperators(1, 100 ether, 10 ether);
+
+        vm.prank(keeper);
+        vm.expectRevert(
+            abi.encodeWithSelector(IOperatorsRegistryV1.ExitsGreaterThanExitDemand.selector, 20 ether, 10 ether)
+        );
+        reg.requestETHExits(_noCL, _noEL, _makeConsolidationAlloc(_ops1(0), _amts1(20 ether)), 0, 0);
+    }
+
+    /// @notice Consolidation requests without matching per-operator reservations revert.
+    function testConsolidationExitRevertsRequestsWithoutReservations() public {
+        _setupConsolidationOperators(1, 100 ether, 100 ether);
+
+        IOperatorsRegistryV1.ExitsViaConsolidationAllocation memory alloc;
+        alloc.ethPerOperator = new IOperatorsRegistryV1.ExitETHAllocation[](0);
+        IWithdrawV1.ConsolidationRequest[] memory reqs = new IWithdrawV1.ConsolidationRequest[](1);
+        bytes[] memory src = new bytes[](1);
+        src[0] = PUBKEY_48;
+        reqs[0] = IWithdrawV1.ConsolidationRequest({srcPubkeys: src, targetPubkey: PUBKEY_48});
+        alloc.consolidationRequests = reqs;
+
+        vm.prank(keeper);
+        vm.expectRevert(IOperatorsRegistryV1.InvalidEmptyArray.selector);
+        reg.requestETHExits(_noCL, _noEL, alloc, 0, 0);
+    }
+
+    /// @notice Per-operator reservations without any consolidation requests to dispatch revert.
+    function testConsolidationExitRevertsReservationsWithoutRequests() public {
+        _setupConsolidationOperators(1, 100 ether, 100 ether);
+
+        IOperatorsRegistryV1.ExitsViaConsolidationAllocation memory alloc;
+        IOperatorsRegistryV1.ExitETHAllocation[] memory perOp = new IOperatorsRegistryV1.ExitETHAllocation[](1);
+        perOp[0] = IOperatorsRegistryV1.ExitETHAllocation({operatorIndex: 0, ethAmount: 10 ether});
+        alloc.ethPerOperator = perOp;
+        alloc.consolidationRequests = new IWithdrawV1.ConsolidationRequest[](0);
+
+        vm.prank(keeper);
+        vm.expectRevert(IOperatorsRegistryV1.InvalidEmptyArray.selector);
+        reg.requestETHExits(_noCL, _noEL, alloc, 0, 0);
     }
 }

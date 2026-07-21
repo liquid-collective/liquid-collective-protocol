@@ -153,6 +153,7 @@ abstract contract WithdrawV1TestBase is Test {
         bytes32(uint256(keccak256("attestationVerifier.state.pectraValidatorPubkeyLookup")) - 1);
     bytes32 internal constant PRE_PECTRA_VALIDATOR_PUBKEY_LOOKUP_SLOT =
         bytes32(uint256(keccak256("attestationVerifier.state.prePectraValidatorPubkeyLookup")) - 1);
+    bytes32 internal constant WITHDRAW_ADDRESS_SLOT = bytes32(uint256(keccak256("river.state.withdrawAddress")) - 1);
 
     function setUp() public virtual {
         river = new RiverMock();
@@ -340,6 +341,9 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
             address(attestationVerifier)
         );
         _seedValidatorPubkey(VALID_PUBKEY_48);
+        // The verifier is deployed but not initialized in these tests; authorize this Withdraw for the
+        // exit-consolidation source-dedup path by seeding the stored Withdraw address directly.
+        vm.store(address(attestationVerifier), WITHDRAW_ADDRESS_SLOT, bytes32(uint256(uint160(address(withdraw)))));
     }
 
     function testInitWithdrawV1_1SetsAddresses() external {
@@ -494,6 +498,98 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
 
         assertEq(address(mockConsolidation).balance, 1 gwei);
         assertEq(excessFeeRecipient.balance, valueSent - 1 gwei);
+    }
+
+    function testConsolidateForExitOnlyCallableByOperatorsRegistry() external {
+        bytes[] memory srcPubkeys = new bytes[](1);
+        srcPubkeys[0] = VALID_PUBKEY_48;
+        IWithdrawV1.ConsolidationRequest[] memory requests = new IWithdrawV1.ConsolidationRequest[](1);
+        requests[0] = IWithdrawV1.ConsolidationRequest({srcPubkeys: srcPubkeys, targetPubkey: VALID_PUBKEY_48});
+        address random = makeAddr("random");
+        vm.deal(random, 10 gwei);
+        vm.prank(random);
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", random));
+        withdraw.consolidateForExit{value: 1 gwei}(requests, 1 gwei, excessFeeRecipient);
+    }
+
+    function testConsolidateForExitRejectsReplayedSourceAcrossCalls() external {
+        bytes memory source = _consolidationPubkey(101);
+        _seedValidatorPubkey(source);
+
+        bytes[] memory srcPubkeys = new bytes[](1);
+        srcPubkeys[0] = source;
+        IWithdrawV1.ConsolidationRequest[] memory requests = new IWithdrawV1.ConsolidationRequest[](1);
+        requests[0] = IWithdrawV1.ConsolidationRequest({srcPubkeys: srcPubkeys, targetPubkey: VALID_PUBKEY_48});
+
+        uint256 fee = 1 gwei;
+
+        // first exit consolidation succeeds and records the source in the shared dedup set
+        vm.deal(address(operatorsRegistry), fee);
+        vm.prank(address(operatorsRegistry));
+        withdraw.consolidateForExit{value: fee}(requests, fee, excessFeeRecipient);
+        assertEq(address(mockConsolidation).balance, fee);
+        assertTrue(attestationVerifier.isConsolidationSourceProcessed(source));
+
+        // replaying the same source must revert and forward no further fee
+        vm.deal(address(operatorsRegistry), fee);
+        vm.prank(address(operatorsRegistry));
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.ConsolidationSourceAlreadyProcessed.selector, source)
+        );
+        withdraw.consolidateForExit{value: fee}(requests, fee, excessFeeRecipient);
+        assertEq(address(mockConsolidation).balance, fee);
+    }
+
+    function testConsolidateForExitRejectsDuplicateSourceWithinBatch() external {
+        bytes memory source = _consolidationPubkey(102);
+        _seedValidatorPubkey(source);
+
+        bytes[] memory srcPubkeys = new bytes[](2);
+        srcPubkeys[0] = source;
+        srcPubkeys[1] = source;
+        IWithdrawV1.ConsolidationRequest[] memory requests = new IWithdrawV1.ConsolidationRequest[](1);
+        requests[0] = IWithdrawV1.ConsolidationRequest({srcPubkeys: srcPubkeys, targetPubkey: VALID_PUBKEY_48});
+
+        uint256 value = 2 gwei; // 2 operations * 1 gwei fee
+        vm.deal(address(operatorsRegistry), value);
+        vm.prank(address(operatorsRegistry));
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.ConsolidationSourceAlreadyProcessed.selector, source)
+        );
+        withdraw.consolidateForExit{value: value}(requests, 1 gwei, excessFeeRecipient);
+        // whole tx reverted (dedup runs before dispatch), so nothing was forwarded to the EL contract
+        assertEq(address(mockConsolidation).balance, 0);
+        assertFalse(attestationVerifier.isConsolidationSourceProcessed(source));
+    }
+
+    function testConsolidateDoesNotEnforceExitSourceDedup() external {
+        // The River-initiated consolidate path carries its replay protection in the attestation flow, so it
+        // must NOT consume the exit dedup set: the same source can be dispatched twice through it.
+        bytes[] memory srcPubkeys = new bytes[](1);
+        srcPubkeys[0] = VALID_PUBKEY_48;
+        IWithdrawV1.ConsolidationRequest[] memory requests = new IWithdrawV1.ConsolidationRequest[](1);
+        requests[0] = IWithdrawV1.ConsolidationRequest({srcPubkeys: srcPubkeys, targetPubkey: VALID_PUBKEY_48});
+
+        uint256 fee = 1 gwei;
+        vm.deal(address(river), fee);
+        vm.prank(address(river));
+        withdraw.consolidate{value: fee}(requests, fee, excessFeeRecipient);
+
+        vm.deal(address(river), fee);
+        vm.prank(address(river));
+        withdraw.consolidate{value: fee}(requests, fee, excessFeeRecipient);
+
+        assertEq(address(mockConsolidation).balance, 2 * fee);
+        assertFalse(attestationVerifier.isConsolidationSourceProcessed(VALID_PUBKEY_48));
+    }
+
+    function testConsumeConsolidationSourcesOnlyCallableByWithdraw() external {
+        bytes[] memory sources = new bytes[](1);
+        sources[0] = VALID_PUBKEY_48;
+        address random = makeAddr("random");
+        vm.prank(random);
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", random));
+        attestationVerifier.consumeConsolidationSources(sources);
     }
 
     function testConsolidateSourceAndTargetInValidatorLookupSucceeds() external {

@@ -43,8 +43,13 @@ interface IOperatorsRegistryV1 {
         uint64[] reservedExitAmounts; // gwei, accounting value reserved against headroom; always set
     }
 
+    /// @notice Structure representing exits requested via internal validator consolidation
+    /// @param ethPerOperator Per-operator reserved exit ETH(wei), reserved against each operator's exit
+    ///                       headroom exactly like CL exits. operatorIndex is keeper-supplied and trusted
+    ///                       (there is no on-chain pubkey->operator mapping post-Pectra), mirroring EL exits.
+    /// @param consolidationRequests The raw source->target consolidation requests dispatched to Withdraw
     struct ExitsViaConsolidationAllocation {
-        uint256 ethAmount;
+        ExitETHAllocation[] ethPerOperator;
         IWithdrawV1.ConsolidationRequest[] consolidationRequests;
     }
 
@@ -97,6 +102,11 @@ interface IOperatorsRegistryV1 {
     /// @param index The operator index
     /// @param amount The amount of requested exits in ETH(wei)
     event RequestedETHExits(uint256 indexed index, uint256 amount);
+
+    /// @notice The amount of ETH(wei) that has been requested to be exited via internal consolidation
+    /// @param index The operator index
+    /// @param amount The operator's cumulative requested exits in ETH(wei) after this reservation
+    event RequestedETHExitsViaConsolidation(uint256 indexed index, uint256 amount);
 
     /// @notice The amount of ETH(gwei) that has been requested to be exited per pubkey via EL
     /// @param index The operator index
@@ -440,7 +450,8 @@ interface IOperatorsRegistryV1 {
     /// @dev Reverts with NoExitRequestsToPerform if there is no pending exit demand
     /// @param _allocations The proposed per-operator exit ETH allocations, sorted by operator index
     /// @param _elAllocations The proposed per-operator per-pubkey EL exit ETH allocations, sorted by operator index
-    /// @param _consolidationAllocations Exits via internal consolidations exits
+    /// @param _consolidationAllocations Exits via internal consolidation: per-operator reserved ETH
+    ///        (`ethPerOperator`) plus the raw consolidation requests dispatched to Withdraw
     /// @param _maxFeePerWithdrawal The maximum fee for per withdrawal request
     /// @param _maxFeePerConsolidation The maximum fee for per consolidation request
     function requestETHExits(
