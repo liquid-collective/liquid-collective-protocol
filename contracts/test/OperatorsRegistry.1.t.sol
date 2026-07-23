@@ -241,7 +241,7 @@ abstract contract OperatorsRegistryV1TestBase is Test {
 
     event SetRiver(address indexed river);
     event UpdatedExitedETH(uint256[] exitedETH);
-    event SetOperatorExitedETH(uint256 operatorIndex, uint256 exitedETH);
+    event SetOperatorExitedETH(uint256 indexed index, uint256 exitedETH);
 }
 
 contract OperatorsRegistryV1InitializationTests is OperatorsRegistryV1TestBase {
@@ -725,6 +725,11 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, OperatorAlloca
         for (uint256 idx2 = 0; idx2 < len; ++idx2) {
             OperatorsRegistryInitializableV1(address(operatorsRegistry))
                 .sudoSetActiveCLETH(idx2, uint256(totalCount) * 32 ether);
+        }
+
+        for (uint256 idx = 1; idx < len + 1; ++idx) {
+            vm.expectEmit(true, true, true, true, address(operatorsRegistry));
+            emit SetOperatorExitedETH(idx - 1, exitedETH[idx]);
         }
 
         vm.prank(river);
