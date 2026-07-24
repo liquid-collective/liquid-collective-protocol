@@ -100,6 +100,11 @@ contract RiverV1ForceCommittable is RiverV1WithLegacyInit {
         IOracleManagerV1.StoredConsensusLayerReport storage report = LastConsensusLayerReport.get();
         report.slashingContainmentMode = _enabled;
     }
+
+    function sudoSetValidatorsBalance(uint256 _validatorsBalance) external {
+        IOracleManagerV1.StoredConsensusLayerReport storage report = LastConsensusLayerReport.get();
+        report.validatorsBalance = _validatorsBalance;
+    }
 }
 
 abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator {
@@ -3952,6 +3957,49 @@ contract RiverV1ConsolidationMintTests is RiverV1TestBase {
         vm.prank(consolidator);
         vm.expectRevert(abi.encodeWithSignature("Denied(address)", joe));
         river.mintLsETHForConsolidation(consolidation);
+    }
+
+    function testMintLsETHForConsolidationAtNonUnityPrice() public {
+        address depositor = makeAddr("depositor");
+        address[] memory allowees = new address[](1);
+        allowees[0] = depositor;
+        uint256[] memory permissions = new uint256[](1);
+        permissions[0] = LibAllowlistMasks.DEPOSIT_MASK;
+        vm.prank(allower);
+        allowlist.setAllowPermissions(allowees, permissions);
+
+        vm.deal(depositor, 10 ether);
+        vm.prank(depositor);
+        river.deposit{value: 10 ether}();
+        river.sudoSetValidatorsBalance(10 ether);
+
+        uint256 supplyBefore = river.totalSupply();
+        uint256 underlyingBefore = river.totalUnderlyingSupply();
+        assertEq(supplyBefore, 10 ether, "supply should equal deposited shares");
+        assertEq(underlyingBefore, 20 ether, "underlying should include validator balance");
+
+        uint256 amount = 3 ether;
+        uint256 expectedShares = (amount * supplyBefore) / underlyingBefore;
+        uint256 pricePerShareBefore = river.underlyingBalanceFromShares(1 ether);
+        assertLt(expectedShares, amount, "share price should exceed one");
+
+        _allowConsolidation(bob);
+        IAttestationVerifierV1.ConsolidationObject memory consolidation = _buildConsolidation(bob, amount, 11);
+
+        vm.expectEmit(true, true, true, true);
+        emit IRiverV1.LsETHMintedForConsolidation(bob, amount, expectedShares);
+        vm.prank(consolidator);
+        river.mintLsETHForConsolidation(consolidation);
+
+        assertEq(river.balanceOf(bob), expectedShares, "minted shares should follow share price");
+        assertEq(river.totalSupply(), supplyBefore + expectedShares, "total supply should grow by converted shares");
+        assertEq(river.totalUnderlyingSupply(), underlyingBefore + amount, "underlying should grow by totalAmount");
+        assertApproxEqAbs(
+            river.underlyingBalanceFromShares(1 ether),
+            pricePerShareBefore,
+            1,
+            "share price should be neutral within 1 wei"
+        );
     }
 
     function testMintLsETHForConsolidationCumulativeBalanceAndShares() public {
