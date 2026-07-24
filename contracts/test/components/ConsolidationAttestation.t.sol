@@ -565,6 +565,53 @@ contract ConsolidationAttestationTest is Test {
         _validateConsolidationAsRiver(c);
     }
 
+    function testRevert_tamperedWithdrawalAddress() public {
+        IAttestationVerifierV1.ConsolidationObject memory c = _validConsolidation(address(0x11), 41);
+        c.withdrawalAddress = address(0x22);
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.InsufficientConsolidationAttestations.selector, 0, 2)
+        );
+        _validateConsolidationAsRiver(c);
+    }
+
+    function testRevert_tamperedSourcePubkeys() public {
+        IAttestationVerifierV1.ConsolidationObject memory c = _validConsolidation(address(0x11), 42);
+        c.sourcePubkeys[0] = _pubkey(9999);
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.InsufficientConsolidationAttestations.selector, 0, 2)
+        );
+        _validateConsolidationAsRiver(c);
+    }
+
+    function testRevert_tamperedTargetPubkeys() public {
+        IAttestationVerifierV1.ConsolidationObject memory c = _validConsolidation(address(0x11), 43);
+        c.targetPubkeys[0] = _pubkey(9998);
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.InsufficientConsolidationAttestations.selector, 0, 2)
+        );
+        _validateConsolidationAsRiver(c);
+    }
+
+    function testRevert_tamperedTotalAmount() public {
+        IAttestationVerifierV1.ConsolidationObject memory c = _validConsolidation(address(0x11), 44);
+        c.totalAmount = c.totalAmount + 1;
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.InsufficientConsolidationAttestations.selector, 0, 2)
+        );
+        _validateConsolidationAsRiver(c);
+    }
+
+    function testRevert_swappedSourceAndTargetPubkeys() public {
+        IAttestationVerifierV1.ConsolidationObject memory c = _validConsolidation(address(0x11), 45);
+        bytes[] memory originalSources = c.sourcePubkeys;
+        c.sourcePubkeys = c.targetPubkeys;
+        c.targetPubkeys = originalSources;
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.InsufficientConsolidationAttestations.selector, 0, 2)
+        );
+        _validateConsolidationAsRiver(c);
+    }
+
     // -----------------------------------------------------------------------
     // Signature verification tests
     // -----------------------------------------------------------------------
