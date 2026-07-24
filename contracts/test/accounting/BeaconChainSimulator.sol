@@ -53,7 +53,7 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
     uint256 internal _simTotalDepositedActivatedETH;
     /// @dev Cumulative external-consolidation principal that has landed in validatorsBalance and been reported.
     ///      Monotonically increasing — incremented by the consolidation report step. `_buildReport` adds it to
-    ///      validatorsBalance and reports it as totalExternalConsolidationsAmountReported, so every report
+    ///      validatorsBalance and reports it as totalExternalConsolidationETH, so every report
     ///      carries the current cumulative value (normal reports keep it unchanged → on-chain delta 0).
     uint256 internal _simConsolidatedBalance;
 
@@ -228,6 +228,19 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
         revert("sim_slash: no active validator found");
     }
 
+    /// @dev Models an external consolidation that will be included in the next oracle report.
+    ///      `bufferedPrincipal` is the principal minted into the consolidation buffer at request time (counted in
+    ///      `_simTotalUserDeposited` for I2 ETH-conservation).
+    ///      `reportedAmount` is the delta to add to the cumulative `totalExternalConsolidationsAmountReported` for this report.
+    function sim_reportExternalConsolidation(uint256 bufferedPrincipal, uint256 reportedAmount) internal {
+        _simConsolidatedBalance += reportedAmount;
+        _simTotalUserDeposited += bufferedPrincipal;
+
+        if (reportedAmount > bufferedPrincipal) {
+            _simCumulativeAutocompounded += reportedAmount - bufferedPrincipal;
+        }
+    }
+
     /// @dev Convenience overload — delegates to the two-argument variant.
     function sim_oracleReport() internal {
         sim_oracleReport(false, false);
@@ -298,13 +311,13 @@ abstract contract BeaconChainSimulator is AccountingHarnessBase {
             exitedArr[0] += exitedArr[i];
         }
 
-        // The consolidated principal has landed on the CL, so it is part of the reported validatorsBalance.
+        // The consolidated amount has landed on the CL.
         report.validatorsBalance = validatorsBalance + _simConsolidatedBalance;
         report.validatorsSkimmedBalance = _simCumulativeSkimmed;
         report.validatorsExitedBalance = _simCumulativeExited;
         report.validatorsExitingBalance = validatorsExiting;
         report.totalDepositedActivatedETH = _simTotalDepositedActivatedETH;
-        report.totalExternalConsolidationsAmountReported = _simConsolidatedBalance;
+        report.totalExternalConsolidationETH = _simConsolidatedBalance;
         report.validatorsCount = activatedCount;
         report.exitedETHPerOperator = exitedArr;
         report.activeCLETHPerOperator = activeCLETHArr;

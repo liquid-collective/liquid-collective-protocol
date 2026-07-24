@@ -944,11 +944,21 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         vm.expectEmit(true, false, false, true);
         emit TopUps(0, topUpKeys, topUpAmounts);
 
+        uint256 committedBefore = dm.getCommittedBalance();
+        uint256 balanceBefore = address(dm).balance;
+        uint256 totalDepositedBefore = dm.getTotalDepositedETH();
+
         vm.prank(keeper);
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
 
         assertEq(dm.lastFundedETH(0), 64 ether, "both initial and top-up bump fundedETH");
         assertEq(depositContract.deposit_count(), 2);
+
+        assertEq(committedBefore - dm.getCommittedBalance(), 64 ether, "committed balance should decrease by 64 ETH");
+        assertEq(balanceBefore - address(dm).balance, 64 ether, "contract ETH balance should decrease by 64 ETH");
+        assertEq(
+            dm.getTotalDepositedETH() - totalDepositedBefore, 64 ether, "total deposited should increase by 64 ETH"
+        );
     }
 
     // Issue #543: a top-ups-only batch must NOT emit Deposits (which would inflate
@@ -1187,6 +1197,43 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         assertTrue(verifier.isPubkeyFunded(pk1), "pk1 added to post-Pectra");
     }
 
+    // After a self-consolidation promotes a migrated pre-Pectra key, the pre-Pectra gate must
+    // stop firing and the Pectra gate must take over: the key is now usable for top-ups and is
+    // rejected from re-deposit as already funded. Proves the promotion completes the migration
+    // state machine end-to-end (removal from the pre-Pectra lookup is load-bearing for gating).
+    function testSelfConsolidation_promotedPubkeyIsTopUpableAndNotRedepositable() public {
+        uint256 operatorIdx = 3;
+        uint256 seed = 622;
+        prePectraRegistry.setPrePectraFundedValidatorCount(operatorIdx, 1);
+        bytes memory pubkey = _seedPrePectraValidator(operatorIdx, 0, seed);
+
+        vm.prank(admin);
+        verifier.migratePrePectraValidatorPubkeys(operatorIdx, 0, 1);
+
+        bytes[] memory pubkeys = new bytes[](1);
+        pubkeys[0] = pubkey;
+        vm.prank(address(dm));
+        verifier.validateSelfConsolidation(pubkeys);
+
+        assertFalse(verifier.isPrePectraValidatorPubkeyFunded(pubkey), "pre-Pectra entry cleared by promotion");
+        assertTrue(verifier.isPubkeyFunded(pubkey), "post-Pectra entry added by promotion");
+
+        // Top-up now succeeds: the key is a recognised Pectra validator.
+        IDepositDataBuffer.TopUp[] memory topUps = new IDepositDataBuffer.TopUp[](1);
+        topUps[0] = _makeTopUpDeposit(operatorIdx, seed);
+        (bytes32 topUpId, bytes32 topUpRoot, bytes[] memory topUpSigs) = _prepareTopUps(topUps);
+        vm.prank(keeper);
+        dm.depositToConsensusLayerWithAttestation(topUpId, topUpRoot, topUpSigs);
+
+        // Re-deposit of the promoted key is rejected as already funded, not as a fresh deposit.
+        IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](1);
+        deposits[0] = _makeDeposit(operatorIdx, seed);
+        (bytes32 depositId, bytes32 depositRoot, bytes[] memory depositSigs) = _prepareDeposit(deposits);
+        vm.prank(keeper);
+        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.PubkeyAlreadyFunded.selector, deposits[0].pubkey));
+        dm.depositToConsensusLayerWithAttestation(depositId, depositRoot, depositSigs);
+    }
+
     function testValidateSelfConsolidation_revertsWhenCallerNotRiver() public {
         uint256 operatorIdx = 9;
         prePectraRegistry.setPrePectraFundedValidatorCount(operatorIdx, 1);
@@ -1340,8 +1387,41 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareTopUps(topUps);
 
         vm.prank(keeper);
-        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.TopUpPubkeyNotFunded.selector, topUps[0].pubkey));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAttestationVerifierPectraMigrationV1.PrePectraValidatorPubkeyNotConsolidated.selector, topUps[0].pubkey
+            )
+        );
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+    }
+
+    function testDeposit_migratedPrePectraPubkeyRevertsInValidate() public {
+        uint256 operatorIdx = 3;
+        uint256 seed = 621;
+        prePectraRegistry.setPrePectraFundedValidatorCount(operatorIdx, 1);
+        bytes memory pubkey = _seedPrePectraValidator(operatorIdx, 0, seed);
+
+        vm.prank(admin);
+        verifier.migratePrePectraValidatorPubkeys(operatorIdx, 0, 1);
+        assertTrue(verifier.isPrePectraValidatorPubkeyFunded(pubkey), "pre-Pectra lookup migration");
+        assertFalse(verifier.isPubkeyFunded(pubkey), "runtime lookup still empty");
+
+        IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](1);
+        deposits[0] = _makeDeposit(operatorIdx, seed);
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits);
+
+        vm.prank(keeper);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAttestationVerifierPectraMigrationV1.PrePectraValidatorPubkeyNotConsolidated.selector,
+                deposits[0].pubkey
+            )
+        );
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+
+        // The migrated key must never be recorded as a fresh Pectra deposit.
+        assertFalse(verifier.isPubkeyFunded(pubkey), "runtime lookup must remain empty after revert");
+        assertTrue(verifier.isPrePectraValidatorPubkeyFunded(pubkey), "pre-Pectra lookup unchanged after revert");
     }
 
     /// @dev Re-using a processed `depositDataBufferId` must revert with `DepositDataBufferIdAlreadyProcessed`.
@@ -1717,6 +1797,9 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits);
         vm.prank(keeper);
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs); // must not revert
+
+        assertEq(depositContract.deposit_count(), 1, "exact-minimum deposit must reach the deposit contract");
+        assertEq(dm.getTotalDepositedETH(), 32 ether, "total deposited must reflect the 32 ETH deposit");
     }
 
     /// @dev When a batch has two initial deposits and the second is below 32 ETH, validation must

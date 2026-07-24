@@ -8,12 +8,16 @@ inputs:
     required: true
 runs:
   using: 'docker'
-  image: 'mythril/myth:0.23.22'
+  image: 'mythril/myth:0.24.8'
   entrypoint: './mythril_entrypoint.sh'
   args:
     - 'analyze'
     - ${{ inputs.contract }}
     - '--execution-timeout'
     - '300'
-    - '--solc-json ./remappingPaths.json'
-    - '-t 10'
+    - '--solc-json'
+    - './remappingPaths.json'
+    - '--solv'
+    - '0.8.34'
+    - '-t'
+    - '10'
