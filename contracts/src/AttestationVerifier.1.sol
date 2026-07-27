@@ -29,7 +29,6 @@ import "./state/attestationVerifier/ProcessedDepositDataBufferIds.sol";
 import "./state/attestationVerifier/PectraValidatorPubkeyLookup.sol";
 import "./state/attestationVerifier/PrePectraValidatorPubkeyLookup.sol";
 import "./state/attestationVerifier/ProcessedConsolidationSourcePubkeys.sol";
-import "./state/operatorsRegistry/WithdrawAddress.sol";
 import "./state/shared/RiverAddress.sol";
 
 /// @title AttestationVerifier (v1)
@@ -133,16 +132,6 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
         _;
     }
 
-    /// @notice Restrict to the Withdraw contract.
-    /// @dev Gates the exit-consolidation source-dedup mutation (`consumeConsolidationSources`),
-    ///      which is only reached through `WithdrawV1.consolidateForExit`.
-    modifier onlyWithdraw() {
-        if (msg.sender != WithdrawAddress.get()) {
-            revert LibErrors.Unauthorized(msg.sender);
-        }
-        _;
-    }
-
     // -----------------------------------------------------------------------
     // Initialization
     // -----------------------------------------------------------------------
@@ -241,12 +230,6 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
             ConsolidationDomainSeparator.set(domainSeparator);
             emit SetConsolidationDomainSeparator(domainSeparator);
         }
-    }
-
-    /// @inheritdoc IAttestationVerifierV1
-    function initAttestationVerifierV1_1(address _withdraw) external init(1) {
-        WithdrawAddress.set(_withdraw);
-        emit SetWithdraw(_withdraw);
     }
 
     // -----------------------------------------------------------------------
@@ -652,28 +635,6 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
     /// @inheritdoc IAttestationVerifierV1
     function isConsolidationSourceProcessed(bytes calldata sourcePubkey) external view returns (bool) {
         return ProcessedConsolidationSourcePubkeys.isProcessed(sourcePubkey);
-    }
-
-    /// @inheritdoc IAttestationVerifierV1
-    /// @dev Shares the `ProcessedConsolidationSourcePubkeys` set with `validateConsolidation`, so a
-    ///      source consumed by either the exit-consolidation or the external-consolidation path blocks
-    ///      the other. Mirrors `validateConsolidation`'s per-source dedup: rejects sources already
-    ///      processed and in-batch duplicates before marking. Marks up front; a downstream EL dispatch
-    ///      failure in `WithdrawV1` reverts the whole transaction and rolls the marks back.
-    function consumeConsolidationSources(bytes[] calldata sourcePubkeys) external onlyWithdraw {
-        uint256 len = sourcePubkeys.length;
-        for (uint256 i = 0; i < len; ++i) {
-            bytes calldata sourcePubkey = sourcePubkeys[i];
-            if (ProcessedConsolidationSourcePubkeys.isProcessed(sourcePubkey)) {
-                revert ConsolidationSourceAlreadyProcessed(sourcePubkey);
-            }
-            for (uint256 j = 0; j < i; ++j) {
-                if (_bytesEqual(sourcePubkey, sourcePubkeys[j])) {
-                    revert ConsolidationSourceAlreadyProcessed(sourcePubkey);
-                }
-            }
-        }
-        ProcessedConsolidationSourcePubkeys.markProcessed(sourcePubkeys);
     }
 
     /// @inheritdoc IAttestationVerifierV1

@@ -302,23 +302,10 @@ library LibOracleReporting {
         uint256 consolidationBuffer = ConsolidationBuffer.get();
         uint256 exitConsolidationBuffer =
             IOperatorsRegistryV1(OperatorsRegistryAddress.get()).getExitConsolidationBuffer();
-        uint256 totalConsolidationCoverageDemand = consolidationBuffer + exitConsolidationBuffer;
-        if (totalConsolidationCoverageDemand > 0) {
+        if (consolidationBuffer + exitConsolidationBuffer > 0) {
+            // we do not update the rewards as consolidation coverage is not considered rewards
             vars.trace.pulledConsolidationCoverageFunds =
-                _pullConsolidationCoverageFunds(totalConsolidationCoverageDemand);
-            uint256 pulled = vars.trace.pulledConsolidationCoverageFunds;
-            if (pulled > 0) {
-                // external consolidation buffer is paid down first, any remainder covers the exit buffer
-                uint256 toConsolidation = LibUint256.min(pulled, consolidationBuffer);
-                if (toConsolidation > 0) {
-                    _setConsolidationBuffer(consolidationBuffer, consolidationBuffer - toConsolidation);
-                }
-                uint256 toExit = pulled - toConsolidation;
-                if (toExit > 0) {
-                    IOperatorsRegistryV1(OperatorsRegistryAddress.get()).reportExitViaConsolidation(toExit);
-                }
-                // we do not update the rewards as consolidation coverage is not considered rewards
-            }
+                _pullConsolidationCoverageFunds(consolidationBuffer, exitConsolidationBuffer);
         }
 
         // if our rewards are not null, we dispatch the fee to the collector
@@ -400,15 +387,32 @@ library LibOracleReporting {
         emit IRiverV1.PulledCoverageFunds(collectedCoverageFunds);
     }
 
-    /// @notice Pulls funds from the consolidation coverage fund to River and returns the delta in the balance
-    /// @param _max The maximum amount to pull from the consolidation coverage fund
-    /// @return collectedConsolidationCoverageFunds The amount pulled from the consolidation coverage fund
-    function _pullConsolidationCoverageFunds(uint256 _max)
+    /// @notice Pulls funds from the consolidation coverage fund to River and distributes them across the
+    ///         external consolidation buffer (paid first) and the exit consolidation buffer (remainder)
+    /// @param _consolidationBuffer The outstanding external consolidation buffer demand
+    /// @param _exitConsolidationBuffer The outstanding exit consolidation buffer demand
+    /// @return collectedConsolidationCoverageFunds The total amount pulled from the consolidation coverage fund
+    function _pullConsolidationCoverageFunds(uint256 _consolidationBuffer, uint256 _exitConsolidationBuffer)
         private
         returns (uint256 collectedConsolidationCoverageFunds)
     {
-        collectedConsolidationCoverageFunds = _pullFundsFromCoverageFund(ConsolidationCoverageFundAddress.get(), _max);
-        emit IRiverV1.PulledConsolidationCoverageFunds(collectedConsolidationCoverageFunds);
+        collectedConsolidationCoverageFunds = _pullFundsFromCoverageFund(
+            ConsolidationCoverageFundAddress.get(), _consolidationBuffer + _exitConsolidationBuffer
+        );
+        uint256 toConsolidation = 0;
+        uint256 toExit = 0;
+        if (collectedConsolidationCoverageFunds > 0) {
+            // external consolidation buffer is paid down first, any remainder covers the exit buffer
+            toConsolidation = LibUint256.min(collectedConsolidationCoverageFunds, _consolidationBuffer);
+            if (toConsolidation > 0) {
+                _setConsolidationBuffer(_consolidationBuffer, _consolidationBuffer - toConsolidation);
+            }
+            toExit = collectedConsolidationCoverageFunds - toConsolidation;
+            if (toExit > 0) {
+                IOperatorsRegistryV1(OperatorsRegistryAddress.get()).reportExitViaConsolidation(toExit);
+            }
+        }
+        emit IRiverV1.PulledConsolidationCoverageFunds(toConsolidation, toExit);
     }
 
     /// @notice Pulls funds from the redeem manager exceeding eth buffer

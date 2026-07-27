@@ -60,7 +60,6 @@ contract ConsolidationAttestationTest is Test {
     address internal attester3;
 
     address internal depositAttester = address(0xD1);
-    address internal withdrawContract = makeAddr("withdrawContract");
 
     // EIP-712 constants (must match AttestationVerifierV1)
     bytes32 internal constant EIP712_DOMAIN_TYPEHASH =
@@ -97,7 +96,6 @@ contract ConsolidationAttestationTest is Test {
         cCommittee[1] = attester2;
         cCommittee[2] = attester3;
         verifier.initAttestationVerifierV1(address(river), depositBufferStub, depCommittee, 1, bytes4(0), cCommittee, 2);
-        verifier.initAttestationVerifierV1_1(withdrawContract);
     }
 
     /// @dev Deploy + unbrick a fresh verifier.
@@ -348,13 +346,13 @@ contract ConsolidationAttestationTest is Test {
     }
 
     function testInit_revertAlreadyInitialized() public {
-        // setUp already ran initAttestationVerifierV1 (v0) and initAttestationVerifierV1_1 (v1), so the
-        // next expected version is 2 — calling the v0 initializer again must revert.
+        // setUp already ran initAttestationVerifierV1 (v0), so the next expected version is 1 —
+        // calling the v0 initializer again must revert.
         address[] memory dep = new address[](1);
         dep[0] = depositAttester;
         address[] memory cc = new address[](1);
         cc[0] = attester1;
-        vm.expectRevert(abi.encodeWithSignature("InvalidInitialization(uint256,uint256)", 0, 2));
+        vm.expectRevert(abi.encodeWithSignature("InvalidInitialization(uint256,uint256)", 0, 1));
         verifier.initAttestationVerifierV1(address(river), depositBufferStub, dep, 1, bytes4(0), cc, 1);
     }
 
@@ -835,101 +833,6 @@ contract ConsolidationAttestationTest is Test {
                 signatures: sigs
             })
         );
-    }
-
-    // -----------------------------------------------------------------------
-    // consumeConsolidationSources (exit-consolidation dedup) — shares the
-    // ProcessedConsolidationSourcePubkeys set with validateConsolidation.
-    // -----------------------------------------------------------------------
-
-    function testConsumeConsolidationSources_onlyWithdraw() public {
-        bytes[] memory sources = new bytes[](1);
-        sources[0] = _pubkey(1200);
-        address random = makeAddr("randomCaller");
-        vm.prank(random);
-        vm.expectRevert(abi.encodeWithSelector(LibErrors.Unauthorized.selector, random));
-        verifier.consumeConsolidationSources(sources);
-    }
-
-    function testConsumeConsolidationSources_marksSet() public {
-        bytes memory sourceA = _pubkey(1201);
-        assertFalse(verifier.isConsolidationSourceProcessed(sourceA));
-
-        bytes[] memory sources = new bytes[](1);
-        sources[0] = sourceA;
-        vm.prank(withdrawContract);
-        verifier.consumeConsolidationSources(sources);
-
-        assertTrue(verifier.isConsolidationSourceProcessed(sourceA));
-    }
-
-    function testConsumeConsolidationSources_rejectsAlreadyProcessed() public {
-        bytes memory sourceA = _pubkey(1202);
-        bytes[] memory sources = new bytes[](1);
-        sources[0] = sourceA;
-
-        vm.prank(withdrawContract);
-        verifier.consumeConsolidationSources(sources);
-
-        vm.prank(withdrawContract);
-        vm.expectRevert(
-            abi.encodeWithSelector(IAttestationVerifierV1.ConsolidationSourceAlreadyProcessed.selector, sourceA)
-        );
-        verifier.consumeConsolidationSources(sources);
-    }
-
-    function testConsumeConsolidationSources_rejectsInBatchDuplicate() public {
-        bytes memory sourceA = _pubkey(1203);
-        bytes[] memory sources = new bytes[](2);
-        sources[0] = sourceA;
-        sources[1] = sourceA;
-
-        vm.prank(withdrawContract);
-        vm.expectRevert(
-            abi.encodeWithSelector(IAttestationVerifierV1.ConsolidationSourceAlreadyProcessed.selector, sourceA)
-        );
-        verifier.consumeConsolidationSources(sources);
-
-        // nothing was marked since the batch reverted
-        assertFalse(verifier.isConsolidationSourceProcessed(sourceA));
-    }
-
-    /// @dev Unification: a source consumed via the exit path (consumeConsolidationSources) is then
-    ///      rejected by the external-consolidation path (validateConsolidation), since both share
-    ///      the ProcessedConsolidationSourcePubkeys set.
-    function testUnification_exitConsumedSourceBlocksValidateConsolidation() public {
-        uint256 seed = 1300;
-        bytes memory source = _pubkey(seed);
-
-        bytes[] memory sources = new bytes[](1);
-        sources[0] = source;
-        vm.prank(withdrawContract);
-        verifier.consumeConsolidationSources(sources);
-
-        // A fully-attested external consolidation reusing that source must now revert.
-        IAttestationVerifierV1.ConsolidationObject memory consolidation = _validConsolidation(address(0xCAFE), seed);
-        vm.expectRevert(
-            abi.encodeWithSelector(IAttestationVerifierV1.ConsolidationSourceAlreadyProcessed.selector, source)
-        );
-        _validateConsolidationAsRiver(consolidation);
-    }
-
-    /// @dev Unification (reverse): a source consumed by validateConsolidation is then rejected by the
-    ///      exit path (consumeConsolidationSources).
-    function testUnification_validateConsolidationSourceBlocksExitConsume() public {
-        uint256 seed = 1301;
-        bytes memory source = _pubkey(seed);
-
-        _validateConsolidationAsRiver(_validConsolidation(address(0xCAFE), seed));
-        assertTrue(verifier.isConsolidationSourceProcessed(source));
-
-        bytes[] memory sources = new bytes[](1);
-        sources[0] = source;
-        vm.prank(withdrawContract);
-        vm.expectRevert(
-            abi.encodeWithSelector(IAttestationVerifierV1.ConsolidationSourceAlreadyProcessed.selector, source)
-        );
-        verifier.consumeConsolidationSources(sources);
     }
 
     /// @dev Sources are marked processed only AFTER quorum succeeds, and the per-source loop

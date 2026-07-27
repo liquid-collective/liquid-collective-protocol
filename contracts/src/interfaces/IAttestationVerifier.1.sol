@@ -63,9 +63,6 @@ interface IAttestationVerifierV1 {
     /// @notice Emitted when the River address is set on this verifier
     event SetRiver(address indexed river);
 
-    /// @notice Emitted when the Withdraw address is set on this verifier
-    event SetWithdraw(address indexed withdraw);
-
     /// @notice Emitted when a consolidation-committee attester is added or removed
     event SetConsolidationCommitteeAttester(address indexed consolidationCommitteeAttester, bool value);
 
@@ -317,12 +314,6 @@ interface IAttestationVerifierV1 {
         uint256 _consolidationQuorum
     ) external;
 
-    /// @notice Second-step initializer wiring the Withdraw contract address.
-    /// @dev    Authorizes `consumeConsolidationSources` (exit-consolidation source dedup) to the
-    ///         Withdraw contract. Must be called after `initAttestationVerifierV1`.
-    /// @param _withdraw The Withdraw contract address.
-    function initAttestationVerifierV1_1(address _withdraw) external;
-
     // -----------------------------------------------------------------------
     // Validation entry point (called by River)
     // -----------------------------------------------------------------------
@@ -510,16 +501,9 @@ interface IAttestationVerifierV1 {
     /// @return True if the ID has already been executed
     function isDepositDataBufferIdProcessed(bytes32 depositDataBufferId) external view returns (bool);
 
-    /// @notice Check whether a consolidation source pubkey has already been consumed by either the
-    ///         external-consolidation (`validateConsolidation`) or exit-consolidation path.
+    /// @notice Check whether a consolidation source pubkey has already been consumed by the
+    ///         external-consolidation path (`validateConsolidation`).
     /// @param sourcePubkey The 48-byte BLS source pubkey
     /// @return True if the source pubkey has already been consumed
     function isConsolidationSourceProcessed(bytes calldata sourcePubkey) external view returns (bool);
-
-    /// @notice Consume consolidation source pubkeys for the exit-consolidation path, recording them in
-    ///         the shared source-dedup set. Callable only by the Withdraw contract.
-    /// @dev Reverts `ConsolidationSourceAlreadyProcessed` on a source already processed or duplicated
-    ///      within the batch, then marks all sources as processed.
-    /// @param sourcePubkeys The 48-byte BLS source pubkeys being consolidated away
-    function consumeConsolidationSources(bytes[] calldata sourcePubkeys) external;
 }

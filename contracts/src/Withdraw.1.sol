@@ -116,8 +116,8 @@ contract WithdrawV1 is IWithdrawV1, Initializable, ReentrancyGuard, IProtocolVer
         address excessFeeRecipient
     ) external payable onlyRiver nonReentrant {
         // River-initiated consolidations (external minting / Pectra migration) carry their own replay
-        // protection through the attestation flow, so the exit-path source dedup is not enforced here.
-        uint256 totalFeeRequired = _consolidate(requests, maxFeePerConsolidation, false);
+        // protection through the attestation flow.
+        uint256 totalFeeRequired = _consolidate(requests, maxFeePerConsolidation);
         _refundExcessFee(msg.value, totalFeeRequired, excessFeeRecipient);
     }
 
@@ -130,20 +130,19 @@ contract WithdrawV1 is IWithdrawV1, Initializable, ReentrancyGuard, IProtocolVer
         if (msg.sender != OperatorsRegistryAddress.get()) {
             revert LibErrors.Unauthorized(msg.sender);
         }
-        // Enforce on-chain source-pubkey dedup: a source can only ever be exited via consolidation once.
-        uint256 totalFeeRequired = _consolidate(requests, maxFeePerConsolidation, true);
+        // Source pubkeys are not deduplicated on-chain: the exited-ETH attribution supplied alongside
+        // these requests in `OperatorsRegistry.requestETHExits` is keeper-supplied and keeper-trusted
+        // anyway, and every source still has to be a known funded validator (see `_processConsolidationRequest`).
+        uint256 totalFeeRequired = _consolidate(requests, maxFeePerConsolidation);
         _refundExcessFee(msg.value, totalFeeRequired, excessFeeRecipient);
     }
 
     /// @notice Internal: shared consolidation logic. Validates fees, dispatches every request to the
     /// EL consolidation contract and returns the total fee consumed. Refunds are handled by the caller.
-    /// @param enforceSourceDedup When true (exit path), every source pubkey is checked against and
-    /// recorded in the AttestationVerifier's shared consolidation-source dedup set before dispatch.
-    function _consolidate(
-        IWithdrawV1.ConsolidationRequest[] calldata requests,
-        uint256 maxFeePerConsolidation,
-        bool enforceSourceDedup
-    ) internal returns (uint256 totalConsolidationFeePaid) {
+    function _consolidate(IWithdrawV1.ConsolidationRequest[] calldata requests, uint256 maxFeePerConsolidation)
+        internal
+        returns (uint256 totalConsolidationFeePaid)
+    {
         if (requests.length == 0) {
             revert InvalidEmptyArray();
         }
@@ -161,21 +160,6 @@ contract WithdrawV1 is IWithdrawV1, Initializable, ReentrancyGuard, IProtocolVer
         _validateSufficientValueForFee(msg.value, totalConsolidationFeePaid);
 
         IAttestationVerifierV1 attestationVerifier = IAttestationVerifierV1(AttestationVerifierAddress.get());
-
-        // Exit path: flatten every source across all requests and consume them in one call. This
-        // rejects sources already used (by this or the external-consolidation path) and in-batch
-        // duplicates before any fee is spent or EL call is made.
-        if (enforceSourceDedup) {
-            bytes[] memory sources = new bytes[](totalNumOfConsolidationOperations);
-            uint256 k = 0;
-            for (uint256 i = 0; i < requests.length; i++) {
-                bytes[] calldata srcPubkeys = requests[i].srcPubkeys;
-                for (uint256 j = 0; j < srcPubkeys.length; j++) {
-                    sources[k++] = srcPubkeys[j];
-                }
-            }
-            attestationVerifier.consumeConsolidationSources(sources);
-        }
 
         for (uint256 i = 0; i < requests.length; i++) {
             _processConsolidationRequest(requests[i], consolidationContract, attestationVerifier, fee);

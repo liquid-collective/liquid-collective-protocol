@@ -2993,7 +2993,7 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         bytes32(uint256(keccak256("river.state.externalConsolidationRecipientMappingAddress")) - 1);
     bytes32 constant CONSOLIDATOR_ADDRESS_SLOT = bytes32(uint256(keccak256("river.state.consolidatorAddress")) - 1);
 
-    event PulledConsolidationCoverageFunds(uint256 amount);
+    event PulledConsolidationCoverageFunds(uint256 toConsolidationBuffer, uint256 toExitConsolidationBuffer);
     event SetConsolidationBuffer(uint256 oldAmount, uint256 newAmount);
 
     // ── Layout-safe seeding of river's StoredConsensusLayerReport ──
@@ -3405,9 +3405,9 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         clr.activeCLETHPerOperator = new uint256[](1);
 
         vm.expectEmit(true, true, true, true, address(river));
-        emit PulledConsolidationCoverageFunds(buffer);
-        vm.expectEmit(true, true, true, true, address(river));
         emit SetConsolidationBuffer(buffer, 0);
+        vm.expectEmit(true, true, true, true, address(river));
+        emit PulledConsolidationCoverageFunds(buffer, 0);
 
         vm.prank(address(oracle));
         river.setConsensusLayerData(clr);
@@ -3441,9 +3441,9 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         clr.activeCLETHPerOperator = new uint256[](1);
 
         vm.expectEmit(true, true, true, true, address(river));
-        emit PulledConsolidationCoverageFunds(available);
-        vm.expectEmit(true, true, true, true, address(river));
         emit SetConsolidationBuffer(buffer, buffer - available);
+        vm.expectEmit(true, true, true, true, address(river));
+        emit PulledConsolidationCoverageFunds(available, 0);
 
         vm.prank(address(oracle));
         river.setConsensusLayerData(clr);
