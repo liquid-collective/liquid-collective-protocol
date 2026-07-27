@@ -104,13 +104,6 @@ interface IOracleManagerV1 {
         uint256 lastTotalConsolidationsAmountReported, uint256 newTotalConsolidationsAmountReported
     );
 
-    /// @notice The total consolidation amount reported has increased
-    /// @param lastTotalConsolidationsAmountReported The last total consolidation amount reported
-    /// @param newTotalConsolidationsAmountReported The new total consolidation amount reported
-    error InvalidTotalConsolidationsAmountReportedIncrease(
-        uint256 lastTotalConsolidationsAmountReported, uint256 newTotalConsolidationsAmountReported
-    );
-
     /// @notice Trace structure emitted via logs during reporting
     struct ConsensusLayerDataReportingTrace {
         uint256 rewards;

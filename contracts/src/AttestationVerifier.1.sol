@@ -633,11 +633,6 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
     }
 
     /// @inheritdoc IAttestationVerifierV1
-    function isConsolidationSourceProcessed(bytes calldata sourcePubkey) external view returns (bool) {
-        return ProcessedConsolidationSourcePubkeys.isProcessed(sourcePubkey);
-    }
-
-    /// @inheritdoc IAttestationVerifierV1
     /// @dev Trust boundary: this function validates structural shape (array shapes,
     ///      pubkey byte lengths, and single-use source pubkeys) plus the attestation
     ///      quorum (ECDSA signature recovery against the consolidation committee). It

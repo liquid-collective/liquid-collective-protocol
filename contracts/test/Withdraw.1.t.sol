@@ -509,8 +509,7 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
     }
 
     /// @dev Neither consolidation path deduplicates source pubkeys on-chain: the same source can be
-    ///      dispatched again, and no entry is written to the external-consolidation dedup set
-    ///      (`ProcessedConsolidationSourcePubkeys`, owned by `validateConsolidation`).
+    ///      dispatched again, in a later call or twice within one batch.
     function testConsolidateForExitAllowsRepeatedSource() external {
         bytes memory source = _consolidationPubkey(101);
         _seedValidatorPubkey(source);
@@ -532,7 +531,6 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         withdraw.consolidateForExit{value: fee}(requests, fee, excessFeeRecipient);
 
         assertEq(address(mockConsolidation).balance, 2 * fee);
-        assertFalse(attestationVerifier.isConsolidationSourceProcessed(source));
     }
 
     /// @dev Same source twice inside a single exit batch: both operations dispatch and both fees are paid.
@@ -552,7 +550,6 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         withdraw.consolidateForExit{value: value}(requests, 1 gwei, excessFeeRecipient);
 
         assertEq(address(mockConsolidation).balance, value);
-        assertFalse(attestationVerifier.isConsolidationSourceProcessed(source));
     }
 
     function testConsolidateSourceAndTargetInValidatorLookupSucceeds() external {

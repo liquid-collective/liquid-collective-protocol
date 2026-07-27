@@ -500,10 +500,4 @@ interface IAttestationVerifierV1 {
     /// @param depositDataBufferId The batch identifier
     /// @return True if the ID has already been executed
     function isDepositDataBufferIdProcessed(bytes32 depositDataBufferId) external view returns (bool);
-
-    /// @notice Check whether a consolidation source pubkey has already been consumed by the
-    ///         external-consolidation path (`validateConsolidation`).
-    /// @param sourcePubkey The 48-byte BLS source pubkey
-    /// @return True if the source pubkey has already been consumed
-    function isConsolidationSourceProcessed(bytes calldata sourcePubkey) external view returns (bool);
 }
