@@ -289,23 +289,24 @@ library LibOracleReporting {
             // we do not update the rewards as coverage is not considered rewards
         }
 
-        // reduce the exit consolidation buffer by the ETH that actually arrived via consolidation this report,
-        // before attempting coverage so we only cover the amount still pending
+        // reduce the exit consolidation buffer by the ETH that actually arrived via consolidation this report
         if (vars.totalExitViaConsolidationETHIncrease > 0) {
             IOperatorsRegistryV1(OperatorsRegistryAddress.get())
                 .reportExitViaConsolidation(vars.totalExitViaConsolidationETHIncrease);
         }
 
-        // both the external consolidation buffer and the exit consolidation buffer are backed by the same
-        // consolidation coverage fund, so we pull once for their combined demand and split the proceeds.
-        // we always attempt to pull the funds as we don't track on-chain if a consolidation failure has occurred
         uint256 consolidationBuffer = ConsolidationBuffer.get();
-        uint256 exitConsolidationBuffer =
-            IOperatorsRegistryV1(OperatorsRegistryAddress.get()).getExitConsolidationBuffer();
-        if (consolidationBuffer + exitConsolidationBuffer > 0) {
-            // we do not update the rewards as consolidation coverage is not considered rewards
-            vars.trace.pulledConsolidationCoverageFunds =
-                _pullConsolidationCoverageFunds(consolidationBuffer, exitConsolidationBuffer);
+        // if the consolidation buffer is greater than 0, we attempt to pull the funds from the consolidation coverage fund
+        // we always attempt to pull the funds as we don't track on-chain if a consolidation failure has occurred
+        if (consolidationBuffer > 0) {
+            vars.trace.pulledConsolidationCoverageFunds = _pullConsolidationCoverageFunds(consolidationBuffer);
+            if (vars.trace.pulledConsolidationCoverageFunds > 0) {
+                // we update the consolidation buffer
+                _setConsolidationBuffer(
+                    consolidationBuffer, consolidationBuffer - vars.trace.pulledConsolidationCoverageFunds
+                );
+                // we do not update the rewards as consolidation coverage is not considered rewards
+            }
         }
 
         // if our rewards are not null, we dispatch the fee to the collector
@@ -387,32 +388,15 @@ library LibOracleReporting {
         emit IRiverV1.PulledCoverageFunds(collectedCoverageFunds);
     }
 
-    /// @notice Pulls funds from the consolidation coverage fund to River and distributes them across the
-    ///         external consolidation buffer (paid first) and the exit consolidation buffer (remainder)
-    /// @param _consolidationBuffer The outstanding external consolidation buffer demand
-    /// @param _exitConsolidationBuffer The outstanding exit consolidation buffer demand
-    /// @return collectedConsolidationCoverageFunds The total amount pulled from the consolidation coverage fund
-    function _pullConsolidationCoverageFunds(uint256 _consolidationBuffer, uint256 _exitConsolidationBuffer)
+    /// @notice Pulls funds from the consolidation coverage fund to River and returns the delta in the balance
+    /// @param _max The maximum amount to pull from the consolidation coverage fund
+    /// @return collectedConsolidationCoverageFunds The amount pulled from the consolidation coverage fund
+    function _pullConsolidationCoverageFunds(uint256 _max)
         private
         returns (uint256 collectedConsolidationCoverageFunds)
     {
-        collectedConsolidationCoverageFunds = _pullFundsFromCoverageFund(
-            ConsolidationCoverageFundAddress.get(), _consolidationBuffer + _exitConsolidationBuffer
-        );
-        uint256 toConsolidation = 0;
-        uint256 toExit = 0;
-        if (collectedConsolidationCoverageFunds > 0) {
-            // external consolidation buffer is paid down first, any remainder covers the exit buffer
-            toConsolidation = LibUint256.min(collectedConsolidationCoverageFunds, _consolidationBuffer);
-            if (toConsolidation > 0) {
-                _setConsolidationBuffer(_consolidationBuffer, _consolidationBuffer - toConsolidation);
-            }
-            toExit = collectedConsolidationCoverageFunds - toConsolidation;
-            if (toExit > 0) {
-                IOperatorsRegistryV1(OperatorsRegistryAddress.get()).reportExitViaConsolidation(toExit);
-            }
-        }
-        emit IRiverV1.PulledConsolidationCoverageFunds(toConsolidation, toExit);
+        collectedConsolidationCoverageFunds = _pullFundsFromCoverageFund(ConsolidationCoverageFundAddress.get(), _max);
+        emit IRiverV1.PulledConsolidationCoverageFunds(collectedConsolidationCoverageFunds);
     }
 
     /// @notice Pulls funds from the redeem manager exceeding eth buffer
