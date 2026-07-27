@@ -3,6 +3,8 @@ pragma solidity 0.8.34;
 
 import "../AccountingInvariants.sol";
 import "../../../src/interfaces/IOperatorRegistry.1.sol";
+import "../../../src/interfaces/IRiver.1.sol";
+import "../../../src/state/operatorsRegistry/Operators.3.sol";
 
 contract ExitDemandTest is AccountingInvariants {
     function _depositAndRedeem(uint256 ethAmount) internal {
@@ -12,6 +14,22 @@ contract ExitDemandTest is AccountingInvariants {
         vm.deal(user, ethAmount);
         vm.prank(user);
         river.deposit{value: ethAmount}();
+        sim_requestRedeem(user, river.balanceOf(user));
+    }
+
+    function _depositActivateReportAndRedeem(address user, uint256 validatorCount, uint256 opIdx) internal {
+        uint256 ethAmount = validatorCount * DEPOSIT_SIZE;
+        _allowUser(user);
+        _simTotalUserDeposited += ethAmount;
+        vm.deal(user, ethAmount);
+        vm.prank(user);
+        river.deposit{value: ethAmount}();
+
+        river.debug_moveDepositToCommitted();
+        sim_deposit(opIdx, _amounts(validatorCount, DEPOSIT_SIZE));
+        sim_activateValidators(validatorCount);
+        sim_oracleReport();
+
         sim_requestRedeem(user, river.balanceOf(user));
     }
 
@@ -27,8 +45,23 @@ contract ExitDemandTest is AccountingInvariants {
     }
 
     function _requestETHExit(uint256 opIdx, uint256 ethAmount) internal {
-        IOperatorsRegistryV1.ExitETHAllocation[] memory allocations = new IOperatorsRegistryV1.ExitETHAllocation[](1);
-        allocations[0] = IOperatorsRegistryV1.ExitETHAllocation({operatorIndex: opIdx, ethAmount: ethAmount});
+        uint256[] memory opIdxs = new uint256[](1);
+        opIdxs[0] = opIdx;
+        uint256[] memory ethAmounts = new uint256[](1);
+        ethAmounts[0] = ethAmount;
+        _requestETHExits(opIdxs, ethAmounts);
+    }
+
+    function _requestETHExits(uint256[] memory opIdxs, uint256[] memory ethAmounts) internal {
+        require(opIdxs.length == ethAmounts.length, "exit allocation length mismatch");
+
+        IOperatorsRegistryV1.ExitETHAllocation[] memory allocations =
+            new IOperatorsRegistryV1.ExitETHAllocation[](opIdxs.length);
+        for (uint256 i = 0; i < opIdxs.length; i++) {
+            allocations[i] =
+                IOperatorsRegistryV1.ExitETHAllocation({operatorIndex: opIdxs[i], ethAmount: ethAmounts[i]});
+        }
+
         // Post-Pectra requestETHExits takes EL allocations + a max fee. This test only exercises the
         // CL-exit path, so the EL allocation array is empty and the fee is zero (no msg.value needed).
         IOperatorsRegistryV1.ELExitETHAllocation[] memory elAllocations =
@@ -52,6 +85,8 @@ contract ExitDemandTest is AccountingInvariants {
 
         uint256 requestedExitAmount = 2 * DEPOSIT_SIZE;
         assertEq(demandAfterFirst, requestedExitAmount, "should demand the exact redeem shortfall");
+        vm.expectEmit(true, false, false, true, address(operatorsRegistry));
+        emit IOperatorsRegistryV1.RequestedETHExits(operatorOneIndex, requestedExitAmount);
         _requestETHExit(operatorOneIndex, requestedExitAmount);
         uint256 demandAfterRequest = operatorsRegistry.getCurrentETHExitsDemand();
         assertEq(
@@ -85,6 +120,8 @@ contract ExitDemandTest is AccountingInvariants {
 
         // First post-redeem report runs under containment: exits must be skipped.
         _setAllowSharePriceDecrease(true);
+        vm.expectEmit(false, false, false, false, address(river));
+        emit IRiverV1.SkippedExitRequestsDueToSlashingContainment();
         sim_oracleReport(false, true);
         _setAllowSharePriceDecrease(false);
         assertEq(operatorsRegistry.getCurrentETHExitsDemand(), 0, "containment must skip demandETHExits");
@@ -149,6 +186,25 @@ contract ExitDemandTest is AccountingInvariants {
         assertEq(redeemManager.getWithdrawalEventCount(), withdrawalCountBefore + 1, "should create withdrawal event");
     }
 
+    function testPartialRebalancingMovesBufferAndDemandsResidualExits() public {
+        address redeemer = makeAddr("partialRebalanceRedeemer");
+        _depositActivateReportAndRedeem(redeemer, 3, operatorOneIndex);
+        _addUncommittedDeposit("partialRebalanceBuffer", DEPOSIT_SIZE);
+
+        uint256 redeemDemandBefore = redeemManager.getRedeemDemand();
+        uint256 withdrawalCountBefore = redeemManager.getWithdrawalEventCount();
+        assertEq(redeemDemandBefore, 3 * DEPOSIT_SIZE, "redeem demand before partial rebalancing");
+        assertEq(river.getBalanceToDeposit(), DEPOSIT_SIZE, "buffer should be smaller than redeem demand");
+
+        sim_oracleReport(true, false);
+
+        uint256 redeemDemandAfter = redeemManager.getRedeemDemand();
+        assertEq(redeemManager.getWithdrawalEventCount(), withdrawalCountBefore + 1, "rebalancing should service part");
+        assertLt(redeemDemandAfter, redeemDemandBefore, "redeem demand should be partially serviced");
+        assertEq(redeemDemandAfter, 2 * DEPOSIT_SIZE, "residual redeem demand");
+        assertEq(operatorsRegistry.getCurrentETHExitsDemand(), 2 * DEPOSIT_SIZE, "residual demand should require exits");
+    }
+
     /// @notice When rebalancing is disabled, an available deposit buffer is left untouched and the
     ///         shortfall is covered by demanding validator exits instead.
     function testRebalancingDisabledGoesStraightToExits() public {
@@ -173,6 +229,38 @@ contract ExitDemandTest is AccountingInvariants {
             withdrawalCountBefore,
             "no rebalancing-driven redeem servicing when rebalancing disabled"
         );
+    }
+
+    function testKeeperRequestSplitsExitAllocationAcrossOperators() public {
+        _fundRiver(4 * DEPOSIT_SIZE);
+        sim_deposit(operatorOneIndex, _amounts(2, DEPOSIT_SIZE));
+        sim_deposit(operatorTwoIndex, _amounts(2, DEPOSIT_SIZE));
+        sim_activateValidators(4);
+        sim_oracleReport();
+
+        _depositAndRedeem(3 * DEPOSIT_SIZE);
+        sim_oracleReport();
+        assertEq(operatorsRegistry.getCurrentETHExitsDemand(), 3 * DEPOSIT_SIZE, "multi-operator exit demand");
+
+        uint256[] memory opIdxs = new uint256[](2);
+        opIdxs[0] = operatorOneIndex;
+        opIdxs[1] = operatorTwoIndex;
+        uint256[] memory ethAmounts = new uint256[](2);
+        ethAmounts[0] = 2 * DEPOSIT_SIZE;
+        ethAmounts[1] = DEPOSIT_SIZE;
+
+        vm.expectEmit(true, false, false, true, address(operatorsRegistry));
+        emit IOperatorsRegistryV1.RequestedETHExits(operatorOneIndex, 2 * DEPOSIT_SIZE);
+        vm.expectEmit(true, false, false, true, address(operatorsRegistry));
+        emit IOperatorsRegistryV1.RequestedETHExits(operatorTwoIndex, DEPOSIT_SIZE);
+        _requestETHExits(opIdxs, ethAmounts);
+
+        OperatorsV3.Operator memory operatorOne = operatorsRegistry.getOperator(operatorOneIndex);
+        OperatorsV3.Operator memory operatorTwo = operatorsRegistry.getOperator(operatorTwoIndex);
+        assertEq(operatorOne.requestedExits, 2 * DEPOSIT_SIZE, "operator one allocation");
+        assertEq(operatorTwo.requestedExits, DEPOSIT_SIZE, "operator two allocation");
+        assertEq(operatorsRegistry.getTotalETHExitsRequested(), 3 * DEPOSIT_SIZE, "total requested exits");
+        assertEq(operatorsRegistry.getCurrentETHExitsDemand(), 0, "keeper allocations should consume demand");
     }
 
     function testOneEtherMinimumFloor() public {

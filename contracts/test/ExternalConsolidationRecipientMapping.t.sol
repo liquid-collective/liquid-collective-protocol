@@ -8,7 +8,7 @@ import "./utils/UserFactory.sol";
 import "./utils/LibImplementationUnbricker.sol";
 
 import "../src/Allowlist.1.sol";
-import "../src/ExternalConsolidationRecipientMapping.sol";
+import "../src/ExternalConsolidationRecipientMapping.1.sol";
 import "../src/interfaces/IExternalConsolidationRecipientMapping.1.sol";
 import "../src/libraries/LibAllowlistMasks.sol";
 
@@ -32,7 +32,7 @@ abstract contract ExternalConsolidationRecipientMappingV1TestBase is Test {
     address internal admin;
 
     event SetRiver(address indexed river);
-    event SetRecipient(address indexed withdrawalCredential, address indexed recipient);
+    event SetRecipient(address indexed withdrawalCredentialAddress, address indexed recipient);
 
     function _allowConsolidation(address account) internal {
         address[] memory accounts = new address[](1);
@@ -171,10 +171,28 @@ contract ExternalConsolidationRecipientMappingV1Tests is ExternalConsolidationRe
         vm.stopPrank();
 
         assertEq(mappingContract.getRecipient(sender), address(0));
+        assertEq(mappingContract.resolveRecipient(sender), sender);
     }
 
     function testGetRecipientUnset() external {
-        assertEq(mappingContract.getRecipient(makeAddr("withdrawalCredential")), address(0));
+        assertEq(mappingContract.getRecipient(makeAddr("withdrawalCredentialAddress")), address(0));
+    }
+
+    function testResolveRecipientUnsetReturnsWithdrawalCredentialAddress() external {
+        address withdrawalCredentialAddress = makeAddr("withdrawalCredentialAddress");
+
+        assertEq(mappingContract.resolveRecipient(withdrawalCredentialAddress), withdrawalCredentialAddress);
+    }
+
+    function testResolveRecipientSetReturnsMappedRecipient() external {
+        address withdrawalCredentialAddress = makeAddr("withdrawalCredentialAddress");
+        address recipient = makeAddr("recipient");
+        _allowConsolidation(withdrawalCredentialAddress);
+
+        vm.prank(withdrawalCredentialAddress);
+        mappingContract.setRecipient(recipient);
+
+        assertEq(mappingContract.resolveRecipient(withdrawalCredentialAddress), recipient);
     }
 
     function testVersion() external {
