@@ -4,9 +4,9 @@ pragma solidity 0.8.34;
 import "../../libraries/LibUnstructuredStorage.sol";
 
 /// @title ExitConsolidationBuffer Storage
-/// @notice This value is the amount of performed exit requests, only increased when there is current exit demand
-/// @notice Utility to manage the ExitConsolidationBuffer in storage
-/// @dev This value is in ETH(wei)
+/// @notice Tracks the amount of ETH (wei) expected to arrive from exit-via-consolidation operations.
+/// @dev Increased when consolidation exits are reserved (in OperatorsRegistry.requestETHExits) and decreased
+///      when arrival/coverage is reported (via reportExitViaConsolidation).
 library ExitConsolidationBuffer {
     /// @notice Storage slot of the ExitConsolidationBuffer
     bytes32 internal constant EXIT_CONSOLIDATION_BUFFER_SLOT =

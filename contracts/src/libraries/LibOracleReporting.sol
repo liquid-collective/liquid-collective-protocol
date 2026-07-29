@@ -159,6 +159,12 @@ library LibOracleReporting {
                 }
             }
 
+            if (_report.totalExitViaConsolidationETH < lastStoredReport.totalExitViaConsolidationETH) {
+                revert IOracleManagerV1.InvalidTotalExitViaConsolidationsAmountReportedDecrease(
+                    lastStoredReport.totalExitViaConsolidationETH, _report.totalExitViaConsolidationETH
+                );
+            }
+
             if (_report.totalExitViaConsolidationETH > lastStoredReport.totalExitViaConsolidationETH) {
                 vars.totalExitViaConsolidationETHIncrease =
                     _report.totalExitViaConsolidationETH - lastStoredReport.totalExitViaConsolidationETH;
