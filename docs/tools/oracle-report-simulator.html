@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>setConsensusLayerData — execution trace</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#161a21; --panel2:#1c212a; --line:#2a313d;
+    --fg:#e6e9ef; --dim:#8d97a8; --faint:#5b6474;
+    --acc:#6aa9ff; --ok:#4ec9a0; --warn:#e0b050; --bad:#e06c75; --neutral:#9a7fd1;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);height:100vh;
+       display:flex;flex-direction:column;overflow:hidden;
+       font:13px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+  code,.num,input{font-family:var(--mono)}
+
+  header{padding:9px 14px;border-bottom:1px solid var(--line);background:var(--panel);
+         display:flex;align-items:center;gap:12px;flex-wrap:wrap;flex:none}
+  header h1{margin:0;font-size:13px;font-weight:600}
+  header h1 code{color:var(--acc);font-size:12px}
+  .verdict{font-size:11px;font-weight:600;padding:2px 9px;border-radius:3px;border:1px solid}
+  .verdict.ok{color:var(--ok);border-color:var(--ok);background:#132a22}
+  .verdict.bad{color:var(--bad);border-color:var(--bad);background:#2c1618}
+  .views{display:flex;gap:0;border:1px solid var(--line);border-radius:3px;overflow:hidden}
+  .views a{font-size:11px;padding:3px 10px;color:var(--dim);text-decoration:none;
+           background:var(--panel2)}
+  .views a.cur{background:#22304a;color:var(--acc)}
+  .views a:hover{color:var(--acc)}
+  .presets{margin-left:auto;display:flex;gap:5px;flex-wrap:wrap}
+  button{background:var(--panel2);color:var(--fg);border:1px solid var(--line);
+         border-radius:3px;padding:4px 9px;font-size:11px;cursor:pointer}
+  button:hover{border-color:var(--acc);color:var(--acc)}
+  button.on{border-color:var(--acc);color:var(--acc)}
+
+  main{display:grid;grid-template-columns:296px minmax(430px,1fr) 382px;flex:1;min-height:0;
+       overflow-x:auto}
+  .pane{overflow-y:auto;overflow-x:hidden;padding:11px}
+  .pane+.pane{border-left:1px solid var(--line)}
+  h2.pt{font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--faint);
+        margin:0 0 9px;font-weight:600}
+
+  fieldset{border:1px solid var(--line);border-radius:4px;margin:0 0 9px;padding:7px 9px 8px}
+  legend{font-size:10px;letter-spacing:.05em;color:var(--dim);padding:0 4px}
+  .row{display:flex;align-items:center;gap:6px;margin:2px 0}
+  .row label{flex:1;font-size:11px;color:var(--dim);white-space:nowrap;overflow:hidden;
+             text-overflow:ellipsis}
+  .row input[type=text]{width:92px;background:var(--bg);color:var(--fg);border:1px solid var(--line);
+        border-radius:3px;padding:2px 5px;font-size:11px;text-align:right}
+  .row input[type=text]:focus{outline:none;border-color:var(--acc)}
+  .row .u{width:20px;font-size:10px;color:var(--faint)}
+  .row.ck{gap:7px}.row.ck label{flex:1;font-size:11px}
+  .hint{font-size:10px;color:var(--faint);margin:5px 0 0;line-height:1.45}
+
+  .stage{border:1px solid var(--line);border-left:3px solid var(--line);border-radius:4px;
+         background:var(--panel);margin-bottom:7px}
+  .stage.taken{border-left-color:var(--ok)}
+  .stage.skipped{border-left-color:var(--faint);opacity:.52}
+  .stage.revert{border-left-color:var(--bad);background:#1d1517}
+  .stage.info{border-left-color:var(--acc)}
+  .stage.pass{border-left-color:var(--neutral)}
+  .sh{display:flex;align-items:baseline;gap:9px;padding:6px 10px}
+  .sh .ln{font-family:var(--mono);font-size:10px;color:var(--faint);min-width:54px;flex:none}
+  .sh .nm{font-weight:600;font-size:12px}.sh .nm code{font-size:12px}
+  .sh .tg{margin-left:auto;font-size:10px;padding:1px 6px;border-radius:8px;flex:none;
+          border:1px solid var(--line);color:var(--dim);white-space:nowrap}
+  .tg.g{border-color:var(--ok);color:var(--ok)}
+  .tg.s{border-color:var(--faint);color:var(--faint)}
+  .tg.r{border-color:var(--bad);color:var(--bad)}
+  .tg.b{border-color:var(--acc);color:var(--acc)}
+  .sb{padding:0 10px 8px 73px}
+  .cond{font-family:var(--mono);font-size:11px;color:var(--dim);background:var(--panel2);
+        border-radius:3px;padding:4px 7px;margin-bottom:6px;white-space:pre-wrap;overflow-x:auto}
+  .cond b{color:var(--fg)}
+  .note{font-size:11px;color:var(--dim);margin:4px 0 0}
+  .note.f{color:var(--warn)}
+  .errmsg{font-family:var(--mono);font-size:11px;color:var(--bad);background:#2a1618;
+          border-radius:3px;padding:5px 7px;white-space:pre-wrap}
+  table.d{border-collapse:collapse;font-family:var(--mono);font-size:11px}
+  table.d td{padding:1px 0}
+  table.d td.k{color:var(--dim);padding-right:12px}
+  table.d td.v{text-align:right;min-width:92px}
+  table.d td.a{width:18px;text-align:center;color:var(--faint)}
+  .up{color:var(--ok)}.down{color:var(--bad)}.same{color:var(--faint)}
+
+  .card{border:1px solid var(--line);border-radius:4px;background:var(--panel);
+        padding:8px 10px;margin-bottom:9px}
+  .card h3{margin:0 0 7px;font-size:10px;letter-spacing:.07em;text-transform:uppercase;
+           color:var(--dim);font-weight:600;display:flex;align-items:baseline;gap:6px}
+  .card h3 .r{margin-left:auto;font-size:10px;letter-spacing:0;text-transform:none}
+  .legend{font-size:10px;color:var(--faint);margin-top:6px;line-height:1.5}
+  .sw{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:3px}
+
+  .g{display:flex;align-items:center;gap:7px;font-size:11px;padding:2px 0}
+  .g .gl{flex:1;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .g .gm{font-family:var(--mono);font-size:10px;color:var(--faint);flex:none}
+  .g .gp{flex:none;font-size:9px;padding:0 5px;border-radius:7px;border:1px solid;width:60px;
+         text-align:center}
+  .gp.ok{color:var(--ok);border-color:#2c5445}
+  .gp.bad{color:var(--bad);border-color:var(--bad);background:#2c1618;font-weight:600}
+  .gp.na{color:var(--faint);border-color:#252b35}
+
+  .id{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:11px;margin:2px 0}
+  .id .sg{width:9px;color:var(--faint);flex:none}
+  .id .lb{width:132px;color:var(--dim);font-size:10px;flex:none;white-space:nowrap;
+          overflow:hidden;text-overflow:ellipsis}
+  .id .bw{flex:1;height:9px;position:relative}
+  .id .bw i{position:absolute;top:0;bottom:0;border-radius:2px}
+  .id .vl{width:86px;text-align:right;flex:none}
+  .idt{border-top:1px solid var(--line);margin-top:5px;padding-top:5px;font-weight:600}
+
+  .wf{display:flex;align-items:center;gap:6px;font-size:10px;margin:3px 0}
+  .wf .wl{width:112px;color:var(--dim);text-align:right;flex:none}
+  .wf .wt{flex:1;height:13px;background:var(--panel2);border-radius:2px;position:relative}
+  .wf .wt i{position:absolute;top:0;bottom:0;border-radius:2px}
+  .wf .wv{width:80px;text-align:right;font-family:var(--mono);flex:none}
+  .wf.ob .wl{color:var(--warn)}
+
+  .lw{overflow-x:auto}
+  table.lg{border-collapse:collapse;font-family:var(--mono);font-size:10px;white-space:nowrap}
+  table.lg th{color:var(--faint);font-weight:500;font-size:9px;padding:3px 5px;
+              border-bottom:1px solid var(--line);text-align:right}
+  table.lg th:first-child{text-align:left;position:sticky;left:0;background:var(--panel)}
+  table.lg td{padding:2px 5px;text-align:right;border-bottom:1px solid #1e242e}
+  table.lg td:first-child{text-align:left;color:var(--dim);position:sticky;left:0;
+                          background:var(--panel)}
+  table.lg td.c{color:var(--acc);background:#17253a}
+  table.lg tr.tot td{border-top:1px solid var(--line);color:var(--fg)}
+  table.lg tr.tot td:first-child{color:var(--fg);font-weight:600}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Oracle report — <code>LibOracleReporting.setConsensusLayerData</code></h1>
+  <span id="verdict" class="verdict ok">completed</span>
+  <span class="views">
+    <a class="cur" href="oracle-report-simulator.html">trace</a>
+    <a href="oracle-report-flows.html">flows</a>
+  </span>
+  <div class="presets" id="presets"></div>
+</header>
+
+<main>
+  <section class="pane" id="inputs"></section>
+  <section class="pane"><h2 class="pt">Execution trace</h2><div id="trace"></div></section>
+  <section class="pane" id="side"></section>
+</main>
+
+<script src="report-sim.js"></script>
+<script>
+"use strict";
+const {fmt, esc, max, readInputs, simulate} = ReportSim;
+
+function renderTrace(r){
+  document.getElementById("trace").innerHTML = r.steps.map(s=>{
+    const [cls,txt] = s.tag || ["",""];
+    let body = "";
+    if(s.cond) body += `<div class="cond">${s.cond}</div>`;
+    if(s.err)  body += `<div class="errmsg">${esc(s.err).replace(/&amp;lt;/g,"&lt;")}</div>`;
+    if(s.deltas && s.deltas.length) body += `<table class="d">` + s.deltas.map(dd=>{
+      const [k,a,b] = dd;
+      const cl = b>a?"up":b<a?"down":"same";
+      return `<tr><td class="k">${k}</td><td class="v same">${fmt(a)}</td>`
+           + `<td class="a">→</td><td class="v ${cl}">${fmt(b)}</td></tr>`;
+    }).join("") + `</table>`;
+    if(s.notes) body += s.notes.map(n=>`<p class="note ${n[0]}">${n[1]}</p>`).join("");
+    return `<div class="stage ${s.kind}"><div class="sh"><span class="ln">${s.lines}</span>`
+      + `<span class="nm">${s.name}</span>`
+      + (txt?`<span class="tg ${cls}">${txt}</span>`:"") + `</div>`
+      + (body?`<div class="sb">${body}</div>`:"") + `</div>`;
+  }).join("");
+}
+
+const ALL_GUARDS = ["Valid epoch","exited not decreasing","skimmed not decreasing",
+  "activated not decreasing","activatedInc ≤ inFlight","count not decreasing",
+  "extConsol not decreasing","CL pull delivers exactly","upper bound","lower bound",
+  "shares > 0 for onEarnings"];
+
+function renderSide(r){
+  const byName = {}; r.guards.forEach(g=>byName[g.label]=g);
+  const guardHtml = ALL_GUARDS.map(n=>{
+    const g = byName[n];
+    if(!g) return `<div class="g"><span class="gl">${n}</span>`
+      + `<span class="gm">not reached</span><span class="gp na">—</span></div>`;
+    return `<div class="g"><span class="gl">${n}</span><span class="gm">${g.margin||""}</span>`
+      + (g.ok?`<span class="gp ok">pass</span>`:`<span class="gp bad">REVERT</span>`) + `</div>`;
+  }).join("");
+
+  let idHtml = `<p class="legend">not reached</p>`;
+  if(r.identity){
+    const t = r.identity.terms;
+    const scale = t.reduce((m,x)=>max(m, x[2]<0n?-x[2]:x[2]), 1n);
+    idHtml = t.map(x=>{
+      const [sg,lb,v] = x, av = v<0n?-v:v, w = Number(av*100n/scale);
+      return `<div class="id"><span class="sg">${sg}</span><span class="lb">${lb}</span>`
+        + `<span class="bw"><i style="left:0;width:${w}%;`
+        + `background:var(--${v<0n?"bad":"ok"})"></i></span>`
+        + `<span class="vl ${v<0n?"down":v>0n?"up":"same"}">${fmt(av)}</span></div>`;
+    }).join("")
+    + `<div class="id idt"><span class="sg">=</span><span class="lb">CL-side rewards</span>`
+    + `<span class="bw"></span><span class="vl ${r.identity.sum<0n?"down":"up"}">`
+    + `${fmt(r.identity.sum)}</span></div>`
+    + (r.identity.overridden
+        ? `<p class="legend" style="color:var(--warn)">Override active — line 213 is replaced, `
+          +`so this identity describes the <em>true</em> asset balance (${fmt(r.postTrue)}), not `
+          +`the value the bound check used (${fmt(r.post)}).</p>`
+        : `<p class="legend">Exact: <code>_assetBalance()</code> has six terms and exactly four `
+          +`move between lines 168 and 213. Identity check `
+          +(r.identity.sum===r.identity.actual
+              ? `<span class="up">✓ matches post − pre</span>.`
+              : `<span class="down">✗ ${fmt(r.identity.sum)} vs ${fmt(r.identity.actual)}</span>.`)
+          +`</p>`);
+  }
+
+  let wfHtml = `<p class="legend">not reached</p>`;
+  if(r.wf){
+    const w = r.wf, span = max(w.maxIncrease + w.loss, 1n);
+    const bar = (v,color,dashed) => {
+      if(v<=0n) return `<span class="wt"></span>`;
+      const over = v > span, pct = over ? 100 : Number(v*100n/span);
+      return `<span class="wt"><i style="left:0;width:${pct}%;background:${color}`
+        + `${dashed?";border:1px dashed var(--warn)":""}"></i>`
+        + (over?`<i style="right:-1px;width:3px;background:var(--warn)"></i>`:"") + `</span>`;
+    };
+    const row = (lbl,v,color,ob,dashed) =>
+      `<div class="wf${ob?" ob":""}"><span class="wl">${lbl}</span>${bar(v,color,dashed)}`
+      + `<span class="wv ${v>0n?"":"same"}">${fmt(v)}</span></div>`;
+    wfHtml = row("maxIncrease", w.maxIncrease, "#2c4a6e")
+      + (w.loss>0n ? row("+ reported loss", w.loss, "var(--neutral)") : "")
+      + row("− CL rewards", w.rewardsCL, "var(--ok)")
+      + row("− EL fees", w.t.pulledELFees, "var(--acc)")
+      + row("− exceeding ETH", w.t.pulledExceeding, "var(--neutral)")
+      + row("coverage ⚠", w.t.pulledCoverage, "#4a3a12", true, true)
+      + row("consol. coverage ⚠", w.t.pulledConsolCoverage, "#4a3a12", true, true)
+      + row("remaining", w.remaining, "#3a4250")
+      + `<p class="legend">`
+      + `<span class="sw" style="background:var(--ok)"></span>rewards, not a pull · `
+      + `<span class="sw" style="background:var(--acc)"></span>rewards + drains budget · `
+      + `<span class="sw" style="background:var(--neutral)"></span>drains budget only · `
+      + `<span class="sw" style="background:#4a3a12;border:1px dashed var(--warn)"></span>`
+      + `⚠ neither rewards nor budget-draining</p>`;
+  }
+
+  const L = r.ledger;
+  const ROWS = [["validatorsBalance","vb"],["balanceToDeposit","btd"],["balanceToRedeem","btr"],
+    ["committedBalance","cb"],["inFlightDeposit","ifd"],["consolidationBuffer","buf"],
+    ["shares","sh"]];
+  const lgHtml = L.length ? `<div class="lw"><table class="lg"><thead><tr><th>slot</th>`
+    + L.map(c=>`<th>${c.label}</th>`).join("") + `</tr></thead><tbody>`
+    + ROWS.map(rw=>`<tr><td>${rw[0]}</td>` + L.map((c,i)=>
+        `<td class="${i>0 && L[i-1][rw[1]]!==c[rw[1]] ? "c":""}">${fmt(c[rw[1]],4)}</td>`
+      ).join("") + `</tr>`).join("")
+    + `<tr class="tot"><td>_assetBalance()</td>` + L.map((c,i)=>
+        `<td class="${i>0 && L[i-1].ab!==c.ab ? "c":""}">${fmt(c.ab,4)}</td>`
+      ).join("") + `</tr></tbody></table></div>` : `<p class="legend">no state changes</p>`;
+
+  document.getElementById("side").innerHTML =
+    `<div class="card"><h3>Revert guards<span class="r">${r.guards.length}/11 reached</span></h3>`
+      + guardHtml + `<p class="legend">Margin is headroom before the guard trips.</p></div>`
+  + `<div class="card"><h3>post − pre decomposition</h3>${idHtml}</div>`
+  + `<div class="card"><h3>Upper-bound budget</h3>${wfHtml}</div>`
+  + `<div class="card"><h3>Storage ledger<span class="r">scrolls →</span></h3>${lgHtml}</div>`;
+}
+
+function run(){
+  let r;
+  try { r = simulate(readInputs()); }
+  catch(e){
+    const v = document.getElementById("verdict");
+    v.className = "verdict bad"; v.textContent = "model error";
+    document.getElementById("trace").innerHTML =
+      `<div class="stage revert"><div class="sh"><span class="ln">—</span>`
+      +`<span class="nm">Simulator threw</span></div><div class="sb">`
+      +`<div class="errmsg">${esc(e && e.stack || e)}</div></div></div>`;
+    return;
+  }
+  const v = document.getElementById("verdict");
+  if(r.reverted){ v.className = "verdict bad"; v.textContent = "reverted · " + r.reverted.name; }
+  else { v.className = "verdict ok";
+         v.textContent = "completed · rewards " + fmt(r.trace.rewards,6) + " Ξ"; }
+  renderTrace(r); renderSide(r);
+}
+
+ReportSim.renderInputs(document.getElementById("inputs"));
+ReportSim.renderPresets(document.getElementById("presets"), run);
+document.getElementById("inputs").addEventListener("input", run);
+ReportSim.setFields("Happy path");
+ReportSim.markPreset(document.getElementById("presets"), "Happy path");
+run();
+</script>
+</body>
+</html>

@@ -1,0 +1,490 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>setConsensusLayerData — bucket flows</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#161a21; --panel2:#1c212a; --line:#2a313d;
+    --fg:#e6e9ef; --dim:#8d97a8; --faint:#5b6474;
+    --acc:#6aa9ff; --ok:#4ec9a0; --warn:#e0b050; --bad:#e06c75; --neutral:#9a7fd1;
+    --teal:#3f9ea8; --orange:#d19a66; --grey:#7f8da3;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);height:100vh;
+       display:flex;flex-direction:column;overflow:hidden;
+       font:13px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+  code,input{font-family:var(--mono)}
+
+  header{padding:9px 14px;border-bottom:1px solid var(--line);background:var(--panel);
+         display:flex;align-items:center;gap:12px;flex-wrap:wrap;flex:none}
+  header h1{margin:0;font-size:13px;font-weight:600}
+  header h1 code{color:var(--acc);font-size:12px}
+  .verdict{font-size:11px;font-weight:600;padding:2px 9px;border-radius:3px;border:1px solid}
+  .verdict.ok{color:var(--ok);border-color:var(--ok);background:#132a22}
+  .verdict.bad{color:var(--bad);border-color:var(--bad);background:#2c1618}
+  .views{display:flex;border:1px solid var(--line);border-radius:3px;overflow:hidden}
+  .views a{font-size:11px;padding:3px 10px;color:var(--dim);text-decoration:none;
+           background:var(--panel2)}
+  .views a.cur{background:#22304a;color:var(--acc)}
+  .views a:hover{color:var(--acc)}
+  .presets{margin-left:auto;display:flex;gap:5px;flex-wrap:wrap}
+  button{background:var(--panel2);color:var(--fg);border:1px solid var(--line);
+         border-radius:3px;padding:4px 9px;font-size:11px;cursor:pointer}
+  button:hover{border-color:var(--acc);color:var(--acc)}
+  button.on{border-color:var(--acc);color:var(--acc)}
+
+  main{display:grid;grid-template-columns:274px minmax(520px,1fr) 336px;flex:1;min-height:0;
+       overflow-x:auto}
+  .pane{overflow-y:auto;overflow-x:hidden;padding:11px}
+  .pane+.pane{border-left:1px solid var(--line)}
+  h2.pt{font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--faint);
+        margin:0 0 9px;font-weight:600}
+
+  fieldset{border:1px solid var(--line);border-radius:4px;margin:0 0 9px;padding:7px 9px 8px}
+  legend{font-size:10px;letter-spacing:.05em;color:var(--dim);padding:0 4px}
+  .row{display:flex;align-items:center;gap:6px;margin:2px 0}
+  .row label{flex:1;font-size:11px;color:var(--dim);white-space:nowrap;overflow:hidden;
+             text-overflow:ellipsis}
+  .row input[type=text]{width:84px;background:var(--bg);color:var(--fg);
+        border:1px solid var(--line);border-radius:3px;padding:2px 5px;font-size:11px;
+        text-align:right}
+  .row input[type=text]:focus{outline:none;border-color:var(--acc)}
+  .row .u{width:16px;font-size:10px;color:var(--faint)}
+  .row.ck{gap:7px}.row.ck label{flex:1;font-size:11px}
+  .hint{font-size:10px;color:var(--faint);margin:5px 0 0;line-height:1.45}
+
+  /* centre: diagram + scrubber */
+  .stage-col{display:flex;flex-direction:column;min-height:0;overflow:hidden;padding:11px}
+  #diagram{flex:1;min-height:0;display:flex;align-items:center;justify-content:center}
+  #diagram svg{width:100%;height:100%}
+  .rolled{border:1px solid var(--bad);background:#2c1618;color:var(--bad);border-radius:4px;
+          padding:6px 9px;font-size:11px;margin-bottom:8px}
+  .rolled b{font-family:var(--mono)}
+
+  .scrub{flex:none;border-top:1px solid var(--line);padding-top:9px;margin-top:6px}
+  .scrub-top{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+  .scrub-top .lbl{font-size:11px;font-weight:600;min-width:150px}
+  .scrub-top .lbl small{color:var(--faint);font-weight:400}
+  input[type=range]{flex:1;accent-color:var(--acc)}
+  .ticks{display:flex;gap:2px}
+  .ticks span{flex:1;height:4px;border-radius:1px;background:var(--panel2)}
+  .ticks span.on{background:var(--acc)}
+  .ticks span.past{background:#2c4a6e}
+
+  /* nodes / edges */
+  .nbox{fill:var(--panel);stroke:var(--line);stroke-width:1}
+  .nbox.ext{fill:#13161c;stroke-dasharray:3 2}
+  .nbox.hot{stroke:var(--acc);stroke-width:1.6}
+  .nlab{font:600 10.5px -apple-system,sans-serif;fill:var(--fg)}
+  .nsub{font:9px -apple-system,sans-serif;fill:var(--faint)}
+  .nval{font:11.5px var(--mono);fill:var(--fg)}
+  .ndelta{font:9.5px var(--mono)}
+  .btrack{fill:#22283245}
+  .bfill{fill:#2c4a6e}
+  .bfill.hot{fill:var(--acc)}
+  .edge{fill:none;stroke-linecap:round;opacity:.16}
+  .edge.act{opacity:1;stroke-dasharray:7 5;animation:dash 1.1s linear infinite}
+  @keyframes dash{to{stroke-dashoffset:-24}}
+  .elab{font:9.5px var(--mono);fill:var(--faint);opacity:.35}
+  .elab.act{fill:var(--fg);opacity:1}
+  .ebg{fill:var(--bg);opacity:0}
+  .ebg.act{opacity:.82}
+
+  .card{border:1px solid var(--line);border-radius:4px;background:var(--panel);
+        padding:8px 10px;margin-bottom:9px}
+  .card h3{margin:0 0 7px;font-size:10px;letter-spacing:.07em;text-transform:uppercase;
+           color:var(--dim);font-weight:600;display:flex;align-items:baseline;gap:6px}
+  .card h3 .r{margin-left:auto;font-size:10px;letter-spacing:0;text-transform:none}
+  .legend{font-size:10px;color:var(--faint);margin-top:6px;line-height:1.5}
+  .sw{display:inline-block;width:9px;height:3px;border-radius:2px;margin:0 3px 2px 0}
+
+  .cons{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:11px;margin:2px 0}
+  .cons .sg{width:9px;color:var(--faint);flex:none}
+  .cons .lb{flex:1;color:var(--dim);font-size:10px;font-family:-apple-system,sans-serif}
+  .cons .vl{width:92px;text-align:right}
+  .cons.tot{border-top:1px solid var(--line);margin-top:5px;padding-top:5px;font-weight:600}
+  .up{color:var(--ok)}.down{color:var(--bad)}.same{color:var(--faint)}
+
+  .fl{display:flex;align-items:center;gap:6px;font-size:10.5px;padding:2px 0}
+  .fl .bar{width:3px;align-self:stretch;border-radius:2px;flex:none}
+  .fl .rt{flex:1;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .fl .am{font-family:var(--mono);flex:none}
+  .fl.dim{opacity:.4}
+
+  .spark{display:flex;align-items:flex-end;gap:2px;height:34px;margin:4px 0 2px}
+  .spark i{flex:1;background:#2c4a6e;border-radius:1px 1px 0 0;min-height:1px}
+  .spark i.on{background:var(--acc)}
+  .spark i.dip{background:var(--warn)}
+
+  .lw{overflow-x:auto}
+  table.lg{border-collapse:collapse;font-family:var(--mono);font-size:10px;white-space:nowrap}
+  table.lg th{color:var(--faint);font-weight:500;font-size:9px;padding:3px 5px;
+              border-bottom:1px solid var(--line);text-align:right}
+  table.lg th:first-child{text-align:left;position:sticky;left:0;background:var(--panel)}
+  table.lg th.on{color:var(--acc)}
+  table.lg td{padding:2px 5px;text-align:right;border-bottom:1px solid #1e242e}
+  table.lg td:first-child{text-align:left;color:var(--dim);position:sticky;left:0;
+                          background:var(--panel)}
+  table.lg td.c{color:var(--acc);background:#17253a}
+  table.lg td.col{background:#1a2029}
+  table.lg tr.tot td{border-top:1px solid var(--line);color:var(--fg)}
+  table.lg tr.tot td:first-child{color:var(--fg);font-weight:600}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Bucket flows — <code>LibOracleReporting.setConsensusLayerData</code></h1>
+  <span id="verdict" class="verdict ok">completed</span>
+  <span class="views">
+    <a href="oracle-report-simulator.html">trace</a>
+    <a class="cur" href="oracle-report-flows.html">flows</a>
+  </span>
+  <div class="presets" id="presets"></div>
+</header>
+
+<main>
+  <section class="pane" id="inputs"></section>
+  <section class="stage-col">
+    <div id="rolled"></div>
+    <div id="diagram"></div>
+    <div class="scrub">
+      <div class="scrub-top">
+        <span class="lbl" id="stepLabel">—</span>
+        <button id="prev">◀</button>
+        <button id="play">▶ play</button>
+        <button id="next">▶</button>
+        <input type="range" id="range" min="0" max="0" value="0">
+      </div>
+      <div class="ticks" id="ticks"></div>
+    </div>
+  </section>
+  <section class="pane" id="side"></section>
+</main>
+
+<script src="report-sim.js"></script>
+<script>
+"use strict";
+const {fmt, max, min, abs, readInputs, simulate, NODES} = ReportSim;
+
+/* ───────────────── diagram geometry (viewBox 1030 × 530) ───────────────── */
+const VB_W = 1030, VB_H = 530;
+const BOX = {
+  yield:    {x: 16, y: 34, w:142, h:48},
+  loss:     {x: 16, y: 34, w:142, h:48},   // mutually exclusive with yield
+  elfee:    {x: 16, y:322, w:142, h:44},
+  rmbuf:    {x: 16, y:378, w:142, h:44},
+  cov:      {x: 16, y:434, w:142, h:44},
+  vb:       {x:214, y: 26, w:152, h:80},
+  ifd:      {x:214, y:134, w:152, h:48},
+  buf:      {x:214, y:198, w:152, h:48},
+  withdraw: {x:448, y: 32, w:138, h:48},
+  btd:      {x:648, y:138, w:164, h:66},
+  btr:      {x:648, y:268, w:164, h:66},
+  cb:       {x:864, y:143, w:150, h:48},
+  rm:       {x:864, y:276, w:150, h:48},
+};
+// per-edge anchor nudges so parallel edges don't overlap
+const NUDGE = {
+  "withdraw>btd":{oy2:-22}, "elfee>btd":{oy2:-11}, "rmbuf>btd":{oy2:0},
+  "cov>btd":{oy2:11}, "buf>btd":{oy2:24},
+  "withdraw>btr":{oy2:-20}, "buf>vb":{ox:46}, "ifd>vb":{ox:-46},
+  "btd>btr":{ox:-42}, "btr>btd":{ox:42},
+};
+const KIND_STYLE = {
+  transfer:{c:"var(--acc)",    name:"external ETH in"},
+  sweep:   {c:"var(--grey)",   name:"CL → EL sweep"},
+  recog:   {c:"var(--neutral)",name:"recognition (reclassify)"},
+  yield:   {c:"var(--ok)",     name:"CL yield (new value)"},
+  loss:    {c:"var(--bad)",    name:"CL loss"},
+  settle:  {c:"var(--warn)",   name:"receivable → cash"},
+  internal:{c:"var(--teal)",   name:"internal move"},
+  outflow: {c:"var(--orange)", name:"ETH leaves River"},
+};
+const STEP_NAME = {
+  pre:"pre-report state", CL:"_pullCLFunds", buf:"buffer drawdown",
+  flight:"in-flight drawdown", store:"store report (restatement)", EL:"_pullELFees",
+  exceed:"exceeding ETH", cov:"coverage funds", cCov:"consolidation coverage",
+  fee:"fee shares minted", rebal:"deposit→redeem rebalance",
+  withdraw:"reportWithdraw payout", skim:"skim excess", commit:"commit to deposit",
+};
+
+function pathFor(a, b, n){
+  n = n || {};
+  let p0,p1,p2,p3;
+  if(b.x >= a.x + a.w){                                    // left → right
+    p0 = {x:a.x+a.w, y:a.y+a.h/2+(n.oy1||0)};
+    p3 = {x:b.x,     y:b.y+b.h/2+(n.oy2||0)};
+    const dx = Math.max(44,(p3.x-p0.x)/2);
+    p1 = {x:p0.x+dx,y:p0.y}; p2 = {x:p3.x-dx,y:p3.y};
+  } else if(b.x + b.w <= a.x){                              // right → left
+    p0 = {x:a.x,      y:a.y+a.h/2+(n.oy1||0)};
+    p3 = {x:b.x+b.w,  y:b.y+b.h/2+(n.oy2||0)};
+    const dx = Math.max(44,(p0.x-p3.x)/2);
+    p1 = {x:p0.x-dx,y:p0.y}; p2 = {x:p3.x+dx,y:p3.y};
+  } else {                                                  // same column → vertical
+    const down = a.y < b.y, s = down?1:-1;
+    p0 = {x:a.x+a.w/2+(n.ox||0), y: down ? a.y+a.h : a.y};
+    p3 = {x:b.x+b.w/2+(n.ox||0), y: down ? b.y     : b.y+b.h};
+    const dy = Math.max(26, Math.abs(p3.y-p0.y)/2);
+    p1 = {x:p0.x,y:p0.y+s*dy}; p2 = {x:p3.x,y:p3.y-s*dy};
+  }
+  const mid = {x:(p0.x+3*p1.x+3*p2.x+p3.x)/8, y:(p0.y+3*p1.y+3*p2.y+p3.y)/8};
+  return {d:`M${p0.x} ${p0.y} C${p1.x} ${p1.y}, ${p2.x} ${p2.y}, ${p3.x} ${p3.y}`, mid, p3, p2};
+}
+
+/* value of a node at a given step index */
+function nodeValue(r, id, i){
+  const meta = NODES[id];
+  if(meta && meta.internal) return r.ledger[i] ? r.ledger[i][meta.key] : 0n;
+  // External counterparty: cumulative throughput up to step i. Uses max(in, out) rather
+  // than in+out so a waypoint like the Withdraw contract — which receives the CL sweep and
+  // then forwards it — reports the amount that passed through, not twice that.
+  let inn = 0n, outt = 0n;
+  r.flows.forEach(f=>{
+    if(f.stepIdx > i) return;
+    if(f.to===id)   inn  += f.amt;
+    if(f.from===id) outt += f.amt;
+  });
+  return max(inn, outt);
+}
+
+function renderDiagram(r, cur){
+  const usedYield = r.flows.some(f=>f.from==="yield");
+  const usedLoss  = r.flows.some(f=>f.to==="loss");
+  const present = {};
+  r.flows.forEach(f=>{ present[f.from]=1; present[f.to]=1; });
+  ["vb","ifd","buf","btd","btr","cb"].forEach(k=>present[k]=1);   // buckets always shown
+  if(!usedYield) delete present.yield;
+  if(!usedLoss)  delete present.loss;
+
+  const maxAmt = r.flows.reduce((m,f)=>max(m,f.amt), 1n);
+  const width = amt => {
+    const ratio = Number(amt*10000n/maxAmt)/10000;
+    return (1.6 + 8.4*Math.sqrt(ratio)).toFixed(2);
+  };
+
+  // ── edges ──
+  let edges = "", labels = "";
+  r.flows.forEach(f=>{
+    const a = BOX[f.from], b = BOX[f.to];
+    if(!a || !b) return;
+    const st = KIND_STYLE[f.kind] || KIND_STYLE.internal;
+    const p = pathFor(a, b, NUDGE[f.from+">"+f.to]);
+    const act = f.stepIdx === cur;
+    edges += `<path class="edge${act?" act":""}" d="${p.d}" stroke="${st.c}" `
+      + `stroke-width="${width(f.amt)}"><title>${f.from} → ${f.to} · ${fmt(f.amt)} Ξ`
+      + `\n${f.note||""}</title></path>`
+      + `<path d="${p.d}" stroke="transparent" stroke-width="14" fill="none"></path>`;
+    const txt = fmt(f.amt,3);
+    const w = txt.length*6.1 + 8;
+    labels += `<g><rect class="ebg${act?" act":""}" x="${p.mid.x-w/2}" y="${p.mid.y-7.5}" `
+      + `width="${w}" height="15" rx="3"></rect>`
+      + `<text class="elab${act?" act":""}" x="${p.mid.x}" y="${p.mid.y+3.5}" `
+      + `text-anchor="middle">${txt}</text></g>`;
+  });
+
+  // ── nodes ──
+  let nodes = "";
+  Object.keys(present).forEach(id=>{
+    const box = BOX[id], meta = NODES[id];
+    if(!box || !meta) return;
+    const v = nodeValue(r, id, cur);
+    const prev = cur>0 ? nodeValue(r, id, cur-1) : v;
+    const dv = v - prev;
+    const hot = r.flows.some(f=>f.stepIdx===cur && (f.from===id||f.to===id));
+    // fill bar scaled to this node's own maximum across the whole call
+    let mx = 1n;
+    for(let i=0;i<r.ledger.length;i++) mx = max(mx, nodeValue(r,id,i));
+    const pct = Number(v*1000n/mx)/10;
+    nodes += `<g><rect class="nbox${meta.internal?"":" ext"}${hot?" hot":""}" x="${box.x}" `
+      + `y="${box.y}" width="${box.w}" height="${box.h}" rx="5"></rect>`
+      + `<text class="nlab" x="${box.x+9}" y="${box.y+15}">${meta.short}</text>`
+      + `<text class="nsub" x="${box.x+box.w-9}" y="${box.y+15}" text-anchor="end">`
+      + `${meta.internal?"in _assetBalance":"external"}</text>`
+      + `<text class="nval" x="${box.x+9}" y="${box.y+33}">${fmt(v,3)}</text>`
+      + (dv!==0n ? `<text class="ndelta" x="${box.x+box.w-9}" y="${box.y+33}" `
+          + `text-anchor="end" fill="${dv>0n?"var(--ok)":"var(--bad)"}">`
+          + `${dv>0n?"+":"−"}${fmt(abs(dv),3)}</text>` : "")
+      + `<rect class="btrack" x="${box.x+9}" y="${box.y+box.h-13}" width="${box.w-18}" `
+      + `height="5" rx="2.5"></rect>`
+      + `<rect class="bfill${hot?" hot":""}" x="${box.x+9}" y="${box.y+box.h-13}" `
+      + `width="${((box.w-18)*pct/100).toFixed(1)}" height="5" rx="2.5"></rect>`
+      + `<title>${meta.label}\n${fmt(v)} Ξ</title></g>`;
+  });
+
+  document.getElementById("diagram").innerHTML =
+    `<svg viewBox="0 0 ${VB_W} ${VB_H}" preserveAspectRatio="xMidYMid meet">`
+    + edges + nodes + labels + `</svg>`;
+}
+
+function renderSide(r, cur){
+  /* conservation of _assetBalance() over the whole call */
+  const c = r.conservation;
+  let consHtml = `<p class="legend">not reached</p>`;
+  if(c){
+    const row = (sg,lb,v) => `<div class="cons"><span class="sg">${sg}</span>`
+      + `<span class="lb">${lb}</span><span class="vl ${v>0n?"up":v<0n?"down":"same"}">`
+      + `${fmt(v)}</span></div>`;
+    consHtml = row(c.clYield<0n?"−":"+", "CL yield", c.clYield<0n?-c.clYield:c.clYield)
+      + row("+","EL fees pulled", c.elFees)
+      + row("+","exceeding ETH pulled", c.exceeding)
+      + row("+","coverage pulled", c.coverage)
+      + row("−","reportWithdraw payout", c.withdrawOut)
+      + `<div class="cons tot"><span class="sg">=</span>`
+      + `<span class="lb">Δ _assetBalance()</span>`
+      + `<span class="vl ${c.delta<0n?"down":"up"}">${fmt(c.delta)}</span></div>`
+      + `<p class="legend">${c.ok
+          ? `<span class="up">✓ balances</span> — everything else cancels: activation, `
+            +`consolidation recognition, the CL sweep against its pull, the consolidation `
+            +`settlement, rebalancing, skimming and committing all net to zero.`
+          : `<span class="down">✗ ${fmt(c.sum)} vs ${fmt(c.delta)}</span>`}</p>`;
+  }
+
+  /* assetBalance sparkline — shows the mid-call dip */
+  const L = r.ledger;
+  let sparkHtml = "";
+  if(L.length){
+    const lo = L.reduce((m,s)=>min(m,s.ab), L[0].ab);
+    const hi = L.reduce((m,s)=>max(m,s.ab), L[0].ab);
+    const span = hi-lo === 0n ? 1n : hi-lo;
+    sparkHtml = `<div class="spark">` + L.map((s,i)=>{
+      const h = 8 + Number((s.ab-lo)*92n/span)*0.26;
+      const dip = i>0 && s.ab < L[0].ab;
+      return `<i class="${i===cur?"on":dip?"dip":""}" style="height:${h}%" `
+        + `title="${s.label}: ${fmt(s.ab)}"></i>`;
+    }).join("") + `</div><p class="legend">`
+      + `_assetBalance() across the call: ${fmt(lo,3)} → ${fmt(hi,3)}. `
+      + `Amber bars sit <em>below</em> the pre-report value — the dip while the buffer and `
+      + `in-flight drawdowns have landed but the report has not yet been stored.</p>`;
+  }
+
+  /* flows at this step */
+  const here = r.flows.filter(f=>f.stepIdx===cur);
+  const flowHtml = (here.length ? here : []).map(f=>{
+    const st = KIND_STYLE[f.kind] || KIND_STYLE.internal;
+    return `<div class="fl"><span class="bar" style="background:${st.c}"></span>`
+      + `<span class="rt">${NODES[f.from].short} → ${NODES[f.to].short}`
+      + `<br><span style="color:var(--faint)">${f.note||st.name}</span></span>`
+      + `<span class="am">${fmt(f.amt,4)}</span></div>`;
+  }).join("") || `<p class="legend">no ETH moves at this step</p>`;
+
+  const sf = r.shareFlows.filter(f=>f.stepIdx===cur);
+  const shareHtml = sf.map(f=>{
+    const who = f.kind==="mint" ? "shares minted → collector"
+                                : "shares burnt ← RedeemManager";
+    return `<div class="fl"><span class="bar" style="background:var(--neutral)"></span>`
+      + `<span class="rt">${who}<br>`
+      + `<span style="color:var(--faint)">${f.note} · not ETH, no effect on _assetBalance()`
+      + `</span></span><span class="am">${fmt(f.amt,6)}</span></div>`;
+  }).join("");
+
+  /* ledger */
+  const ROWS = [["validatorsBalance","vb"],["balanceToDeposit","btd"],["balanceToRedeem","btr"],
+    ["committedBalance","cb"],["inFlightDeposit","ifd"],["consolidationBuffer","buf"]];
+  const lgHtml = L.length ? `<div class="lw"><table class="lg"><thead><tr><th>bucket</th>`
+    + L.map((s,i)=>`<th class="${i===cur?"on":""}">${s.label}</th>`).join("")
+    + `</tr></thead><tbody>`
+    + ROWS.map(rw=>`<tr><td>${rw[0]}</td>` + L.map((s,i)=>
+        `<td class="${i===cur?"col ":""}${i>0 && L[i-1][rw[1]]!==s[rw[1]] ? "c":""}">`
+        + `${fmt(s[rw[1]],3)}</td>`).join("") + `</tr>`).join("")
+    + `<tr class="tot"><td>_assetBalance()</td>` + L.map((s,i)=>
+        `<td class="${i===cur?"col ":""}${i>0 && L[i-1].ab!==s.ab ? "c":""}">`
+        + `${fmt(s.ab,3)}</td>`).join("") + `</tr></tbody></table></div>` : "";
+
+  const legend = Object.keys(KIND_STYLE).map(k=>
+    `<span class="sw" style="background:${KIND_STYLE[k].c}"></span>${KIND_STYLE[k].name}`
+  ).join(" · ");
+
+  document.getElementById("side").innerHTML =
+    `<div class="card"><h3>Conservation of _assetBalance()</h3>${consHtml}</div>`
+  + `<div class="card"><h3>Asset balance over the call</h3>${sparkHtml}</div>`
+  + `<div class="card"><h3>At this step<span class="r">${STEP_NAME[L[cur]&&L[cur].label]||""}`
+    + `</span></h3>${flowHtml}${shareHtml}</div>`
+  + `<div class="card"><h3>Flow kinds</h3><p class="legend">${legend}</p></div>`
+  + `<div class="card"><h3>Bucket ledger<span class="r">scrolls →</span></h3>${lgHtml}</div>`;
+}
+
+/* ───────────────── state + wiring ───────────────── */
+let R = null, cur = 0, timer = null;
+
+function paint(){
+  if(!R) return;
+  cur = Math.max(0, Math.min(cur, R.ledger.length-1));
+  const s = R.ledger[cur];
+  document.getElementById("stepLabel").innerHTML =
+    `${cur+1}/${R.ledger.length} · ${STEP_NAME[s.label]||s.label}`
+    + `<br><small>${s.label}</small>`;
+  const rg = document.getElementById("range");
+  rg.max = R.ledger.length-1; rg.value = cur;
+  document.getElementById("ticks").innerHTML = R.ledger.map((x,i)=>
+    `<span class="${i===cur?"on":i<cur?"past":""}" title="${STEP_NAME[x.label]||x.label}">`
+    + `</span>`).join("");
+  renderDiagram(R, cur);
+  renderSide(R, cur);
+}
+
+function run(keepStep){
+  const prevLen = R ? R.ledger.length : 0;
+  try { R = simulate(readInputs()); }
+  catch(e){
+    document.getElementById("verdict").className = "verdict bad";
+    document.getElementById("verdict").textContent = "model error";
+    document.getElementById("rolled").innerHTML =
+      `<div class="rolled">Simulator threw: <b>${ReportSim.esc(e && e.message || e)}</b></div>`;
+    return;
+  }
+  // resolve each flow's step label to a ledger index
+  const idxOf = {};
+  R.ledger.forEach((s,i)=>{ if(idxOf[s.label]===undefined) idxOf[s.label]=i; });
+  const last = R.ledger.length-1;
+  R.flows.forEach(f=>{ f.stepIdx = idxOf[f.step]===undefined ? last : idxOf[f.step]; });
+  R.shareFlows.forEach(f=>{ f.stepIdx = idxOf[f.step]===undefined ? last : idxOf[f.step]; });
+
+  const v = document.getElementById("verdict");
+  if(R.reverted){ v.className="verdict bad"; v.textContent = "reverted · " + R.reverted.name; }
+  else { v.className="verdict ok";
+         v.textContent = "completed · rewards " + fmt(R.trace.rewards,6) + " Ξ"; }
+
+  document.getElementById("rolled").innerHTML = R.reverted
+    ? `<div class="rolled">Reverted with <b>${R.reverted.name}</b> — in the real contract `
+      + `<em>every</em> state change below is rolled back and no ETH moves at all. The buckets `
+      + `shown are the would-be state at the point of failure.</div>`
+    : "";
+
+  if(!keepStep || R.ledger.length !== prevLen) cur = R.ledger.length-1;
+  paint();
+}
+
+function step(d){ stop(); cur += d; paint(); }
+function stop(){ if(timer){ clearInterval(timer); timer=null;
+                            document.getElementById("play").textContent="▶ play"; } }
+document.getElementById("prev").onclick = ()=>step(-1);
+document.getElementById("next").onclick = ()=>step(1);
+document.getElementById("range").oninput = e => { stop(); cur = +e.target.value; paint(); };
+document.getElementById("play").onclick = () => {
+  if(timer){ stop(); return; }
+  document.getElementById("play").textContent = "❚❚ stop";
+  cur = 0; paint();
+  timer = setInterval(()=>{
+    if(cur >= R.ledger.length-1){ stop(); return; }
+    cur++; paint();
+  }, 950);
+};
+window.addEventListener("keydown", e=>{
+  if(e.target.tagName === "INPUT" && e.target.type === "text") return;
+  if(e.key==="ArrowLeft") step(-1);
+  if(e.key==="ArrowRight") step(1);
+});
+
+ReportSim.renderInputs(document.getElementById("inputs"));
+ReportSim.renderPresets(document.getElementById("presets"), ()=>run(false));
+document.getElementById("inputs").addEventListener("input", ()=>run(true));
+ReportSim.setFields("Happy path");
+ReportSim.markPreset(document.getElementById("presets"), "Happy path");
+run(false);
+</script>
+</body>
+</html>
