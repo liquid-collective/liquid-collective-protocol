@@ -111,6 +111,12 @@ contract OperatorsRegistryWithMigrationHelpers is OperatorsRegistryV1 {
     function sudoSetRawExitedETH(uint256[] memory value) external {
         OperatorsV3.setRawExitedETH(value);
     }
+
+    /// Test helper: exposes the raw released ETH array including its leading sum cell, which
+    /// `getReleasedETHPerOperator()` strips.
+    function sudoGetRawReleasedETH() external view returns (uint256[] memory) {
+        return OperatorsV3.getReleasedETH();
+    }
 }
 
 contract OperatorsRegistryV1PrePectraBridgeTests is Test {
@@ -210,6 +216,7 @@ contract OperatorsRegistryV1PrePectraBridgeTests is Test {
 contract RiverMock {
     uint256 public getDepositedValidatorCount;
     address public keeper;
+    bool internal slashingContainmentMode;
 
     constructor(uint256 _getDepositedValidatorsCount) {
         getDepositedValidatorCount = _getDepositedValidatorsCount;
@@ -225,6 +232,14 @@ contract RiverMock {
 
     function getKeeper() external view returns (address) {
         return keeper;
+    }
+
+    function setSlashingContainmentMode(bool _enabled) external {
+        slashingContainmentMode = _enabled;
+    }
+
+    function getSlashingContainmentMode() external view returns (bool) {
+        return slashingContainmentMode;
     }
 }
 
@@ -3260,5 +3275,546 @@ contract OperatorsRegistryV1ELExitTests is Test {
         vm.prank(keeper);
         vm.expectRevert(IOperatorsRegistryV1.InvalidEmptyArray.selector);
         reg.requestETHExits(_noCL, _noEL, alloc, 0, 0);
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Release of stuck exit reservations (CL failure recovery — admin break-glass)
+// ─────────────────────────────────────────────────────────────────────────────
+
+contract OperatorsRegistryV1ExitReleaseTests is Test {
+    OperatorsRegistryWithMigrationHelpers internal reg;
+    MockWithdrawForELExits internal mockWithdraw;
+    address internal admin;
+    address internal keeper;
+    address internal river;
+
+    // 8 ETH expressed in gwei — the wire/reserved amount used by the partial EL exits below
+    uint64 internal constant EIGHT_ETH_IN_GWEI = 8_000_000_000;
+    bytes internal constant PUBKEY_48 =
+        hex"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+
+    IOperatorsRegistryV1.ExitETHAllocation[] internal _noCL;
+    IOperatorsRegistryV1.ELExitETHAllocation[] internal _noEL;
+    IOperatorsRegistryV1.ExitsViaConsolidationAllocation internal _noConsolidation;
+
+    function setUp() public {
+        admin = makeAddr("admin");
+        keeper = makeAddr("keeper");
+        river = address(new RiverMock(0));
+        RiverMock(river).setKeeper(keeper);
+        reg = new OperatorsRegistryWithMigrationHelpers();
+        LibImplementationUnbricker.unbrick(vm, address(reg));
+        reg.initOperatorsRegistryV1(admin, river);
+
+        mockWithdraw = new MockWithdrawForELExits();
+        reg.sudoSetWithdrawAddress(address(mockWithdraw));
+    }
+
+    /// @dev Adds `count` operators each with `activeCLETHEach` funded + active CL ETH, then sets the exit
+    ///      demand. `totalAvailableCLETH` is kept huge so per-operator headroom governs, not the global cap.
+    function _setupOperators(uint256 count, uint256 activeCLETHEach, uint256 demand) internal {
+        vm.startPrank(admin);
+        for (uint256 i; i < count; ++i) {
+            reg.addOperator(
+                string(abi.encodePacked("Op", vm.toString(i))), makeAddr(string(abi.encodePacked("op", vm.toString(i))))
+            );
+        }
+        vm.stopPrank();
+        for (uint256 i; i < count; ++i) {
+            reg.sudoSetFundedV3(i, activeCLETHEach);
+            reg.sudoSetActiveCLETH(i, activeCLETHEach);
+        }
+        vm.prank(river);
+        reg.demandETHExits(demand, type(uint128).max);
+    }
+
+    /// @dev Dispatches a single-pubkey partial EL exit for `opIndex`, reserving `gweiAmount`.
+    function _requestELExit(uint256 opIndex, uint64 gweiAmount) internal {
+        IOperatorsRegistryV1.ELExitETHAllocation[] memory allocs = new IOperatorsRegistryV1.ELExitETHAllocation[](1);
+        bytes[] memory pubkeys = new bytes[](1);
+        pubkeys[0] = PUBKEY_48;
+        uint64[] memory withdrawalAmounts = new uint64[](1);
+        withdrawalAmounts[0] = gweiAmount;
+        uint64[] memory reservedExitAmounts = new uint64[](1);
+        reservedExitAmounts[0] = gweiAmount;
+        allocs[0] = IOperatorsRegistryV1.ELExitETHAllocation({
+            operatorIndex: opIndex,
+            pubkeys: pubkeys,
+            withdrawalAmounts: withdrawalAmounts,
+            reservedExitAmounts: reservedExitAmounts
+        });
+
+        vm.prank(keeper);
+        reg.requestETHExits(_noCL, allocs, _noConsolidation, 0, 0);
+    }
+
+    /// @dev Dispatches a consolidation-for-exit reserving `ethAmount` for `opIndex`.
+    function _requestConsolidationExit(uint256 opIndex, uint256 ethAmount) internal {
+        IOperatorsRegistryV1.ExitETHAllocation[] memory perOp = new IOperatorsRegistryV1.ExitETHAllocation[](1);
+        perOp[0] = IOperatorsRegistryV1.ExitETHAllocation({operatorIndex: opIndex, ethAmount: ethAmount});
+        IWithdrawV1.ConsolidationRequest[] memory reqs = new IWithdrawV1.ConsolidationRequest[](1);
+        bytes[] memory src = new bytes[](1);
+        src[0] = PUBKEY_48;
+        reqs[0] = IWithdrawV1.ConsolidationRequest({srcPubkeys: src, targetPubkey: PUBKEY_48});
+
+        vm.prank(keeper);
+        reg.requestETHExits(
+            _noCL,
+            _noEL,
+            IOperatorsRegistryV1.ExitsViaConsolidationAllocation({ethPerOperator: perOp, consolidationRequests: reqs}),
+            0,
+            0
+        );
+    }
+
+    function _release(uint256 opIndex, uint256 ethAmount) internal {
+        _release(opIndex, ethAmount, 0);
+    }
+
+    function _release(uint256 opIndex, uint256 ethAmount, uint256 viaConsolidationETH) internal {
+        IOperatorsRegistryV1.ExitReleaseAllocation[] memory allocs = _makeRelease(opIndex, ethAmount);
+        vm.prank(admin);
+        reg.releaseExitRequests(allocs, viaConsolidationETH);
+    }
+
+    function _makeRelease(uint256 opIndex, uint256 ethAmount)
+        internal
+        pure
+        returns (IOperatorsRegistryV1.ExitReleaseAllocation[] memory allocs)
+    {
+        allocs = new IOperatorsRegistryV1.ExitReleaseAllocation[](1);
+        allocs[0] = IOperatorsRegistryV1.ExitReleaseAllocation({operatorIndex: opIndex, ethAmount: ethAmount});
+    }
+
+    /// @dev Reports cumulative exited ETH for a single-operator registry, as the oracle would.
+    function _reportExitedETH(uint256 op0Exited) internal {
+        uint256[] memory exitedETH = new uint256[](2);
+        exitedETH[0] = op0Exited;
+        exitedETH[1] = op0Exited;
+        vm.prank(river);
+        reg.reportExitedETH(exitedETH);
+    }
+
+    // ── 1. Sum invariant ─────────────────────────────────────────────────────
+
+    /// @notice A release is the exact inverse of a reservation: requestedExits and TotalETHExitsRequested
+    ///         go down while CurrentETHExitsDemand goes up by the same amount, leaving
+    ///         `getExitedAndRequestedETHExits()`'s second return value (the redeem formula's
+    ///         `preExitingBalance` input) untouched.
+    function testReleaseIsSumInvariant() public {
+        _setupOperators(1, 100 ether, 100 ether);
+        _requestELExit(0, EIGHT_ETH_IN_GWEI);
+
+        assertEq(reg.getOperator(0).requestedExits, 8 ether, "reserved 8 ETH");
+        assertEq(reg.getTotalETHExitsRequested(), 8 ether, "total requested 8 ETH");
+        assertEq(reg.getCurrentETHExitsDemand(), 92 ether, "demand reduced by the reservation");
+        (, uint256 requestedBefore) = reg.getExitedAndRequestedETHExits();
+
+        _release(0, 8 ether);
+
+        assertEq(reg.getOperator(0).requestedExits, 0, "operator reservation unwound");
+        assertEq(reg.getTotalETHExitsRequested(), 0, "total requested unwound");
+        assertEq(reg.getCurrentETHExitsDemand(), 100 ether, "released amount back in demand");
+
+        (, uint256 requestedAfter) = reg.getExitedAndRequestedETHExits();
+        assertEq(requestedAfter, requestedBefore, "TotalETHExitsRequested + demand must be invariant");
+    }
+
+    /// @notice The per-operator and aggregate release events carry the released amounts.
+    function testReleaseEmitsEvents() public {
+        _setupOperators(1, 100 ether, 100 ether);
+        _requestELExit(0, EIGHT_ETH_IN_GWEI);
+
+        vm.expectEmit(true, true, true, true, address(reg));
+        emit IOperatorsRegistryV1.ReleasedETHExits(0, 5 ether, 3 ether);
+        vm.expectEmit(true, true, true, true, address(reg));
+        emit IOperatorsRegistryV1.ReleasedExitRequests(5 ether, 0);
+        _release(0, 5 ether);
+    }
+
+    /// @notice Releasing across several operators in one call sums correctly and leaves each operator's
+    ///         own reservation reduced by its own amount.
+    function testReleaseMultipleOperators() public {
+        _setupOperators(2, 100 ether, 100 ether);
+        _requestELExit(0, EIGHT_ETH_IN_GWEI);
+        _requestELExit(1, EIGHT_ETH_IN_GWEI);
+        assertEq(reg.getTotalETHExitsRequested(), 16 ether, "both reservations recorded");
+
+        IOperatorsRegistryV1.ExitReleaseAllocation[] memory allocs = new IOperatorsRegistryV1.ExitReleaseAllocation[](2);
+        allocs[0] = IOperatorsRegistryV1.ExitReleaseAllocation({operatorIndex: 0, ethAmount: 3 ether});
+        allocs[1] = IOperatorsRegistryV1.ExitReleaseAllocation({operatorIndex: 1, ethAmount: 8 ether});
+        vm.prank(admin);
+        reg.releaseExitRequests(allocs, 0);
+
+        assertEq(reg.getOperator(0).requestedExits, 5 ether, "op0 partially released");
+        assertEq(reg.getOperator(1).requestedExits, 0, "op1 fully released");
+        assertEq(reg.getTotalETHExitsRequested(), 5 ether, "total down by 11 ETH");
+        assertEq(reg.getCurrentETHExitsDemand(), 84 ether + 11 ether, "demand up by 11 ETH");
+    }
+
+    // ── 2. Re-dispatch ───────────────────────────────────────────────────────
+
+    /// @notice Once released, the restored per-operator headroom lets the keeper dispatch the same ETH
+    ///         again. Before the release the operator is at its headroom cap and the retry reverts, which
+    ///         is what makes the post-release success meaningful.
+    function testReleaseRestoresDispatchableHeadroom() public {
+        // activeCLETH == the reservation, so after reserving, available headroom is exactly 0.
+        _setupOperators(1, 8 ether, 100 ether);
+        _requestELExit(0, EIGHT_ETH_IN_GWEI);
+        assertEq(reg.getOperator(0).requestedExits, 8 ether, "headroom fully consumed");
+
+        // Counterfactual: without the release the keeper cannot re-dispatch.
+        IOperatorsRegistryV1.ELExitETHAllocation[] memory allocs = new IOperatorsRegistryV1.ELExitETHAllocation[](1);
+        bytes[] memory pubkeys = new bytes[](1);
+        pubkeys[0] = PUBKEY_48;
+        uint64[] memory amounts = new uint64[](1);
+        amounts[0] = EIGHT_ETH_IN_GWEI;
+        allocs[0] = IOperatorsRegistryV1.ELExitETHAllocation({
+            operatorIndex: 0, pubkeys: pubkeys, withdrawalAmounts: amounts, reservedExitAmounts: amounts
+        });
+        vm.prank(keeper);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IOperatorsRegistryV1.ELExitsRequestedExceedAvailableActiveCLAmount.selector, uint256(0), 8 ether, 0
+            )
+        );
+        reg.requestETHExits(_noCL, allocs, _noConsolidation, 0, 0);
+
+        _release(0, 8 ether);
+
+        uint256 withdrawCallsBefore = mockWithdraw.withdrawCallCount();
+        _requestELExit(0, EIGHT_ETH_IN_GWEI);
+        assertEq(mockWithdraw.withdrawCallCount(), withdrawCallsBefore + 1, "re-dispatched to the predeploy");
+        assertEq(reg.getOperator(0).requestedExits, 8 ether, "reservation re-established");
+        assertEq(reg.getTotalETHExitsRequested(), 8 ether, "total requested re-established");
+        assertEq(reg.getCurrentETHExitsDemand(), 92 ether, "demand consumed again");
+    }
+
+    // ── 3. Clamp ─────────────────────────────────────────────────────────────
+
+    /// @notice Releasing more than the outstanding reservation clamps to the outstanding amount instead of
+    ///         reverting, and the event reports the actual (clamped) amount.
+    function testReleaseClampsToOutstanding() public {
+        _setupOperators(1, 100 ether, 100 ether);
+        _requestELExit(0, EIGHT_ETH_IN_GWEI);
+
+        vm.expectEmit(true, true, true, true, address(reg));
+        emit IOperatorsRegistryV1.ReleasedETHExits(0, 8 ether, 0);
+        vm.expectEmit(true, true, true, true, address(reg));
+        emit IOperatorsRegistryV1.ReleasedExitRequests(8 ether, 0);
+        _release(0, 500 ether);
+
+        assertEq(reg.getOperator(0).requestedExits, 0, "clamped to the outstanding reservation");
+        assertEq(reg.getTotalETHExitsRequested(), 0, "total reduced by the clamped amount only");
+        assertEq(reg.getCurrentETHExitsDemand(), 100 ether, "demand restored by the clamped amount only");
+        assertEq(reg.sudoGetRawReleasedETH()[1], 8 ether, "accumulator records the clamped amount");
+    }
+
+    /// @notice Already-exited ETH is not outstanding: the clamp accounts for reported exits, so a release
+    ///         cannot unwind a reservation the consensus layer has actually honoured.
+    function testReleaseClampsAgainstReportedExitedETH() public {
+        _setupOperators(1, 100 ether, 100 ether);
+        _requestELExit(0, EIGHT_ETH_IN_GWEI);
+        // 5 of the 8 reserved ETH actually landed.
+        _reportExitedETH(5 ether);
+
+        _release(0, 8 ether);
+
+        assertEq(reg.getOperator(0).requestedExits, 5 ether, "only the 3 ETH still outstanding was released");
+        assertEq(reg.getTotalETHExitsRequested(), 5 ether, "total reduced by 3 ETH");
+        assertEq(reg.sudoGetRawReleasedETH()[1], 3 ether, "accumulator records 3 ETH");
+    }
+
+    /// @notice A release against an operator with nothing outstanding is a no-op on every counter.
+    function testReleaseWithNothingOutstandingIsNoOp() public {
+        _setupOperators(1, 100 ether, 100 ether);
+
+        _release(0, 10 ether);
+
+        assertEq(reg.getOperator(0).requestedExits, 0, "requestedExits untouched");
+        assertEq(reg.getTotalETHExitsRequested(), 0, "total untouched");
+        assertEq(reg.getCurrentETHExitsDemand(), 100 ether, "demand untouched");
+        assertEq(reg.sudoGetRawReleasedETH()[0], 0, "accumulator untouched");
+    }
+
+    // ── 4. Consolidation ─────────────────────────────────────────────────────
+
+    /// @notice The consolidation subset of a release decrements the exit consolidation buffer.
+    function testReleaseDecrementsConsolidationBuffer() public {
+        _setupOperators(1, 100 ether, 100 ether);
+        _requestConsolidationExit(0, 30 ether);
+        assertEq(reg.getExitConsolidationBuffer(), 30 ether, "buffer holds the reservation");
+
+        vm.expectEmit(true, true, true, true, address(reg));
+        emit IOperatorsRegistryV1.ExitConsolidationBufferSet(30 ether, 10 ether);
+        _release(0, 20 ether, 20 ether);
+
+        assertEq(reg.getExitConsolidationBuffer(), 10 ether, "buffer reduced by the consolidation subset");
+        assertEq(reg.getOperator(0).requestedExits, 10 ether, "reservation reduced by 20 ETH");
+        assertEq(reg.getCurrentETHExitsDemand(), 70 ether + 20 ether, "demand restored by 20 ETH");
+    }
+
+    /// @notice The consolidation subset must not exceed the total released — including when the total was
+    ///         clamped below the requested amount.
+    function testReleaseRevertsWhenConsolidationExceedsRelease() public {
+        _setupOperators(1, 100 ether, 100 ether);
+        _requestConsolidationExit(0, 30 ether);
+
+        IOperatorsRegistryV1.ExitReleaseAllocation[] memory allocs = _makeRelease(0, 20 ether);
+        vm.prank(admin);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IOperatorsRegistryV1.ReleasedConsolidationExceedsRelease.selector, 21 ether, 20 ether
+            )
+        );
+        reg.releaseExitRequests(allocs, 21 ether);
+    }
+
+    /// @notice The bound is against the CLAMPED total, not the requested amount: asking to release 50 ETH
+    ///         when only 30 is outstanding and claiming 40 of it as consolidation must revert.
+    function testReleaseConsolidationBoundUsesClampedTotal() public {
+        _setupOperators(1, 100 ether, 100 ether);
+        _requestConsolidationExit(0, 30 ether);
+
+        IOperatorsRegistryV1.ExitReleaseAllocation[] memory allocs = _makeRelease(0, 50 ether);
+        vm.prank(admin);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IOperatorsRegistryV1.ReleasedConsolidationExceedsRelease.selector, 40 ether, 30 ether
+            )
+        );
+        reg.releaseExitRequests(allocs, 40 ether);
+    }
+
+    /// @notice The buffer decrement saturates at 0 rather than underflowing when the reported consolidation
+    ///         arrivals have already drained it.
+    function testReleaseConsolidationBufferSaturatesAtZero() public {
+        _setupOperators(1, 100 ether, 100 ether);
+        _requestConsolidationExit(0, 30 ether);
+        // Arrivals reported for the whole buffer, but the reservation itself is still outstanding.
+        vm.prank(river);
+        reg.reportExitViaConsolidation(30 ether);
+        assertEq(reg.getExitConsolidationBuffer(), 0, "buffer drained");
+
+        _release(0, 30 ether, 30 ether);
+
+        assertEq(reg.getExitConsolidationBuffer(), 0, "buffer saturated at zero");
+        assertEq(reg.getOperator(0).requestedExits, 0, "reservation still released in full");
+    }
+
+    // ── 5. Accumulator ───────────────────────────────────────────────────────
+
+    /// @notice Successive releases accumulate per operator, with the raw array's first cell holding the sum.
+    function testReleaseAccumulates() public {
+        _setupOperators(2, 100 ether, 100 ether);
+        _requestELExit(0, EIGHT_ETH_IN_GWEI);
+        _requestELExit(1, EIGHT_ETH_IN_GWEI);
+
+        _release(0, 3 ether);
+        _release(0, 2 ether);
+        _release(1, 8 ether);
+
+        uint256[] memory raw = reg.sudoGetRawReleasedETH();
+        assertEq(raw.length, 3, "raw array is [sum, op0, op1]");
+        assertEq(raw[0], 13 ether, "sum cell tracks the total released");
+        assertEq(raw[1], 5 ether, "op0 accumulated across two releases");
+        assertEq(raw[2], 8 ether, "op1 released once");
+
+        uint256[] memory perOp = reg.getReleasedETHPerOperator();
+        assertEq(perOp.length, 2, "view strips the sum cell");
+        assertEq(perOp[0], 5 ether, "op0 per-operator view");
+        assertEq(perOp[1], 8 ether, "op1 per-operator view");
+    }
+
+    /// @notice The accumulator array grows lazily: releasing for a high operator index for the first time
+    ///         zero-fills the operators below it.
+    function testReleaseAccumulatorGrowsLazily() public {
+        _setupOperators(3, 100 ether, 100 ether);
+        assertEq(reg.getReleasedETHPerOperator().length, 0, "array not yet grown");
+
+        _requestELExit(2, EIGHT_ETH_IN_GWEI);
+        _release(2, 8 ether);
+
+        uint256[] memory raw = reg.sudoGetRawReleasedETH();
+        assertEq(raw.length, 4, "grown to [sum, op0, op1, op2]");
+        assertEq(raw[0], 8 ether, "sum");
+        assertEq(raw[1], 0, "op0 never released");
+        assertEq(raw[2], 0, "op1 never released");
+        assertEq(raw[3], 8 ether, "op2 released");
+    }
+
+    // ── 6. Access control and input validation ───────────────────────────────
+
+    function testReleaseUnauthorized(uint256 _salt) public {
+        _setupOperators(1, 100 ether, 100 ether);
+        address random = address(uint160(uint256(keccak256(abi.encode("release-unauthorized", _salt)))));
+        vm.assume(random != admin);
+
+        IOperatorsRegistryV1.ExitReleaseAllocation[] memory allocs = _makeRelease(0, 1 ether);
+        vm.prank(random);
+        vm.expectRevert(abi.encodeWithSelector(LibErrors.Unauthorized.selector, random));
+        reg.releaseExitRequests(allocs, 0);
+    }
+
+    /// @notice Neither the keeper nor an operator can release; the lever is admin-only.
+    function testReleaseRejectsKeeper() public {
+        _setupOperators(1, 100 ether, 100 ether);
+
+        IOperatorsRegistryV1.ExitReleaseAllocation[] memory allocs = _makeRelease(0, 1 ether);
+        vm.prank(keeper);
+        vm.expectRevert(abi.encodeWithSelector(LibErrors.Unauthorized.selector, keeper));
+        reg.releaseExitRequests(allocs, 0);
+    }
+
+    function testReleaseRevertsOnEmptyArray() public {
+        _setupOperators(1, 100 ether, 100 ether);
+
+        IOperatorsRegistryV1.ExitReleaseAllocation[] memory allocs = new IOperatorsRegistryV1.ExitReleaseAllocation[](0);
+        vm.prank(admin);
+        vm.expectRevert(IOperatorsRegistryV1.InvalidEmptyArray.selector);
+        reg.releaseExitRequests(allocs, 0);
+    }
+
+    function testReleaseRevertsOnOutOfRangeOperator() public {
+        _setupOperators(1, 100 ether, 100 ether);
+
+        IOperatorsRegistryV1.ExitReleaseAllocation[] memory allocs = _makeRelease(1, 1 ether);
+        vm.prank(admin);
+        vm.expectRevert(abi.encodeWithSelector(IOperatorsRegistryV1.InvalidOperatorIndex.selector, 1, 1));
+        reg.releaseExitRequests(allocs, 0);
+    }
+
+    function testReleaseRevertsOnUnorderedOperators() public {
+        _setupOperators(2, 100 ether, 100 ether);
+
+        IOperatorsRegistryV1.ExitReleaseAllocation[] memory allocs = new IOperatorsRegistryV1.ExitReleaseAllocation[](2);
+        allocs[0] = IOperatorsRegistryV1.ExitReleaseAllocation({operatorIndex: 1, ethAmount: 1 ether});
+        allocs[1] = IOperatorsRegistryV1.ExitReleaseAllocation({operatorIndex: 0, ethAmount: 1 ether});
+        vm.prank(admin);
+        vm.expectRevert(IOperatorsRegistryV1.UnorderedOperatorList.selector);
+        reg.releaseExitRequests(allocs, 0);
+    }
+
+    function testReleaseRevertsOnDuplicateOperators() public {
+        _setupOperators(2, 100 ether, 100 ether);
+
+        IOperatorsRegistryV1.ExitReleaseAllocation[] memory allocs = new IOperatorsRegistryV1.ExitReleaseAllocation[](2);
+        allocs[0] = IOperatorsRegistryV1.ExitReleaseAllocation({operatorIndex: 0, ethAmount: 1 ether});
+        allocs[1] = IOperatorsRegistryV1.ExitReleaseAllocation({operatorIndex: 0, ethAmount: 1 ether});
+        vm.prank(admin);
+        vm.expectRevert(IOperatorsRegistryV1.UnorderedOperatorList.selector);
+        reg.releaseExitRequests(allocs, 0);
+    }
+
+    /// @notice An inactive operator's stuck reservation is exactly the case that needs unwinding, so the
+    ///         release path deliberately has no `active` check.
+    function testReleaseWorksForInactiveOperator() public {
+        _setupOperators(1, 100 ether, 100 ether);
+        _requestELExit(0, EIGHT_ETH_IN_GWEI);
+
+        vm.prank(admin);
+        reg.setOperatorStatus(0, false);
+
+        _release(0, 8 ether);
+
+        assertEq(reg.getOperator(0).requestedExits, 0, "inactive operator reservation unwound");
+        assertEq(reg.getCurrentETHExitsDemand(), 100 ether, "demand restored");
+    }
+
+    // ── 7. Premature release self-heals ──────────────────────────────────────
+
+    /// @notice A premature release is self-correcting: if the exit lands after the release,
+    ///         `_setExitedETH` treats the difference as an unsolicited exit, raises `requestedExits` back,
+    ///         bumps `TotalETHExitsRequested` and re-consumes the restored demand. The cost is
+    ///         over-exiting, never corrupted state.
+    function testPrematureReleaseSelfHeals() public {
+        _setupOperators(1, 100 ether, 100 ether);
+        _requestELExit(0, EIGHT_ETH_IN_GWEI);
+
+        _release(0, 8 ether);
+        assertEq(reg.getOperator(0).requestedExits, 0, "released before the exit landed");
+        assertEq(reg.getCurrentETHExitsDemand(), 100 ether, "demand restored");
+
+        // The dropped-looking exit actually lands and is reported by the oracle.
+        vm.expectEmit(true, true, true, true, address(reg));
+        emit IOperatorsRegistryV1.UpdatedRequestedETHExitsUponStopped(0, 0, 8 ether);
+        _reportExitedETH(8 ether);
+
+        assertEq(reg.getOperator(0).requestedExits, 8 ether, "requestedExits raised back to the exited amount");
+        assertEq(reg.getTotalETHExitsRequested(), 8 ether, "total raised back");
+        assertEq(reg.getCurrentETHExitsDemand(), 92 ether, "restored demand re-consumed by the late exit");
+
+        (uint256 totalExited, uint256 totalRequested) = reg.getExitedAndRequestedETHExits();
+        assertEq(totalExited, 8 ether, "exited reported");
+        assertEq(totalRequested, 100 ether, "requested + demand back to the pre-release total");
+    }
+
+    // -- 8. Slashing containment ---------------------------------------------
+
+    /// @notice Containment blocks the keeper from dispatching exits — including demand that predates the
+    ///         containment, which was previously dispatchable — and dispatch resumes once it lifts.
+    function testRequestETHExitsRevertsDuringContainment() public {
+        _setupOperators(1, 100 ether, 100 ether);
+
+        RiverMock(river).setSlashingContainmentMode(true);
+
+        IOperatorsRegistryV1.ELExitETHAllocation[] memory allocs = new IOperatorsRegistryV1.ELExitETHAllocation[](1);
+        bytes[] memory pubkeys = new bytes[](1);
+        pubkeys[0] = PUBKEY_48;
+        uint64[] memory amounts = new uint64[](1);
+        amounts[0] = EIGHT_ETH_IN_GWEI;
+        allocs[0] = IOperatorsRegistryV1.ELExitETHAllocation({
+            operatorIndex: 0, pubkeys: pubkeys, withdrawalAmounts: amounts, reservedExitAmounts: amounts
+        });
+
+        vm.prank(keeper);
+        vm.expectRevert(IConsensusLayerDepositManagerV1.SlashingContainmentModeEnabled.selector);
+        reg.requestETHExits(_noCL, allocs, _noConsolidation, 0, 0);
+
+        RiverMock(river).setSlashingContainmentMode(false);
+
+        _requestELExit(0, EIGHT_ETH_IN_GWEI);
+        assertEq(reg.getOperator(0).requestedExits, 8 ether, "dispatch resumes once containment lifts");
+    }
+
+    /// @notice The containment gate precedes the demand check, so it fires even with no demand to dispatch.
+    function testContainmentGatePrecedesDemandCheck() public {
+        _setupOperators(1, 100 ether, 0);
+        RiverMock(river).setSlashingContainmentMode(true);
+
+        vm.prank(keeper);
+        vm.expectRevert(IConsensusLayerDepositManagerV1.SlashingContainmentModeEnabled.selector);
+        reg.requestETHExits(_noCL, _noEL, _noConsolidation, 0, 0);
+    }
+
+    /// @notice A release still works during containment: state is restored so the demand is on the books,
+    ///         but the keeper stays blocked from dispatching it until containment lifts.
+    function testReleaseWorksDuringContainmentButDispatchDoesNot() public {
+        _setupOperators(1, 100 ether, 100 ether);
+        _requestELExit(0, EIGHT_ETH_IN_GWEI);
+
+        RiverMock(river).setSlashingContainmentMode(true);
+
+        _release(0, 8 ether);
+        assertEq(reg.getOperator(0).requestedExits, 0, "release unaffected by containment");
+        assertEq(reg.getCurrentETHExitsDemand(), 100 ether, "demand restored during containment");
+
+        IOperatorsRegistryV1.ELExitETHAllocation[] memory allocs = new IOperatorsRegistryV1.ELExitETHAllocation[](1);
+        bytes[] memory pubkeys = new bytes[](1);
+        pubkeys[0] = PUBKEY_48;
+        uint64[] memory amounts = new uint64[](1);
+        amounts[0] = EIGHT_ETH_IN_GWEI;
+        allocs[0] = IOperatorsRegistryV1.ELExitETHAllocation({
+            operatorIndex: 0, pubkeys: pubkeys, withdrawalAmounts: amounts, reservedExitAmounts: amounts
+        });
+        vm.prank(keeper);
+        vm.expectRevert(IConsensusLayerDepositManagerV1.SlashingContainmentModeEnabled.selector);
+        reg.requestETHExits(_noCL, allocs, _noConsolidation, 0, 0);
+
+        // Once containment lifts, the released demand is dispatchable.
+        RiverMock(river).setSlashingContainmentMode(false);
+        _requestELExit(0, EIGHT_ETH_IN_GWEI);
+        assertEq(reg.getOperator(0).requestedExits, 8 ether, "released demand dispatched after containment");
     }
 }

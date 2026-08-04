@@ -198,4 +198,68 @@ library OperatorsV3 {
 
         r.value = value;
     }
+
+    /// @notice Storage slot of the Released ETH
+    bytes32 internal constant RELEASED_ETH_SLOT = bytes32(uint256(keccak256("river.state.releasedETH")) - 1);
+
+    // This slot stores the cumulative amount of exit reservations that have been released per operator,
+    // encoded exactly like `exitedETH`: [sum, op0, op1, ...] where the first cell is the total across
+    // all operators. Keeping the layout identical lets a future oracle-reported release path compare a
+    // cumulative report array element-for-element against this one with no reshaping.
+    struct SlotReleasedETH {
+        uint256[] value;
+    }
+
+    /// @notice Retrieve the storage pointer of the Released ETH array
+    /// @return The Released ETH storage pointer
+    function getReleasedETH() internal view returns (uint256[] storage) {
+        bytes32 slot = RELEASED_ETH_SLOT;
+
+        SlotReleasedETH storage r;
+
+        // solhint-disable-next-line no-inline-assembly
+        assembly {
+            r.slot := slot
+        }
+
+        return r.value;
+    }
+
+    /// @notice Retrieve the cumulative released ETH for an operator by its index
+    /// @param index The index of the operator to lookup
+    /// @return The released ETH for the given operator index
+    function getReleasedETH(uint256 index) internal view returns (uint256) {
+        return _getReleasedETH(getReleasedETH(), index);
+    }
+
+    /// @notice Retrieve the cumulative released ETH for an operator by its index
+    /// @dev Returns 0 for indexes the array has not grown to yet, mirroring `_getExitedETH`
+    /// @param releasedETH The storage pointer to the raw array containing the released ETH
+    /// @param index The index of the operator to lookup
+    /// @return The released ETH for the given operator index
+    function _getReleasedETH(uint256[] storage releasedETH, uint256 index) internal view returns (uint256) {
+        if (index + 1 >= releasedETH.length) {
+            return 0;
+        }
+        return releasedETH[index + 1];
+    }
+
+    /// @notice Adds to the cumulative released ETH of an operator, growing the array lazily
+    /// @dev This is the single writer of the released ETH accumulator: the admin break-glass path and any
+    ///      future oracle-reported release path both funnel their (clamped) deltas through here, so the
+    ///      accumulator can never diverge between the two.
+    /// @param operatorIndex The index of the operator whose reservation is being released
+    /// @param amount The ETH(wei) amount released
+    function addReleasedETH(uint256 operatorIndex, uint256 amount) internal {
+        uint256[] storage releasedETH = getReleasedETH();
+
+        // slot 0 holds the sum, so operator `operatorIndex` lives at `operatorIndex + 1`
+        uint256 requiredLength = operatorIndex + 2;
+        while (releasedETH.length < requiredLength) {
+            releasedETH.push(0);
+        }
+
+        releasedETH[0] += amount;
+        releasedETH[operatorIndex + 1] += amount;
+    }
 }
