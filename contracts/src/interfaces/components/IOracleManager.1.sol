@@ -111,6 +111,13 @@ interface IOracleManagerV1 {
         uint256 lastTotalExitViaConsolidationsAmountReported, uint256 newTotalExitViaConsolidationsAmountReported
     );
 
+    /// @notice The total exit via consolidation amount reported is larger than the increase in the amount of exited ETH
+    /// @param totalExitViaConsolidationsAmountReportedIncrease The increase in the amount of exited ETH
+    /// @param exitedETHIncrease The increase in the amount of exited ETH
+    error InvalidTotalExitViaConsolidationsAmountReportedIncrease(
+        uint256 totalExitViaConsolidationsAmountReportedIncrease, uint256 exitedETHIncrease
+    );
+
     /// @notice Trace structure emitted via logs during reporting
     struct ConsensusLayerDataReportingTrace {
         uint256 rewards;
