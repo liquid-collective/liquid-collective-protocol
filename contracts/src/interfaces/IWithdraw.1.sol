@@ -70,6 +70,10 @@ interface IWithdrawV1 {
     /// @param pubkey The offending 48-byte BLS pubkey
     error SourcePubkeyNotFunded(bytes pubkey);
 
+    /// @notice Thrown when a source pubkey equals the target pubkey in a flow that forbids self-consolidation
+    /// @param pubkey The offending 48-byte BLS pubkey
+    error SelfConsolidationNotAllowed(bytes pubkey);
+
     /// @param _river The address of the River contract
     function initializeWithdrawV1(address _river) external;
 
