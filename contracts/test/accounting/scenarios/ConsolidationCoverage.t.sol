@@ -203,6 +203,23 @@ contract ConsolidationCoverageScenarioTest is AccountingInvariants {
         vm.store(address(operatorsRegistry), EXIT_CONSOLIDATION_BUFFER_SLOT, bytes32(amount));
     }
 
+    /// @dev Lands `amount` wei of validator ETH on the Withdraw contract as exited ETH, so the next report
+    ///      carries a `validatorsExitedBalance` increase of `amount`. An exit-via-consolidation arrival must
+    ///      be backed by such an increase, otherwise the report is rejected with
+    ///      `InvalidTotalExitViaConsolidationsAmountReportedIncrease`.
+    function _simExitArrival(uint256 amount) internal {
+        sim_requestExit(operatorOneIndex, amount);
+        sim_completeExit(operatorOneIndex, amount, 0);
+    }
+
+    /// @dev Submits a hand-mutated report as the oracle member and advances the simulator's reported-exited
+    ///      watermark, so a later `_buildBadReport` only tops the Withdraw contract up with the new arrival.
+    function _submitReport(IOracleManagerV1.ConsensusLayerReport memory report) internal {
+        vm.prank(oracleMember);
+        oracle.reportConsensusLayerData(report);
+        _lastReportedExited = _simCumulativeExited;
+    }
+
     /// @notice Reporting an arrival (cumulative totalExitViaConsolidationETH increase) debits the exit buffer by
     ///         the PER-REPORT delta, not the cumulative total. This pins the stored-report persistence fix:
     ///         without persisting totalExitViaConsolidationETH, the second report would debit by the cumulative
@@ -213,17 +230,17 @@ contract ConsolidationCoverageScenarioTest is AccountingInvariants {
         // No coverage donated, so the (empty) fund pull is a no-op and only the arrival adjustment moves the buffer.
         _seedExitConsolidationBuffer(10 ether);
 
+        _simExitArrival(3 ether);
         IOracleManagerV1.ConsensusLayerReport memory r1 = _buildBadReport(false, false);
         r1.totalExitViaConsolidationETH = 3 ether;
-        vm.prank(oracleMember);
-        oracle.reportConsensusLayerData(r1);
+        _submitReport(r1);
         assertEq(operatorsRegistry.getExitConsolidationBuffer(), 7 ether, "debited by first-report delta (3)");
         assertEq(river.getLastConsensusLayerReport().totalExitViaConsolidationETH, 3 ether, "arrival total persisted");
 
+        _simExitArrival(2 ether);
         IOracleManagerV1.ConsensusLayerReport memory r2 = _buildBadReport(false, false);
         r2.totalExitViaConsolidationETH = 5 ether; // cumulative -> delta of 2
-        vm.prank(oracleMember);
-        oracle.reportConsensusLayerData(r2);
+        _submitReport(r2);
         assertEq(
             operatorsRegistry.getExitConsolidationBuffer(),
             5 ether,
