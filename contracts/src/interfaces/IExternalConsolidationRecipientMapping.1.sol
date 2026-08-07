@@ -3,16 +3,16 @@ pragma solidity 0.8.34;
 
 /// @title External Consolidation Recipient Mapping Interface (v1)
 /// @author Alluvial Finance Inc.
-/// @notice Maps callers' withdrawal credential addresses to recipient addresses for external consolidation minting
+/// @notice Maps withdrawal credential addresses to recipient addresses for external consolidation minting
 interface IExternalConsolidationRecipientMappingV1 {
     /// @notice The stored River address has changed
     /// @param river The new River address
     event SetRiver(address indexed river);
 
     /// @notice The recipient for a withdrawal credential address has changed
-    /// @param withdrawalCredential The withdrawal credential address
+    /// @param withdrawalCredentialAddress The address component of the validator withdrawal credentials
     /// @param recipient The recipient address
-    event SetRecipient(address indexed withdrawalCredential, address indexed recipient);
+    event SetRecipient(address indexed withdrawalCredentialAddress, address indexed recipient);
 
     /// @notice The requested recipient is denied on the allowlist
     error RecipientIsDenied();
@@ -22,12 +22,19 @@ interface IExternalConsolidationRecipientMappingV1 {
     function initExternalConsolidationRecipientMappingV1(address _riverAddress) external;
 
     /// @notice Sets the recipient address for the caller.
-    /// @dev The assumption is that the caller is the withdrawal credential address.
+    /// @dev The caller is the committee-attested withdrawal credential address.
     /// @param _recipient The address to receive minted LsETH
     function setRecipient(address _recipient) external;
 
-    /// @notice Retrieves the recipient address mapped to a withdrawal credential address
-    /// @param _withdrawalCredential The withdrawal credential address to query
+    /// @notice Retrieves the raw recipient address mapped to a withdrawal credential address
+    /// @param _withdrawalCredentialAddress The withdrawal credential address to query
     /// @return The mapped recipient address
-    function getRecipient(address _withdrawalCredential) external view returns (address);
+    function getRecipient(address _withdrawalCredentialAddress) external view returns (address);
+
+    /// @notice Resolves the mint recipient for a withdrawal credential address
+    /// @dev Returns the mapped recipient when set, otherwise falls back to the withdrawal credential address.
+    /// @dev Does not perform any validation on the recipient address.
+    /// @param _withdrawalCredentialAddress The withdrawal credential address to resolve
+    /// @return The recipient address to receive minted LsETH
+    function resolveRecipient(address _withdrawalCredentialAddress) external view returns (address);
 }

@@ -48,3 +48,7 @@ runRiver.sh
 .claude
 
 /.review
+
+# Mythril local run artifacts
+.solcx
+mythril_output.md

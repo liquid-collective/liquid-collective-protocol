@@ -15,7 +15,7 @@ import "./state/externalConsolidationRecipientMapping/ExternalConsolidationRecip
 
 /// @title External Consolidation Recipient Mapping (v1)
 /// @author Alluvial Finance Inc.
-/// @notice Maps callers' withdrawal credential addresses to recipient addresses for external consolidation minting
+/// @notice Maps caller's withdrawal credentials to recipient addresses for external consolidation minting
 contract ExternalConsolidationRecipientMappingV1 is
     Initializable,
     IExternalConsolidationRecipientMappingV1,
@@ -40,8 +40,14 @@ contract ExternalConsolidationRecipientMappingV1 is
     }
 
     /// @inheritdoc IExternalConsolidationRecipientMappingV1
-    function getRecipient(address _withdrawalCredential) external view returns (address) {
-        return ExternalConsolidationRecipientMapping.get(_withdrawalCredential);
+    function getRecipient(address _withdrawalCredentialAddress) external view returns (address) {
+        return ExternalConsolidationRecipientMapping.get(_withdrawalCredentialAddress);
+    }
+
+    /// @inheritdoc IExternalConsolidationRecipientMappingV1
+    function resolveRecipient(address _withdrawalCredentialAddress) external view returns (address) {
+        address recipient = ExternalConsolidationRecipientMapping.get(_withdrawalCredentialAddress);
+        return recipient == address(0) ? _withdrawalCredentialAddress : recipient;
     }
 
     function version() external pure returns (string memory) {
