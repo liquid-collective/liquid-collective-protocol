@@ -248,6 +248,128 @@ contract ConsolidationCoverageScenarioTest is AccountingInvariants {
         );
     }
 
+    /// @notice `totalExitViaConsolidationETH` is a cumulative running total, so a report carrying a value below
+    ///         the stored one is rejected with `InvalidTotalExitViaConsolidationsAmountReportedDecrease`. Without
+    ///         the guard the lowered watermark would let the very same arrival be reported again, debiting the
+    ///         exit buffer twice for one consolidation.
+    function testExitViaConsolidationDecreaseReverts() public {
+        _baseline();
+        _seedExitConsolidationBuffer(10 ether);
+
+        _simExitArrival(3 ether);
+        IOracleManagerV1.ConsensusLayerReport memory r1 = _buildBadReport(false, false);
+        r1.totalExitViaConsolidationETH = 3 ether;
+        _submitReport(r1);
+        assertEq(operatorsRegistry.getExitConsolidationBuffer(), 7 ether, "first arrival debited the buffer");
+
+        // A lower cumulative total than the stored 3 ether.
+        IOracleManagerV1.ConsensusLayerReport memory r2 = _buildBadReport(false, false);
+        r2.totalExitViaConsolidationETH = 1 ether;
+        vm.prank(oracleMember);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IOracleManagerV1.InvalidTotalExitViaConsolidationsAmountReportedDecrease.selector, 3 ether, 1 ether
+            )
+        );
+        oracle.reportConsensusLayerData(r2);
+
+        assertEq(operatorsRegistry.getExitConsolidationBuffer(), 7 ether, "rejected report left the buffer untouched");
+    }
+
+    /// @notice Same guard, reached the way an oracle bug actually reaches it: a later report leaves
+    ///         `totalExitViaConsolidationETH` at its default zero (reporting only the per-report delta, or
+    ///         nothing at all) after a non-zero total was stored. Zero is still a decrease, so the report is
+    ///         rejected rather than silently resetting the watermark.
+    function testExitViaConsolidationOmittedAfterNonZeroTotalReverts() public {
+        _baseline();
+        _seedExitConsolidationBuffer(10 ether);
+
+        _simExitArrival(3 ether);
+        IOracleManagerV1.ConsensusLayerReport memory r1 = _buildBadReport(false, false);
+        r1.totalExitViaConsolidationETH = 3 ether;
+        _submitReport(r1);
+
+        // Left at the struct default: the field is simply not carried forward.
+        IOracleManagerV1.ConsensusLayerReport memory r2 = _buildBadReport(false, false);
+        vm.prank(oracleMember);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IOracleManagerV1.InvalidTotalExitViaConsolidationsAmountReportedDecrease.selector, 3 ether, 0
+            )
+        );
+        oracle.reportConsensusLayerData(r2);
+
+        assertEq(
+            river.getLastConsensusLayerReport().totalExitViaConsolidationETH, 3 ether, "stored total not rolled back"
+        );
+    }
+
+    /// @notice An arrival must be backed by exited ETH landing in the same report: an increase of one wei above
+    ///         the matching `validatorsExitedBalance` increase is rejected with
+    ///         `InvalidTotalExitViaConsolidationsAmountReportedIncrease`. This pins the exact boundary — the
+    ///         existing `testExitViaConsolidationArrivalDebitsBufferByPerReportDelta` accepts increase ==
+    ///         exitedIncrease, so together they fix the comparison as strict.
+    function testExitViaConsolidationIncreaseAboveExitedIncreaseReverts() public {
+        _baseline();
+        _seedExitConsolidationBuffer(10 ether);
+
+        _simExitArrival(3 ether);
+        IOracleManagerV1.ConsensusLayerReport memory report = _buildBadReport(false, false);
+        report.totalExitViaConsolidationETH = 3 ether + 1;
+        vm.prank(oracleMember);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IOracleManagerV1.InvalidTotalExitViaConsolidationsAmountReportedIncrease.selector, 3 ether + 1, 3 ether
+            )
+        );
+        oracle.reportConsensusLayerData(report);
+
+        assertEq(operatorsRegistry.getExitConsolidationBuffer(), 10 ether, "unbacked arrival did not debit the buffer");
+    }
+
+    /// @notice The degenerate case of the same guard: an arrival reported while no ETH exited at all. The buffer
+    ///         being non-empty (a consolidation exit is genuinely pending) is not sufficient — the debit is
+    ///         driven by ETH that actually arrived, so the increase is compared against a zero exited increase.
+    function testExitViaConsolidationIncreaseWithoutAnyExitReverts() public {
+        _baseline();
+        _seedExitConsolidationBuffer(10 ether);
+
+        // No `_simExitArrival`: validatorsExitedBalance is unchanged, so the exited increase is zero.
+        IOracleManagerV1.ConsensusLayerReport memory report = _buildBadReport(false, false);
+        report.totalExitViaConsolidationETH = 1 ether;
+        vm.prank(oracleMember);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IOracleManagerV1.InvalidTotalExitViaConsolidationsAmountReportedIncrease.selector, 1 ether, 0
+            )
+        );
+        oracle.reportConsensusLayerData(report);
+
+        assertEq(operatorsRegistry.getExitConsolidationBuffer(), 10 ether, "unbacked arrival did not debit the buffer");
+    }
+
+    /// @notice Repeating the stored cumulative total is neither a decrease nor an increase: the report is
+    ///         accepted and the exit buffer is not debited again. This covers the pass-through of both bounds
+    ///         checks and would catch either comparison being loosened to `<=` / `>=`.
+    function testExitViaConsolidationUnchangedTotalIsANoOp() public {
+        _baseline();
+        _seedExitConsolidationBuffer(10 ether);
+
+        _simExitArrival(3 ether);
+        IOracleManagerV1.ConsensusLayerReport memory r1 = _buildBadReport(false, false);
+        r1.totalExitViaConsolidationETH = 3 ether;
+        _submitReport(r1);
+        assertEq(operatorsRegistry.getExitConsolidationBuffer(), 7 ether, "first arrival debited the buffer");
+
+        // Same cumulative total, no new arrival to account for.
+        IOracleManagerV1.ConsensusLayerReport memory r2 = _buildBadReport(false, false);
+        r2.totalExitViaConsolidationETH = 3 ether;
+        _submitReport(r2);
+
+        assertEq(operatorsRegistry.getExitConsolidationBuffer(), 7 ether, "no second debit for an unchanged total");
+        assertEq(river.getLastConsensusLayerReport().totalExitViaConsolidationETH, 3 ether, "stored total unchanged");
+    }
+
     function _maxIncreaseForNextReport(uint256 preReportUnderlying) internal view returns (uint256) {
         ReportBounds.ReportBoundsStruct memory rb = river.getReportBounds();
         return (preReportUnderlying * rb.annualAprUpperBound * _frameDuration()) / (10_000 * 365 days);
