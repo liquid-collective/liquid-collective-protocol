@@ -138,7 +138,7 @@ contract ConsolidationCoverageScenarioTest is AccountingInvariants {
         assertEq(river.totalSupply(), sharesBefore, "no fee shares minted on consolidated principal");
     }
 
-    function testConsolidationLifecycleConservation() public {
+    function testMintReportDrawdownAndCoveragePullConservesUnderlyingAndShares() public {
         _baseline();
 
         uint256 coverage = 5 ether;
