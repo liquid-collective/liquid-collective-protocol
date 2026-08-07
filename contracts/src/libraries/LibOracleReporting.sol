@@ -168,6 +168,13 @@ library LibOracleReporting {
             if (_report.totalExitViaConsolidationETH > lastStoredReport.totalExitViaConsolidationETH) {
                 vars.totalExitViaConsolidationETHIncrease =
                     _report.totalExitViaConsolidationETH - lastStoredReport.totalExitViaConsolidationETH;
+
+                // we ensure that the total exit via consolidation amount reported is not larger than the increase in the amount of exited ETH
+                if (vars.totalExitViaConsolidationETHIncrease > vars.exitedAmountIncrease) {
+                    revert IOracleManagerV1.InvalidTotalExitViaConsolidationsAmountReportedIncrease(
+                        vars.totalExitViaConsolidationETHIncrease, vars.exitedAmountIncrease
+                    );
+                }
             }
 
             // we compute the new skimmed amount by taking the delta between reports
