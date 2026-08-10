@@ -63,6 +63,7 @@ library LibOracleReporting {
         uint256 lastConsolidationBuffer;
         uint256 totalExternalConsolidationETHIncrease;
         uint256 totalExitViaConsolidationETHIncrease;
+        uint256 stoppedEarningAmountIncrease;
         uint256 timeElapsedSinceLastReport;
         uint256 availableAmountToUpperBound;
         IOracleManagerV1.ConsensusLayerDataReportingTrace trace;
@@ -177,6 +178,24 @@ library LibOracleReporting {
                 }
             }
 
+            // the cumulative stopped-earning balance is monotone for the same reason the exited and
+            // skimmed balances are: it counts principal that has crossed exit_epoch, and nothing can
+            // un-cross it
+            if (_report.validatorsStoppedEarningBalance < lastStoredReport.validatorsStoppedEarningBalance) {
+                revert IOracleManagerV1.InvalidDecreasingValidatorsStoppedEarningBalance(
+                    lastStoredReport.validatorsStoppedEarningBalance, _report.validatorsStoppedEarningBalance
+                );
+            }
+
+            // the delta is the principal that stopped earning within this reporting interval. It is
+            // deliberately NOT bounded here against validatorsExitingBalance + validatorsExitedBalance:
+            // post-exit_epoch slashing can make the cumulative stopped-earning total exceed what is
+            // eventually swept, so that comparison is not an invariant, and an over-tight revert on the
+            // report path would block redemption settlement entirely (_reportWithdrawToRedeemManager
+            // runs inside this same call). Consumers clamp the delta instead.
+            vars.stoppedEarningAmountIncrease =
+                _report.validatorsStoppedEarningBalance - lastStoredReport.validatorsStoppedEarningBalance;
+
             // we compute the new skimmed amount by taking the delta between reports
             vars.skimmedAmountIncrease = _report.validatorsSkimmedBalance - vars.lastReportSkimmedBalance;
 
@@ -221,6 +240,7 @@ library LibOracleReporting {
             storedReport.totalDepositedActivatedETH = _report.totalDepositedActivatedETH;
             storedReport.totalExternalConsolidationETH = _report.totalExternalConsolidationETH;
             storedReport.totalExitViaConsolidationETH = _report.totalExitViaConsolidationETH;
+            storedReport.validatorsStoppedEarningBalance = _report.validatorsStoppedEarningBalance;
             LastConsensusLayerReport.set(storedReport);
         }
 

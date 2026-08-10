@@ -54,6 +54,10 @@ contract OracleManagerV1ExposeInitializer is OracleManagerV1 {
         LastConsensusLayerReport.get().totalExternalConsolidationETH = amount;
     }
 
+    function supersedeValidatorsStoppedEarningBalance(uint256 amount) external {
+        LastConsensusLayerReport.get().validatorsStoppedEarningBalance = amount;
+    }
+
     function supersedeDepositedValidatorCount(uint256 amount) external {
         DepositedValidatorCount.set(amount);
     }
@@ -369,5 +373,54 @@ contract OracleManagerV1CoverageTests is OracleManagerV1Tests {
             )
         );
         oracleManager.setConsensusLayerData(clr);
+    }
+
+    /// Asserts that setConsensusLayerData reverts with InvalidDecreasingValidatorsStoppedEarningBalance
+    /// when the reported cumulative stopped-earning balance is lower than the stored value. The field
+    /// counts principal that has crossed exit_epoch, which nothing can un-cross, so a decrease is an
+    /// oracle bug rather than a reportable state.
+    function testSetConsensusLayerDataRevertsOnStoppedEarningBalanceDecrease() public {
+        OracleManagerV1ExposeInitializer om = OracleManagerV1ExposeInitializer(address(oracleManager));
+        om.supersedeValidatorsStoppedEarningBalance(64 ether);
+
+        uint256 epoch = epochsPerFrame;
+        vm.warp(genesisTime + (epoch + epochsToAssumedFinality) * slotsPerEpoch * secondsPerSlot);
+        IOracleManagerV1.ConsensusLayerReport memory clr;
+        clr.epoch = epoch;
+        clr.exitedETHPerOperator = new uint256[](1);
+        clr.validatorsStoppedEarningBalance = 32 ether;
+
+        vm.prank(oracle);
+        vm.expectRevert(
+            abi.encodeWithSignature(
+                "InvalidDecreasingValidatorsStoppedEarningBalance(uint256,uint256)", 64 ether, 32 ether
+            )
+        );
+        oracleManager.setConsensusLayerData(clr);
+    }
+
+    /// Asserts that reporting an unchanged stopped-earning balance is accepted (a reporting interval in
+    /// which no validator crossed exit_epoch is the common case, and must not revert).
+    function testSetConsensusLayerDataAcceptsUnchangedStoppedEarningBalance() public {
+        OracleManagerV1ExposeInitializer om = OracleManagerV1ExposeInitializer(address(oracleManager));
+        om.supersedeValidatorsStoppedEarningBalance(64 ether);
+
+        uint256 epoch = epochsPerFrame;
+        vm.warp(genesisTime + (epoch + epochsToAssumedFinality) * slotsPerEpoch * secondsPerSlot);
+        IOracleManagerV1.ConsensusLayerReport memory clr;
+        clr.epoch = epoch;
+        clr.exitedETHPerOperator = new uint256[](1);
+        clr.validatorsStoppedEarningBalance = 64 ether;
+
+        // reverts later in the orchestration (this bare mock cannot satisfy the self-calls), but NOT
+        // with the monotonicity error — that is what this asserts
+        vm.prank(oracle);
+        try oracleManager.setConsensusLayerData(clr) {}
+        catch (bytes memory reason) {
+            assertTrue(
+                bytes4(reason) != IOracleManagerV1.InvalidDecreasingValidatorsStoppedEarningBalance.selector,
+                "equal stopped-earning balance must not trip the monotonicity guard"
+            );
+        }
     }
 }
