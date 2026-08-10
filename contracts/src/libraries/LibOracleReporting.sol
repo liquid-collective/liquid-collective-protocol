@@ -361,6 +361,19 @@ library LibOracleReporting {
             _report.slashingContainmentMode
         );
 
+        // we mark the pending redeem demand whose backing principal stopped earning in this interval, at
+        // this report's rate. This must run BEFORE _reportWithdrawToRedeemManager: settlement burns the
+        // corresponding shares and removes that LsETH from the redeem demand, so demand settled in this
+        // same report would otherwise never be marked and would be paid at its request-time rate.
+        // Called unconditionally on a non-zero delta — the cumulative validatorsStoppedEarningBalance was
+        // already persisted above, so skipping the call would discard the delta permanently. In
+        // particular it is NOT gated on slashing containment: containment freezes new exits while leaving
+        // settlement priced at the depressed rate, which lengthens a queued redeemer's wait, so
+        // suspending accrual there would penalise them twice.
+        if (vars.stoppedEarningAmountIncrease > 0) {
+            IRedeemManagerV1(RedeemManagerAddress.get()).reportStoppedEarning(vars.stoppedEarningAmountIncrease);
+        }
+
         // we use the updated balanceToRedeem value to report a withdraw event on the redeem manager
         _reportWithdrawToRedeemManager();
 
