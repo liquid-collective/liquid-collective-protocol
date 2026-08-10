@@ -3461,6 +3461,105 @@ contract RiverV1CoverageTests is RiverV1TestBase {
     /// stored report leaves the consolidation buffer untouched. The reduction branch in
     /// LibOracleReporting.setConsensusLayerData uses a strict `>` comparison, so an equal report must not
     /// enter the reduction path.
+    /// Asserts that the cumulative validatorsStoppedEarningBalance survives a real report round-trip
+    /// through LibOracleReporting into LastConsensusLayerReport storage, and that it is readable back
+    /// via getLastConsensusLayerReport. This is the anchor the redemption cap-raise reads its per-report
+    /// delta from, so the value must persist even in a report where nothing else moves.
+    function testReportStoppedEarningBalancePersistsAndAccumulates() public {
+        _initRiverMinimalForReporting();
+
+        assertEq(river.getLastConsensusLayerReport().validatorsStoppedEarningBalance, 0);
+
+        uint256 epoch = epochsPerFrame;
+        _warpToFinalizedEpoch(epoch);
+        IOracleManagerV1.ConsensusLayerReport memory clr;
+        clr.epoch = epoch;
+        clr.validatorsStoppedEarningBalance = 32 ether;
+        clr.totalDepositedActivatedETH = 0;
+        clr.exitedETHPerOperator = new uint256[](1);
+        clr.activeCLETHPerOperator = new uint256[](1);
+
+        vm.prank(address(oracle));
+        river.setConsensusLayerData(clr);
+
+        assertEq(river.getLastConsensusLayerReport().validatorsStoppedEarningBalance, 32 ether);
+
+        // a second report accumulates rather than replacing a per-interval delta
+        uint256 nextEpoch = epoch + epochsPerFrame;
+        _warpToFinalizedEpoch(nextEpoch);
+        IOracleManagerV1.ConsensusLayerReport memory clr2;
+        clr2.epoch = nextEpoch;
+        clr2.validatorsStoppedEarningBalance = 96 ether;
+        clr2.totalDepositedActivatedETH = 0;
+        clr2.exitedETHPerOperator = new uint256[](1);
+        clr2.activeCLETHPerOperator = new uint256[](1);
+
+        vm.prank(address(oracle));
+        river.setConsensusLayerData(clr2);
+
+        assertEq(river.getLastConsensusLayerReport().validatorsStoppedEarningBalance, 96 ether);
+    }
+
+    /// Asserts the monotonicity guard fires end-to-end on the real River, not just on the bare
+    /// OracleManager mock.
+    function testReportingError_InvalidDecreasingValidatorsStoppedEarningBalance() public {
+        _initRiverMinimalForReporting();
+
+        uint256 epoch = epochsPerFrame;
+        _warpToFinalizedEpoch(epoch);
+        IOracleManagerV1.ConsensusLayerReport memory clr;
+        clr.epoch = epoch;
+        clr.validatorsStoppedEarningBalance = 64 ether;
+        clr.totalDepositedActivatedETH = 0;
+        clr.exitedETHPerOperator = new uint256[](1);
+        clr.activeCLETHPerOperator = new uint256[](1);
+
+        vm.prank(address(oracle));
+        river.setConsensusLayerData(clr);
+
+        uint256 nextEpoch = epoch + epochsPerFrame;
+        _warpToFinalizedEpoch(nextEpoch);
+        IOracleManagerV1.ConsensusLayerReport memory clr2;
+        clr2.epoch = nextEpoch;
+        clr2.validatorsStoppedEarningBalance = 63 ether;
+        clr2.totalDepositedActivatedETH = 0;
+        clr2.exitedETHPerOperator = new uint256[](1);
+        clr2.activeCLETHPerOperator = new uint256[](1);
+
+        vm.prank(address(oracle));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IOracleManagerV1.InvalidDecreasingValidatorsStoppedEarningBalance.selector, 64 ether, 63 ether
+            )
+        );
+        river.setConsensusLayerData(clr2);
+    }
+
+    /// Asserts that a cumulative stopped-earning total ABOVE validatorsExitingBalance +
+    /// validatorsExitedBalance is accepted. That comparison is deliberately not enforced: principal is
+    /// counted at its balance when it crossed exit_epoch, and post-exit_epoch slashing can reduce what
+    /// is eventually swept, so the sum is not an invariant. Reverting on it would brick the whole report
+    /// — including redemption settlement, which runs later in the same call.
+    function testReportStoppedEarningBalanceMayExceedExitingPlusExited() public {
+        _initRiverMinimalForReporting();
+
+        uint256 epoch = epochsPerFrame;
+        _warpToFinalizedEpoch(epoch);
+        IOracleManagerV1.ConsensusLayerReport memory clr;
+        clr.epoch = epoch;
+        clr.validatorsExitingBalance = 0;
+        clr.validatorsExitedBalance = 0;
+        clr.validatorsStoppedEarningBalance = 32 ether;
+        clr.totalDepositedActivatedETH = 0;
+        clr.exitedETHPerOperator = new uint256[](1);
+        clr.activeCLETHPerOperator = new uint256[](1);
+
+        vm.prank(address(oracle));
+        river.setConsensusLayerData(clr);
+
+        assertEq(river.getLastConsensusLayerReport().validatorsStoppedEarningBalance, 32 ether);
+    }
+
     function testReportConsolidationsUnchangedKeepsBuffer() public {
         _initRiverMinimalForReporting();
         // No consolidation coverage fund configured, so the end-of-report pull path cannot touch the buffer.
