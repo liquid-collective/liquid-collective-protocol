@@ -77,6 +77,10 @@ interface IRedeemManagerV1 {
     /// @param markedLsETH The portion that was actually marked
     event StoppedEarningExceededMarkableDemand(uint256 reportedLsETH, uint256 markedLsETH);
 
+    /// @notice Emitted when the rate mark floor is pinned at upgrade time
+    /// @param floor The lowest LsETH position a rate mark may cover
+    event SetRateMarkFloor(uint256 floor);
+
     /// @notice Emitted when the River address is set
     /// @param river The new river address
     event SetRiver(address river);
@@ -133,6 +137,12 @@ interface IRedeemManagerV1 {
     function initializeRedeemManagerV1(address _river) external;
 
     function initializeRedeemManagerV1_2() external;
+
+    /// @notice Pins the launch cutover for stopped-earning rate marks at the end of the current queue
+    /// @dev Must run in the same governance action that upgrades the implementation. Without it the
+    ///      floor stays 0 and the first reports after the upgrade spend their stopped-earning credit on
+    ///      pre-upgrade requests, which have no anchor and therefore cannot use it.
+    function initializeRedeemManagerV1_3() external;
 
     /// @notice Retrieve River address
     /// @return The address of River
@@ -230,6 +240,10 @@ interface IRedeemManagerV1 {
     ///      `validatorsStoppedEarningBalance` before this point, so a skipped call loses the delta for good.
     /// @param _stoppedEarningEth The ETH value of the principal that crossed exit_epoch in this interval
     function reportStoppedEarning(uint256 _stoppedEarningEth) external;
+
+    /// @notice Retrieve the lowest LsETH position that a rate mark may cover
+    /// @dev The launch cutover. Demand below this position is always paid under the original rules.
+    function getRateMarkFloor() external view returns (uint256);
 
     /// @notice Retrieve the global count of rate marks
     function getRateMarkCount() external view returns (uint256);
