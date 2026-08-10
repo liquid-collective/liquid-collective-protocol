@@ -128,6 +128,7 @@ contract RedeeManagerV1TestBase is Test {
     event ReportedWithdrawal(uint256 height, uint256 size, uint256 ethAmount, uint32 id);
     event ReportedStoppedEarning(uint256 height, uint256 amount, uint256 markedEth, uint32 id);
     event StoppedEarningExceededMarkableDemand(uint256 reportedLsETH, uint256 markedLsETH);
+    event SetRateMarkFloor(uint256 floor);
     event SatisfiedRedeemRequest(
         uint32 indexed redeemRequestId,
         uint32 indexed withdrawalEventId,
@@ -1685,6 +1686,23 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         return redeemManager.requestRedeem(amount, user);
     }
 
+    /// @dev Puts the contract in the state a live deployment is in just before the stopped-earning
+    ///      upgrade, then applies it. setUp only runs initializeRedeemManagerV1, leaving the version at
+    ///      1, whereas mainnet is already at 2.
+    /// @dev The version is poked rather than reached by calling initializeRedeemManagerV1_2, because
+    ///      RedeemQueueV1 and RedeemQueueV2 share the storage slot
+    ///      keccak256("river.state.redeemQueue") - 1. Its migration re-interprets that array in place and
+    ///      is only safe because init(1) runs it exactly once, before any V2 request exists. Running it
+    ///      over a populated V2 queue silently corrupts every element.
+    function _pokeVersionTo(uint256 version) internal {
+        vm.store(address(redeemManager), bytes32(uint256(keccak256("river.state.version")) - 1), bytes32(version));
+    }
+
+    function _upgradeToV1_3() internal {
+        _pokeVersionTo(2);
+        redeemManager.initializeRedeemManagerV1_3();
+    }
+
     /// @dev Settles `lsETH` of demand at the current pool rate and claims request `id` in full.
     function _settleAndClaim(uint32 id, uint256 lsETH, uint256 settlementRate) internal returns (uint256 received) {
         uint256 withdrawnEth = applyRate(lsETH, settlementRate);
@@ -1917,6 +1935,101 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
 
         uint256 received = _settleAndClaim(id, 30e18, 1.05e18);
         assertEq(received, applyRate(30e18, 1e18));
+    }
+
+    /// The launch cutover. initializeRedeemManagerV1_3 pins the mark floor at the end of the queue as
+    /// it stands at upgrade time, so demand that was already pending is excluded from accrual.
+    function testInitializeV1_3PinsFloorAtCurrentQueueEnd() external {
+        address user = _generateAllowlistedUser(0);
+        river.sudoSetRate(1e18);
+        _openRequest(user, 30e18);
+        _openRequest(user, 20e18);
+
+        assertEq(redeemManager.getRateMarkFloor(), 0);
+        _pokeVersionTo(2);
+        vm.expectEmit(true, true, true, true);
+        emit SetRateMarkFloor(50e18);
+        redeemManager.initializeRedeemManagerV1_3();
+        assertEq(redeemManager.getRateMarkFloor(), 50e18);
+    }
+
+    function testInitializeV1_3OnEmptyQueuePinsZero() external {
+        _upgradeToV1_3();
+        assertEq(redeemManager.getRateMarkFloor(), 0);
+    }
+
+    function testInitializeV1_3Twice() external {
+        _upgradeToV1_3();
+        vm.expectRevert(abi.encodeWithSignature("InvalidInitialization(uint256,uint256)", 2, 3));
+        redeemManager.initializeRedeemManagerV1_3();
+    }
+
+    /// Without the floor, marks would start at the head of the queue and be consumed by pre-upgrade
+    /// requests, which have no anchor and so cannot use them — silently short-changing the first
+    /// post-upgrade cohort by exactly that amount. This is the regression the floor exists to prevent:
+    /// the post-upgrade request must receive the full mark.
+    function testFloorStopsLegacyDemandFromConsumingMarks() external {
+        address user = _generateAllowlistedUser(0);
+        river.sudoSetRate(1e18);
+
+        // a pre-upgrade request, still pending at upgrade time
+        uint32 legacy = _openRequest(user, 30e18);
+        bytes32 anchorSlot =
+            keccak256(abi.encode(uint256(legacy), bytes32(uint256(keccak256("river.state.redeemRequestAnchor")) - 1)));
+        vm.store(address(redeemManager), anchorSlot, bytes32(0));
+        vm.store(address(redeemManager), bytes32(uint256(anchorSlot) + 1), bytes32(0));
+
+        _upgradeToV1_3();
+        assertEq(redeemManager.getRateMarkFloor(), 30e18);
+
+        // a post-upgrade request
+        uint32 fresh = _openRequest(user, 30e18);
+
+        // stopped-earning principal worth exactly one request
+        river.sudoSetRate(1.05e18);
+        river.sudoReportStoppedEarning(address(redeemManager), applyRate(30e18, 1.05e18));
+
+        // the mark starts past the legacy request, not at 0
+        assertEq(redeemManager.getRateMarkDetails(0).height, 30e18);
+        assertEq(redeemManager.getRateMarkDetails(0).amount, 30e18);
+
+        // legacy settles first and is unaffected: still capped at its request rate
+        uint256 legacyWithdrawn = applyRate(30e18, 1.05e18);
+        vm.deal(address(this), legacyWithdrawn);
+        river.sudoReportWithdraw{value: legacyWithdrawn}(address(redeemManager), 30e18);
+        uint32[] memory legacyIds = new uint32[](1);
+        legacyIds[0] = legacy;
+        uint32[] memory legacyEvents = new uint32[](1);
+        legacyEvents[0] = 0;
+        uint256 beforeLegacy = user.balance;
+        redeemManager.claimRedeemRequests(legacyIds, legacyEvents);
+        assertEq(user.balance - beforeLegacy, applyRate(30e18, 1e18));
+
+        // and the post-upgrade request gets the whole mark
+        uint256 received = _settleAndClaim(fresh, 30e18, 1.05e18);
+        assertEq(received, applyRate(30e18, 1.05e18));
+    }
+
+    /// The floor must not strand credit when it sits above the settled height: once demand grows past
+    /// the floor, marking resumes normally from the floor.
+    function testMarkingResumesAboveFloor() external {
+        address user = _generateAllowlistedUser(0);
+        river.sudoSetRate(1e18);
+        _openRequest(user, 30e18);
+        _upgradeToV1_3();
+
+        // nothing markable yet: all demand is below the floor
+        river.sudoReportStoppedEarning(address(redeemManager), 100e18);
+        assertEq(redeemManager.getRateMarkCount(), 0);
+
+        uint32 fresh = _openRequest(user, 10e18);
+        river.sudoSetRate(1.02e18);
+        river.sudoReportStoppedEarning(address(redeemManager), applyRate(10e18, 1.02e18));
+
+        assertEq(redeemManager.getRateMarkCount(), 1);
+        assertEq(redeemManager.getRateMarkDetails(0).height, 30e18);
+        assertEq(redeemManager.getRateMarkDetails(0).amount, 10e18);
+        assertEq(redeemManager.getRedeemRequestAnchor(fresh).lsETHAtRequest, 10e18);
     }
 
     function testResolveOutOfBounds() external {
