@@ -1,4 +1,4 @@
-.PHONY: foundry lib yarn install test lint test-lint
+.PHONY: foundry lib yarn install test lint test-lint size
 
 foundry:
 	echo "Install foundry"
@@ -18,6 +18,12 @@ test:
 
 test-heavy:
 	forge test -vvv --gas-report --match-contract HEAVY_FUZZING
+
+# Checks every deployable production contract against the EIP-170 runtime limit.
+# RiverV1 has ~1.6KB of headroom, so run this on any change that touches River or the
+# oracle report struct. Set MIN_RUNTIME_MARGIN to also fail on a too-thin margin.
+size:
+	./scripts/check_contract_sizes.sh
 
 lint:
 	forge build --force
