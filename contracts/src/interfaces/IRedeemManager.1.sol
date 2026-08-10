@@ -3,6 +3,8 @@ pragma solidity 0.8.34;
 
 import "../state/redeemManager/RedeemQueue.2.sol";
 import "../state/redeemManager/WithdrawalStack.sol";
+import "../state/redeemManager/RateMarkStack.sol";
+import "../state/redeemManager/RedeemRequestAnchor.sol";
 
 /// @title Redeem Manager Interface (v1)
 /// @author Alluvial Finance Inc.
@@ -59,6 +61,21 @@ interface IRedeemManagerV1 {
     /// @param oldRedeemDemand The old redeem demand
     /// @param newRedeemDemand The new redeem demand
     event SetRedeemDemand(uint256 oldRedeemDemand, uint256 newRedeemDemand);
+
+    /// @notice Emitted when a rate mark is created, raising the payout cap of the covered redeem demand
+    /// @param height The start position of the mark on the cumulative LsETH axis
+    /// @param amount The amount of LsETH marked
+    /// @param markedEth The ETH value of `amount` at the pool rate of this report
+    /// @param id The id of the new rate mark
+    event ReportedStoppedEarning(uint256 height, uint256 amount, uint256 markedEth, uint32 id);
+
+    /// @notice Emitted when reported stopped-earning principal exceeded the markable redeem demand
+    /// @dev Not an error. Most exits are not backing a redemption, so the common case is that the
+    ///      reported principal is far larger than the pending demand and the surplus is simply not
+    ///      attributable to any redeemer. Emitted so the excess is observable rather than silent.
+    /// @param reportedLsETH The LsETH equivalent of the reported stopped-earning principal
+    /// @param markedLsETH The portion that was actually marked
+    event StoppedEarningExceededMarkableDemand(uint256 reportedLsETH, uint256 markedLsETH);
 
     /// @notice Emitted when the River address is set
     /// @param river The new river address
@@ -205,6 +222,29 @@ interface IRedeemManagerV1 {
     /// @notice Reports a withdraw event from River
     /// @param _lsETHWithdrawable The amount of LsETH that can be redeemed due to this new withdraw event
     function reportWithdraw(uint256 _lsETHWithdrawable) external payable;
+
+    /// @notice Reports the principal that stopped earning on the consensus layer in this reporting interval
+    /// @dev Called by River once per report, BEFORE `reportWithdraw`, so that demand settled in the same
+    ///      report is marked before its shares are burned and removed from the redeem demand.
+    /// @dev Must be called unconditionally whenever the delta is non-zero. River persists the cumulative
+    ///      `validatorsStoppedEarningBalance` before this point, so a skipped call loses the delta for good.
+    /// @param _stoppedEarningEth The ETH value of the principal that crossed exit_epoch in this interval
+    function reportStoppedEarning(uint256 _stoppedEarningEth) external;
+
+    /// @notice Retrieve the global count of rate marks
+    function getRateMarkCount() external view returns (uint256);
+
+    /// @notice Retrieve the details of a specific rate mark
+    /// @param _rateMarkId The id of the rate mark
+    /// @return The rate mark details
+    function getRateMarkDetails(uint32 _rateMarkId) external view returns (RateMarkStack.RateMark memory);
+
+    /// @notice Retrieve the immutable request-time valuation of a redeem request
+    /// @dev A zero `lsETHAtRequest` means the request predates the stopped-earning upgrade and is paid
+    ///      under the original rules.
+    /// @param _redeemRequestId The id of the request
+    /// @return The request-time anchor
+    function getRedeemRequestAnchor(uint32 _redeemRequestId) external view returns (RedeemRequestAnchor.Anchor memory);
 
     /// @notice Pulls exceeding buffer eth
     /// @param _max The maximum amount that should be pulled
