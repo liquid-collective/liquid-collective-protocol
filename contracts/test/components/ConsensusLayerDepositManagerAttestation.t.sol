@@ -389,6 +389,14 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     // Helpers
     // -----------------------------------------------------------------------
 
+    /// @dev Return whether an address appears in an in-memory list.
+    function _contains(address[] memory values, address expected) internal pure returns (bool) {
+        for (uint256 i = 0; i < values.length; ++i) {
+            if (values[i] == expected) return true;
+        }
+        return false;
+    }
+
     /// @dev Generate a deterministic 48-byte pubkey (valid length for deposit contract).
     function _fakePubkey(uint256 seed) internal pure returns (bytes memory) {
         return abi.encodePacked(sha256(abi.encode("pubkey", seed)), bytes16(0));
@@ -2067,6 +2075,11 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         assertEq(verifier.getDepositDataBuffer(), address(buffer));
         assertEq(verifier.getRootAttesterCount(), 3);
         assertEq(verifier.getRootAttestationQuorum(), 2);
+        address[] memory rootAttesters = verifier.getRootAttesters();
+        assertEq(rootAttesters.length, 3);
+        assertTrue(_contains(rootAttesters, rootAttester1));
+        assertTrue(_contains(rootAttesters, rootAttester2));
+        assertTrue(_contains(rootAttesters, rootAttester3));
         assertTrue(verifier.isRootAttester(rootAttester1));
         assertTrue(verifier.isRootAttester(rootAttester2));
         assertTrue(verifier.isRootAttester(rootAttester3));
@@ -2140,6 +2153,36 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         verifier.setRootAttester(newAttester, false);
         assertFalse(verifier.isRootAttester(newAttester));
         assertEq(verifier.getRootAttesterCount(), 3);
+    }
+
+    /// @dev Enumeration follows additions and unordered removals, including removal of the
+    ///      member swapped into a vacated non-tail position.
+    function testGetRootAttesters_tracksAddAndNonTailRemoval() public {
+        address newAttester = address(0xFEED);
+
+        vm.prank(admin);
+        verifier.setRootAttester(newAttester, true);
+
+        vm.prank(admin);
+        verifier.setRootAttester(rootAttester2, false);
+
+        address[] memory rootAttesters = verifier.getRootAttesters();
+        assertEq(rootAttesters.length, 3);
+        assertTrue(_contains(rootAttesters, rootAttester1));
+        assertFalse(_contains(rootAttesters, rootAttester2));
+        assertTrue(_contains(rootAttesters, rootAttester3));
+        assertTrue(_contains(rootAttesters, newAttester));
+
+        // `newAttester` was the tail and should have been moved into rootAttester2's slot.
+        // Removing it proves the index mapping was repaired by the first swap-and-pop.
+        vm.prank(admin);
+        verifier.setRootAttester(newAttester, false);
+
+        rootAttesters = verifier.getRootAttesters();
+        assertEq(rootAttesters.length, 2);
+        assertTrue(_contains(rootAttesters, rootAttester1));
+        assertTrue(_contains(rootAttesters, rootAttester3));
+        assertFalse(_contains(rootAttesters, newAttester));
     }
 
     /// @dev Non-admin caller must be rejected by onlyRiverAdmin.

@@ -453,6 +453,11 @@ interface IAttestationVerifierV1 {
     /// @return True if account is a registered root attester
     function isRootAttester(address account) external view returns (bool);
 
+    /// @notice Retrieve all registered root attesters
+    /// @dev The order is not stable and may change when a root attester is removed.
+    /// @return The registered root attesters
+    function getRootAttesters() external view returns (address[] memory);
+
     /// @notice Retrieve the current number of registered root attesters
     /// @return The root attester count
     function getRootAttesterCount() external view returns (uint256);

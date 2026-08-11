@@ -48,7 +48,7 @@ contract AttesterSetDepositBufferStub {
 ///         - soft-bricking the deposit flow by setting quorum > registered count
 ///         - soft-bricking the deposit flow by setting quorum > `MAX_SIGNATURES`
 ///         - auth bypass via quorum = 0
-///         - desync between the `count` scalar and the `isRootAttester` mapping
+///         - desync between enumeration and `isRootAttester` membership
 contract AttesterSetInvariantTest is Test {
     AttestationVerifierV1 internal verifier;
     AttesterSetHandler internal handler;
@@ -97,19 +97,31 @@ contract AttesterSetInvariantTest is Test {
         assertGt(verifier.getRootAttestationQuorum(), 0);
     }
 
-    /// @dev The verifier's `count` scalar and its `isRootAttester` mapping must
-    ///      stay in sync. A refactor that desyncs them (e.g. increments count without
-    ///      writing the flag, or vice versa) would make the contract lie about its own state
-    ///      and would not be caught by the four scalar-checking invariants above.
-    function invariant_countMatchesMapping() public {
-        uint256 expected = 0;
-        uint256 n = handler.getCandidatesLength();
-        for (uint256 i = 0; i < n; i++) {
-            if (verifier.isRootAttester(handler.getCandidate(i))) {
-                ++expected;
+    /// @dev Enumeration is a duplicate-free, zero-free representation of exactly the same set
+    ///      exposed by `isRootAttester`, and its length is the canonical count.
+    function invariant_enumerationMatchesMembership() public {
+        address[] memory members = verifier.getRootAttesters();
+        assertEq(members.length, verifier.getRootAttesterCount(), "enumeration length != count");
+
+        for (uint256 i = 0; i < members.length; ++i) {
+            assertTrue(members[i] != address(0), "enumeration contains zero address");
+            assertTrue(verifier.isRootAttester(members[i]), "enumerated address is not a member");
+
+            for (uint256 j = i + 1; j < members.length; ++j) {
+                assertTrue(members[i] != members[j], "enumeration contains duplicate");
             }
         }
-        assertEq(verifier.getRootAttesterCount(), expected, "count != mapping");
+
+        uint256 n = handler.getCandidatesLength();
+        for (uint256 i = 0; i < n; i++) {
+            address candidate = handler.getCandidate(i);
+            uint256 occurrences;
+            for (uint256 j = 0; j < members.length; ++j) {
+                if (members[j] == candidate) ++occurrences;
+            }
+            uint256 expected = verifier.isRootAttester(candidate) ? 1 : 0;
+            assertEq(occurrences, expected, "enumeration != membership");
+        }
     }
 
     /// @dev Design-time constants must satisfy `MAX_ROOT_ATTESTERS >= MAX_SIGNATURES`.

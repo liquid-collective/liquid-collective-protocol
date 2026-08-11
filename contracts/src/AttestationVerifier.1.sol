@@ -190,8 +190,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
 
         for (uint256 i = 0; i < _rootAttesters.length; i++) {
             if (!RootAttesters.isRootAttester(_rootAttesters[i])) {
-                RootAttesters.setRootAttester(_rootAttesters[i], true);
-                RootAttesters.setCount(RootAttesters.getCount() + 1);
+                RootAttesters.push(_rootAttesters[i]);
                 emit SetRootAttester(_rootAttesters[i], true);
             }
         }
@@ -313,8 +312,11 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
             revert QuorumExceedsRootAttesterCount(currentQuorum, newCount);
         }
 
-        RootAttesters.setCount(newCount);
-        RootAttesters.setRootAttester(rootAttester, value);
+        if (value) {
+            RootAttesters.push(rootAttester);
+        } else {
+            RootAttesters.remove(rootAttester);
+        }
         emit SetRootAttester(rootAttester, value);
     }
 
@@ -374,6 +376,11 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
     /// @inheritdoc IAttestationVerifierV1
     function isRootAttester(address account) external view returns (bool) {
         return RootAttesters.isRootAttester(account);
+    }
+
+    /// @inheritdoc IAttestationVerifierV1
+    function getRootAttesters() external view returns (address[] memory) {
+        return RootAttesters.get();
     }
 
     /// @inheritdoc IAttestationVerifierV1
