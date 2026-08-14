@@ -228,8 +228,14 @@ interface IRedeemManagerV1 {
     ///      report is marked before its shares are burned and removed from the redeem demand.
     /// @dev Must be called unconditionally whenever the delta is non-zero. River persists the cumulative
     ///      `validatorsStoppedEarningBalance` before this point, so a skipped call loses the delta for good.
+    /// @dev The two arguments are the same amount denominated in ETH and in LsETH, both valued by River
+    ///      from its pre-report snapshot — the pool valuation as it stood before the report was applied.
+    ///      Their ratio is the rate the resulting mark locks, and it is passed in rather than read from
+    ///      River here because by the time this runs River has already rebased and minted the interval's
+    ///      fee, so a live read would return the very rewards the mark is meant to exclude.
     /// @param _stoppedEarningEth The ETH value of the principal that crossed exit_epoch in this interval
-    function reportStoppedEarning(uint256 _stoppedEarningEth) external;
+    /// @param _stoppedEarningLsETH The same amount in LsETH, valued at River's pre-report rate
+    function reportStoppedEarning(uint256 _stoppedEarningEth, uint256 _stoppedEarningLsETH) external;
 
     /// @notice Retrieve the global count of rate marks
     function getRateMarkCount() external view returns (uint256);

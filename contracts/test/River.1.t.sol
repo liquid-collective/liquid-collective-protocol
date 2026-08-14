@@ -3560,6 +3560,109 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         assertEq(river.getLastConsensusLayerReport().validatorsStoppedEarningBalance, 32 ether);
     }
 
+    /// @dev Deposits `depositAmount`, queues `redeemAmount` of LsETH for redemption and returns the
+    ///      largest CL balance increase this report may carry without tripping the upper reporting bound.
+    ///      The pool rate is 1:1 on entry, so LsETH and ETH amounts coincide before the report.
+    function _seedRedeemDemandAndBound(uint256 depositAmount, uint256 redeemAmount, uint256 epoch)
+        private
+        returns (uint256 maxIncrease)
+    {
+        address alice = makeAddr("alice");
+        _allowDeposit(alice);
+        vm.deal(alice, depositAmount);
+        vm.prank(alice);
+        river.deposit{value: depositAmount}();
+
+        vm.prank(alice);
+        river.approve(address(redeemManager), redeemAmount);
+        vm.prank(alice);
+        redeemManager.requestRedeem(redeemAmount);
+
+        _warpToFinalizedEpoch(epoch);
+
+        // mirrors LibOracleReporting._maxIncrease for a first report (last stored epoch is 0)
+        uint256 elapsed = epoch * slotsPerEpoch * secondsPerSlot;
+        maxIncrease = (river.totalUnderlyingSupply() * river.getReportBounds().annualAprUpperBound * elapsed)
+            / (LibBasisPoints.BASIS_POINTS_MAX * 365 days);
+        assertGt(maxIncrease, 0);
+    }
+
+    /// Asserts the rate mark is priced at the rate River held BEFORE the report was applied, not the one
+    /// it ends the interval on. The report path values the stopped-earning delta at
+    /// LibOracleReporting.setConsensusLayerData's pre-report snapshot — taken before _pullCLFunds, the
+    /// stored-report update and the fee mint — and carries it to reportStoppedEarning as data. Principal
+    /// that crossed exit_epoch must stop accruing pool rewards from that moment, so the demand it backs
+    /// may not be credited with the interval during which it stopped earning.
+    function testReportStoppedEarningMarksAtPreReportRate() public {
+        _initRiverMinimalForReporting();
+
+        uint256 epoch = epochsPerFrame;
+        uint256 maxIncrease = _seedRedeemDemandAndBound(64 ether, 32 ether, epoch);
+
+        uint256 preUnderlying = river.totalUnderlyingSupply();
+        uint256 preSupply = river.totalSupply();
+
+        // a real rewards interval: the CL balance grows within bound, so the rate genuinely moves
+        uint256 reward = maxIncrease / 2;
+        assertGt(reward, 0);
+        uint256 stoppedEarningEth = 10 ether;
+
+        IOracleManagerV1.ConsensusLayerReport memory clr;
+        clr.epoch = epoch;
+        clr.validatorsBalance = reward;
+        clr.validatorsStoppedEarningBalance = stoppedEarningEth;
+        clr.totalDepositedActivatedETH = 0;
+        clr.exitedETHPerOperator = new uint256[](1);
+        clr.activeCLETHPerOperator = new uint256[](1);
+
+        vm.prank(address(oracle));
+        river.setConsensusLayerData(clr);
+
+        // the rate did move over the report, so pre and post are genuinely distinguishable
+        assertGt(river.totalUnderlyingSupply() * preSupply, preUnderlying * river.totalSupply());
+
+        assertEq(redeemManager.getRateMarkCount(), 1);
+        RateMarkStack.RateMark memory mark = redeemManager.getRateMarkDetails(0);
+
+        // the whole delta fits in the pending demand, so it is marked verbatim at the pre-report rate
+        assertEq(mark.amount, (stoppedEarningEth * preSupply) / preUnderlying);
+        assertEq(mark.markedEth, stoppedEarningEth);
+
+        // and that is strictly less than what the interval's closing rate would have locked in
+        assertLt(mark.markedEth, river.underlyingBalanceFromShares(mark.amount));
+    }
+
+    /// Slashing containment freezes new exit requests but leaves the rest of the report — including the
+    /// rebase and the fee mint — running, so the mark must still be anchored to the pre-report rate.
+    /// Suspending accrual here would penalise a queued redeemer twice.
+    function testReportStoppedEarningMarksAtPreReportRateUnderSlashingContainment() public {
+        _initRiverMinimalForReporting();
+
+        uint256 epoch = epochsPerFrame;
+        uint256 maxIncrease = _seedRedeemDemandAndBound(64 ether, 32 ether, epoch);
+
+        uint256 preUnderlying = river.totalUnderlyingSupply();
+        uint256 preSupply = river.totalSupply();
+        uint256 stoppedEarningEth = 10 ether;
+
+        IOracleManagerV1.ConsensusLayerReport memory clr;
+        clr.epoch = epoch;
+        clr.validatorsBalance = maxIncrease / 2;
+        clr.validatorsStoppedEarningBalance = stoppedEarningEth;
+        clr.slashingContainmentMode = true;
+        clr.totalDepositedActivatedETH = 0;
+        clr.exitedETHPerOperator = new uint256[](1);
+        clr.activeCLETHPerOperator = new uint256[](1);
+
+        vm.prank(address(oracle));
+        river.setConsensusLayerData(clr);
+
+        RateMarkStack.RateMark memory mark = redeemManager.getRateMarkDetails(0);
+        assertEq(mark.amount, (stoppedEarningEth * preSupply) / preUnderlying);
+        assertEq(mark.markedEth, stoppedEarningEth);
+        assertLt(mark.markedEth, river.underlyingBalanceFromShares(mark.amount));
+    }
+
     function testReportConsolidationsUnchangedKeepsBuffer() public {
         _initRiverMinimalForReporting();
         // No consolidation coverage fund configured, so the end-of-report pull path cannot touch the buffer.
