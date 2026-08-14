@@ -243,8 +243,10 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
     }
 
     /// @inheritdoc IRedeemManagerV1
-    function reportStoppedEarning(uint256 _stoppedEarningEth) external onlyRiver {
-        if (_stoppedEarningEth == 0) {
+    function reportStoppedEarning(uint256 _stoppedEarningEth, uint256 _stoppedEarningLsETH) external onlyRiver {
+        // a zero LsETH leg also covers the degenerate pools where River's conversion returns 0 (no asset
+        // balance or no shares), which is what makes the division at the end unconditionally safe
+        if (_stoppedEarningEth == 0 || _stoppedEarningLsETH == 0) {
             return;
         }
 
@@ -270,8 +272,7 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
             markStart = settledHeight;
         }
 
-        IRiverV1 river = _castedRiver();
-        uint256 reportedLsETH = river.sharesFromUnderlyingBalance(_stoppedEarningEth);
+        uint256 reportedLsETH = _stoppedEarningLsETH;
         uint256 lsETHToMark = reportedLsETH;
         uint256 markable = totalRequestedHeight > markStart ? totalRequestedHeight - markStart : 0;
         if (lsETHToMark > markable) {
@@ -282,9 +283,12 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
             return;
         }
 
-        // Priced at the pool rate of THIS report. River calls this after the rebase and the fee mint,
-        // so the rate is already final for the interval.
-        uint256 markedEth = river.underlyingBalanceFromShares(lsETHToMark);
+        // Priced at the rate River held BEFORE this report was applied, which is exactly the ratio of the
+        // two arguments — the interval during which the principal stopped earning is excluded on purpose.
+        // Marking the whole reported amount therefore needs no conversion at all; only the clamped case
+        // divides, scaling the eth leg down in the same proportion so the locked rate is preserved.
+        uint256 markedEth =
+            lsETHToMark == reportedLsETH ? _stoppedEarningEth : (_stoppedEarningEth * lsETHToMark) / reportedLsETH;
 
         RateMarkStack.RateMark[] storage rateMarks = RateMarkStack.get();
         uint32 rateMarkId = uint32(rateMarks.length);
