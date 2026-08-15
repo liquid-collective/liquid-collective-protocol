@@ -114,7 +114,7 @@ interface IOracleManagerV1 {
     /// @notice The total exit via consolidation amount reported is larger than the increase in the amount of exited ETH
     /// @param totalExitViaConsolidationsAmountReportedIncrease The increase in the amount of exited ETH
     /// @param exitedETHIncrease The increase in the amount of exited ETH
-    error InvalidTotalExitViaConsolidationsAmountReportedIncrease(
+    error ExitViaConsolidationETHIncreaseExceedsExitedETHIncrease(
         uint256 totalExitViaConsolidationsAmountReportedIncrease, uint256 exitedETHIncrease
     );
 

@@ -269,7 +269,7 @@ contract ConsolidationCoverageScenarioTest is AccountingInvariants {
     /// @dev Lands `amount` wei of validator ETH on the Withdraw contract as exited ETH, so the next report
     ///      carries a `validatorsExitedBalance` increase of `amount`. An exit-via-consolidation arrival must
     ///      be backed by such an increase, otherwise the report is rejected with
-    ///      `InvalidTotalExitViaConsolidationsAmountReportedIncrease`.
+    ///      `ExitViaConsolidationETHIncreaseExceedsExitedETHIncrease`.
     function _simExitArrival(uint256 amount) internal {
         sim_requestExit(operatorOneIndex, amount);
         sim_completeExit(operatorOneIndex, amount, 0);
@@ -369,7 +369,7 @@ contract ConsolidationCoverageScenarioTest is AccountingInvariants {
 
     /// @notice An arrival must be backed by exited ETH landing in the same report: an increase of one wei above
     ///         the matching `validatorsExitedBalance` increase is rejected with
-    ///         `InvalidTotalExitViaConsolidationsAmountReportedIncrease`. This pins the exact boundary — the
+    ///         `ExitViaConsolidationETHIncreaseExceedsExitedETHIncrease`. This pins the exact boundary — the
     ///         existing `testExitViaConsolidationArrivalDebitsBufferByPerReportDelta` accepts increase ==
     ///         exitedIncrease, so together they fix the comparison as strict.
     function testExitViaConsolidationIncreaseAboveExitedIncreaseReverts() public {
@@ -382,7 +382,7 @@ contract ConsolidationCoverageScenarioTest is AccountingInvariants {
         vm.prank(oracleMember);
         vm.expectRevert(
             abi.encodeWithSelector(
-                IOracleManagerV1.InvalidTotalExitViaConsolidationsAmountReportedIncrease.selector, 3 ether + 1, 3 ether
+                IOracleManagerV1.ExitViaConsolidationETHIncreaseExceedsExitedETHIncrease.selector, 3 ether + 1, 3 ether
             )
         );
         oracle.reportConsensusLayerData(report);
@@ -403,7 +403,7 @@ contract ConsolidationCoverageScenarioTest is AccountingInvariants {
         vm.prank(oracleMember);
         vm.expectRevert(
             abi.encodeWithSelector(
-                IOracleManagerV1.InvalidTotalExitViaConsolidationsAmountReportedIncrease.selector, 1 ether, 0
+                IOracleManagerV1.ExitViaConsolidationETHIncreaseExceedsExitedETHIncrease.selector, 1 ether, 0
             )
         );
         oracle.reportConsensusLayerData(report);

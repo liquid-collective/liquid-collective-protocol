@@ -373,7 +373,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     function requestETHExits(
         ExitETHAllocation[] calldata _allocations,
         ELExitETHAllocation[] calldata _elAllocations,
-        ExitsViaConsolidationAllocation calldata _consolidationAllocations,
+        ExitsViaConsolidationAllocation calldata _exitViaConsolidationAllocation,
         uint256 _maxFeePerWithdrawal,
         uint256 _maxFeePerConsolidation
     ) external payable nonReentrant {
@@ -388,8 +388,8 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
         if (
             _allocations.length == 0 && _elAllocations.length == 0
-                && _consolidationAllocations.consolidationRequests.length == 0
-                && _consolidationAllocations.ethPerOperator.length == 0
+                && _exitViaConsolidationAllocation.consolidationRequests.length == 0
+                && _exitViaConsolidationAllocation.ethPerOperator.length == 0
         ) {
             revert InvalidEmptyArray();
         }
@@ -402,22 +402,23 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         requestedETHAmount += elRequestedETHAmount;
 
         if (
-            _consolidationAllocations.consolidationRequests.length > 0
-                || _consolidationAllocations.ethPerOperator.length > 0
+            _exitViaConsolidationAllocation.consolidationRequests.length > 0
+                || _exitViaConsolidationAllocation.ethPerOperator.length > 0
         ) {
             // Reservations and dispatch must come together: a one-sided allocation would either reserve
             // exit demand for consolidations that never dispatch, or dispatch consolidations whose exited
             // ETH is never reserved/reconciled.
             if (
-                _consolidationAllocations.consolidationRequests.length == 0
-                    || _consolidationAllocations.ethPerOperator.length == 0
+                _exitViaConsolidationAllocation.consolidationRequests.length == 0
+                    || _exitViaConsolidationAllocation.ethPerOperator.length == 0
             ) {
                 revert InvalidEmptyArray();
             }
 
             // Reserve the projected exited ETH per operator (against each operator's active-CL headroom),
             // exactly like CL exits; emits RequestedETHExitsViaConsolidation per operator.
-            uint256 consolidationReserved = _reserveExitAllocations(_consolidationAllocations.ethPerOperator, true);
+            uint256 consolidationReserved =
+                _reserveExitAllocations(_exitViaConsolidationAllocation.ethPerOperator, true);
 
             remainingETHExitsDemand =
                 requestedETHAmount >= currentETHExitsDemand ? 0 : currentETHExitsDemand - requestedETHAmount;
@@ -429,7 +430,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             // keeper directly, so the whole budget is counted as spent here and the outer refund is a no-op.
             uint256 consolidationValueBudget = msg.value - totalFeePaid;
             IWithdrawV1(WithdrawAddress.get()).consolidateForExit{value: consolidationValueBudget}(
-                _consolidationAllocations.consolidationRequests, _maxFeePerConsolidation, msg.sender
+                _exitViaConsolidationAllocation.consolidationRequests, _maxFeePerConsolidation, msg.sender
             );
             totalFeePaid += consolidationValueBudget;
             requestedETHAmount += consolidationReserved;

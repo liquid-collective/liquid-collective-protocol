@@ -444,14 +444,14 @@ interface IOperatorsRegistryV1 {
     /// @dev Reverts with NoExitRequestsToPerform if there is no pending exit demand
     /// @param _allocations The proposed per-operator exit ETH allocations, sorted by operator index
     /// @param _elAllocations The proposed per-operator per-pubkey EL exit ETH allocations, sorted by operator index
-    /// @param _consolidationAllocations Exits via internal consolidation: per-operator reserved ETH
+    /// @param _exitViaConsolidationAllocation Exits via internal consolidation: per-operator reserved ETH
     ///        (`ethPerOperator`) plus the raw consolidation requests dispatched to Withdraw
     /// @param _maxFeePerWithdrawal The maximum fee for per withdrawal request
     /// @param _maxFeePerConsolidation The maximum fee for per consolidation request
     function requestETHExits(
         ExitETHAllocation[] calldata _allocations,
         ELExitETHAllocation[] calldata _elAllocations,
-        ExitsViaConsolidationAllocation calldata _consolidationAllocations,
+        ExitsViaConsolidationAllocation calldata _exitViaConsolidationAllocation,
         uint256 _maxFeePerWithdrawal,
         uint256 _maxFeePerConsolidation
     ) external payable;
