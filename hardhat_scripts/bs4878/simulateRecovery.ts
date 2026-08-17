@@ -106,7 +106,9 @@ async function main() {
   console.log("=".repeat(78));
   const artifact = await hre.artifacts.readArtifact("RedeemManagerV1Recovery");
   const factory = new hre.ethers.ContractFactory(artifact.abi, artifact.bytecode, deployer);
-  const recovery = await factory.deploy();
+  // Explicit limit: the tenderly network in hardhat.config caps gas at 5,000,000, and depositing
+  // ~11.5 KB of runtime code alone costs roughly 2.3M.
+  const recovery = await factory.deploy({ gasLimit: 10_000_000 });
   await recovery.deployed();
   console.log(`  recovery implementation at ${recovery.address}`);
 
