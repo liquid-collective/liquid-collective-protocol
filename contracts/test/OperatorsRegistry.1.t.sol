@@ -3535,7 +3535,8 @@ contract OperatorsRegistryV1ExitReleaseTests is Test {
         assertEq(reg.getOperator(0).requestedExits, 0, "requestedExits untouched");
         assertEq(reg.getTotalETHExitsRequested(), 0, "total untouched");
         assertEq(reg.getCurrentETHExitsDemand(), 100 ether, "demand untouched");
-        assertEq(reg.sudoGetRawReleasedETH()[0], 0, "accumulator untouched");
+        // A zero release never grows the accumulator, so "untouched" is an empty array here.
+        assertEq(reg.sudoGetRawReleasedETH().length, 0, "accumulator untouched");
     }
 
     // ── 4. Consolidation ─────────────────────────────────────────────────────
