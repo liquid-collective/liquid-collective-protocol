@@ -6,6 +6,7 @@ import {
   REDEEM_MANAGER_PROXY_ADMIN,
   buildCorrectedQueue,
   encodeRepairCalldata,
+  retry,
   historyProvider,
   redeemManagerAt,
   verifyQueue,
@@ -33,7 +34,8 @@ import {
 //
 // Nothing here touches real hoodi. Every transaction goes to the Virtual TestNet.
 
-const DEPLOYER = "0x00000000000000000000000000000000BeeF4878";
+// Lowercase on purpose: ethers rejects mixed case that is not a valid EIP-55 checksum.
+const DEPLOYER = "0x00000000000000000000000000000000beef4878";
 
 const PROXY_ABI = [
   "function pause()",
@@ -42,6 +44,11 @@ const PROXY_ABI = [
   "function upgradeTo(address)",
   "function upgradeToAndCall(address,bytes)",
 ];
+
+// Set BS4878_RESUME=1 to skip straight to verification when the repair has already been applied,
+// e.g. after a transport failure mid-run. repairRedeemQueue is one-shot, so a plain re-run would
+// otherwise be impossible without resetting the fork.
+const RESUME = process.env.BS4878_RESUME === "1";
 
 async function main() {
   const url = (hre.network.config as any).url as string;
@@ -66,16 +73,18 @@ async function main() {
   console.log("=".repeat(78));
   console.log("0. pre-state");
   console.log("=".repeat(78));
-  const count = (await rm.getRedeemRequestCount()).toNumber();
-  const demand = await rm.getRedeemDemand();
+  const zeroCall = { from: hre.ethers.constants.AddressZero };
+  const count = (await rm.callStatic.getRedeemRequestCount(zeroCall)).toNumber();
+  const demand = await rm.callStatic.getRedeemDemand(zeroCall);
   const coverage = await withdrawalStackEnd(rm);
   console.log(`  queue length ${count}   redeemDemand ${eth(demand)}   balance ${eth(await provider.getBalance(REDEEM_MANAGER))} ETH`);
   const absurd: number[] = [];
   for (let i = 0; i < Math.min(count, 86); ++i) {
-    if ((await rm.getRedeemRequestDetails(i)).amount.gt(hre.ethers.utils.parseEther("1000000"))) absurd.push(i);
+    const d = await retry<any>(() => rm.callStatic.getRedeemRequestDetails(i, zeroCall));
+    if (d.amount.gt(hre.ethers.utils.parseEther("1000000"))) absurd.push(i);
   }
   console.log(`  requests with absurd amounts (corruption present): ${absurd.length}`);
-  if (absurd.length === 0) throw new Error("fork does not look corrupted - is this really hoodi?");
+  if (!RESUME && absurd.length === 0) throw new Error("fork does not look corrupted - is this really hoodi?");
 
   console.log("\n  deriving the repair payload against the fork...");
   const rows = await buildCorrectedQueue(hre, history, provider);
@@ -83,6 +92,11 @@ async function main() {
   console.log("  -> demand invariant holds against fork state");
   const calldata = encodeRepairCalldata(hre, rows);
 
+  if (RESUME) {
+    console.log("\n  BS4878_RESUME=1 - skipping steps 1-4, verifying the applied repair\n");
+  }
+
+  if (!RESUME) {
   console.log("\n" + "=".repeat(78));
   console.log("1. pause the proxy");
   console.log("=".repeat(78));
@@ -117,6 +131,7 @@ async function main() {
   console.log("=".repeat(78));
   const receipt = await (await proxyAsAdmin.upgradeToAndCall(recovery.address, calldata, { gasLimit: 30_000_000 })).wait();
   console.log(`  status=${receipt.status} gas=${receipt.gasUsed.toString()}`);
+  }
 
   console.log("\n" + "=".repeat(78));
   console.log("5. verify every request matches the intended payload");
@@ -124,8 +139,10 @@ async function main() {
   // The proxy is still paused, and it lets the zero address through so views keep working.
   const zeroCaller = { from: hre.ethers.constants.AddressZero };
   const mismatches: string[] = [];
+  const restored: any[] = [];
   for (let i = 0; i < count; ++i) {
-    const got = await rm.callStatic.getRedeemRequestDetails(i, zeroCaller);
+    const got = await retry<any>(() => rm.callStatic.getRedeemRequestDetails(i, zeroCaller));
+    restored.push(got);
     const want = rows[i];
     if (!got.amount.eq(want.amount)) mismatches.push(`${i}.amount`);
     if (!got.maxRedeemableEth.eq(want.maxRedeemableEth)) mismatches.push(`${i}.maxRedeemableEth`);
@@ -140,14 +157,15 @@ async function main() {
   console.log("\n" + "=".repeat(78));
   console.log("6. verify invariants");
   console.log("=".repeat(78));
+  // Reuse the reads from step 5 rather than fetching all 125 again - Tenderly drops the connection
+  // under long sequential call bursts.
   let prev = hre.ethers.constants.Zero;
   let monotonic = true;
-  for (let i = 0; i < count; ++i) {
-    const d = await rm.callStatic.getRedeemRequestDetails(i, zeroCaller);
+  for (const d of restored) {
     if (d.height.lt(prev)) monotonic = false;
     prev = d.height.add(d.amount);
   }
-  const demandAfter = await rm.callStatic.getRedeemDemand(zeroCaller);
+  const demandAfter = await retry<any>(() => rm.callStatic.getRedeemDemand(zeroCaller));
   console.log(`  heights monotonic: ${monotonic}`);
   console.log(`  queue end ${eth(prev)} - coverage ${eth(coverage)} = ${eth(prev.sub(coverage))}`);
   console.log(`  redeemDemand                                    = ${eth(demandAfter)}`);

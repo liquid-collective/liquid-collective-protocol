@@ -29,6 +29,28 @@ export const HISTORY_RPC = process.env.BS4878_HISTORY_RPC || "https://ethereum-h
 
 const LOG_CHUNK = 45000;
 
+/// Retry transport failures. Tenderly drops the connection under long sequential call bursts, which
+/// surfaces as ECONNRESET / SERVER_ERROR rather than a revert, so a plain retry clears it.
+export async function retry<T>(fn: () => Promise<T>, attempts = 5, delayMs = 400): Promise<T> {
+  let last: any;
+  for (let i = 0; i < attempts; ++i) {
+    try {
+      return await fn();
+    } catch (e: any) {
+      const transport =
+        e?.code === "SERVER_ERROR" ||
+        e?.code === "TIMEOUT" ||
+        e?.code === "NETWORK_ERROR" ||
+        e?.error?.code === "ECONNRESET" ||
+        e?.serverError?.code === "ECONNRESET";
+      if (!transport) throw e;
+      last = e;
+      await new Promise((r) => setTimeout(r, delayMs * (i + 1)));
+    }
+  }
+  throw last;
+}
+
 export interface RedeemRequest {
   amount: EthersType.BigNumber;
   maxRedeemableEth: EthersType.BigNumber;
@@ -66,7 +88,7 @@ async function scanLogs(
   const out: EthersType.Event[] = [];
   for (let start = from; start <= to; start += LOG_CHUNK) {
     const end = Math.min(start + LOG_CHUNK - 1, to);
-    out.push(...(await contract.queryFilter(filter, start, end)));
+    out.push(...(await retry(() => contract.queryFilter(filter, start, end))));
   }
   return out;
 }
@@ -119,7 +141,7 @@ export async function reconstructPreUpgrade(
   const out = new Map<number, Reconstructed>();
   for (const [id, r] of [...byId.entries()].sort((a, b) => a[0] - b[0])) {
     if (!txCache.has(r.txHash)) {
-      const tx = await history.getTransaction(r.txHash);
+      const tx = await retry(() => history.getTransaction(r.txHash));
       const viaRiver = (tx.to || "").toLowerCase() === RIVER.toLowerCase();
       txCache.set(r.txHash, (viaRiver ? RIVER : tx.from).toLowerCase());
     }
@@ -184,7 +206,9 @@ export async function buildCorrectedQueue(
   const rmState = await redeemManagerAt(hre, state);
   const rmHistory = await redeemManagerAt(hre, history);
   const count = (await rmState.getRedeemRequestCount()).toNumber();
-  const head = await history.getBlockNumber();
+  // Bound the scan by the state provider's height, not the live chain's. On a fork the two differ,
+  // and scanning past the fork point would net claims the forked state has never seen.
+  const head = Math.min(await state.getBlockNumber(), await history.getBlockNumber());
 
   const legacy = await reconstructPreUpgrade(hre, history);
   const netting = await claimNetting(hre, history, legacy.size, head);
@@ -214,7 +238,7 @@ export async function buildCorrectedQueue(
       rows.push({ amount, maxRedeemableEth: maxEth, recipient: rec.recipient, height: rec.height, initiator: rec.initiator });
       sizes.push(rec.size);
     } else {
-      const d = await rmState.getRedeemRequestDetails(i);
+      const d = await retry<any>(() => rmState.getRedeemRequestDetails(i));
       rows.push({
         amount: d.amount,
         maxRedeemableEth: d.maxRedeemableEth,
