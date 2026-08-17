@@ -111,11 +111,13 @@ contract RedeemManagerV1Recovery is RedeemManagerV1 {
             }
             // The unclaimed remainder of a request never starts before the previous request's end position,
             // because claiming only ever moves height forward while holding height + amount constant.
+            //!TODO dont' get this.
             if (request.height < previousEnd) {
                 revert RepairOverlappingRequest(i, request.height, previousEnd);
             }
             uint256 end = request.height + request.amount;
             // Every request was created with a non zero size, so end positions strictly increase.
+            //!TODO dont' get this.
             if (i != 0 && end <= previousEnd) {
                 revert RepairEmptyRequest(i);
             }

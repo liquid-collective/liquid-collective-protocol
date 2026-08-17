@@ -66,8 +66,32 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
         emit SetRiver(_river);
     }
 
+    /// @inheritdoc IRedeemManagerV1
+    /// @dev `init(1)` alone is not enough of a guard: a deployment created fresh from v1.2.0 or later
+    ///      sources already writes the RedeemQueueV2 layout while its Version sits at 1, so the guard
+    ///      passes and this migration corrupts the queue by re-reading 5 word records at a 4 word
+    ///      stride (BS-4878). The layout check below distinguishes "not yet migrated" from "never was
+    ///      in V1 layout", which the version counter cannot.
     function initializeRedeemManagerV1_2() external init(1) {
+        if (_isAlreadyV2Layout()) {
+            revert QueueAlreadyInV2Layout();
+        }
         _redeemQueueMigrationV1_2();
+    }
+
+    /// @notice Detect whether the redeem queue is already stored in the RedeemQueueV2 layout
+    /// @dev A V1 queue of N records occupies words `base .. base + 4N - 1`. The last V2 record's
+    ///      `initiator` lives at `base + 5N - 1`, which is beyond that for every N >= 1, so it reads
+    ///      zero for a genuine V1 queue. In a V2 queue it is always non-zero, because `_requestRedeem`
+    ///      stores `msg.sender` there. An empty queue has nothing to migrate either way.
+    /// @return True if the queue is already in the V2 layout
+    function _isAlreadyV2Layout() internal view returns (bool) {
+        RedeemQueueV2.RedeemRequest[] storage queue = RedeemQueueV2.get();
+        uint256 length = queue.length;
+        if (length == 0) {
+            return false;
+        }
+        return queue[length - 1].initiator != address(0);
     }
 
     function _redeemQueueMigrationV1_2() internal {

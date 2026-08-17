@@ -27,6 +27,13 @@ export const UPGRADE_BLOCK = 3027299;
 // state reads go to the fork while log scans stay pointed here.
 export const HISTORY_RPC = process.env.BS4878_HISTORY_RPC || "https://ethereum-hoodi-rpc.publicnode.com";
 
+// An archive endpoint serving state at UPGRADE_BLOCK - 1. The default HISTORY_RPC is not archive, so
+// this is separate. Known-good hoodi archive endpoints, all rate limited:
+//   https://rpc.hoodi.ethpandaops.io
+//   https://hoodi.drpc.org
+//   https://hoodi.gateway.tenderly.co
+export const ARCHIVE_RPC = process.env.BS4878_ARCHIVE_RPC || "https://rpc.hoodi.ethpandaops.io";
+
 const LOG_CHUNK = 45000;
 
 /// Retry transport failures. Tenderly drops the connection under long sequential call bursts, which
@@ -159,6 +166,62 @@ export async function reconstructPreUpgrade(
   return out;
 }
 
+/// Read the pre-upgrade queue directly from archive state at UPGRADE_BLOCK - 1.
+///
+/// This is the primary source. It beats the event reconstruction on two counts: nothing is derived,
+/// and `initiator` is read rather than inferred - that field appears in no event, so
+/// reconstructPreUpgrade has to guess it from whether the creating transaction targeted River.
+export async function readPreUpgradeFromArchive(
+  hre: HardhatRuntimeEnvironment,
+  archive: EthersType.providers.JsonRpcProvider
+): Promise<Map<number, RedeemRequest>> {
+  const rm = await redeemManagerAt(hre, archive);
+  const at = { blockTag: UPGRADE_BLOCK - 1 };
+  const count = (await retry<any>(() => rm.getRedeemRequestCount(at))).toNumber();
+
+  const out = new Map<number, RedeemRequest>();
+  for (let i = 0; i < count; ++i) {
+    const d = await retry<any>(() => rm.getRedeemRequestDetails(i, at));
+    out.set(i, {
+      amount: d.amount,
+      maxRedeemableEth: d.maxRedeemableEth,
+      recipient: d.recipient.toLowerCase(),
+      height: d.height,
+      initiator: d.initiator.toLowerCase(),
+    });
+  }
+  return out;
+}
+
+/// Require the two independent derivations of the pre-upgrade queue to agree exactly.
+///
+/// The repair rewrites state irreversibly, so a single source is not enough. Any divergence means one
+/// of the two is wrong and the run must stop rather than guess which.
+export function assertSourcesAgree(
+  archive: Map<number, RedeemRequest>,
+  reconstructed: Map<number, Reconstructed>
+): void {
+  if (archive.size !== reconstructed.size) {
+    throw new Error(`pre-upgrade source mismatch: archive has ${archive.size}, events have ${reconstructed.size}`);
+  }
+  const bad: string[] = [];
+  for (const [id, a] of archive) {
+    const r = reconstructed.get(id);
+    if (!r) {
+      bad.push(`${id}: missing from event reconstruction`);
+      continue;
+    }
+    if (!a.amount.eq(r.amount)) bad.push(`${id}.amount`);
+    if (!a.maxRedeemableEth.eq(r.maxRedeemableEth)) bad.push(`${id}.maxRedeemableEth`);
+    if (!a.height.eq(r.height)) bad.push(`${id}.height`);
+    if (a.recipient !== r.recipient.toLowerCase()) bad.push(`${id}.recipient`);
+    if (a.initiator !== r.initiator.toLowerCase()) bad.push(`${id}.initiator`);
+  }
+  if (bad.length) {
+    throw new Error(`archive and event reconstruction disagree on ${bad.length} field(s): ${bad.slice(0, 12).join(", ")}`);
+  }
+}
+
 /// Claims booked against the corrupted region since the upgrade consumed a different request's
 /// entitlement. The migration wrote index j from pre-migration words 4j..4j+3; when 4j is a multiple
 /// of 5 those are exactly request 4j/5's amount, maxRedeemableEth, recipient and height, so the claim
@@ -210,7 +273,13 @@ export async function buildCorrectedQueue(
   // and scanning past the fork point would net claims the forked state has never seen.
   const head = Math.min(await state.getBlockNumber(), await history.getBlockNumber());
 
+  // Two independent derivations of the pre-upgrade queue, required to agree before we rewrite state.
+  // Archive is primary: nothing derived, and `initiator` read rather than inferred.
+  const archive = new hre.ethers.providers.JsonRpcProvider(ARCHIVE_RPC);
+  const legacyArchive = await readPreUpgradeFromArchive(hre, archive);
   const legacy = await reconstructPreUpgrade(hre, history);
+  assertSourcesAgree(legacyArchive, legacy);
+
   const netting = await claimNetting(hre, history, legacy.size, head);
 
   // Original sizes for requests created after the upgrade.
@@ -223,7 +292,7 @@ export async function buildCorrectedQueue(
   const rows: RedeemRequest[] = [];
   const sizes: EthersType.BigNumber[] = [];
   for (let i = 0; i < count; ++i) {
-    const rec = legacy.get(i);
+    const rec = legacyArchive.get(i);
     if (rec) {
       let amount = rec.amount;
       let maxEth = rec.maxRedeemableEth;
@@ -236,7 +305,9 @@ export async function buildCorrectedQueue(
         }
       }
       rows.push({ amount, maxRedeemableEth: maxEth, recipient: rec.recipient, height: rec.height, initiator: rec.initiator });
-      sizes.push(rec.size);
+      // Original size comes from the event reconstruction: archive state gives the remaining amount,
+      // not the size at creation, and the end-position chain needs the latter.
+      sizes.push(legacy.get(i)!.size);
     } else {
       const d = await retry<any>(() => rmState.getRedeemRequestDetails(i));
       rows.push({

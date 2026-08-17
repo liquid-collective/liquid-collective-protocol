@@ -5,12 +5,24 @@ pragma solidity 0.8.34;
 import "./RedeemManager.1.t.sol";
 import "../src/migration/RedeemManagerV1Recovery.sol";
 
+/// @title Recovery implementation with the pre-guard migration exposed
+/// @notice `initializeRedeemManagerV1_2` now refuses to run against a queue already in the V2 layout,
+///         so these tests use the unguarded path to recreate the corrupted state before repairing it.
+///         The `init(1)` bump matches what happened on staging, leaving Version at 2 so the repair's
+///         `init(2)` guard is satisfied.
+contract RedeemManagerV1RecoveryHarness is RedeemManagerV1Recovery {
+    /// @notice Replay the V1 to V2 migration without the layout guard
+    function sudoReplayMigrationUnguarded() external init(1) {
+        _redeemQueueMigrationV1_2();
+    }
+}
+
 /// @title Recovery tests for BS-4878
 /// @notice Reproduces the staging state - a queue written natively in RedeemQueueV2 layout with Version
 ///         still at 1, so the replayed `initializeRedeemManagerV1_2` corrupts it - then repairs it and
 ///         asserts the queue is restored and claimable.
 contract RedeemManagerV1RecoveryTest is RedeeManagerV1TestBase {
-    RedeemManagerV1Recovery internal redeemManager;
+    RedeemManagerV1RecoveryHarness internal redeemManager;
 
     /// @notice Snapshot of the queue taken before the faulty migration runs
     RedeemQueueV2.RedeemRequest[] internal expected;
@@ -19,7 +31,7 @@ contract RedeemManagerV1RecoveryTest is RedeeManagerV1TestBase {
         allowlistAdmin = makeAddr("allowlistAdmin");
         allowlistAllower = makeAddr("allowlistAllower");
         allowlistDenier = makeAddr("allowlistDenier");
-        redeemManager = new RedeemManagerV1Recovery();
+        redeemManager = new RedeemManagerV1RecoveryHarness();
         LibImplementationUnbricker.unbrick(vm, address(redeemManager));
         allowlist = new AllowlistV1();
         LibImplementationUnbricker.unbrick(vm, address(allowlist));
@@ -79,7 +91,7 @@ contract RedeemManagerV1RecoveryTest is RedeeManagerV1TestBase {
     }
 
     function _corrupt() internal {
-        redeemManager.initializeRedeemManagerV1_2();
+        redeemManager.sudoReplayMigrationUnguarded();
     }
 
     function _payload() internal view returns (RedeemQueueV2.RedeemRequest[] memory payload) {
