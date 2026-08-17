@@ -7,15 +7,15 @@ import {
   buildCorrectedQueue,
   claimNetting,
   encodeRepairCalldata,
+  ARCHIVE_RPC,
   historyProvider,
   readPreUpgradeFromArchive,
   redeemManagerAt,
-  reconstructPreUpgrade,
   retry,
   verifyQueue,
   withdrawalStackEnd,
   eth,
-} from "./lib";
+} from "./redeemQueueRepair";
 
 // BS-4878 pre-verification. Read only.
 //
@@ -46,12 +46,11 @@ async function main() {
   console.log(`BS-4878 preflight @ hoodi block ${block} (${new Date(timestamp * 1000).toISOString()})`);
   console.log(`  proxy paused: ${paused}${paused ? "" : "   <-- NOT frozen; this is a dry run"}\n`);
 
-  // Two independent derivations of the pre-upgrade queue. buildCorrectedQueue asserts they agree;
-  // recompute here so the artifact records the check explicitly.
-  const archive = new hre.ethers.providers.JsonRpcProvider(process.env.BS4878_ARCHIVE_RPC || "https://rpc.hoodi.ethpandaops.io");
+  const archive = new hre.ethers.providers.JsonRpcProvider(ARCHIVE_RPC);
   const legacyArchive = await readPreUpgradeFromArchive(hre, archive);
-  const legacyEvents = await reconstructPreUpgrade(hre, history);
 
+  // buildCorrectedQueue derives the pre-upgrade queue twice - archive state and event replay - and
+  // throws unless they agree field-for-field, so reaching the next line means the check passed.
   const rows = await buildCorrectedQueue(hre, history, state);
   const coverage = await withdrawalStackEnd(rm);
   const demand = await rm.getRedeemDemand();

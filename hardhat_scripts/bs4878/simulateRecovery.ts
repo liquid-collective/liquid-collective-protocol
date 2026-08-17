@@ -12,7 +12,7 @@ import {
   verifyQueue,
   withdrawalStackEnd,
   eth,
-} from "./lib";
+} from "./redeemQueueRepair";
 
 // BS-4878: rehearse the full staging recovery on a Tenderly Virtual TestNet forked from hoodi.
 //

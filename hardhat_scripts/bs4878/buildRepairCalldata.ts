@@ -8,7 +8,7 @@ import {
   verifyQueue,
   withdrawalStackEnd,
   eth,
-} from "./lib";
+} from "./redeemQueueRepair";
 
 // BS-4878: build and validate the calldata for RedeemManagerV1Recovery.repairRedeemQueue. Read only.
 //

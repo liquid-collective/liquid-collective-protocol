@@ -9,7 +9,7 @@ import {
   retry,
   withdrawalStackEnd,
   eth,
-} from "./lib";
+} from "./redeemQueueRepair";
 
 // BS-4878: claim every remaining redeem request on a repaired fork and check each payout against the
 // pre BYOV-upgrade values.

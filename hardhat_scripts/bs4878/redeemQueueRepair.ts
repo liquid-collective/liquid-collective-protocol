@@ -2,7 +2,11 @@ import "@nomiclabs/hardhat-ethers";
 import { ethers as EthersType } from "ethers";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
-// BS-4878 shared helpers.
+// BS-4878: rebuild a correct redeem queue and prove it before writing it on chain.
+//
+// Everything the repair scripts share lives here: deriving the pre-upgrade queue two independent
+// ways and requiring them to agree, assembling the corrected 125-record queue, checking the
+// invariants the on-chain repair enforces, and ABI encoding the payload.
 //
 // The v1.3.0 upgrade script calls `initializeRedeemManagerV1_2` through `upgradeToAndCall`. On a
 // deployment created fresh from v1.2.1 sources the redeem queue is already in RedeemQueueV2 layout

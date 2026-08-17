@@ -1,6 +1,6 @@
 import hre from "hardhat";
 import { ethers as EthersType } from "ethers";
-import { REDEEM_MANAGER, RIVER, redeemManagerAt, retry, withdrawalStackEnd, eth } from "./lib";
+import { REDEEM_MANAGER, RIVER, redeemManagerAt, retry, withdrawalStackEnd, eth } from "./redeemQueueRepair";
 
 // BS-4878: prove the repaired queue can be drained completely against the withdrawal stack.
 //
