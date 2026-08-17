@@ -18,10 +18,12 @@ Heights are never taken verbatim. They are derived from the end-position chain
 Run bs4878_reconstruct.py against the FROZEN state first - these numbers move with every claim.
 """
 import json
+import os
 import subprocess
 import sys
 
-RPC = "https://ethereum-hoodi-rpc.publicnode.com"
+# Override to target a fork when pre-flighting the repair, e.g. a Tenderly Virtual TestNet.
+RPC = os.environ.get("BS4878_RPC", "https://ethereum-hoodi-rpc.publicnode.com")
 RM = "0x5d51E82b75A4F16ef677d5bE20d707b6441A00b7"
 UPGRADE_BLOCK = 3027299
 REPAIR_JSON = "scripts/bs4878_hoodi_repair.json"
