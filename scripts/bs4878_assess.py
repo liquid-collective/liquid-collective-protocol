@@ -31,9 +31,28 @@ SEL_WE_COUNT = "0x841ecb85"
 SEL_WE_DETAILS = "0x86233754"
 SEL_DEMAND = "0x0d8d2a54"
 
-# The claim booked against corrupted id 70 actually consumed true request 56's entitlement,
-# because the migration copied word 4*70 == 5*56. Repair must net it against 56, not 70.
-MISATTRIBUTED = {"claimedOn": 70, "belongsTo": 56, "lsETH": 983561000000000000, "eth": 10**18}
+def claim_netting(R, head):
+    """Claims booked against the corrupted region consumed a different request's entitlement.
+
+    The migration wrote index j from pre-migration words 4j..4j+3; when 4j is a multiple of 5 those
+    are exactly request 4j/5's amount, maxRedeemableEth, recipient and height, so the claim must be
+    netted against that request. Derived from events rather than hardcoded, because the amounts carry
+    full wei precision and a rounded constant leaves dust behind that reads as a still-open request.
+    """
+    netting = {}
+    for lg in scan(T_CLAIMED, UPGRADE_BLOCK, head):
+        rid = int(lg["topics"][1], 16)
+        if rid >= len(R):
+            continue
+        eth_paid, lsETH, _rem = words(lg["data"])
+        if (4 * rid) % 5 != 0:
+            raise SystemExit(f"claim on corrupted id {rid} blends two records - attribute it manually")
+        source = 4 * rid // 5
+        acc = netting.setdefault(source, {"lsETH": 0, "eth": 0, "from": []})
+        acc["lsETH"] += lsETH
+        acc["eth"] += eth_paid
+        acc["from"].append(rid)
+    return netting
 
 _id = [0]
 
@@ -135,9 +154,10 @@ def main():
         print(f"  id {rid:>3}  ETH={e(eth_paid):>14}  lsETH={e(ls):>14}{flag}")
     for rid, paid, cap in over:
         print(f"  !! id {rid} paid {e(paid)} ETH vs true entitlement {e(cap)} ETH")
-    print(f"  note: the id {MISATTRIBUTED['claimedOn']} claim consumed request "
-          f"{MISATTRIBUTED['belongsTo']}'s entitlement; repair nets it against "
-          f"{MISATTRIBUTED['belongsTo']}")
+    netting = claim_netting(R, head)
+    for source, acc in sorted(netting.items()):
+        print(f"  note: claim(s) on corrupted id {acc['from']} consumed request {source}'s entitlement "
+              f"({acc['lsETH']} LsETH / {acc['eth']} ETH); repair nets it against {source}")
 
     print("\n" + "=" * 78)
     print("3. live exposure")
@@ -161,9 +181,9 @@ def main():
         sizes[k] = end - prev_end
         prev_end = end
         amt, mx = int(R[k]["amount"]), int(R[k]["maxRedeemableEth"])
-        if k == MISATTRIBUTED["belongsTo"]:
-            amt -= MISATTRIBUTED["lsETH"]
-            mx -= MISATTRIBUTED["eth"]
+        if k in netting:
+            amt -= netting[k]["lsETH"]
+            mx -= netting[k]["eth"]
         rows.append({"id": k, "amount": max(amt, 0), "maxEth": max(mx, 0)})
     for k in range(86, int(call(SEL_COUNT), 16)):
         d = detail(k)
