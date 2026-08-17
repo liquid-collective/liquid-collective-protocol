@@ -1,0 +1,160 @@
+//SPDX-License-Identifier: BUSL-1.1
+pragma solidity 0.8.34;
+
+import "../RedeemManager.1.sol";
+
+/// @title Redeem Manager Recovery (BS-4878)
+/// @author Alluvial Finance Inc.
+/// @notice One-shot recovery implementation that rewrites a redeem queue corrupted by a replayed
+///         `initializeRedeemManagerV1_2`.
+/// @dev The v1.3.0 upgrade script calls `initializeRedeemManagerV1_2` through `upgradeToAndCall`. On a
+///      deployment created fresh from v1.2.1 sources the queue is already in RedeemQueueV2 layout while
+///      Version is still 1, so the `init(1)` guard passes and the V1 -> V2 migration is replayed. It reads
+///      5 word records at a 4 word stride, so every record past index 0 is reassembled from fragments of
+///      its neighbours.
+///
+///      Recovery sequence, all steps driven from the proxy admin (the RedeemManagerProxyFirewall):
+///        1. `TUPProxy.pause()` - stops claims. Views still resolve for callers sending from address zero.
+///        2. Rebuild the correct queue off chain from `RequestedRedeem` / `ClaimedRedeemRequest` events.
+///        3. `upgradeToAndCall(recovery, repairRedeemQueue(requests))` - this contract, atomically.
+///        4. `upgradeTo(RedeemManagerV1)` - drop the recovery surface again.
+///        5. `TUPProxy.unpause()`.
+///
+///      Step 3 is deliberately a single atomic call rather than a batched one: a partially repaired queue
+///      is harder to reason about than a failed transaction, and the proxy's transparent dispatch means
+///      only `upgradeToAndCall` can reach an implementation function from the admin anyway.
+contract RedeemManagerV1Recovery is RedeemManagerV1 {
+    /// @notice The supplied queue does not have the same length as the stored one
+    /// @param provided The number of requests supplied
+    /// @param expected The number of requests currently stored
+    error RepairLengthMismatch(uint256 provided, uint256 expected);
+
+    /// @notice The supplied request has a zero recipient
+    /// @param index The index of the offending request
+    error RepairInvalidRecipient(uint256 index);
+
+    /// @notice The supplied request has a zero initiator
+    /// @param index The index of the offending request
+    error RepairInvalidInitiator(uint256 index);
+
+    /// @notice The supplied request starts before the end position of the preceding one
+    /// @param index The index of the offending request
+    /// @param height The height of the offending request
+    /// @param previousEnd The end position of the preceding request
+    error RepairOverlappingRequest(uint256 index, uint256 height, uint256 previousEnd);
+
+    /// @notice The supplied request has an end position at or below the preceding one, implying a zero size
+    /// @param index The index of the offending request
+    error RepairEmptyRequest(uint256 index);
+
+    /// @notice The rebuilt queue ends below the withdrawal stack coverage, which `reportWithdraw` forbids
+    /// @param queueEnd The end position of the rebuilt queue
+    /// @param coverage The end position of the withdrawal stack
+    error RepairQueueBelowCoverage(uint256 queueEnd, uint256 coverage);
+
+    /// @notice The rebuilt queue is inconsistent with the untouched redeem demand counter
+    /// @param implied The demand implied by the rebuilt queue
+    /// @param expected The redeem demand currently stored
+    error RepairDemandMismatch(uint256 implied, uint256 expected);
+
+    /// @notice Emitted for every request rewritten by the repair
+    /// @param redeemRequestId The id of the repaired request
+    /// @param amount The restored amount of LsETH remaining
+    /// @param maxRedeemableEth The restored maximum amount of ETH redeemable
+    /// @param recipient The restored recipient
+    /// @param height The restored height
+    /// @param initiator The restored initiator
+    event RedeemRequestRepaired(
+        uint32 indexed redeemRequestId,
+        uint256 amount,
+        uint256 maxRedeemableEth,
+        address recipient,
+        uint256 height,
+        address initiator
+    );
+
+    /// @notice Emitted once the whole queue has been rewritten and the invariants verified
+    /// @param count The number of requests rewritten
+    /// @param queueEndPosition The end position of the rebuilt queue
+    /// @param redeemDemand The redeem demand the rebuilt queue was checked against
+    event RedeemQueueRepaired(uint256 count, uint256 queueEndPosition, uint256 redeemDemand);
+
+    /// @notice Rewrite the redeem queue with externally reconstructed values
+    /// @dev Guarded by `init(2)`, so this runs exactly once on a deployment whose Version the replayed
+    ///      migration already advanced to 2. Values are supplied as calldata and never derived from the
+    ///      corrupted storage - deriving in place is what caused the incident.
+    ///
+    ///      The checks below make the calldata self validating. The decisive one is the demand check:
+    ///      `_requestRedeem` adds every request's size to RedeemDemand and anchors each request at the
+    ///      preceding one's end position, while `reportWithdraw` subtracts each withdrawal event's size and
+    ///      anchors it at the preceding event's end position. So the end of the queue minus the end of the
+    ///      withdrawal stack is identically RedeemDemand. RedeemDemand lives in its own slot and was never
+    ///      written by the faulty migration, which makes it an independent witness that the supplied queue
+    ///      geometry is the correct one.
+    /// @param _requests The full queue, index aligned, exactly as it should read after the repair
+    function repairRedeemQueue(RedeemQueueV2.RedeemRequest[] calldata _requests) external init(2) {
+        RedeemQueueV2.RedeemRequest[] storage queue = RedeemQueueV2.get();
+        uint256 count = queue.length;
+        if (_requests.length != count) {
+            revert RepairLengthMismatch(_requests.length, count);
+        }
+
+        uint256 previousEnd = 0;
+        for (uint256 i = 0; i < count; ++i) {
+            RedeemQueueV2.RedeemRequest calldata request = _requests[i];
+
+            if (request.recipient == address(0)) {
+                revert RepairInvalidRecipient(i);
+            }
+            if (request.initiator == address(0)) {
+                revert RepairInvalidInitiator(i);
+            }
+            // The unclaimed remainder of a request never starts before the previous request's end position,
+            // because claiming only ever moves height forward while holding height + amount constant.
+            if (request.height < previousEnd) {
+                revert RepairOverlappingRequest(i, request.height, previousEnd);
+            }
+            uint256 end = request.height + request.amount;
+            // Every request was created with a non zero size, so end positions strictly increase.
+            if (i != 0 && end <= previousEnd) {
+                revert RepairEmptyRequest(i);
+            }
+            previousEnd = end;
+
+            queue[i] = request;
+
+            emit RedeemRequestRepaired(
+                uint32(i),
+                request.amount,
+                request.maxRedeemableEth,
+                request.recipient,
+                request.height,
+                request.initiator
+            );
+        }
+
+        uint256 coverage = _withdrawalStackEndPosition();
+        if (previousEnd < coverage) {
+            revert RepairQueueBelowCoverage(previousEnd, coverage);
+        }
+        uint256 impliedDemand = previousEnd - coverage;
+        uint256 redeemDemand = RedeemDemand.get();
+        if (impliedDemand != redeemDemand) {
+            revert RepairDemandMismatch(impliedDemand, redeemDemand);
+        }
+
+        emit RedeemQueueRepaired(count, previousEnd, redeemDemand);
+    }
+
+    /// @notice Retrieve the end position of the withdrawal stack, in the same cumulative LsETH space as the queue
+    /// @return The end position of the last withdrawal event, or zero if the stack is empty
+    function _withdrawalStackEndPosition() internal view returns (uint256) {
+        WithdrawalStack.WithdrawalEvent[] storage withdrawalEvents = WithdrawalStack.get();
+        uint256 length = withdrawalEvents.length;
+        if (length == 0) {
+            return 0;
+        }
+        WithdrawalStack.WithdrawalEvent memory last = withdrawalEvents[length - 1];
+        return last.height + last.amount;
+    }
+}

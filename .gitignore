@@ -46,3 +46,4 @@ emv-**/*
 runRiver.sh
 
 .claude
+scripts/bs4878_repair_calldata.txt

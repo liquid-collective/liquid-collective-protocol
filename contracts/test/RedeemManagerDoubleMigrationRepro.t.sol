@@ -91,7 +91,7 @@ contract RedeemManagerDoubleMigrationRepro is RedeeManagerV1TestBase {
         // Heights are no longer monotonic, which breaks the dichotomic resolve/claim search.
         assertTrue(
             !(afterMigration[0].height <= afterMigration[1].height
-                && afterMigration[1].height <= afterMigration[2].height),
+                    && afterMigration[1].height <= afterMigration[2].height),
             "heights still monotonic"
         );
     }
