@@ -251,6 +251,9 @@ library OperatorsV3 {
     /// @param operatorIndex The index of the operator whose reservation is being released
     /// @param amount The ETH(wei) amount released
     function addReleasedETH(uint256 operatorIndex, uint256 amount) internal {
+        if (amount == 0) {
+            return;
+        }
         uint256[] storage releasedETH = getReleasedETH();
 
         // slot 0 holds the sum, so operator `operatorIndex` lives at `operatorIndex + 1`
