@@ -326,7 +326,7 @@ export function verifyQueue(
       throw new Error(`request ${i}: height ${r.height} starts before previous end ${previousEnd}`);
     }
     const end = r.height.add(r.amount);
-    if (i !== 0 && end.lte(previousEnd)) throw new Error(`request ${i}: non increasing end position`);
+    if (end.lte(previousEnd)) throw new Error(`request ${i}: non increasing end position`);
     previousEnd = end;
   });
   if (previousEnd.lt(coverage)) throw new Error(`queue end ${previousEnd} below coverage ${coverage}`);
