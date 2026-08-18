@@ -158,7 +158,7 @@ contract RedeemManagerV1Recovery is RedeemManagerV1 {
             }
             uint256 end = request.height + request.amount;
             // Every request was created with a non zero size, so end positions strictly increase.
-            if (i != 0 && end <= previousEnd) {
+            if (end <= previousEnd) {
                 revert RepairEmptyRequest(i);
             }
             previousEnd = end;
