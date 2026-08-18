@@ -6,6 +6,7 @@ import {
   CLEAN_IMPL_1_3_0,
   REDEEM_MANAGER,
   REDEEM_MANAGER_PROXY_ADMIN,
+  currentQueueHash,
   redeemManagerAt,
   retry,
   withdrawalStackEnd,
@@ -38,10 +39,11 @@ import {
 // The payload comes from the preflight artifact, which is the file a human reviewed. Nothing rebuilds
 // it at send time, so what ships is what was signed off.
 //
+// Everything else - which artifact, which implementation, whether to run the claim smoke test - is
+// derived from the repo and the chain id, so a mistyped environment variable cannot steer a live
+// upgrade.
+//
 //   BS4878_EXECUTE=1            actually send; default is print-only
-//   BS4878_PREFLIGHT=<path>     preflight json; auto-detected when only one is present
-//   BS4878_RECOVERY=0x...       skip the deploy and reuse an already deployed implementation
-//   BS4878_CLAIM_CHECK=1        after restore, claim one request; forks only
 
 const REAL_HOODI_CHAIN_ID = 560048;
 const PREFLIGHT_DIR = "hardhat_scripts/staging_redeem_queue_migration";
@@ -103,17 +105,13 @@ function loadReviewedPayload(recoveryInterface: EthersType.utils.Interface): {
   queueHash: string;
   records: any[];
 } {
-  // Use the explicitly reviewed file when supplied; otherwise require an unambiguous local artifact.
-  let file = process.env.BS4878_PREFLIGHT;
-  if (!file) {
-    const found = fs.readdirSync(PREFLIGHT_DIR).filter((f) => /^preflight-\d+\.json$/.test(f));
-    if (found.length !== 1) {
-      throw new Error(
-        `expected one preflight-<block>.json in ${PREFLIGHT_DIR}, found ${found.length} - set BS4878_PREFLIGHT`
-      );
-    }
-    file = path.join(PREFLIGHT_DIR, found[0]);
+  // Always the committed artifact, never a path passed in at run time - the reviewed file is the one
+  // in the repo.
+  const found = fs.readdirSync(PREFLIGHT_DIR).filter((f) => /^preflight-\d+\.json$/.test(f));
+  if (found.length !== 1) {
+    throw new Error(`expected exactly one preflight-<block>.json in ${PREFLIGHT_DIR}, found ${found.length}`);
   }
+  const file = path.join(PREFLIGHT_DIR, found[0]);
 
   // Read the exact reviewed records and calldata; this script never reconstructs them at execution time.
   const { calldata, expectedQueueHash, generatedAtBlock, generatedAtISO, records } = JSON.parse(
@@ -199,14 +197,26 @@ async function main() {
   // Bind the live proxy, resolve the authorized signer, and load the exact payload approved in preflight.
   const redeemManager = await redeemManagerAt(hre, provider);
   const { signer, signerAddress, impersonated } = await resolveSigner(provider, chainId, shouldExecute);
-  const { calldata, records } = loadReviewedPayload(recoveryInterface);
+  const { calldata, queueHash, records } = loadReviewedPayload(recoveryInterface);
 
   // Capture the implementation that is actually live rather than trusting the constant, so restore
   // puts back what was there. A mismatch means staging is not where we think it is.
   const liveImplementation = await readImplementation(provider);
   if (liveImplementation.toLowerCase() !== CLEAN_IMPL_1_3_0.toLowerCase()) {
+    console.error(`live implementation is ${liveImplementation}, expected ${CLEAN_IMPL_1_3_0}`);
+    console.error(`if a previous run left the recovery implementation installed, restore it with:`);
+    console.error(`  to        ${REDEEM_MANAGER_PROXY_ADMIN}`);
+    console.error(`  calldata  ${PROXY_INTERFACE.encodeFunctionData("upgradeTo", [CLEAN_IMPL_1_3_0])}`);
+    throw new Error("unexpected live implementation - stop and investigate");
+  }
+
+  // The repair refuses to apply to any queue but the one the payload was built against. Check that
+  // here so a stale artifact aborts locally instead of burning 30M gas on a guaranteed revert.
+  const liveQueueHash = await currentQueueHash(hre, redeemManager);
+  if (liveQueueHash.toLowerCase() !== queueHash.toLowerCase()) {
     throw new Error(
-      `live implementation ${liveImplementation} is not the expected ${CLEAN_IMPL_1_3_0} - stop and investigate`
+      `queue has moved since the artifact was generated (live ${liveQueueHash}, artifact ${queueHash})` +
+        ` - rerun hoodi/01_preflight.ts, review the new artifact, and replace the committed one`
     );
   }
 
@@ -216,9 +226,8 @@ async function main() {
   );
   console.log(`  live implementation ${liveImplementation}`);
   console.log(`  requests ${(await redeemManager.callStatic.getRedeemRequestCount(FROM_ZERO)).toNumber()}`);
-  console.log(`  balance ${eth(await provider.getBalance(REDEEM_MANAGER))} ETH\n`);
-
-  let recoveryImplementation = process.env.BS4878_RECOVERY;
+  console.log(`  balance ${eth(await provider.getBalance(REDEEM_MANAGER))} ETH`);
+  console.log(`  queue hash matches the artifact\n`);
 
   // Stop here in print-only mode after showing the complete transaction sequence and its actors.
   if (!shouldExecute) {
@@ -234,21 +243,19 @@ async function main() {
     return;
   }
 
-  // Step 1: deploy the temporary recovery implementation, unless a reviewed deployment was supplied.
-  if (!recoveryImplementation) {
-    console.log("1 deploy");
-    const deployed = await new hre.ethers.ContractFactory(artifact.abi, artifact.bytecode, signer!).deploy({
-      gasLimit: 10_000_000,
-    });
-    await deployed.deployed();
-    recoveryImplementation = deployed.address;
-    console.log(`  deployed at ${recoveryImplementation}\n`);
-  } else {
-    console.log(`1 deploy skipped, reusing ${recoveryImplementation}\n`);
-  }
+  // Step 1: deploy the temporary recovery implementation, always fresh from the compiled artifact.
+  // This is the target of a delegatecall on a proxy holding the redeem manager's ETH, so it must be
+  // code this run produced rather than an address someone pasted in.
+  console.log("1 deploy recovery implementation");
+  const deployed = await new hre.ethers.ContractFactory(artifact.abi, artifact.bytecode, signer!).deploy({
+    gasLimit: 10_000_000,
+  });
+  await deployed.deployed();
+  const recoveryImplementation = deployed.address;
+  console.log(`  deployed at ${recoveryImplementation}\n`);
 
   // Step 2: atomically install the recovery implementation and execute the reviewed queue rewrite.
-  console.log("2 repair");
+  console.log("2 repair redeem queue");
   await send(
     signer!,
     "repair",
@@ -257,11 +264,11 @@ async function main() {
   );
 
   // Step 3: compare the repaired queue with preflight before allowing the original implementation back.
-  console.log("\n3 verify");
+  console.log("\n3 verify migration");
   await verifyRepair(redeemManager, records);
 
   // Step 4: remove the recovery surface and confirm the proxy points back to the original implementation.
-  console.log("\n4 restore");
+  console.log("\n4 restore old implementation");
   await send(signer!, "restore", PROXY_INTERFACE.encodeFunctionData("upgradeTo", [liveImplementation]), 500_000);
   const restored = await readImplementation(provider);
   if (restored.toLowerCase() !== liveImplementation.toLowerCase()) {
@@ -269,8 +276,9 @@ async function main() {
   }
   console.log(`  implementation back to ${restored}`);
 
-  // Optional fork-only smoke test: claim one repaired request and report the actual ETH paid.
-  if (process.env.BS4878_CLAIM_CHECK === "1" && !isRealHoodi) {
+  // Fork-only smoke test: claim one repaired request and report the actual ETH paid. Gated on the
+  // chain id so it can never be switched on against real holders' funds.
+  if (!isRealHoodi) {
     const [withdrawalEventId] = await redeemManager.resolveRedeemRequests([2]);
     if (withdrawalEventId.gte(0)) {
       const request = await redeemManager.getRedeemRequestDetails(2);

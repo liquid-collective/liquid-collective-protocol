@@ -344,8 +344,11 @@ export async function currentQueueHash(
   hre: HardhatRuntimeEnvironment,
   rm: EthersType.Contract
 ): Promise<string> {
+  // Read the count once. In the loop condition it was re-read every iteration, doubling the request
+  // volume and getting public endpoints to drop the connection part way through.
+  const count = await requestCount(rm);
   let acc = hre.ethers.constants.HashZero;
-  for (let i = 0; i < (await requestCount(rm)); ++i) {
+  for (let i = 0; i < count; ++i) {
     const d = await detail(rm, i);
     acc = hre.ethers.utils.solidityKeccak256(
       ["bytes32", "uint256", "uint256", "address", "uint256", "address"],
