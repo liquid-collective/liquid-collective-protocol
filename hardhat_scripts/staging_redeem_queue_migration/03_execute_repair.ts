@@ -1,4 +1,5 @@
 import * as fs from "fs";
+import * as path from "path";
 import hre from "hardhat";
 import { ethers as EthersType } from "ethers";
 import {
@@ -26,10 +27,14 @@ import {
 // against, so a claim landing between building and sending makes it revert rather than silently
 // replay stale amounts. Freezing the proxy would only add oracle downtime for no extra safety.
 //
+// The payload comes from the preflight artifact, which is the file a human reviewed. Nothing rebuilds
+// it at send time, so what ships is what was signed off.
+//
 //   BS4878_STEP=deploy|repair|restore   which step to run
 //   BS4878_EXECUTE=1                    actually send; default is print-only
 //   BS4878_SEQUENCE=1                   run every step in order; forks only
 //   BS4878_RECOVERY=0x...               the deployed recovery implementation
+//   BS4878_PREFLIGHT=<path>             preflight json; auto-detected when only one is present
 //   BS4878_CLAIM_CHECK=1                after restore, claim one request; forks only
 //
 // Print-only output is enough to submit from a Safe or hardware wallet instead.
@@ -38,7 +43,7 @@ import {
 // half-finished sequence is easier to reason about when each transaction was a separate decision.
 
 const REAL_HOODI_CHAIN_ID = 560048;
-const CALLDATA_FILE = "hardhat_scripts/staging_redeem_queue_migration/repair-calldata.txt";
+const PREFLIGHT_DIR = "hardhat_scripts/staging_redeem_queue_migration";
 const STEPS = ["deploy", "repair", "restore"] as const;
 type Step = (typeof STEPS)[number];
 
@@ -86,6 +91,38 @@ async function resolveSigner(
     hre.ethers.utils.hexValue(hre.ethers.utils.parseEther("100")),
   ]);
   return { signer: provider.getSigner(firewallAdmin), signerAddress: firewallAdmin, impersonated: true };
+}
+
+/// Load the reviewed preflight artifact and check it is internally consistent.
+///
+/// repairRedeemQueue(tuple[] , bytes32) encodes the array as an offset, so the head is
+/// [offset, expectedQueueHash] and the hash is the second word after the selector - not the last 32
+/// bytes, which are the final record's initiator. Comparing it against the artifact's own
+/// expectedQueueHash catches a payload edited or swapped after review.
+function loadReviewedPayload(): { calldata: string; queueHash: string; block: number; generatedAt: string } {
+  const explicit = process.env.BS4878_PREFLIGHT;
+  let file = explicit;
+  if (!file) {
+    const found = fs.readdirSync(PREFLIGHT_DIR).filter((f) => /^preflight-\d+\.json$/.test(f));
+    if (found.length !== 1) {
+      throw new Error(
+        `expected exactly one preflight-<block>.json in ${PREFLIGHT_DIR}, found ${found.length}` +
+          ` - set BS4878_PREFLIGHT to choose`
+      );
+    }
+    file = path.join(PREFLIGHT_DIR, found[0]);
+  }
+  const artifact = JSON.parse(fs.readFileSync(file, "utf8"));
+  const { calldata, expectedQueueHash, generatedAtBlock, generatedAtISO } = artifact;
+  if (!calldata || !expectedQueueHash) throw new Error(`${file} is missing calldata or expectedQueueHash`);
+  const encodedHash = `0x${calldata.slice(2 + 8 + 64, 2 + 8 + 128)}`;
+  if (encodedHash.toLowerCase() !== expectedQueueHash.toLowerCase()) {
+    throw new Error(`${file} is inconsistent: payload carries ${encodedHash}, artifact says ${expectedQueueHash}`);
+  }
+  console.log(`  payload from ${file}`);
+  console.log(`    built at block ${generatedAtBlock} (${generatedAtISO})`);
+  console.log(`    queue hash ${expectedQueueHash}`);
+  return { calldata, queueHash: expectedQueueHash, block: generatedAtBlock, generatedAt: generatedAtISO };
 }
 
 async function readQueueState(redeemManager: EthersType.Contract, provider: EthersType.providers.Provider) {
@@ -144,9 +181,7 @@ async function main() {
 
     if (step === "repair") {
       if (!recoveryImplementation) throw new Error("set BS4878_RECOVERY to the deployed recovery implementation");
-      if (!fs.existsSync(CALLDATA_FILE)) throw new Error(`missing ${CALLDATA_FILE} - run 02_build_repair_calldata.ts`);
-      const repairCalldata = fs.readFileSync(CALLDATA_FILE, "utf8").trim();
-      console.log(`  payload ${(repairCalldata.length - 2) / 2} bytes from ${CALLDATA_FILE}`);
+      const { calldata: repairCalldata } = loadReviewedPayload();
       transactionData = PROXY_INTERFACE.encodeFunctionData("upgradeToAndCall", [recoveryImplementation, repairCalldata]);
     } else {
       transactionData = PROXY_INTERFACE.encodeFunctionData("upgradeTo", [CLEAN_IMPL_1_3_0]);
