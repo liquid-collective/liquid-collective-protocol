@@ -132,10 +132,13 @@ async function main() {
     console.log(`     ${addr}  ${eth(amt)} ETH`);
   }
 
+  const residue = balance.sub(buffered);
+
   if (stillOpen.length) throw new Error(`queue not fully settled: ${JSON.stringify(stillOpen)}`);
   if (totalPaid.gt(totalCap)) throw new Error("paid out more than the sum of entitlements");
+  if (totalPaid.lt(totalCap)) throw new Error("did not pay out the full sum of entitlements");
   if (balance.lt(buffered)) throw new Error("contract cannot cover its own exceeding-eth buffer");
-
+  if (!residue.isZero()) throw new Error(`unexplained residue after full settlement: ${eth(residue)}`);
   console.log("\n" + "=".repeat(78));
   console.log("FULL RECOVERY PROVEN - every request settled, nothing stranded, nothing overpaid");
   console.log("=".repeat(78));
