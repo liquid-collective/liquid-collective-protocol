@@ -93,13 +93,16 @@ async function main() {
   for (const id of openBefore) {
     const w = owed.get(id)!;
     const resolved = await retry<any>(() => rm.resolveRedeemRequests([id]));
-    if (resolved[0].lt(0)) {
+    const raw = resolved[0];
+    const eventIdSigned =
+      typeof raw === "number" ? raw : EthersType.BigNumber.from(raw).fromTwos(64).toNumber();
+    if (eventIdSigned < 0) {
       failed.push(id);
       continue;
     }
     const before = await retry(() => provider.getBalance(w.recipient));
     await (
-      await rmCaller["claimRedeemRequests(uint32[],uint32[])"]([id], [resolved[0]], { gasLimit: 8_000_000 })
+      await rmCaller["claimRedeemRequests(uint32[],uint32[])" ]([id], [eventIdSigned], { gasLimit: 8_000_000 })
     ).wait();
     const paid = (await retry(() => provider.getBalance(w.recipient))).sub(before);
     received.set(w.recipient, (received.get(w.recipient) || hre.ethers.constants.Zero).add(paid));
