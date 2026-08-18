@@ -8,16 +8,16 @@ import {
   verifyQueue,
   withdrawalStackEnd,
   eth,
-} from "./redeemQueueRepair";
+} from "../redeem_queue_repair";
 
 // BS-4878: build and validate the calldata for RedeemManagerV1Recovery.repairRedeemQueue. Read only.
 //
-//   npx hardhat run hardhat_scripts/bs4878/buildRepairCalldata.ts --network hoodi
+//   npx hardhat run hardhat_scripts/staging_redeem_queue_migration/hoodi/02_build_repair_calldata.ts --network hoodi
 //
-// Writes hardhat_scripts/bs4878/repair-calldata.txt. The artifact is gitignored on purpose: it must
+// Writes hardhat_scripts/staging_redeem_queue_migration/repair-calldata.txt. The artifact is gitignored on purpose: it must
 // be regenerated against the frozen state, because every claim moves the numbers.
 
-const OUT = "hardhat_scripts/bs4878/repair-calldata.txt";
+const OUT = "hardhat_scripts/staging_redeem_queue_migration/repair-calldata.txt";
 
 async function main() {
   const history = historyProvider(hre.ethers);

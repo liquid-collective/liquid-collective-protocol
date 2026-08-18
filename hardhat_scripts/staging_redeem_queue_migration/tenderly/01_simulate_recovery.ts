@@ -12,11 +12,11 @@ import {
   verifyQueue,
   withdrawalStackEnd,
   eth,
-} from "./redeemQueueRepair";
+} from "../redeem_queue_repair";
 
 // BS-4878: rehearse the full staging recovery on a Tenderly Virtual TestNet forked from hoodi.
 //
-//   npx hardhat run hardhat_scripts/bs4878/simulateRecovery.ts --network tenderly
+//   npx hardhat run hardhat_scripts/staging_redeem_queue_migration/tenderly/01_simulate_recovery.ts --network tenderly
 //
 // Requires TENDERLY_RPC_URL to point at a Virtual TestNet forked from hoodi at (or near) head.
 //

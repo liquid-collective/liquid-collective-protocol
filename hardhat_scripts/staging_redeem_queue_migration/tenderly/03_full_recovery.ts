@@ -1,12 +1,12 @@
 import hre from "hardhat";
 import { ethers as EthersType } from "ethers";
-import { REDEEM_MANAGER, RIVER, redeemManagerAt, retry, withdrawalStackEnd, eth } from "./redeemQueueRepair";
+import { REDEEM_MANAGER, RIVER, redeemManagerAt, retry, withdrawalStackEnd, eth } from "../redeem_queue_repair";
 
 // BS-4878: prove the repaired queue can be drained completely against the withdrawal stack.
 //
-//   npx hardhat run hardhat_scripts/bs4878/fullRecovery.ts --network tenderly
+//   npx hardhat run hardhat_scripts/staging_redeem_queue_migration/tenderly/03_full_recovery.ts --network tenderly
 //
-// simulateRecovery.ts stops at whatever the withdrawal stack currently covers, so it leaves the tail
+// 01_simulate_recovery.ts stops at whatever the withdrawal stack currently covers, so it leaves the tail
 // unproven - those requests are legitimately waiting on future oracle reports. This goes further: it
 // impersonates River to report the remaining demand, funding it at River's own conversion rate, then
 // claims every request and asserts the queue settles to nothing.
@@ -51,7 +51,7 @@ async function main() {
   const coverage0 = await withdrawalStackEnd(rm);
   const demand0 = await rm.getRedeemDemand();
   if (!monotonic || !prev.sub(coverage0).eq(demand0)) {
-    throw new Error("queue does not look repaired - run simulateRecovery.ts first");
+    throw new Error("queue does not look repaired - run 01_simulate_recovery.ts first");
   }
   console.log("0. pre-state (repair already applied)");
   console.log(`   queue ${count} records, ${openBefore.length} open`);

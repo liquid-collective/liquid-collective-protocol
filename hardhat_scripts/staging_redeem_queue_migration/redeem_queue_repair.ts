@@ -14,7 +14,7 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 // reads 5 word records at a 4 word stride, so every record past index 0 is reassembled from fragments
 // of its neighbours.
 //
-// Everything here is read-only. The only module that sends transactions is simulateRecovery.ts, and
+// Everything here is read-only. The only module that sends transactions is 01_simulate_recovery.ts, and
 // it only ever talks to a Tenderly Virtual TestNet.
 
 export const HOODI_CHAIN_ID = 560048;

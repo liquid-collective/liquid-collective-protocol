@@ -15,11 +15,11 @@ import {
   verifyQueue,
   withdrawalStackEnd,
   eth,
-} from "./redeemQueueRepair";
+} from "../redeem_queue_repair";
 
 // BS-4878 pre-verification. Read only.
 //
-//   npx hardhat run hardhat_scripts/bs4878/preflight.ts --network hoodi
+//   npx hardhat run hardhat_scripts/staging_redeem_queue_migration/hoodi/01_preflight.ts --network hoodi
 //
 // Snapshots the chain as if it were already frozen and writes one reviewable artifact containing the
 // exact repair payload, every check the on-chain repair will perform, a per-record diff against
@@ -28,7 +28,7 @@ import {
 //
 // The artifact is deliberately point-in-time. Do not send a payload generated before the freeze.
 
-const OUTDIR = "hardhat_scripts/bs4878";
+const OUTDIR = "hardhat_scripts/staging_redeem_queue_migration";
 
 async function main() {
   const state = hre.ethers.provider;

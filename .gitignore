@@ -46,5 +46,5 @@ emv-**/*
 runRiver.sh
 
 .claude
-hardhat_scripts/bs4878/repair-calldata.txt
-hardhat_scripts/bs4878/preflight-*.json
+hardhat_scripts/staging_redeem_queue_migration/repair-calldata.txt
+hardhat_scripts/staging_redeem_queue_migration/preflight-*.json
