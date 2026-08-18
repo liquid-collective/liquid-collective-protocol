@@ -136,7 +136,8 @@ export async function reconstructPreUpgrade(
 
   for (const ev of await scanLogs(rm, rm.filters.RequestedRedeem(), DEPLOY_BLOCK, cutoff)) {
     // RequestedRedeem's `amount` is the size at creation, not the remaining amount.
-    const { recipient, height, amount, maxRedeemableEth, id } = ev.args as any;
+    const { recipient, height, amount, maxRedeemableEth, id: rawId } = ev.args as any;
+    const id: number = typeof rawId === "number" ? rawId : rawId.toNumber();
     byId.set(id, {
       recipient: recipient.toLowerCase(),
       size: amount,
