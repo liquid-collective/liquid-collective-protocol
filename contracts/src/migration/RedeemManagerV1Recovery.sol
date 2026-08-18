@@ -16,15 +16,18 @@ import "../state/redeemManager/RedeemQueueRepaired.sol";
 ///      its neighbours.
 ///
 ///      Recovery sequence, all steps driven from the proxy admin (the RedeemManagerProxyFirewall):
-///        1. `TUPProxy.pause()` - stops claims. Views still resolve for callers sending from address zero.
-///        2. Rebuild the correct queue off chain from `RequestedRedeem` / `ClaimedRedeemRequest` events.
-///        3. `upgradeToAndCall(recovery, repairRedeemQueue(requests))` - this contract, atomically.
-///        4. `upgradeTo(RedeemManagerV1)` - drop the recovery surface again.
-///        5. `TUPProxy.unpause()`.
+///        1. Rebuild the correct queue off chain, from archive state at the pre-upgrade block, cross
+///           checked against a replay of `RequestedRedeem` / `ClaimedRedeemRequest`.
+///        2. `upgradeToAndCall(recovery, repairRedeemQueue(requests, queueHash))` - this contract.
+///        3. `upgradeTo(RedeemManagerV1)` - drop the recovery surface again.
 ///
-///      Step 3 is deliberately a single atomic call rather than a batched one: a partially repaired queue
-///      is harder to reason about than a failed transaction, and the proxy's transparent dispatch means
-///      only `upgradeToAndCall` can reach an implementation function from the admin anyway.
+///      No pause is needed. The queue hash is verified on chain, so a claim landing between building
+///      the payload and sending it makes the repair revert rather than silently replay stale amounts.
+///
+///      Step 2 is deliberately a single atomic call: a partially repaired queue is harder to reason
+///      about than a failed transaction, and the proxy's transparent dispatch means only
+///      `upgradeToAndCall` can reach an implementation function from the admin anyway.
+
 contract RedeemManagerV1Recovery is RedeemManagerV1 {
     /// @notice EIP-1967 admin slot, read to confirm the caller is the proxy admin
     bytes32 private constant EIP1967_ADMIN_SLOT = 0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103;
