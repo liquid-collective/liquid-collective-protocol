@@ -37,6 +37,17 @@ contract RedeemManagerV1RecoveryTest is RedeeManagerV1TestBase {
 
     bytes32 internal constant EIP1967_ADMIN_SLOT = 0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103;
 
+    /// @notice Mirrors of the recovery contract's events, declared here so `vm.expectEmit` can build them
+    event RedeemRequestRepaired(
+        uint32 indexed redeemRequestId,
+        uint256 amount,
+        uint256 maxRedeemableEth,
+        address recipient,
+        uint256 height,
+        address initiator
+    );
+    event RedeemQueueRepairPerformed(uint256 count, uint256 queueEndPosition, uint256 redeemDemand);
+
     function _allowlistUser(address user) internal {
         address[] memory accounts = new address[](1);
         accounts[0] = user;
@@ -82,6 +93,62 @@ contract RedeemManagerV1RecoveryTest is RedeeManagerV1TestBase {
         // its 30 ether is settled and its height moves from 30 to 45 while its end position stays at 60.
         assertEq(expected[2].height, 45 ether, "request 2 height should have advanced");
         assertEq(expected[2].amount, 15 ether, "request 2 should be partially claimed");
+    }
+
+    /// @notice Build a queue in which the first request is fully settled, so the payload carries a zero
+    ///         amount record. 53 of the 125 real staging records are in exactly this shape, and their
+    ///         height is the request's end position rather than its start.
+    function _seedQueueWithSettledRequest() internal {
+        _request(11, 10 ether);
+        _request(12, 20 ether);
+        _request(13, 30 ether);
+
+        vm.deal(address(this), 30 ether);
+        river.sudoReportWithdraw{value: 30 ether}(address(redeemManager), 30 ether);
+
+        uint32[] memory ids = new uint32[](1);
+        uint32[] memory events = new uint32[](1);
+        redeemManager.claimRedeemRequests(ids, events);
+
+        _snapshot(3);
+        assertEq(expected[0].amount, 0, "request 0 should be fully settled");
+        assertEq(expected[0].height, 10 ether, "a settled request sits at its own end position");
+    }
+
+    /// @notice Build a queue through the River path, so `initiator` differs from `recipient`. This is the
+    ///         real staging shape: every legacy record was created via `River.requestRedeem`, so the
+    ///         faulty migration's `initiator = recipient` overwrite is observable on every one of them.
+    function _seedQueueViaRiver() internal returns (address[] memory recipients) {
+        recipients = new address[](3);
+        uint256[] memory amounts = new uint256[](3);
+        amounts[0] = 10 ether;
+        amounts[1] = 20 ether;
+        amounts[2] = 30 ether;
+
+        river.sudoDeal(address(river), 60 ether);
+        vm.startPrank(address(river));
+        river.approve(address(redeemManager), 60 ether);
+        for (uint256 i = 0; i < 3; ++i) {
+            recipients[i] = uf._new(20 + i);
+            redeemManager.requestRedeem(amounts[i], recipients[i], address(river));
+        }
+        vm.stopPrank();
+
+        vm.deal(address(this), 30 ether);
+        river.sudoReportWithdraw{value: 30 ether}(address(redeemManager), 30 ether);
+
+        _snapshot(3);
+    }
+
+    function _snapshot(uint32 _count) internal {
+        for (uint32 i = 0; i < _count; ++i) {
+            expected.push(redeemManager.getRedeemRequestDetails(i));
+        }
+    }
+
+    function _queueEnd() internal view returns (uint256) {
+        RedeemQueueV2.RedeemRequest storage last = expected[expected.length - 1];
+        return last.height + last.amount;
     }
 
     function _corrupt() internal {
@@ -263,5 +330,250 @@ contract RedeemManagerV1RecoveryTest is RedeeManagerV1TestBase {
             abi.encodeWithSelector(RedeemManagerV1Recovery.RepairDemandMismatch.selector, demand + 1 ether, demand)
         );
         redeemManager.repairRedeemQueue(payload, expectedHash);
+    }
+
+    /// @notice A zero initiator would leave the claim path denylist-checking address(0)
+    function testRepairRejectsZeroInitiator() external {
+        _seedQueue();
+        _corrupt();
+
+        RedeemQueueV2.RedeemRequest[] memory payload = _payload();
+        payload[1].initiator = address(0);
+
+        bytes32 expectedHash = _queueHash();
+
+        vm.expectRevert(abi.encodeWithSelector(RedeemManagerV1Recovery.RepairInvalidInitiator.selector, 1));
+        redeemManager.repairRedeemQueue(payload, expectedHash);
+    }
+
+    /// @notice A record whose end position does not advance past its predecessor's would be unclaimable
+    ///         dead weight in the queue, so a zero size at a legitimate start position is still rejected
+    function testRepairRejectsEmptyRequest() external {
+        _seedQueue();
+        _corrupt();
+
+        // Request 0 spans [0, 10). Parking request 1 at height 10 with no size makes its end position
+        // equal to the previous one, which is exactly the degenerate record the check exists for.
+        RedeemQueueV2.RedeemRequest[] memory payload = _payload();
+        payload[1].height = expected[0].height + expected[0].amount;
+        payload[1].amount = 0;
+
+        bytes32 expectedHash = _queueHash();
+
+        vm.expectRevert(abi.encodeWithSelector(RedeemManagerV1Recovery.RepairEmptyRequest.selector, 1));
+        redeemManager.repairRedeemQueue(payload, expectedHash);
+    }
+
+    /// @notice A queue ending below the withdrawal stack is a state `reportWithdraw` can never produce,
+    ///         and would under-report what holders are owed
+    function testRepairRejectsQueueBelowCoverage() external {
+        _seedQueue();
+        _corrupt();
+
+        // Shrink every record to 1 ether so the chain stays strictly increasing but the queue ends at
+        // 4 ether, far below the 45 ether the withdrawal stack already covers.
+        RedeemQueueV2.RedeemRequest[] memory payload = _payload();
+        for (uint256 i = 0; i < payload.length; ++i) {
+            payload[i].height = i * 1 ether;
+            payload[i].amount = 1 ether;
+        }
+
+        bytes32 expectedHash = _queueHash();
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                RedeemManagerV1Recovery.RepairQueueBelowCoverage.selector, uint256(4 ether), uint256(45 ether)
+            )
+        );
+        redeemManager.repairRedeemQueue(payload, expectedHash);
+    }
+
+    /// @notice The events are the only record of what the repair wrote, so they are part of the contract
+    function testRepairEmitsAnEventPerRecordAndOneSummary() external {
+        _seedQueue();
+        _corrupt();
+
+        RedeemQueueV2.RedeemRequest[] memory payload = _payload();
+        bytes32 expectedHash = _queueHash();
+        uint256 demand = redeemManager.getRedeemDemand();
+        uint256 queueEnd = _queueEnd();
+
+        for (uint32 i = 0; i < payload.length; ++i) {
+            vm.expectEmit(true, true, true, true);
+            emit RedeemRequestRepaired(
+                i,
+                payload[i].amount,
+                payload[i].maxRedeemableEth,
+                payload[i].recipient,
+                payload[i].height,
+                payload[i].initiator
+            );
+        }
+        vm.expectEmit(true, true, true, true);
+        emit RedeemQueueRepairPerformed(payload.length, queueEnd, demand);
+
+        redeemManager.repairRedeemQueue(payload, expectedHash);
+    }
+
+    /// @notice The reason the one-off lives in its own slot: Version must stay at 2 so the repaired
+    ///         deployment keeps matching every other one
+    function testRepairDoesNotAdvanceVersion() external {
+        _seedQueue();
+        _corrupt();
+
+        assertEq(uint256(vm.load(address(redeemManager), Version.VERSION_SLOT)), 2, "migration should reach 2");
+        assertEq(
+            uint256(vm.load(address(redeemManager), RedeemQueueRepaired.REDEEM_QUEUE_REPAIRED_SLOT)),
+            0,
+            "flag should start clear"
+        );
+
+        redeemManager.repairRedeemQueue(_payload(), _queueHash());
+
+        assertEq(uint256(vm.load(address(redeemManager), Version.VERSION_SLOT)), 2, "Version must not advance");
+        assertEq(
+            uint256(vm.load(address(redeemManager), RedeemQueueRepaired.REDEEM_QUEUE_REPAIRED_SLOT)),
+            1,
+            "flag should be set"
+        );
+    }
+
+    /// @notice The flag is written before the payload is validated, so a rejected attempt must not burn
+    ///         the single shot the deployment gets
+    function testRejectedRepairDoesNotConsumeTheOneShot() external {
+        _seedQueue();
+        _corrupt();
+
+        RedeemQueueV2.RedeemRequest[] memory payload = _payload();
+        bytes32 correctHash = _queueHash();
+
+        vm.expectRevert(
+            abi.encodeWithSelector(RedeemManagerV1Recovery.RepairQueueChanged.selector, correctHash, bytes32(0))
+        );
+        redeemManager.repairRedeemQueue(payload, bytes32(0));
+
+        assertEq(
+            uint256(vm.load(address(redeemManager), RedeemQueueRepaired.REDEEM_QUEUE_REPAIRED_SLOT)),
+            0,
+            "the rejected attempt must not have set the flag"
+        );
+
+        // The retry with a correct payload still goes through.
+        redeemManager.repairRedeemQueue(payload, correctHash);
+        assertEq(redeemManager.getRedeemRequestDetails(1).amount, expected[1].amount, "retry should apply");
+    }
+
+    /// @notice Access control is checked ahead of the one-off flag, so a stranger cannot burn the shot
+    ///         by sending a payload that would fail validation anyway
+    function testRepairChecksAuthorizationBeforeTheOneShotFlag() external {
+        _seedQueue();
+        _corrupt();
+
+        address stranger = uf._new(98);
+        RedeemQueueV2.RedeemRequest[] memory payload = _payload();
+        bytes32 correctHash = _queueHash();
+
+        vm.prank(stranger);
+        vm.expectRevert(abi.encodeWithSelector(LibErrors.Unauthorized.selector, stranger));
+        redeemManager.repairRedeemQueue(payload, bytes32(0));
+
+        assertEq(
+            uint256(vm.load(address(redeemManager), RedeemQueueRepaired.REDEEM_QUEUE_REPAIRED_SLOT)),
+            0,
+            "an unauthorized call must not have set the flag"
+        );
+
+        redeemManager.repairRedeemQueue(payload, correctHash);
+    }
+
+    /// @notice A fully settled request round-trips: its zero amount survives the geometry checks because
+    ///         its height is its end position, and it stays unclaimable afterwards
+    function testRepairRestoresFullySettledRequest() external {
+        _seedQueueWithSettledRequest();
+        _corrupt();
+
+        assertTrue(redeemManager.getRedeemRequestDetails(1).amount != expected[1].amount, "not corrupted");
+
+        redeemManager.repairRedeemQueue(_payload(), _queueHash());
+
+        for (uint32 i = 0; i < expected.length; ++i) {
+            RedeemQueueV2.RedeemRequest memory got = redeemManager.getRedeemRequestDetails(i);
+            assertEq(got.amount, expected[i].amount, "amount");
+            assertEq(got.maxRedeemableEth, expected[i].maxRedeemableEth, "maxRedeemableEth");
+            assertEq(got.recipient, expected[i].recipient, "recipient");
+            assertEq(got.height, expected[i].height, "height");
+            assertEq(got.initiator, expected[i].initiator, "initiator");
+        }
+
+        uint32[] memory ids = new uint32[](1);
+        uint32[] memory events = new uint32[](1);
+        vm.expectRevert(abi.encodeWithSelector(IRedeemManagerV1.RedeemRequestAlreadyClaimed.selector, 0));
+        redeemManager.claimRedeemRequests(ids, events, false, type(uint16).max);
+    }
+
+    /// @notice The staging case: requests made through River carry River as initiator, the migration
+    ///         overwrites it with the recipient, and the repair puts it back
+    function testRepairRestoresInitiatorDistinctFromRecipient() external {
+        address[] memory recipients = _seedQueueViaRiver();
+
+        for (uint32 i = 0; i < 3; ++i) {
+            assertEq(expected[i].initiator, address(river), "initiator should be River before the migration");
+            assertTrue(expected[i].initiator != recipients[i], "initiator and recipient must differ");
+        }
+
+        _corrupt();
+
+        assertEq(
+            redeemManager.getRedeemRequestDetails(0).initiator,
+            redeemManager.getRedeemRequestDetails(0).recipient,
+            "the migration should have clobbered initiator with recipient"
+        );
+
+        redeemManager.repairRedeemQueue(_payload(), _queueHash());
+
+        for (uint32 i = 0; i < 3; ++i) {
+            RedeemQueueV2.RedeemRequest memory got = redeemManager.getRedeemRequestDetails(i);
+            assertEq(got.initiator, address(river), "initiator");
+            assertEq(got.recipient, recipients[i], "recipient");
+        }
+    }
+
+    /// @notice The repair writes the queue and nothing else. RedeemDemand in particular is the witness
+    ///         the geometry is checked against, so touching it would destroy the only independent signal.
+    function testRepairLeavesTheRestOfTheAccountingUntouched() external {
+        _seedQueue();
+        _corrupt();
+
+        uint256 demandBefore = redeemManager.getRedeemDemand();
+        uint256 bufferedBefore = redeemManager.getBufferedExceedingEth();
+        uint256 withdrawalCountBefore = redeemManager.getWithdrawalEventCount();
+        WithdrawalStack.WithdrawalEvent memory lastEventBefore =
+            redeemManager.getWithdrawalEventDetails(uint32(withdrawalCountBefore - 1));
+        uint256 balanceBefore = address(redeemManager).balance;
+
+        redeemManager.repairRedeemQueue(_payload(), _queueHash());
+
+        assertEq(redeemManager.getRedeemDemand(), demandBefore, "redeemDemand");
+        assertEq(redeemManager.getBufferedExceedingEth(), bufferedBefore, "bufferedExceedingEth");
+        assertEq(redeemManager.getWithdrawalEventCount(), withdrawalCountBefore, "withdrawalEventCount");
+        assertEq(address(redeemManager).balance, balanceBefore, "balance");
+
+        WithdrawalStack.WithdrawalEvent memory lastEventAfter =
+            redeemManager.getWithdrawalEventDetails(uint32(withdrawalCountBefore - 1));
+        assertEq(lastEventAfter.amount, lastEventBefore.amount, "withdrawal event amount");
+        assertEq(lastEventAfter.height, lastEventBefore.height, "withdrawal event height");
+        assertEq(lastEventAfter.withdrawnEth, lastEventBefore.withdrawnEth, "withdrawal event withdrawnEth");
+    }
+
+    /// @notice An empty queue with an empty withdrawal stack satisfies every invariant trivially. Worth
+    ///         pinning because it is the one path where the withdrawal stack has no last element to read.
+    function testRepairOnEmptyQueueSucceeds() external {
+        RedeemQueueV2.RedeemRequest[] memory empty = new RedeemQueueV2.RedeemRequest[](0);
+
+        vm.expectEmit(true, true, true, true);
+        emit RedeemQueueRepairPerformed(0, 0, 0);
+        redeemManager.repairRedeemQueue(empty, bytes32(0));
+
+        assertEq(redeemManager.getRedeemRequestCount(), 0, "queue should still be empty");
     }
 }
