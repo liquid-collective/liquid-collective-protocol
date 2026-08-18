@@ -71,16 +71,19 @@ async function main() {
   for (const id of open) {
     const cur = before.get(id)!;
     const resolved = await retry<any>(() => rm.resolveRedeemRequests([id]));
-    const eventId: EthersType.BigNumber = resolved[0];
+    const raw = resolved[0];
+    const eventIdSigned =
+      typeof raw === "number" ? raw : EthersType.BigNumber.from(raw).fromTwos(64).toNumber();
 
-    if (eventId.lt(0)) {
+    if (eventIdSigned < 0) {
       pendingCount += 1;
       rows.push(
         `  ${String(id).padStart(4)}  PENDING   ${eth(cur.amount).padStart(14)} LsETH  ` +
-          `beyond withdrawal coverage (resolve=${eventId.toString()})`
+          `beyond withdrawal coverage (resolve=${eventIdSigned})`
       );
       continue;
     }
+    const eventId = eventIdSigned;
 
     // Expected payout: the whole cap for a request fully inside coverage, pro rata otherwise.
     const endPos = cur.height.add(cur.amount);
@@ -89,7 +92,7 @@ async function main() {
 
     const balBefore = await retry(() => provider.getBalance(cur.recipient));
     await (
-      await rmCaller["claimRedeemRequests(uint32[],uint32[])"]([id], [eventId], { gasLimit: 8_000_000 })
+      await rmCaller["claimRedeemRequests(uint32[],uint32[])" ]([id], [eventId], { gasLimit: 8_000_000 })
     ).wait();
     const paid = (await retry(() => provider.getBalance(cur.recipient))).sub(balBefore);
     totalPaid = totalPaid.add(paid);
