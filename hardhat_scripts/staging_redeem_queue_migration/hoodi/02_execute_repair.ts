@@ -72,8 +72,10 @@ async function resolveSigner(
     provider
   ).getAdmin(FROM_ZERO);
 
+  // A dry run only reports who must sign, so it deliberately does not require access to a private key.
   if (!shouldExecute) return { signer: undefined, signerAddress: firewallAdmin, impersonated: false };
 
+  // Real Hoodi must be signed by the configured Firewall admin; reject any accidentally selected key.
   if (chainId === REAL_HOODI_CHAIN_ID) {
     const signers = await hre.ethers.getSigners();
     if (signers.length === 0) throw new Error("no signer configured - set PRIVATE_KEY for the Firewall admin");
@@ -84,6 +86,7 @@ async function resolveSigner(
     return { signer: signers[0], signerAddress, impersonated: false };
   }
 
+  // Fork rehearsals impersonate the same admin and fund it locally so they exercise the production call path.
   await provider.send("tenderly_setBalance", [
     firewallAdmin,
     hre.ethers.utils.hexValue(hre.ethers.utils.parseEther("100")),
@@ -93,22 +96,33 @@ async function resolveSigner(
 
 /// Load the reviewed preflight artifact and check it is internally consistent.
 ///
-/// repairRedeemQueue(tuple[], bytes32) encodes the array behind an offset, so the head is
-/// [offset, expectedQueueHash] and the hash is the second word after the selector - not the trailing
-/// 32 bytes, which are the last record's initiator.
-function loadReviewedPayload(): { calldata: string; queueHash: string; records: any[] } {
+/// Decode through the compiled recovery ABI so the selector, tuple layout and expected queue hash
+/// are validated rather than inferred from fixed calldata offsets.
+function loadReviewedPayload(recoveryInterface: EthersType.utils.Interface): {
+  calldata: string;
+  queueHash: string;
+  records: any[];
+} {
+  // Use the explicitly reviewed file when supplied; otherwise require an unambiguous local artifact.
   let file = process.env.BS4878_PREFLIGHT;
   if (!file) {
     const found = fs.readdirSync(PREFLIGHT_DIR).filter((f) => /^preflight-\d+\.json$/.test(f));
     if (found.length !== 1) {
-      throw new Error(`expected one preflight-<block>.json in ${PREFLIGHT_DIR}, found ${found.length} - set BS4878_PREFLIGHT`);
+      throw new Error(
+        `expected one preflight-<block>.json in ${PREFLIGHT_DIR}, found ${found.length} - set BS4878_PREFLIGHT`
+      );
     }
     file = path.join(PREFLIGHT_DIR, found[0]);
   }
-  const { calldata, expectedQueueHash, generatedAtBlock, generatedAtISO, records } =
-    JSON.parse(fs.readFileSync(file, "utf8"));
+
+  // Read the exact reviewed records and calldata; this script never reconstructs them at execution time.
+  const { calldata, expectedQueueHash, generatedAtBlock, generatedAtISO, records } = JSON.parse(
+    fs.readFileSync(file, "utf8")
+  );
   if (!calldata || !expectedQueueHash) throw new Error(`${file} is missing calldata or expectedQueueHash`);
-  const encodedHash = `0x${calldata.slice(2 + 8 + 64, 2 + 8 + 128)}`;
+
+  // ABI decoding validates the function selector and tuple layout before checking the embedded queue hash.
+  const encodedHash = recoveryInterface.decodeFunctionData("repairRedeemQueue", calldata)._expectedQueueHash;
   if (encodedHash.toLowerCase() !== expectedQueueHash.toLowerCase()) {
     throw new Error(`${file} is inconsistent: payload carries ${encodedHash}, artifact says ${expectedQueueHash}`);
   }
@@ -117,18 +131,15 @@ function loadReviewedPayload(): { calldata: string; queueHash: string; records: 
   return { calldata, queueHash: expectedQueueHash, records };
 }
 
+/// Read the implementation currently installed in the proxy's standard EIP-1967 storage slot.
 async function readImplementation(provider: EthersType.providers.Provider): Promise<string> {
   return hre.ethers.utils.getAddress(
     `0x${(await provider.getStorageAt(REDEEM_MANAGER, EIP1967_IMPL_SLOT)).slice(-40)}`
   );
 }
 
-async function send(
-  signer: EthersType.Signer,
-  label: string,
-  data: string,
-  gasLimit: number
-): Promise<void> {
+/// Send one Firewall transaction and wait for its receipt before the sequence advances.
+async function send(signer: EthersType.Signer, label: string, data: string, gasLimit: number): Promise<void> {
   const transaction = await signer.sendTransaction({ to: REDEEM_MANAGER_PROXY_ADMIN, data, gasLimit });
   const receipt = await transaction.wait();
   console.log(`  status ${receipt.status}  gas ${receipt.gasUsed.toString()}  ${transaction.hash}`);
@@ -142,6 +153,7 @@ async function verifyRepair(redeemManager: EthersType.Contract, records: any[]):
   let previousEnd = hre.ethers.constants.Zero;
   let heightsMonotonic = true;
 
+  // Compare every repaired field with the reviewed preflight and rebuild the queue end as we go.
   for (let id = 0; id < records.length; ++id) {
     const onChain = await retry<any>(() => redeemManager.callStatic.getRedeemRequestDetails(id, FROM_ZERO));
     const want = records[id].intended;
@@ -154,18 +166,25 @@ async function verifyRepair(redeemManager: EthersType.Contract, records: any[]):
     previousEnd = onChain.height.add(onChain.amount);
   }
 
+  // Independently prove queueEnd - withdrawalCoverage == redeemDemand, matching the on-chain repair check.
   const redeemDemand = await redeemManager.callStatic.getRedeemDemand(FROM_ZERO);
   const impliedDemand = previousEnd.sub(await withdrawalStackEnd(redeemManager));
   console.log(`  records matching the reviewed payload : ${records.length - mismatches.length}/${records.length}`);
   console.log(`  heights monotonic                     : ${heightsMonotonic}`);
-  console.log(`  queueEnd - coverage ${eth(impliedDemand)} == redeemDemand ${eth(redeemDemand)} : ${impliedDemand.eq(redeemDemand)}`);
+  console.log(
+    `  queueEnd - coverage ${eth(impliedDemand)} == redeemDemand ${eth(redeemDemand)} : ${impliedDemand.eq(
+      redeemDemand
+    )}`
+  );
 
+  // Throw before restore if any record or accounting invariant differs from the reviewed result.
   if (mismatches.length) throw new Error(`repair did not apply cleanly: ${mismatches.slice(0, 12).join(", ")}`);
   if (!heightsMonotonic) throw new Error("heights are not monotonic after the repair");
   if (!impliedDemand.eq(redeemDemand)) throw new Error("demand invariant broken after the repair");
 }
 
 async function main() {
+  // Establish the target chain first; chainId controls whether signing is real or impersonated.
   const rpcUrl = (hre.network.config as any).url as string;
   if (!rpcUrl) throw new Error("network has no url");
   const provider = new hre.ethers.providers.JsonRpcProvider(rpcUrl);
@@ -173,29 +192,40 @@ async function main() {
   const isRealHoodi = chainId === REAL_HOODI_CHAIN_ID;
   const shouldExecute = process.env.BS4878_EXECUTE === "1";
 
+  // Load the recovery ABI once and reuse the same artifact for payload validation and optional deployment.
+  const artifact = await hre.artifacts.readArtifact("RedeemManagerV1Recovery");
+  const recoveryInterface = new hre.ethers.utils.Interface(artifact.abi);
+
+  // Bind the live proxy, resolve the authorized signer, and load the exact payload approved in preflight.
   const redeemManager = await redeemManagerAt(hre, provider);
   const { signer, signerAddress, impersonated } = await resolveSigner(provider, chainId, shouldExecute);
-  const { calldata, records } = loadReviewedPayload();
+  const { calldata, records } = loadReviewedPayload(recoveryInterface);
 
   // Capture the implementation that is actually live rather than trusting the constant, so restore
   // puts back what was there. A mismatch means staging is not where we think it is.
   const liveImplementation = await readImplementation(provider);
   if (liveImplementation.toLowerCase() !== CLEAN_IMPL_1_3_0.toLowerCase()) {
-    throw new Error(`live implementation ${liveImplementation} is not the expected ${CLEAN_IMPL_1_3_0} - stop and investigate`);
+    throw new Error(
+      `live implementation ${liveImplementation} is not the expected ${CLEAN_IMPL_1_3_0} - stop and investigate`
+    );
   }
 
   console.log(`${isRealHoodi ? "REAL HOODI" : "fork"}  chainId ${chainId}  block ${await provider.getBlockNumber()}`);
-  console.log(`  ${shouldExecute ? "signer" : "must be signed by"} ${signerAddress}${impersonated ? " (impersonated)" : ""}`);
+  console.log(
+    `  ${shouldExecute ? "signer" : "must be signed by"} ${signerAddress}${impersonated ? " (impersonated)" : ""}`
+  );
   console.log(`  live implementation ${liveImplementation}`);
   console.log(`  requests ${(await redeemManager.callStatic.getRedeemRequestCount(FROM_ZERO)).toNumber()}`);
   console.log(`  balance ${eth(await provider.getBalance(REDEEM_MANAGER))} ETH\n`);
 
   let recoveryImplementation = process.env.BS4878_RECOVERY;
-  const artifact = await hre.artifacts.readArtifact("RedeemManagerV1Recovery");
 
+  // Stop here in print-only mode after showing the complete transaction sequence and its actors.
   if (!shouldExecute) {
     console.log("print-only. The sequence would be:");
-    console.log(`  1 deploy  RedeemManagerV1Recovery, ${(artifact.bytecode.length - 2) / 2} bytes, no constructor args`);
+    console.log(
+      `  1 deploy  RedeemManagerV1Recovery, ${(artifact.bytecode.length - 2) / 2} bytes, no constructor args`
+    );
     console.log(`  2 repair  to ${REDEEM_MANAGER_PROXY_ADMIN}  from ${signerAddress}`);
     console.log(`            upgradeToAndCall(<recovery>, <${(calldata.length - 2) / 2} byte payload>)`);
     console.log(`  3 verify  every record against the reviewed payload, then the invariants`);
@@ -204,10 +234,12 @@ async function main() {
     return;
   }
 
+  // Step 1: deploy the temporary recovery implementation, unless a reviewed deployment was supplied.
   if (!recoveryImplementation) {
     console.log("1 deploy");
-    const deployed = await new hre.ethers.ContractFactory(artifact.abi, artifact.bytecode, signer!)
-      .deploy({ gasLimit: 10_000_000 });
+    const deployed = await new hre.ethers.ContractFactory(artifact.abi, artifact.bytecode, signer!).deploy({
+      gasLimit: 10_000_000,
+    });
     await deployed.deployed();
     recoveryImplementation = deployed.address;
     console.log(`  deployed at ${recoveryImplementation}\n`);
@@ -215,6 +247,7 @@ async function main() {
     console.log(`1 deploy skipped, reusing ${recoveryImplementation}\n`);
   }
 
+  // Step 2: atomically install the recovery implementation and execute the reviewed queue rewrite.
   console.log("2 repair");
   await send(
     signer!,
@@ -223,9 +256,11 @@ async function main() {
     30_000_000
   );
 
+  // Step 3: compare the repaired queue with preflight before allowing the original implementation back.
   console.log("\n3 verify");
   await verifyRepair(redeemManager, records);
 
+  // Step 4: remove the recovery surface and confirm the proxy points back to the original implementation.
   console.log("\n4 restore");
   await send(signer!, "restore", PROXY_INTERFACE.encodeFunctionData("upgradeTo", [liveImplementation]), 500_000);
   const restored = await readImplementation(provider);
@@ -234,12 +269,15 @@ async function main() {
   }
   console.log(`  implementation back to ${restored}`);
 
+  // Optional fork-only smoke test: claim one repaired request and report the actual ETH paid.
   if (process.env.BS4878_CLAIM_CHECK === "1" && !isRealHoodi) {
     const [withdrawalEventId] = await redeemManager.resolveRedeemRequests([2]);
     if (withdrawalEventId.gte(0)) {
       const request = await redeemManager.getRedeemRequestDetails(2);
       const balanceBefore = await provider.getBalance(request.recipient);
-      await (await redeemManager.connect(signer!)["claimRedeemRequests(uint32[],uint32[])"]([2], [withdrawalEventId])).wait();
+      await (
+        await redeemManager.connect(signer!)["claimRedeemRequests(uint32[],uint32[])"]([2], [withdrawalEventId])
+      ).wait();
       const paid = (await provider.getBalance(request.recipient)).sub(balanceBefore);
       console.log(`\nclaim check: request 2 paid ${eth(paid)} ETH (cap ${eth(request.maxRedeemableEth)})`);
     }
