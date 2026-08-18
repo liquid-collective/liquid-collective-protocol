@@ -22,12 +22,12 @@ import {
 //
 //   npx hardhat run hardhat_scripts/staging_redeem_queue_migration/hoodi/01_preflight.ts --network hoodi
 //
-// Snapshots the chain as if it were already frozen and writes one reviewable artifact containing the
-// exact repair payload, every check the on-chain repair will perform, a per-record diff against
-// current state, and the holder impact. Run it now to review the payload ahead of the freeze window,
-// then run it again once actually paused - the two should differ only where the chain moved.
+// Writes one reviewable artifact: the exact repair payload, every check the on-chain repair will
+// perform, a per-record diff against current state, and the holder impact.
 //
-// The artifact is deliberately point-in-time. Do not send a payload generated before the freeze.
+// The artifact is point-in-time and records the queue hash it was built against. That hash is what
+// binds the payload to a specific queue - the repair rejects it if anything has moved since, so a
+// stale artifact fails loudly rather than being applied.
 
 const OUTDIR = "hardhat_scripts/staging_redeem_queue_migration";
 
@@ -38,14 +38,7 @@ async function main() {
 
   const block = await state.getBlockNumber();
   const timestamp = (await state.getBlock(block)).timestamp;
-  const paused = await new hre.ethers.Contract(
-    REDEEM_MANAGER,
-    ["function paused() view returns (bool)"],
-    state
-  ).paused();
-
-  console.log(`BS-4878 preflight @ hoodi block ${block} (${new Date(timestamp * 1000).toISOString()})`);
-  console.log(`  proxy paused: ${paused}${paused ? "" : "   <-- NOT frozen; this is a dry run"}\n`);
+  console.log(`BS-4878 preflight @ hoodi block ${block} (${new Date(timestamp * 1000).toISOString()})\n`);
 
   const archive = new hre.ethers.providers.JsonRpcProvider(ARCHIVE_RPC);
   const legacyArchive = await readPreUpgradeFromArchive(hre, archive);
@@ -151,8 +144,7 @@ async function main() {
   const artifact = {
     generatedAtBlock: block,
     generatedAtISO: new Date(timestamp * 1000).toISOString(),
-    proxyPaused: paused,
-    isDryRun: !paused,
+    expectedQueueHash: queueHash,
     redeemManager: REDEEM_MANAGER,
     upgradeBlock: UPGRADE_BLOCK,
     sources: { archiveAgreesWithEvents: true, legacyRecordCount: legacyArchive.size },
@@ -191,9 +183,8 @@ async function main() {
   const out = `${OUTDIR}/preflight-${block}.json`;
   fs.writeFileSync(out, JSON.stringify(artifact, null, 2));
   console.log(`\nwrote ${out}`);
-  if (!paused) {
-    console.log("NOTE: proxy is not paused, so this is a dry run. Regenerate once frozen before sending.");
-  }
+  console.log(`queue hash ${queueHash}`);
+  console.log("Regenerate before sending: the repair rejects the payload if the queue has moved since.");
   if (!solvent || !impliedDemand.eq(demand)) process.exitCode = 1;
 }
 

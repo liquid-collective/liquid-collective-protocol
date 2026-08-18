@@ -19,200 +19,196 @@ import {
 //   real hoodi (chainId 560048)  the configured PRIVATE_KEY, asserted to be the Firewall admin
 //   anything else (a fork)       that same admin address, impersonated
 //
-// Either way the transaction goes to the ProxyFirewall and is forwarded to the proxy, so the fork
+// Either way the transaction goes to the ProxyFirewall and is forwarded to the proxy, so a fork
 // exercises the identical path including the forwarding.
 //
-//   BS4878_STEP=pause|deploy|repair|restore|unpause   which step to run
-//   BS4878_EXECUTE=1                                  actually send; default is print-only
-//   BS4878_SEQUENCE=1                                 run every step in order; forks only
-//   BS4878_RECOVERY=0x...                             the deployed recovery implementation
-//   BS4878_CLAIM_CHECK=1                              after unpause, claim one request; forks only
+// There is no pause step. repairRedeemQueue verifies a hash of the queue the payload was built
+// against, so a claim landing between building and sending makes it revert rather than silently
+// replay stale amounts. Freezing the proxy would only add oracle downtime for no extra safety.
+//
+//   BS4878_STEP=deploy|repair|restore   which step to run
+//   BS4878_EXECUTE=1                    actually send; default is print-only
+//   BS4878_SEQUENCE=1                   run every step in order; forks only
+//   BS4878_RECOVERY=0x...               the deployed recovery implementation
+//   BS4878_CLAIM_CHECK=1                after restore, claim one request; forks only
 //
 // Print-only output is enough to submit from a Safe or hardware wallet instead.
 //
 // Steps are separate on purpose: the queue must be verified between `repair` and `restore`, and a
 // half-finished sequence is easier to reason about when each transaction was a separate decision.
 
-const REAL_HOODI = 560048;
+const REAL_HOODI_CHAIN_ID = 560048;
 const CALLDATA_FILE = "hardhat_scripts/staging_redeem_queue_migration/repair-calldata.txt";
-// pause/unpause are no longer part of the sequence: repairRedeemQueue verifies the queue hash, so a
-// claim landing mid-window makes it revert rather than silently replay stale amounts. They remain
-// selectable via BS4878_STEP if you want to freeze anyway.
 const STEPS = ["deploy", "repair", "restore"] as const;
-const ALL_STEPS = ["pause", "deploy", "repair", "restore", "unpause"] as const;
-type Step = (typeof ALL_STEPS)[number];
+type Step = (typeof STEPS)[number];
 
-const PROXY_IFACE = new hre.ethers.utils.Interface([
-  "function pause()",
-  "function unpause()",
-  "function paused() view returns (bool)",
+const PROXY_INTERFACE = new hre.ethers.utils.Interface([
   "function upgradeTo(address)",
   "function upgradeToAndCall(address,bytes)",
 ]);
-const FIREWALL_IFACE = new hre.ethers.utils.Interface(["function getAdmin() view returns (address)"]);
+const FIREWALL_INTERFACE = new hre.ethers.utils.Interface(["function getAdmin() view returns (address)"]);
 
-const ZERO = { from: hre.ethers.constants.AddressZero };
+// TUPProxy blocks every caller but the zero address while paused, so all reads go from there.
+const FROM_ZERO = { from: hre.ethers.constants.AddressZero };
 
 /// Resolve the account that signs, and prove it is allowed to.
 ///
 /// A print-only run needs no key at all - that is the point of it, so payloads can be produced for a
 /// Safe or hardware wallet. The signer is only required when actually sending.
-async function resolveSigner(provider: EthersType.providers.JsonRpcProvider, chainId: number, execute: boolean) {
+async function resolveSigner(
+  provider: EthersType.providers.JsonRpcProvider,
+  chainId: number,
+  shouldExecute: boolean
+): Promise<{ signer?: EthersType.Signer; signerAddress: string; impersonated: boolean }> {
   // Read the admin off the Firewall rather than hardcoding it, so this works for any deployment.
   const firewallAdmin: string = await new hre.ethers.Contract(
     REDEEM_MANAGER_PROXY_ADMIN,
-    FIREWALL_IFACE,
+    FIREWALL_INTERFACE,
     provider
-  ).getAdmin(ZERO);
+  ).getAdmin(FROM_ZERO);
 
-  if (!execute) {
-    return { signer: undefined, addr: firewallAdmin, impersonated: false };
+  if (!shouldExecute) {
+    return { signer: undefined, signerAddress: firewallAdmin, impersonated: false };
   }
 
-  if (chainId === REAL_HOODI) {
+  if (chainId === REAL_HOODI_CHAIN_ID) {
     const signers = await hre.ethers.getSigners();
     if (signers.length === 0) throw new Error("no signer configured - set PRIVATE_KEY for the Firewall admin");
-    const addr = await signers[0].getAddress();
-    if (addr.toLowerCase() !== firewallAdmin.toLowerCase()) {
-      throw new Error(`signer ${addr} is not the Firewall admin ${firewallAdmin} - set PRIVATE_KEY accordingly`);
+    const signerAddress = await signers[0].getAddress();
+    if (signerAddress.toLowerCase() !== firewallAdmin.toLowerCase()) {
+      throw new Error(`signer ${signerAddress} is not the Firewall admin ${firewallAdmin} - fix PRIVATE_KEY`);
     }
-    return { signer: signers[0], addr, impersonated: false };
+    return { signer: signers[0], signerAddress, impersonated: false };
   }
 
   await provider.send("tenderly_setBalance", [
     firewallAdmin,
     hre.ethers.utils.hexValue(hre.ethers.utils.parseEther("100")),
   ]);
-  return { signer: provider.getSigner(firewallAdmin), addr: firewallAdmin, impersonated: true };
+  return { signer: provider.getSigner(firewallAdmin), signerAddress: firewallAdmin, impersonated: true };
 }
 
-async function readState(rm: EthersType.Contract, provider: EthersType.providers.Provider) {
-  const paused: boolean = await new hre.ethers.Contract(REDEEM_MANAGER, PROXY_IFACE, provider).paused(ZERO);
+async function readQueueState(redeemManager: EthersType.Contract, provider: EthersType.providers.Provider) {
   return {
-    paused,
-    count: (await rm.callStatic.getRedeemRequestCount(ZERO)).toNumber(),
-    demand: await rm.callStatic.getRedeemDemand(ZERO),
-    coverage: await withdrawalStackEnd(rm),
-    balance: await provider.getBalance(REDEEM_MANAGER),
+    requestCount: (await redeemManager.callStatic.getRedeemRequestCount(FROM_ZERO)).toNumber(),
+    redeemDemand: await redeemManager.callStatic.getRedeemDemand(FROM_ZERO),
+    withdrawalCoverage: await withdrawalStackEnd(redeemManager),
+    contractBalance: await provider.getBalance(REDEEM_MANAGER),
   };
 }
 
 async function main() {
-  const url = (hre.network.config as any).url as string;
-  if (!url) throw new Error("network has no url");
-  const provider = new hre.ethers.providers.JsonRpcProvider(url);
+  const rpcUrl = (hre.network.config as any).url as string;
+  if (!rpcUrl) throw new Error("network has no url");
+  const provider = new hre.ethers.providers.JsonRpcProvider(rpcUrl);
   const chainId = (await provider.getNetwork()).chainId;
-  const isReal = chainId === REAL_HOODI;
-  const execute = process.env.BS4878_EXECUTE === "1";
-  const sequence = process.env.BS4878_SEQUENCE === "1";
+  const isRealHoodi = chainId === REAL_HOODI_CHAIN_ID;
+  const shouldExecute = process.env.BS4878_EXECUTE === "1";
+  const runWholeSequence = process.env.BS4878_SEQUENCE === "1";
 
-  if (sequence && isReal) {
+  if (runWholeSequence && isRealHoodi) {
     throw new Error("sequence mode is for forks only - staging needs verification between repair and restore");
   }
-  const steps: Step[] = sequence ? [...STEPS] : [process.env.BS4878_STEP as Step];
-  if (steps.some((s) => !ALL_STEPS.includes(s))) {
-    throw new Error(`set BS4878_STEP to one of: ${ALL_STEPS.join(", ")}   (or BS4878_SEQUENCE=1)`);
+  const stepsToRun: Step[] = runWholeSequence ? [...STEPS] : [process.env.BS4878_STEP as Step];
+  if (stepsToRun.some((step) => !STEPS.includes(step))) {
+    throw new Error(`set BS4878_STEP to one of: ${STEPS.join(", ")}   (or BS4878_SEQUENCE=1)`);
   }
 
-  const rm = await redeemManagerAt(hre, provider);
-  const { signer, addr, impersonated } = await resolveSigner(provider, chainId, execute);
-  let recovery = process.env.BS4878_RECOVERY;
+  const redeemManager = await redeemManagerAt(hre, provider);
+  const { signer, signerAddress, impersonated } = await resolveSigner(provider, chainId, shouldExecute);
+  let recoveryImplementation = process.env.BS4878_RECOVERY;
 
-  const s0 = await readState(rm, provider);
-  console.log(`${isReal ? "REAL HOODI" : "fork"}  chainId ${chainId}  block ${await provider.getBlockNumber()}`);
-  console.log(`  ${execute ? "signer" : "must be signed by"} ${addr}${impersonated ? " (impersonated)" : ""}   execute ${execute}`);
-  console.log(`  paused ${s0.paused}   requests ${s0.count}   redeemDemand ${eth(s0.demand)}`);
-  console.log(`  balance ${eth(s0.balance)} ETH\n`);
+  const initialState = await readQueueState(redeemManager, provider);
+  console.log(`${isRealHoodi ? "REAL HOODI" : "fork"}  chainId ${chainId}  block ${await provider.getBlockNumber()}`);
+  console.log(`  ${shouldExecute ? "signer" : "must be signed by"} ${signerAddress}${impersonated ? " (impersonated)" : ""}`);
+  console.log(`  requests ${initialState.requestCount}   redeemDemand ${eth(initialState.redeemDemand)}`);
+  console.log(`  balance ${eth(initialState.contractBalance)} ETH\n`);
 
-  for (const step of steps) {
-    const st = await readState(rm, provider);
-    let data: string;
+  for (const step of stepsToRun) {
+    let transactionData: string;
 
     if (step === "deploy") {
-      const art = await hre.artifacts.readArtifact("RedeemManagerV1Recovery");
-      console.log(`step deploy: RedeemManagerV1Recovery, ${(art.bytecode.length - 2) / 2} bytes, no constructor args`);
-      if (!execute) {
+      const artifact = await hre.artifacts.readArtifact("RedeemManagerV1Recovery");
+      console.log(`step deploy: RedeemManagerV1Recovery, ${(artifact.bytecode.length - 2) / 2} bytes, no constructor args`);
+      if (!shouldExecute) {
         console.log("  print-only - set BS4878_EXECUTE=1 to deploy\n");
         continue;
       }
-      const c = await new hre.ethers.ContractFactory(art.abi, art.bytecode, signer!).deploy({ gasLimit: 10_000_000 });
-      await c.deployed();
-      recovery = c.address;
-      console.log(`  deployed at ${recovery}\n`);
+      const deployed = await new hre.ethers.ContractFactory(artifact.abi, artifact.bytecode, signer!)
+        .deploy({ gasLimit: 10_000_000 });
+      await deployed.deployed();
+      recoveryImplementation = deployed.address;
+      console.log(`  deployed at ${recoveryImplementation}\n`);
       continue;
     }
 
-    switch (step) {
-      case "pause":
-        if (st.paused) throw new Error("already paused");
-        data = PROXY_IFACE.encodeFunctionData("pause");
-        break;
-      case "repair": {
-        // The repair overwrites amounts. A claim landing between building the payload and sending it
-        // would be silently reverted, letting a paid request be claimed again, and no on-chain check
-        // catches that because a claim moves neither queueEnd, coverage nor redeemDemand.
-        if (!recovery) throw new Error("set BS4878_RECOVERY to the deployed recovery implementation");
-        if (!fs.existsSync(CALLDATA_FILE)) throw new Error(`missing ${CALLDATA_FILE} - run 02_build_repair_calldata.ts`);
-        const inner = fs.readFileSync(CALLDATA_FILE, "utf8").trim();
-        console.log(`  payload ${(inner.length - 2) / 2} bytes from ${CALLDATA_FILE}`);
-        data = PROXY_IFACE.encodeFunctionData("upgradeToAndCall", [recovery, inner]);
-        break;
-      }
-      case "restore":
-        data = PROXY_IFACE.encodeFunctionData("upgradeTo", [CLEAN_IMPL_1_3_0]);
-        break;
-      case "unpause":
-        if (!st.paused) throw new Error("already unpaused");
-        data = PROXY_IFACE.encodeFunctionData("unpause");
-        break;
+    if (step === "repair") {
+      if (!recoveryImplementation) throw new Error("set BS4878_RECOVERY to the deployed recovery implementation");
+      if (!fs.existsSync(CALLDATA_FILE)) throw new Error(`missing ${CALLDATA_FILE} - run 02_build_repair_calldata.ts`);
+      const repairCalldata = fs.readFileSync(CALLDATA_FILE, "utf8").trim();
+      console.log(`  payload ${(repairCalldata.length - 2) / 2} bytes from ${CALLDATA_FILE}`);
+      transactionData = PROXY_INTERFACE.encodeFunctionData("upgradeToAndCall", [recoveryImplementation, repairCalldata]);
+    } else {
+      transactionData = PROXY_INTERFACE.encodeFunctionData("upgradeTo", [CLEAN_IMPL_1_3_0]);
     }
 
     console.log(`step ${step}:`);
     console.log(`  to    ${REDEEM_MANAGER_PROXY_ADMIN}   (ProxyFirewall, forwards to the proxy)`);
-    console.log(`  from  ${addr}`);
-    console.log(`  data  ${data!.length > 160 ? data!.slice(0, 160) + `… (${(data!.length - 2) / 2} bytes)` : data}`);
+    console.log(`  from  ${signerAddress}`);
+    console.log(
+      `  data  ${transactionData.length > 160
+        ? `${transactionData.slice(0, 160)}… (${(transactionData.length - 2) / 2} bytes)`
+        : transactionData}`
+    );
 
-    if (!execute) {
+    if (!shouldExecute) {
       console.log("  print-only - set BS4878_EXECUTE=1 to send, or submit this yourself\n");
       continue;
     }
-    const tx = await signer!.sendTransaction({
+    const transaction = await signer!.sendTransaction({
       to: REDEEM_MANAGER_PROXY_ADMIN,
-      data: data!,
+      data: transactionData,
       gasLimit: step === "repair" ? 30_000_000 : 500_000,
     });
-    const rc = await tx.wait();
-    console.log(`  status ${rc.status}  gas ${rc.gasUsed.toString()}  ${tx.hash}\n`);
-    if (rc.status !== 1) throw new Error(`${step} reverted`);
+    const receipt = await transaction.wait();
+    console.log(`  status ${receipt.status}  gas ${receipt.gasUsed.toString()}  ${transaction.hash}\n`);
+    if (receipt.status !== 1) throw new Error(`${step} reverted`);
   }
 
-  // Post-repair sanity, cheap enough to always run.
-  const end = await readState(rm, provider);
-  let prev = hre.ethers.constants.Zero;
-  let monotonic = true;
-  for (let i = 0; i < end.count; ++i) {
-    const d = await retry<any>(() => rm.callStatic.getRedeemRequestDetails(i, ZERO));
-    if (d.height.lt(prev)) monotonic = false;
-    prev = d.height.add(d.amount);
+  // Only meaningful once something was actually sent: on a print-only run this would just restate the
+  // corrupted queue and read like a failure.
+  if (!shouldExecute) {
+    console.log("print-only run - nothing sent, so no post-state check");
+    return;
   }
+
+  const finalState = await readQueueState(redeemManager, provider);
+  let previousEnd = hre.ethers.constants.Zero;
+  let heightsMonotonic = true;
+  for (let id = 0; id < finalState.requestCount; ++id) {
+    const request = await retry<any>(() => redeemManager.callStatic.getRedeemRequestDetails(id, FROM_ZERO));
+    if (request.height.lt(previousEnd)) heightsMonotonic = false;
+    previousEnd = request.height.add(request.amount);
+  }
+  const impliedDemand = previousEnd.sub(finalState.withdrawalCoverage);
   console.log("post-state");
-  console.log(`  paused ${end.paused}   heights monotonic ${monotonic}`);
-  console.log(`  queueEnd - coverage ${eth(prev.sub(end.coverage))}   redeemDemand ${eth(end.demand)}` +
-              `   invariant ${prev.sub(end.coverage).eq(end.demand)}`);
+  console.log(`  heights monotonic ${heightsMonotonic}`);
+  console.log(`  queueEnd - coverage ${eth(impliedDemand)}   redeemDemand ${eth(finalState.redeemDemand)}` +
+              `   invariant ${impliedDemand.eq(finalState.redeemDemand)}`);
 
-  if (process.env.BS4878_CLAIM_CHECK === "1" && !isReal && execute && !end.paused) {
-    const target = (await rm.resolveRedeemRequests([2]))[0];
-    if (target.gte(0)) {
-      const d = await rm.getRedeemRequestDetails(2);
-      const before = await provider.getBalance(d.recipient);
-      await (await rm.connect(signer!)["claimRedeemRequests(uint32[],uint32[])"]([2], [target])).wait();
-      const paid = (await provider.getBalance(d.recipient)).sub(before);
-      console.log(`  claim check: request 2 paid ${eth(paid)} ETH (cap ${eth(d.maxRedeemableEth)})`);
+  if (process.env.BS4878_CLAIM_CHECK === "1" && !isRealHoodi && shouldExecute) {
+    const [withdrawalEventId] = await redeemManager.resolveRedeemRequests([2]);
+    if (withdrawalEventId.gte(0)) {
+      const request = await redeemManager.getRedeemRequestDetails(2);
+      const balanceBefore = await provider.getBalance(request.recipient);
+      await (await redeemManager.connect(signer!)["claimRedeemRequests(uint32[],uint32[])"]([2], [withdrawalEventId])).wait();
+      const paid = (await provider.getBalance(request.recipient)).sub(balanceBefore);
+      console.log(`  claim check: request 2 paid ${eth(paid)} ETH (cap ${eth(request.maxRedeemableEth)})`);
     }
   }
 }
 
-main().catch((e) => {
-  console.error(e);
+main().catch((error) => {
+  console.error(error);
   process.exitCode = 1;
 });
