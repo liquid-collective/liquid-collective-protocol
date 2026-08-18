@@ -112,9 +112,6 @@ interface IRedeemManagerV1 {
     /// @notice Thrown when an action is blocked because slashing containment mode is active
     error SlashingContainmentModeEnabled();
 
-    /// @notice Thrown when the V1 to V2 redeem queue migration is run against a queue already in V2 layout
-    error QueueAlreadyInV2Layout();
-
     /// @param _river The address of the River contract
     function initializeRedeemManagerV1(address _river) external;
 

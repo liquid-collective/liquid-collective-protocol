@@ -4,31 +4,19 @@ pragma solidity 0.8.34;
 
 import "./RedeemManager.1.t.sol";
 
-/// @title Unguarded migration harness
-/// @notice `initializeRedeemManagerV1_2` now refuses to run against a queue already in the V2 layout,
-///         so the corruption can no longer be triggered through the public entry point. This exposes
-///         the pre-guard path, with the same `init(1)` version bump, so tests can still recreate the
-///         state BS-4878 actually produced on staging.
-contract RedeemManagerV1UnguardedMigration is RedeemManagerV1 {
-    /// @notice Replay the V1 to V2 migration without the layout guard
-    function sudoReplayMigrationUnguarded() external init(1) {
-        _redeemQueueMigrationV1_2();
-    }
-}
-
 /// @title Repro for BS-4878
 /// @notice Reproduces the state of the staging (hoodi/devHoodi) deployments: RedeemManager deployed
 ///         fresh from the v1.2.1 sources, so `initializeRedeemManagerV1` leaves Version at 1 and every
 ///         redeem request is written directly in the RedeemQueueV2 (5 word) layout. The BYOV v1.3.0
 ///         upgrade script then calls `initializeRedeemManagerV1_2`, whose `init(1)` guard still passes.
 contract RedeemManagerDoubleMigrationRepro is RedeeManagerV1TestBase {
-    RedeemManagerV1UnguardedMigration internal redeemManager;
+    RedeemManagerV1 internal redeemManager;
 
     function setUp() external {
         allowlistAdmin = makeAddr("allowlistAdmin");
         allowlistAllower = makeAddr("allowlistAllower");
         allowlistDenier = makeAddr("allowlistDenier");
-        redeemManager = new RedeemManagerV1UnguardedMigration();
+        redeemManager = new RedeemManagerV1();
         LibImplementationUnbricker.unbrick(vm, address(redeemManager));
         allowlist = new AllowlistV1();
         LibImplementationUnbricker.unbrick(vm, address(allowlist));
@@ -75,7 +63,7 @@ contract RedeemManagerDoubleMigrationRepro is RedeeManagerV1TestBase {
         assertEq(before_[0].recipient, u0);
 
         // The BYOV v1.3.0 upgrade script ran this against the already-V2 queue.
-        redeemManager.sudoReplayMigrationUnguarded();
+        redeemManager.initializeRedeemManagerV1_2();
 
         RedeemQueueV2.RedeemRequest[3] memory afterMigration;
         for (uint32 i = 0; i < 3; ++i) {
@@ -108,26 +96,6 @@ contract RedeemManagerDoubleMigrationRepro is RedeeManagerV1TestBase {
         );
     }
 
-    /// @notice The layout guard rejects the migration on the fresh-deploy path that caused BS-4878.
-    function testMigrationRejectedOnQueueAlreadyInV2Layout() external {
-        _request(1, 10 ether);
-        _request(2, 20 ether);
-
-        vm.expectRevert(IRedeemManagerV1.QueueAlreadyInV2Layout.selector);
-        redeemManager.initializeRedeemManagerV1_2();
-
-        // The queue is untouched, so the corruption never happens.
-        RedeemQueueV2.RedeemRequest memory rr = redeemManager.getRedeemRequestDetails(1);
-        assertEq(rr.amount, 20 ether);
-        assertEq(rr.height, 10 ether);
-    }
-
-    /// @notice An empty queue has nothing to migrate, so the guard must not block it.
-    function testMigrationAllowedOnEmptyQueue() external {
-        assertEq(redeemManager.getRedeemRequestCount(), 0);
-        redeemManager.initializeRedeemManagerV1_2();
-    }
-
     /// @notice The stored initiator is lost even for request 0, which is the request that survives.
     function testDoubleMigrationOverwritesInitiatorWithRecipient() external {
         address initiator = uf._new(10);
@@ -142,7 +110,7 @@ contract RedeemManagerDoubleMigrationRepro is RedeeManagerV1TestBase {
 
         assertEq(redeemManager.getRedeemRequestDetails(0).initiator, initiator);
 
-        redeemManager.sudoReplayMigrationUnguarded();
+        redeemManager.initializeRedeemManagerV1_2();
 
         assertEq(redeemManager.getRedeemRequestDetails(0).initiator, recipient);
     }
