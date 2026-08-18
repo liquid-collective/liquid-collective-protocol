@@ -11,7 +11,7 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 //
 // Shared by every script here: derive the pre-upgrade queue two independent ways and require them to
 // agree, assemble the corrected queue, check the invariants the on-chain repair enforces, hash the
-// queue the payload was built against, and ABI encode. Read-only; only 03_execute_repair.ts sends.
+// queue the payload was built against, and ABI encode. Read-only; only 02_execute_repair.ts sends.
 
 export const REDEEM_MANAGER = "0x5d51E82b75A4F16ef677d5bE20d707b6441A00b7";
 export const REDEEM_MANAGER_PROXY_ADMIN = "0x0C20959C12Eb226eC7DddC25109124AE850ED4BE";

@@ -10,9 +10,11 @@ import {
   retry,
   withdrawalStackEnd,
   eth,
-} from "./redeem_queue_repair";
+} from "../redeem_queue_repair";
 
 // BS-4878: perform the redeem queue repair.
+//
+//   BS4878_STEP=repair npx hardhat run hardhat_scripts/staging_redeem_queue_migration/hoodi/02_execute_repair.ts --network hoodi
 //
 // One script for both the rehearsal and the real thing, so what gets tested is what gets run. The
 // network only decides how the transaction is signed:

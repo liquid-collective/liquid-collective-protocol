@@ -6,7 +6,7 @@ import { REDEEM_MANAGER, RIVER, redeemManagerAt, retry, withdrawalStackEnd, eth 
 //
 //   npx hardhat run hardhat_scripts/staging_redeem_queue_migration/tenderly/02_full_recovery.ts --network tenderly
 //
-// 03_execute_repair.ts stops at whatever the withdrawal stack currently covers, so it leaves the tail
+// 02_execute_repair.ts stops at whatever the withdrawal stack currently covers, so it leaves the tail
 // unproven - those requests are legitimately waiting on future oracle reports. This goes further: it
 // impersonates River to report the remaining demand, funding it at River's own conversion rate, then
 // claims every request and asserts the queue settles to nothing.
@@ -51,7 +51,7 @@ async function main() {
   const coverage0 = await withdrawalStackEnd(rm);
   const demand0 = await rm.getRedeemDemand();
   if (!monotonic || !prev.sub(coverage0).eq(demand0)) {
-    throw new Error("queue does not look repaired - run 03_execute_repair.ts first");
+    throw new Error("queue does not look repaired - run 02_execute_repair.ts first");
   }
   console.log("0. pre-state (repair already applied)");
   console.log(`   queue ${count} records, ${openBefore.length} open`);
