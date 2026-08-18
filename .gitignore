@@ -46,5 +46,6 @@ emv-**/*
 runRiver.sh
 
 .claude
-hardhat_scripts/staging_redeem_queue_migration/repair-calldata.txt
-hardhat_scripts/staging_redeem_queue_migration/preflight-*.json
+# BS-4878 point-in-time artifacts - must never be reused across a freeze boundary
+**/repair-calldata.txt
+**/preflight-*.json
