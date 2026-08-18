@@ -4,20 +4,14 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 // BS-4878: rebuild a correct redeem queue and prove it before writing it on chain.
 //
-// Everything the repair scripts share lives here: deriving the pre-upgrade queue two independent
-// ways and requiring them to agree, assembling the corrected 125-record queue, checking the
-// invariants the on-chain repair enforces, and ABI encoding the payload.
+// The v1.3.0 upgrade called `initializeRedeemManagerV1_2` on a deployment whose queue was already in
+// RedeemQueueV2 layout while Version was still 1, so the `init(1)` guard passed and the V1 -> V2
+// migration replayed, reading 5 word records at a 4 word stride. Every record past index 0 is now
+// reassembled from fragments of its neighbours.
 //
-// The v1.3.0 upgrade script calls `initializeRedeemManagerV1_2` through `upgradeToAndCall`. On a
-// deployment created fresh from v1.2.1 sources the redeem queue is already in RedeemQueueV2 layout
-// while Version is still 1, so the `init(1)` guard passes and the V1 -> V2 migration is replayed. It
-// reads 5 word records at a 4 word stride, so every record past index 0 is reassembled from fragments
-// of its neighbours.
-//
-// Everything here is read-only. The only module that sends transactions is 01_simulate_recovery.ts, and
-// it only ever talks to a Tenderly Virtual TestNet.
-
-export const HOODI_CHAIN_ID = 560048;
+// Shared by every script here: derive the pre-upgrade queue two independent ways and require them to
+// agree, assemble the corrected queue, check the invariants the on-chain repair enforces, hash the
+// queue the payload was built against, and ABI encode. Read-only; only 03_execute_repair.ts sends.
 
 export const REDEEM_MANAGER = "0x5d51E82b75A4F16ef677d5bE20d707b6441A00b7";
 export const REDEEM_MANAGER_PROXY_ADMIN = "0x0C20959C12Eb226eC7DddC25109124AE850ED4BE";
@@ -27,40 +21,14 @@ export const RIVER = "0x0CA0c58b1986a55876552E0D9532C963625D5646";
 export const DEPLOY_BLOCK = 307784;
 export const UPGRADE_BLOCK = 3027299;
 
-// Chain history is authoritative and lives on the real network. A Virtual TestNet forks state, so
-// state reads go to the fork while log scans stay pointed here.
+// Chain history is authoritative and lives on the real network, so log scans stay pointed here even
+// when state reads go to a fork. ARCHIVE_RPC is separate because HISTORY_RPC is not an archive node;
+// hoodi archives: rpc.hoodi.ethpandaops.io, hoodi.drpc.org, hoodi.gateway.tenderly.co.
 export const HISTORY_RPC = process.env.BS4878_HISTORY_RPC || "https://ethereum-hoodi-rpc.publicnode.com";
-
-// An archive endpoint serving state at UPGRADE_BLOCK - 1. The default HISTORY_RPC is not archive, so
-// this is separate. Known-good hoodi archive endpoints, all rate limited:
-//   https://rpc.hoodi.ethpandaops.io
-//   https://hoodi.drpc.org
-//   https://hoodi.gateway.tenderly.co
 export const ARCHIVE_RPC = process.env.BS4878_ARCHIVE_RPC || "https://rpc.hoodi.ethpandaops.io";
 
 const LOG_CHUNK = 45000;
-
-/// Retry transport failures. Tenderly drops the connection under long sequential call bursts, which
-/// surfaces as ECONNRESET / SERVER_ERROR rather than a revert, so a plain retry clears it.
-export async function retry<T>(fn: () => Promise<T>, attempts = 5, delayMs = 400): Promise<T> {
-  let last: any;
-  for (let i = 0; i < attempts; ++i) {
-    try {
-      return await fn();
-    } catch (e: any) {
-      const transport =
-        e?.code === "SERVER_ERROR" ||
-        e?.code === "TIMEOUT" ||
-        e?.code === "NETWORK_ERROR" ||
-        e?.error?.code === "ECONNRESET" ||
-        e?.serverError?.code === "ECONNRESET";
-      if (!transport) throw e;
-      last = e;
-      await new Promise((r) => setTimeout(r, delayMs * (i + 1)));
-    }
-  }
-  throw last;
-}
+const FROM_ZERO = { from: EthersType.constants.AddressZero };
 
 export interface RedeemRequest {
   amount: EthersType.BigNumber;
@@ -71,9 +39,27 @@ export interface RedeemRequest {
 }
 
 export interface Reconstructed extends RedeemRequest {
-  id: number;
   size: EthersType.BigNumber;
   open: boolean;
+}
+
+/// Retry transport failures. Tenderly drops the connection under long call bursts, which surfaces as
+/// ECONNRESET / SERVER_ERROR rather than a revert, so a plain retry clears it.
+export async function retry<T>(fn: () => Promise<T>, attempts = 5, delayMs = 400): Promise<T> {
+  let last: any;
+  for (let i = 0; i < attempts; ++i) {
+    try {
+      return await fn();
+    } catch (e: any) {
+      const transport = ["SERVER_ERROR", "TIMEOUT", "NETWORK_ERROR"].includes(e?.code)
+        || e?.error?.code === "ECONNRESET"
+        || e?.serverError?.code === "ECONNRESET";
+      if (!transport) throw e;
+      last = e;
+      await new Promise((r) => setTimeout(r, delayMs * (i + 1)));
+    }
+  }
+  throw last;
 }
 
 export function historyProvider(ethers: typeof EthersType): EthersType.providers.JsonRpcProvider {
@@ -82,110 +68,46 @@ export function historyProvider(ethers: typeof EthersType): EthersType.providers
 
 export async function redeemManagerAt(
   hre: HardhatRuntimeEnvironment,
-  provider: EthersType.providers.Provider,
-  contractName = "RedeemManagerV1"
+  provider: EthersType.providers.Provider
 ): Promise<EthersType.Contract> {
-  const artifact = await hre.artifacts.readArtifact(contractName);
-  return new hre.ethers.Contract(REDEEM_MANAGER, artifact.abi, provider);
+  const { abi } = await hre.artifacts.readArtifact("RedeemManagerV1");
+  return new hre.ethers.Contract(REDEEM_MANAGER, abi, provider);
 }
 
 /// Chunked getLogs, because public endpoints cap the block range.
 async function scanLogs(
-  contract: EthersType.Contract,
+  rm: EthersType.Contract,
   filter: EthersType.EventFilter,
   from: number,
   to: number
 ): Promise<EthersType.Event[]> {
   const out: EthersType.Event[] = [];
-  for (let start = from; start <= to; start += LOG_CHUNK) {
-    const end = Math.min(start + LOG_CHUNK - 1, to);
-    out.push(...(await retry(() => contract.queryFilter(filter, start, end))));
+  for (let a = from; a <= to; a += LOG_CHUNK) {
+    out.push(...(await retry(() => rm.queryFilter(filter, a, Math.min(a + LOG_CHUNK - 1, to)))));
   }
   return out;
 }
 
-/// Rebuild the queue as it stood immediately before the BYOV upgrade.
-///
-/// `_claimRedeemRequest` holds `height + amount` constant and moves height forward as a request is
-/// satisfied, so `height_now = height0 + size0 - remaining`. `maxRedeemableEth` is decremented by the
-/// capped eth paid out, which ClaimedRedeemRequest reports as `ethAmount`.
-///
-/// `initiator` appears in no event. Pre-1.3.0 code set it to msg.sender, so it is River's address when
-/// the request was routed through River.requestRedeem, else the EOA that sent the transaction.
-export async function reconstructPreUpgrade(
-  hre: HardhatRuntimeEnvironment,
-  history: EthersType.providers.JsonRpcProvider
-): Promise<Map<number, Reconstructed>> {
-  const rm = await redeemManagerAt(hre, history);
-  const cutoff = UPGRADE_BLOCK - 1;
-
-  const requested = await scanLogs(rm, rm.filters.RequestedRedeem(), DEPLOY_BLOCK, cutoff);
-  const claimed = await scanLogs(rm, rm.filters.ClaimedRedeemRequest(), DEPLOY_BLOCK, cutoff);
-
-  const byId = new Map<number, any>();
-  for (const ev of requested) {
-    // RequestedRedeem's `amount` is the request's original size at creation.
-    const { recipient, height, amount, maxRedeemableEth, id } = ev.args as any;
-    byId.set(id, {
-      id,
-      recipient: recipient.toLowerCase(),
-      height0: height,
-      size: amount,
-      maxEth0: maxRedeemableEth,
-      endPos: height.add(amount),
-      claimedEth: hre.ethers.constants.Zero,
-      remaining: amount,
-      txHash: ev.transactionHash,
-    });
-  }
-
-  claimed.sort((a, b) => a.blockNumber - b.blockNumber || a.logIndex - b.logIndex);
-  for (const ev of claimed) {
-    const { redeemRequestId, ethAmount, remainingLsEthAmount } = ev.args as any;
-    const r = byId.get(redeemRequestId);
-    if (!r) continue;
-    r.claimedEth = r.claimedEth.add(ethAmount);
-    r.remaining = remainingLsEthAmount;
-  }
-
-  const txCache = new Map<string, string>();
-  const out = new Map<number, Reconstructed>();
-  for (const [id, r] of [...byId.entries()].sort((a, b) => a[0] - b[0])) {
-    if (!txCache.has(r.txHash)) {
-      const tx = await retry(() => history.getTransaction(r.txHash));
-      const viaRiver = (tx.to || "").toLowerCase() === RIVER.toLowerCase();
-      txCache.set(r.txHash, (viaRiver ? RIVER : tx.from).toLowerCase());
-    }
-    out.set(id, {
-      id,
-      amount: r.remaining,
-      maxRedeemableEth: r.maxEth0.sub(r.claimedEth),
-      recipient: r.recipient,
-      height: r.endPos.sub(r.remaining),
-      initiator: txCache.get(r.txHash)!,
-      size: r.size,
-      open: r.remaining.gt(0),
-    });
-  }
-  return out;
+/// Read one request, tolerating a paused proxy (TUPProxy lets the zero address through).
+async function detail(rm: EthersType.Contract, i: number, overrides: any = FROM_ZERO): Promise<any> {
+  return retry<any>(() => rm.callStatic.getRedeemRequestDetails(i, overrides));
 }
 
-/// Read the pre-upgrade queue directly from archive state at UPGRADE_BLOCK - 1.
-///
-/// This is the primary source. It beats the event reconstruction on two counts: nothing is derived,
-/// and `initiator` is read rather than inferred - that field appears in no event, so
-/// reconstructPreUpgrade has to guess it from whether the creating transaction targeted River.
+async function requestCount(rm: EthersType.Contract, overrides: any = FROM_ZERO): Promise<number> {
+  return (await retry<any>(() => rm.callStatic.getRedeemRequestCount(overrides))).toNumber();
+}
+
+/// Pre-upgrade queue, read straight from archive state. The primary source: nothing is derived, and
+/// `initiator` is read rather than inferred - that field appears in no event.
 export async function readPreUpgradeFromArchive(
   hre: HardhatRuntimeEnvironment,
   archive: EthersType.providers.JsonRpcProvider
 ): Promise<Map<number, RedeemRequest>> {
   const rm = await redeemManagerAt(hre, archive);
   const at = { blockTag: UPGRADE_BLOCK - 1 };
-  const count = (await retry<any>(() => rm.getRedeemRequestCount(at))).toNumber();
-
   const out = new Map<number, RedeemRequest>();
-  for (let i = 0; i < count; ++i) {
-    const d = await retry<any>(() => rm.getRedeemRequestDetails(i, at));
+  for (let i = 0; i < (await requestCount(rm, at)); ++i) {
+    const d = await detail(rm, i, at);
     out.set(i, {
       amount: d.amount,
       maxRedeemableEth: d.maxRedeemableEth,
@@ -197,39 +119,97 @@ export async function readPreUpgradeFromArchive(
   return out;
 }
 
-/// Require the two independent derivations of the pre-upgrade queue to agree exactly.
+/// Pre-upgrade queue, replayed from events as an independent second opinion, and the only source of
+/// each request's size at creation.
 ///
-/// The repair rewrites state irreversibly, so a single source is not enough. Any divergence means one
-/// of the two is wrong and the run must stop rather than guess which.
+/// Claiming holds `height + amount` constant while moving height forward, so
+/// `height = height0 + size0 - remaining`. `maxRedeemableEth` drops by the eth paid, which
+/// ClaimedRedeemRequest reports. `initiator` is inferred: pre-1.3.0 code stored msg.sender, so it is
+/// River when the request went through River.requestRedeem, else the sending EOA.
+export async function reconstructPreUpgrade(
+  hre: HardhatRuntimeEnvironment,
+  history: EthersType.providers.JsonRpcProvider
+): Promise<Map<number, Reconstructed>> {
+  const rm = await redeemManagerAt(hre, history);
+  const cutoff = UPGRADE_BLOCK - 1;
+  const byId = new Map<number, any>();
+
+  for (const ev of await scanLogs(rm, rm.filters.RequestedRedeem(), DEPLOY_BLOCK, cutoff)) {
+    // RequestedRedeem's `amount` is the size at creation, not the remaining amount.
+    const { recipient, height, amount, maxRedeemableEth, id } = ev.args as any;
+    byId.set(id, {
+      recipient: recipient.toLowerCase(),
+      size: amount,
+      maxEth0: maxRedeemableEth,
+      endPos: height.add(amount),
+      claimedEth: hre.ethers.constants.Zero,
+      remaining: amount,
+      txHash: ev.transactionHash,
+    });
+  }
+
+  const claims = await scanLogs(rm, rm.filters.ClaimedRedeemRequest(), DEPLOY_BLOCK, cutoff);
+  claims.sort((a, b) => a.blockNumber - b.blockNumber || a.logIndex - b.logIndex);
+  for (const ev of claims) {
+    const { redeemRequestId, ethAmount, remainingLsEthAmount } = ev.args as any;
+    const r = byId.get(redeemRequestId);
+    if (!r) continue;
+    r.claimedEth = r.claimedEth.add(ethAmount);
+    r.remaining = remainingLsEthAmount;
+  }
+
+  const initiators = new Map<string, string>();
+  const out = new Map<number, Reconstructed>();
+  for (const [id, r] of [...byId.entries()].sort((a, b) => a[0] - b[0])) {
+    if (!initiators.has(r.txHash)) {
+      const tx = await retry(() => history.getTransaction(r.txHash));
+      const viaRiver = (tx.to || "").toLowerCase() === RIVER.toLowerCase();
+      initiators.set(r.txHash, (viaRiver ? RIVER : tx.from).toLowerCase());
+    }
+    out.set(id, {
+      amount: r.remaining,
+      maxRedeemableEth: r.maxEth0.sub(r.claimedEth),
+      recipient: r.recipient,
+      height: r.endPos.sub(r.remaining),
+      initiator: initiators.get(r.txHash)!,
+      size: r.size,
+      open: r.remaining.gt(0),
+    });
+  }
+  return out;
+}
+
+/// The repair rewrites state irreversibly, so one source is not enough. Any divergence means one of
+/// the two is wrong and the run must stop rather than guess which.
 export function assertSourcesAgree(
   archive: Map<number, RedeemRequest>,
-  reconstructed: Map<number, Reconstructed>
+  events: Map<number, Reconstructed>
 ): void {
-  if (archive.size !== reconstructed.size) {
-    throw new Error(`pre-upgrade source mismatch: archive has ${archive.size}, events have ${reconstructed.size}`);
+  if (archive.size !== events.size) {
+    throw new Error(`pre-upgrade source mismatch: archive ${archive.size}, events ${events.size}`);
   }
   const bad: string[] = [];
   for (const [id, a] of archive) {
-    const r = reconstructed.get(id);
+    const r = events.get(id);
     if (!r) {
-      bad.push(`${id}: missing from event reconstruction`);
+      bad.push(`${id}: missing from event replay`);
       continue;
     }
-    if (!a.amount.eq(r.amount)) bad.push(`${id}.amount`);
-    if (!a.maxRedeemableEth.eq(r.maxRedeemableEth)) bad.push(`${id}.maxRedeemableEth`);
-    if (!a.height.eq(r.height)) bad.push(`${id}.height`);
-    if (a.recipient !== r.recipient.toLowerCase()) bad.push(`${id}.recipient`);
-    if (a.initiator !== r.initiator.toLowerCase()) bad.push(`${id}.initiator`);
+    for (const f of ["amount", "maxRedeemableEth", "height"] as const) {
+      if (!a[f].eq(r[f])) bad.push(`${id}.${f}`);
+    }
+    for (const f of ["recipient", "initiator"] as const) {
+      if (a[f] !== r[f].toLowerCase()) bad.push(`${id}.${f}`);
+    }
   }
   if (bad.length) {
-    throw new Error(`archive and event reconstruction disagree on ${bad.length} field(s): ${bad.slice(0, 12).join(", ")}`);
+    throw new Error(`archive and event replay disagree on ${bad.length} field(s): ${bad.slice(0, 12).join(", ")}`);
   }
 }
 
-/// Claims booked against the corrupted region since the upgrade consumed a different request's
-/// entitlement. The migration wrote index j from pre-migration words 4j..4j+3; when 4j is a multiple
-/// of 5 those are exactly request 4j/5's amount, maxRedeemableEth, recipient and height, so the claim
-/// must be netted against that request.
+/// A claim booked against the corrupted region consumed a different request's entitlement: the
+/// migration wrote index j from pre-migration words 4j..4j+3, so when 4j divides by 5 those are
+/// exactly request 4j/5's record and the claim nets against that request instead.
 export async function claimNetting(
   hre: HardhatRuntimeEnvironment,
   history: EthersType.providers.JsonRpcProvider,
@@ -237,21 +217,14 @@ export async function claimNetting(
   toBlock: number
 ): Promise<Map<number, { lsETH: EthersType.BigNumber; eth: EthersType.BigNumber; from: number[] }>> {
   const rm = await redeemManagerAt(hre, history);
-  const claimed = await scanLogs(rm, rm.filters.ClaimedRedeemRequest(), UPGRADE_BLOCK, toBlock);
   const netting = new Map<number, { lsETH: EthersType.BigNumber; eth: EthersType.BigNumber; from: number[] }>();
-  for (const ev of claimed) {
-    const { redeemRequestId, ethAmount, lsEthAmount } = ev.args as any;
-    const id: number = redeemRequestId;
+  for (const ev of await scanLogs(rm, rm.filters.ClaimedRedeemRequest(), UPGRADE_BLOCK, toBlock)) {
+    const { redeemRequestId: id, ethAmount, lsEthAmount } = ev.args as any;
     if (id >= legacyCount) continue;
-    if ((4 * id) % 5 !== 0) {
-      throw new Error(`claim on corrupted id ${id} blends two records - attribute it manually`);
-    }
+    if ((4 * id) % 5 !== 0) throw new Error(`claim on corrupted id ${id} blends two records - attribute it manually`);
     const source = (4 * id) / 5;
-    const acc = netting.get(source) || {
-      lsETH: hre.ethers.constants.Zero,
-      eth: hre.ethers.constants.Zero,
-      from: [],
-    };
+    const acc = netting.get(source)
+      ?? { lsETH: hre.ethers.constants.Zero, eth: hre.ethers.constants.Zero, from: [] as number[] };
     acc.lsETH = acc.lsETH.add(lsEthAmount);
     acc.eth = acc.eth.add(ethAmount);
     acc.from.push(id);
@@ -260,11 +233,12 @@ export async function claimNetting(
   return netting;
 }
 
-/// Assemble the full corrected queue.
+/// Assemble the corrected queue.
 ///
-/// Heights are never taken verbatim. They are derived from the end-position chain
-/// `endPos[i] = endPos[i-1] + originalSize[i]`, then `height[i] = endPos[i] - amount[i]`, because
-/// `height + amount` is the quantity the claim path holds invariant.
+/// Heights are never copied. They come from the end-position chain
+/// `endPos[i] = endPos[i-1] + size[i]`, then `height[i] = endPos[i] - amount[i]`, because
+/// `height + amount` is what the claim path holds invariant. Copying stored heights would be wrong
+/// for every settled or partially claimed request.
 export async function buildCorrectedQueue(
   hre: HardhatRuntimeEnvironment,
   history: EthersType.providers.JsonRpcProvider,
@@ -272,21 +246,16 @@ export async function buildCorrectedQueue(
 ): Promise<RedeemRequest[]> {
   const rmState = await redeemManagerAt(hre, state);
   const rmHistory = await redeemManagerAt(hre, history);
-  const count = (await rmState.getRedeemRequestCount()).toNumber();
-  // Bound the scan by the state provider's height, not the live chain's. On a fork the two differ,
-  // and scanning past the fork point would net claims the forked state has never seen.
+  const count = await requestCount(rmState);
+  // Bound by the state provider's height: on a fork it trails the live chain, and scanning past the
+  // fork point would net claims the forked state has never seen.
   const head = Math.min(await state.getBlockNumber(), await history.getBlockNumber());
 
-  // Two independent derivations of the pre-upgrade queue, required to agree before we rewrite state.
-  // Archive is primary: nothing derived, and `initiator` read rather than inferred.
-  const archive = new hre.ethers.providers.JsonRpcProvider(ARCHIVE_RPC);
-  const legacyArchive = await readPreUpgradeFromArchive(hre, archive);
-  const legacy = await reconstructPreUpgrade(hre, history);
-  assertSourcesAgree(legacyArchive, legacy);
+  const archive = await readPreUpgradeFromArchive(hre, new hre.ethers.providers.JsonRpcProvider(ARCHIVE_RPC));
+  const events = await reconstructPreUpgrade(hre, history);
+  assertSourcesAgree(archive, events);
+  const netting = await claimNetting(hre, history, archive.size, head);
 
-  const netting = await claimNetting(hre, history, legacy.size, head);
-
-  // Original sizes for requests created after the upgrade.
   const postSizes = new Map<number, EthersType.BigNumber>();
   for (const ev of await scanLogs(rmHistory, rmHistory.filters.RequestedRedeem(), UPGRADE_BLOCK, head)) {
     const { amount, id } = ev.args as any;
@@ -296,24 +265,21 @@ export async function buildCorrectedQueue(
   const rows: RedeemRequest[] = [];
   const sizes: EthersType.BigNumber[] = [];
   for (let i = 0; i < count; ++i) {
-    const rec = legacyArchive.get(i);
-    if (rec) {
-      let amount = rec.amount;
-      let maxEth = rec.maxRedeemableEth;
+    const pre = archive.get(i);
+    if (pre) {
       const net = netting.get(i);
-      if (net) {
-        amount = amount.sub(net.lsETH);
-        maxEth = maxEth.sub(net.eth);
-        if (amount.lt(0) || maxEth.lt(0)) {
-          throw new Error(`netting request ${i} went negative - re-check the claim attribution`);
-        }
+      const amount = net ? pre.amount.sub(net.lsETH) : pre.amount;
+      const maxRedeemableEth = net ? pre.maxRedeemableEth.sub(net.eth) : pre.maxRedeemableEth;
+      if (amount.lt(0) || maxRedeemableEth.lt(0)) {
+        throw new Error(`netting request ${i} went negative - re-check the claim attribution`);
       }
-      rows.push({ amount, maxRedeemableEth: maxEth, recipient: rec.recipient, height: rec.height, initiator: rec.initiator });
-      // Original size comes from the event reconstruction: archive state gives the remaining amount,
-      // not the size at creation, and the end-position chain needs the latter.
-      sizes.push(legacy.get(i)!.size);
+      rows.push({ ...pre, amount, maxRedeemableEth });
+      // Archive gives the remaining amount; the chain needs the size at creation, which only the
+      // event replay has.
+      sizes.push(events.get(i)!.size);
     } else {
-      const d = await retry<any>(() => rmState.getRedeemRequestDetails(i));
+      // Created after the upgrade, so the record itself is sound and only its height is misplaced.
+      const d = await detail(rmState, i);
       rows.push({
         amount: d.amount,
         maxRedeemableEth: d.maxRedeemableEth,
@@ -328,33 +294,31 @@ export async function buildCorrectedQueue(
   }
 
   let end = hre.ethers.constants.Zero;
-  for (let i = 0; i < rows.length; ++i) {
+  rows.forEach((r, i) => {
     end = end.add(sizes[i]);
-    rows[i].height = end.sub(rows[i].amount);
-  }
+    r.height = end.sub(r.amount);
+  });
   return rows;
 }
 
-/// Retrieve the end position of the withdrawal stack, in the same cumulative LsETH space as the queue.
+/// End position of the withdrawal stack, in the same cumulative LsETH space as the queue.
 export async function withdrawalStackEnd(rm: EthersType.Contract): Promise<EthersType.BigNumber> {
-  const count = (await rm.getWithdrawalEventCount()).toNumber();
+  const count = (await retry<any>(() => rm.callStatic.getWithdrawalEventCount(FROM_ZERO))).toNumber();
   if (count === 0) return EthersType.BigNumber.from(0);
-  const last = await rm.getWithdrawalEventDetails(count - 1);
+  const last = await retry<any>(() => rm.callStatic.getWithdrawalEventDetails(count - 1, FROM_ZERO));
   return last.height.add(last.amount);
 }
 
-/// Mirror the checks RedeemManagerV1Recovery.repairRedeemQueue performs, so a doomed transaction is
-/// caught before it is sent. The decisive one is the demand check: RedeemDemand lives in its own slot
-/// and was never written by the faulty migration, which makes it an independent witness that the
-/// supplied queue geometry is correct.
+/// Mirror of the checks repairRedeemQueue performs, so a doomed transaction is caught before it is
+/// sent. The decisive one is the demand check: RedeemDemand sits in its own slot and was never written
+/// by the faulty migration, which makes it an independent witness that the geometry is right.
 export function verifyQueue(
   rows: RedeemRequest[],
   coverage: EthersType.BigNumber,
   redeemDemand: EthersType.BigNumber
 ): { queueEnd: EthersType.BigNumber; impliedDemand: EthersType.BigNumber } {
   let previousEnd = EthersType.BigNumber.from(0);
-  for (let i = 0; i < rows.length; ++i) {
-    const r = rows[i];
+  rows.forEach((r, i) => {
     if (r.recipient === EthersType.constants.AddressZero) throw new Error(`request ${i}: zero recipient`);
     if (r.initiator === EthersType.constants.AddressZero) throw new Error(`request ${i}: zero initiator`);
     if (r.height.lt(previousEnd)) {
@@ -363,10 +327,8 @@ export function verifyQueue(
     const end = r.height.add(r.amount);
     if (i !== 0 && end.lte(previousEnd)) throw new Error(`request ${i}: non increasing end position`);
     previousEnd = end;
-  }
-  if (previousEnd.lt(coverage)) {
-    throw new Error(`queue end ${previousEnd} below withdrawal coverage ${coverage}`);
-  }
+  });
+  if (previousEnd.lt(coverage)) throw new Error(`queue end ${previousEnd} below coverage ${coverage}`);
   const impliedDemand = previousEnd.sub(coverage);
   if (!impliedDemand.eq(redeemDemand)) {
     throw new Error(`DEMAND MISMATCH - implied ${impliedDemand} vs stored ${redeemDemand}; repair would revert`);
@@ -374,21 +336,17 @@ export function verifyQueue(
   return { queueEnd: previousEnd, impliedDemand };
 }
 
-/// Hash the queue exactly as RedeemManagerV1Recovery._currentQueueHash does.
-///
-/// The repair refuses to run unless this still matches, so a claim landing between building the
-/// payload and sending it is rejected rather than silently reverted. Field order must not drift from
-/// the Solidity side.
+/// Hash the queue exactly as RedeemManagerV1Recovery._currentQueueHash does. The repair refuses to run
+/// unless this still matches, so a claim landing between building the payload and sending it is
+/// rejected rather than silently replayed - which is why no pause is needed. Field order must not
+/// drift from the Solidity side.
 export async function currentQueueHash(
   hre: HardhatRuntimeEnvironment,
   rm: EthersType.Contract
 ): Promise<string> {
-  const count = (await rm.callStatic.getRedeemRequestCount({ from: EthersType.constants.AddressZero })).toNumber();
   let acc = hre.ethers.constants.HashZero;
-  for (let i = 0; i < count; ++i) {
-    const d = await retry<any>(() =>
-      rm.callStatic.getRedeemRequestDetails(i, { from: EthersType.constants.AddressZero })
-    );
+  for (let i = 0; i < (await requestCount(rm)); ++i) {
+    const d = await detail(rm, i);
     acc = hre.ethers.utils.solidityKeccak256(
       ["bytes32", "uint256", "uint256", "address", "uint256", "address"],
       [acc, d.amount, d.maxRedeemableEth, d.recipient, d.height, d.initiator]
@@ -412,7 +370,7 @@ export function encodeRepairCalldata(
 }
 
 export function eth(v: EthersType.BigNumber): string {
-  const s = EthersType.utils.formatEther(v);
-  const [i, f = ""] = s.split(".");
-  return `${BigInt(i).toLocaleString("en-US")}.${(f + "000000").slice(0, 6)}`;
+  const [i, f = ""] = EthersType.utils.formatEther(v).split(".");
+  const sign = i.startsWith("-") ? "-" : "";
+  return `${sign}${BigInt(i.replace("-", "")).toLocaleString("en-US")}.${(f + "000000").slice(0, 6)}`;
 }
