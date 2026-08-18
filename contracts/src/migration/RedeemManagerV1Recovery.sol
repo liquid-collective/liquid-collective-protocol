@@ -2,6 +2,8 @@
 pragma solidity 0.8.34;
 
 import "../RedeemManager.1.sol";
+import "../libraries/LibErrors.sol";
+import "../state/redeemManager/RedeemQueueRepaired.sol";
 
 /// @title Redeem Manager Recovery (BS-4878)
 /// @author Alluvial Finance Inc.
@@ -24,6 +26,12 @@ import "../RedeemManager.1.sol";
 ///      is harder to reason about than a failed transaction, and the proxy's transparent dispatch means
 ///      only `upgradeToAndCall` can reach an implementation function from the admin anyway.
 contract RedeemManagerV1Recovery is RedeemManagerV1 {
+    /// @notice EIP-1967 admin slot, read to confirm the caller is the proxy admin
+    bytes32 private constant EIP1967_ADMIN_SLOT = 0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103;
+
+    /// @notice The repair has already been performed on this deployment
+    error RedeemQueueAlreadyRepaired();
+
     /// @notice The supplied queue does not have the same length as the stored one
     /// @param provided The number of requests supplied
     /// @param expected The number of requests currently stored
@@ -77,12 +85,12 @@ contract RedeemManagerV1Recovery is RedeemManagerV1 {
     /// @param count The number of requests rewritten
     /// @param queueEndPosition The end position of the rebuilt queue
     /// @param redeemDemand The redeem demand the rebuilt queue was checked against
-    event RedeemQueueRepaired(uint256 count, uint256 queueEndPosition, uint256 redeemDemand);
+    event RedeemQueueRepairPerformed(uint256 count, uint256 queueEndPosition, uint256 redeemDemand);
 
     /// @notice Rewrite the redeem queue with externally reconstructed values
-    /// @dev Guarded by `init(2)`, so this runs exactly once on a deployment whose Version the replayed
-    ///      migration already advanced to 2. Values are supplied as calldata and never derived from the
-    ///      corrupted storage - deriving in place is what caused the incident.
+    /// @dev Restricted to the proxy admin and guarded by a dedicated one-off flag rather than `init`,
+    ///      so Version stays at 2 and matches the other deployments. Values are supplied as calldata and
+    ///      never derived from the corrupted storage - deriving in place is what caused the incident.
     ///
     ///      The checks below make the calldata self validating. The decisive one is the demand check:
     ///      `_requestRedeem` adds every request's size to RedeemDemand and anchors each request at the
@@ -92,7 +100,22 @@ contract RedeemManagerV1Recovery is RedeemManagerV1 {
     ///      written by the faulty migration, which makes it an independent witness that the supplied queue
     ///      geometry is the correct one.
     /// @param _requests The full queue, index aligned, exactly as it should read after the repair
-    function repairRedeemQueue(RedeemQueueV2.RedeemRequest[] calldata _requests) external init(2) {
+    function repairRedeemQueue(RedeemQueueV2.RedeemRequest[] calldata _requests) external {
+        // Access control, not decoration: recipients are written verbatim from calldata and only checked
+        // for being non zero, so an unauthorised caller could pass a queue that satisfies every geometry
+        // check while pointing all the payouts at themselves. A transparent proxy never delegates calls
+        // from its admin, so requiring the admin here means this is reachable only through
+        // upgradeToAndCall, which preserves msg.sender across the inner delegatecall.
+        if (msg.sender != _proxyAdmin()) {
+            revert LibErrors.Unauthorized(msg.sender);
+        }
+        // One-off, tracked in its own slot rather than through `init` so that Version stays at 2 and
+        // matches the other deployments.
+        if (RedeemQueueRepaired.get()) {
+            revert RedeemQueueAlreadyRepaired();
+        }
+        RedeemQueueRepaired.set(true);
+
         RedeemQueueV2.RedeemRequest[] storage queue = RedeemQueueV2.get();
         uint256 count = queue.length;
         if (_requests.length != count) {
@@ -143,7 +166,16 @@ contract RedeemManagerV1Recovery is RedeemManagerV1 {
             revert RepairDemandMismatch(impliedDemand, redeemDemand);
         }
 
-        emit RedeemQueueRepaired(count, previousEnd, redeemDemand);
+        emit RedeemQueueRepairPerformed(count, previousEnd, redeemDemand);
+    }
+
+    /// @notice Retrieve the proxy admin from the EIP-1967 slot
+    /// @return admin The address allowed to upgrade this proxy
+    function _proxyAdmin() internal view returns (address admin) {
+        bytes32 slot = EIP1967_ADMIN_SLOT;
+        assembly {
+            admin := sload(slot)
+        }
     }
 
     /// @notice Retrieve the end position of the withdrawal stack, in the same cumulative LsETH space as the queue

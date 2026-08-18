@@ -58,6 +58,7 @@ async function main() {
   // Virtual TestNet impersonate. This mirrors deploy/hoodi/06_upgrade_v1_3_0_proxies.ts.
   const provider = new hre.ethers.providers.JsonRpcProvider(url);
   const net = await provider.getNetwork();
+  if (net.chainId === 560048) throw new Error("refusing to run against real hoodi - this impersonates the proxy admin");
   console.log(`fork chainId=${net.chainId}  block=${await provider.getBlockNumber()}\n`);
 
   for (const who of [REDEEM_MANAGER_PROXY_ADMIN, DEPLOYER]) {

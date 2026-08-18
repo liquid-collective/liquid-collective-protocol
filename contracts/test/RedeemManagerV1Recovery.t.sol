@@ -29,7 +29,13 @@ contract RedeemManagerV1RecoveryTest is RedeeManagerV1TestBase {
 
         // The staging deploy script only ever calls this one, leaving Version at 1.
         redeemManager.initializeRedeemManagerV1(address(river));
+
+        // repairRedeemQueue is restricted to the EIP-1967 proxy admin. These tests drive the
+        // implementation directly rather than through a proxy, so point that slot at this contract.
+        vm.store(address(redeemManager), EIP1967_ADMIN_SLOT, bytes32(uint256(uint160(address(this)))));
     }
+
+    bytes32 internal constant EIP1967_ADMIN_SLOT = 0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103;
 
     function _allowlistUser(address user) internal {
         address[] memory accounts = new address[](1);
@@ -139,7 +145,19 @@ contract RedeemManagerV1RecoveryTest is RedeeManagerV1TestBase {
         _corrupt();
         redeemManager.repairRedeemQueue(_payload());
 
-        vm.expectRevert(abi.encodeWithSelector(Initializable.InvalidInitialization.selector, 2, 3));
+        vm.expectRevert(RedeemManagerV1Recovery.RedeemQueueAlreadyRepaired.selector);
+        redeemManager.repairRedeemQueue(_payload());
+    }
+
+    /// @notice Only the proxy admin may repair - recipients come straight from calldata, so an
+    ///         unauthorised caller could otherwise redirect every payout while passing all the checks.
+    function testRepairRejectsNonAdminCaller() external {
+        _seedQueue();
+        _corrupt();
+
+        address stranger = uf._new(99);
+        vm.prank(stranger);
+        vm.expectRevert(abi.encodeWithSelector(LibErrors.Unauthorized.selector, stranger));
         redeemManager.repairRedeemQueue(_payload());
     }
 
