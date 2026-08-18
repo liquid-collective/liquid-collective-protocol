@@ -7,6 +7,7 @@ import {
   buildCorrectedQueue,
   claimNetting,
   encodeRepairCalldata,
+  currentQueueHash,
   ARCHIVE_RPC,
   historyProvider,
   readPreUpgradeFromArchive,
@@ -122,7 +123,8 @@ async function main() {
     pendingHolders.set(k, [...(pendingHolders.get(k) || []), i]);
   }
 
-  const calldata = encodeRepairCalldata(hre, rows);
+  const queueHash = await currentQueueHash(hre, rm);
+  const calldata = encodeRepairCalldata(hre, rows, queueHash);
 
   console.log("checks");
   console.log(`  archive vs events        : agree on all ${legacyArchive.size} legacy records`);

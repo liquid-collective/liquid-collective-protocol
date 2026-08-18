@@ -88,6 +88,15 @@ contract RedeemManagerV1RecoveryTest is RedeeManagerV1TestBase {
         redeemManager.initializeRedeemManagerV1_2();
     }
 
+    /// @notice Mirror of RedeemManagerV1Recovery._currentQueueHash
+    function _queueHash() internal view returns (bytes32 acc) {
+        uint256 n = redeemManager.getRedeemRequestCount();
+        for (uint32 i = 0; i < n; ++i) {
+            RedeemQueueV2.RedeemRequest memory r = redeemManager.getRedeemRequestDetails(i);
+            acc = keccak256(abi.encodePacked(acc, r.amount, r.maxRedeemableEth, r.recipient, r.height, r.initiator));
+        }
+    }
+
     function _payload() internal view returns (RedeemQueueV2.RedeemRequest[] memory payload) {
         payload = new RedeemQueueV2.RedeemRequest[](expected.length);
         for (uint256 i = 0; i < expected.length; ++i) {
@@ -102,7 +111,7 @@ contract RedeemManagerV1RecoveryTest is RedeeManagerV1TestBase {
         // Sanity: the migration really did damage the queue.
         assertTrue(redeemManager.getRedeemRequestDetails(1).amount != expected[1].amount, "not corrupted");
 
-        redeemManager.repairRedeemQueue(_payload());
+        redeemManager.repairRedeemQueue(_payload(), _queueHash());
 
         for (uint32 i = 0; i < expected.length; ++i) {
             RedeemQueueV2.RedeemRequest memory got = redeemManager.getRedeemRequestDetails(i);
@@ -118,7 +127,7 @@ contract RedeemManagerV1RecoveryTest is RedeeManagerV1TestBase {
     function testRepairedQueueIsClaimable() external {
         _seedQueue();
         _corrupt();
-        redeemManager.repairRedeemQueue(_payload());
+        redeemManager.repairRedeemQueue(_payload(), _queueHash());
 
         // Cover the rest of the queue so every request can be settled.
         uint256 remaining = 100 ether - 45 ether;
@@ -143,10 +152,39 @@ contract RedeemManagerV1RecoveryTest is RedeeManagerV1TestBase {
     function testRepairIsOneShot() external {
         _seedQueue();
         _corrupt();
-        redeemManager.repairRedeemQueue(_payload());
+        redeemManager.repairRedeemQueue(_payload(), _queueHash());
+
+        bytes32 expectedHash = _queueHash();
 
         vm.expectRevert(RedeemManagerV1Recovery.RedeemQueueAlreadyRepaired.selector);
-        redeemManager.repairRedeemQueue(_payload());
+        redeemManager.repairRedeemQueue(_payload(), expectedHash);
+    }
+
+    /// @notice The whole reason pausing is unnecessary: a claim landing between building the payload and
+    ///         sending it makes the repair revert instead of silently replaying the pre-claim amount,
+    ///         which would let an already-paid request be claimed a second time.
+    function testRepairRejectsQueueChangedByAClaimMidWindow() external {
+        _seedQueue();
+        _corrupt();
+
+        // payload and fingerprint built now
+        RedeemQueueV2.RedeemRequest[] memory payload = _payload();
+        bytes32 staleHash = _queueHash();
+
+        // a claim lands before the repair is sent
+        uint32[] memory ids = new uint32[](1);
+        uint32[] memory events = new uint32[](1);
+        ids[0] = 0;
+        events[0] = 0;
+        redeemManager.claimRedeemRequests(ids, events);
+
+        bytes32 freshHash = _queueHash();
+        assertTrue(staleHash != freshHash, "the claim should have moved the queue");
+
+        vm.expectRevert(
+            abi.encodeWithSelector(RedeemManagerV1Recovery.RepairQueueChanged.selector, freshHash, staleHash)
+        );
+        redeemManager.repairRedeemQueue(payload, staleHash);
     }
 
     /// @notice Only the proxy admin may repair - recipients come straight from calldata, so an
@@ -156,9 +194,10 @@ contract RedeemManagerV1RecoveryTest is RedeeManagerV1TestBase {
         _corrupt();
 
         address stranger = uf._new(99);
+        bytes32 expectedHash = _queueHash();
         vm.prank(stranger);
         vm.expectRevert(abi.encodeWithSelector(LibErrors.Unauthorized.selector, stranger));
-        redeemManager.repairRedeemQueue(_payload());
+        redeemManager.repairRedeemQueue(_payload(), expectedHash);
     }
 
     function testRepairRejectsWrongLength() external {
@@ -170,8 +209,10 @@ contract RedeemManagerV1RecoveryTest is RedeeManagerV1TestBase {
             short[i] = expected[i];
         }
 
+        bytes32 expectedHash = _queueHash();
+
         vm.expectRevert(abi.encodeWithSelector(RedeemManagerV1Recovery.RepairLengthMismatch.selector, 3, 4));
-        redeemManager.repairRedeemQueue(short);
+        redeemManager.repairRedeemQueue(short, expectedHash);
     }
 
     function testRepairRejectsZeroRecipient() external {
@@ -181,8 +222,10 @@ contract RedeemManagerV1RecoveryTest is RedeeManagerV1TestBase {
         RedeemQueueV2.RedeemRequest[] memory payload = _payload();
         payload[1].recipient = address(0);
 
+        bytes32 expectedHash = _queueHash();
+
         vm.expectRevert(abi.encodeWithSelector(RedeemManagerV1Recovery.RepairInvalidRecipient.selector, 1));
-        redeemManager.repairRedeemQueue(payload);
+        redeemManager.repairRedeemQueue(payload, expectedHash);
     }
 
     /// @notice A request that starts before its predecessor ends is caught by the geometry checks
@@ -195,12 +238,13 @@ contract RedeemManagerV1RecoveryTest is RedeeManagerV1TestBase {
         payload[2].height = 1 ether;
 
         uint256 previousEnd = expected[1].height + expected[1].amount;
+        bytes32 expectedHash = _queueHash();
         vm.expectRevert(
             abi.encodeWithSelector(
                 RedeemManagerV1Recovery.RepairOverlappingRequest.selector, 2, uint256(1 ether), previousEnd
             )
         );
-        redeemManager.repairRedeemQueue(payload);
+        redeemManager.repairRedeemQueue(payload, expectedHash);
     }
 
     /// @notice The decisive check: a queue that is internally consistent but globally wrong is still rejected,
@@ -214,9 +258,10 @@ contract RedeemManagerV1RecoveryTest is RedeeManagerV1TestBase {
         payload[3].amount += 1 ether;
 
         uint256 demand = redeemManager.getRedeemDemand();
+        bytes32 expectedHash = _queueHash();
         vm.expectRevert(
             abi.encodeWithSelector(RedeemManagerV1Recovery.RepairDemandMismatch.selector, demand + 1 ether, demand)
         );
-        redeemManager.repairRedeemQueue(payload);
+        redeemManager.repairRedeemQueue(payload, expectedHash);
     }
 }

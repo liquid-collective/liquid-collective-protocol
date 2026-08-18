@@ -14,7 +14,7 @@ import {
 // BS-4878: claim every remaining redeem request on a repaired fork and check each payout against the
 // pre BYOV-upgrade values.
 //
-//   npx hardhat run hardhat_scripts/staging_redeem_queue_migration/tenderly/02_claim_all.ts --network tenderly
+//   npx hardhat run hardhat_scripts/staging_redeem_queue_migration/tenderly/01_claim_all.ts --network tenderly
 //
 // The reference is reconstructPreUpgrade - the queue as it stood before the upgrade at hoodi block
 // 3027299 (2026-06-16 10:55 UTC) - with the one claim booked against the corrupted region netted

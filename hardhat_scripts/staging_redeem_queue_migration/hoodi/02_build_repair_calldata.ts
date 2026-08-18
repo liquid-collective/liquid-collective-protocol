@@ -3,6 +3,7 @@ import hre from "hardhat";
 import {
   buildCorrectedQueue,
   encodeRepairCalldata,
+  currentQueueHash,
   historyProvider,
   redeemManagerAt,
   verifyQueue,
@@ -34,7 +35,8 @@ async function main() {
   console.log(`  redeemDemand : ${demand.toString()}`);
   console.log("  -> demand invariant holds, repairRedeemQueue will pass its checks");
 
-  const calldata = encodeRepairCalldata(hre, rows);
+  const queueHash = await currentQueueHash(hre, rm);
+  const calldata = encodeRepairCalldata(hre, rows, queueHash);
   fs.writeFileSync(OUT, calldata + "\n");
 
   const open = rows.filter((r) => r.amount.gt(0));

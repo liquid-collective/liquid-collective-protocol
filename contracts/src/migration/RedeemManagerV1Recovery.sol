@@ -32,6 +32,11 @@ contract RedeemManagerV1Recovery is RedeemManagerV1 {
     /// @notice The repair has already been performed on this deployment
     error RedeemQueueAlreadyRepaired();
 
+    /// @notice The queue changed between building the payload and sending it
+    /// @param found The hash of the queue as it stands now
+    /// @param expected The hash the payload was built against
+    error RepairQueueChanged(bytes32 found, bytes32 expected);
+
     /// @notice The supplied queue does not have the same length as the stored one
     /// @param provided The number of requests supplied
     /// @param expected The number of requests currently stored
@@ -100,7 +105,8 @@ contract RedeemManagerV1Recovery is RedeemManagerV1 {
     ///      written by the faulty migration, which makes it an independent witness that the supplied queue
     ///      geometry is the correct one.
     /// @param _requests The full queue, index aligned, exactly as it should read after the repair
-    function repairRedeemQueue(RedeemQueueV2.RedeemRequest[] calldata _requests) external {
+    /// @param _expectedQueueHash Hash of the queue as it stood when the payload was built
+    function repairRedeemQueue(RedeemQueueV2.RedeemRequest[] calldata _requests, bytes32 _expectedQueueHash) external {
         // Access control, not decoration: recipients are written verbatim from calldata and only checked
         // for being non zero, so an unauthorised caller could pass a queue that satisfies every geometry
         // check while pointing all the payouts at themselves. A transparent proxy never delegates calls
@@ -115,6 +121,16 @@ contract RedeemManagerV1Recovery is RedeemManagerV1 {
             revert RedeemQueueAlreadyRepaired();
         }
         RedeemQueueRepaired.set(true);
+
+        // The payload was built against a specific queue. If anything moved since - a claim, a new
+        // request - those values are stale and writing them would revert real activity: replaying a
+        // claimed request's old amount would let it be claimed a second time. None of the checks below
+        // would notice, because claiming moves neither the end positions, the coverage nor the demand.
+        // Comparing the whole queue makes that impossible to miss, and removes any need to pause first.
+        bytes32 currentHash = _currentQueueHash();
+        if (currentHash != _expectedQueueHash) {
+            revert RepairQueueChanged(currentHash, _expectedQueueHash);
+        }
 
         RedeemQueueV2.RedeemRequest[] storage queue = RedeemQueueV2.get();
         uint256 count = queue.length;
@@ -167,6 +183,25 @@ contract RedeemManagerV1Recovery is RedeemManagerV1 {
         }
 
         emit RedeemQueueRepairPerformed(count, previousEnd, redeemDemand);
+    }
+
+    /// @notice Hash the redeem queue as it currently stands
+    /// @dev Rolling hash so the whole queue is covered without materialising it in memory. Must match
+    ///      the off chain computation in redeem_queue_repair.ts exactly, field order included.
+    /// @return The hash of every stored redeem request, in order
+    function _currentQueueHash() internal view returns (bytes32) {
+        RedeemQueueV2.RedeemRequest[] storage queue = RedeemQueueV2.get();
+        uint256 length = queue.length;
+        bytes32 acc;
+        for (uint256 i = 0; i < length; ++i) {
+            RedeemQueueV2.RedeemRequest storage request = queue[i];
+            acc = keccak256(
+                abi.encodePacked(
+                    acc, request.amount, request.maxRedeemableEth, request.recipient, request.height, request.initiator
+                )
+            );
+        }
+        return acc;
     }
 
     /// @notice Retrieve the proxy admin from the EIP-1967 slot

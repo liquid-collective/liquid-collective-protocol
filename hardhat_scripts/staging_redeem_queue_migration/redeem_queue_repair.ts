@@ -374,15 +374,40 @@ export function verifyQueue(
   return { queueEnd: previousEnd, impliedDemand };
 }
 
+/// Hash the queue exactly as RedeemManagerV1Recovery._currentQueueHash does.
+///
+/// The repair refuses to run unless this still matches, so a claim landing between building the
+/// payload and sending it is rejected rather than silently reverted. Field order must not drift from
+/// the Solidity side.
+export async function currentQueueHash(
+  hre: HardhatRuntimeEnvironment,
+  rm: EthersType.Contract
+): Promise<string> {
+  const count = (await rm.callStatic.getRedeemRequestCount({ from: EthersType.constants.AddressZero })).toNumber();
+  let acc = hre.ethers.constants.HashZero;
+  for (let i = 0; i < count; ++i) {
+    const d = await retry<any>(() =>
+      rm.callStatic.getRedeemRequestDetails(i, { from: EthersType.constants.AddressZero })
+    );
+    acc = hre.ethers.utils.solidityKeccak256(
+      ["bytes32", "uint256", "uint256", "address", "uint256", "address"],
+      [acc, d.amount, d.maxRedeemableEth, d.recipient, d.height, d.initiator]
+    );
+  }
+  return acc;
+}
+
 export function encodeRepairCalldata(
   hre: HardhatRuntimeEnvironment,
-  rows: RedeemRequest[]
+  rows: RedeemRequest[],
+  expectedQueueHash: string
 ): string {
   const iface = new hre.ethers.utils.Interface([
-    "function repairRedeemQueue((uint256 amount,uint256 maxRedeemableEth,address recipient,uint256 height,address initiator)[] _requests)",
+    "function repairRedeemQueue((uint256 amount,uint256 maxRedeemableEth,address recipient,uint256 height,address initiator)[] _requests,bytes32 _expectedQueueHash)",
   ]);
   return iface.encodeFunctionData("repairRedeemQueue", [
     rows.map((r) => [r.amount, r.maxRedeemableEth, r.recipient, r.height, r.initiator]),
+    expectedQueueHash,
   ]);
 }
 
