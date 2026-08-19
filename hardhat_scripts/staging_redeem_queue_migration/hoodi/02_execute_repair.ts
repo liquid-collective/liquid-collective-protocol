@@ -260,7 +260,7 @@ async function main() {
     signer!,
     "repair",
     PROXY_INTERFACE.encodeFunctionData("upgradeToAndCall", [recoveryImplementation, calldata]),
-    30_000_000
+    5_000_000
   );
 
   // Step 3: compare the repaired queue with preflight.

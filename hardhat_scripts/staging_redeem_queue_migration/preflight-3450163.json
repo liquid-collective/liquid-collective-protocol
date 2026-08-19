@@ -1,6 +1,6 @@
 {
-  "generatedAtBlock": 3443838,
-  "generatedAtISO": "2026-08-18T11:54:12.000Z",
+  "generatedAtBlock": 3450163,
+  "generatedAtISO": "2026-08-19T10:45:36.000Z",
   "expectedQueueHash": "0xf2d11cc7568fd716aabb0c87328e05334acb035d253e80290c13a2413901d8ea",
   "redeemManager": "0x5d51E82b75A4F16ef677d5bE20d707b6441A00b7",
   "upgradeBlock": 3027299,
@@ -20,16 +20,16 @@
   ],
   "invariant": {
     "queueEnd": "1666671148686832569773",
-    "withdrawalCoverage": "1649116663155974541114",
-    "impliedDemand": "17554485530858028659",
-    "redeemDemand": "17554485530858028659",
+    "withdrawalCoverage": "1649204816083866263867",
+    "impliedDemand": "17466332602966305906",
+    "redeemDemand": "17466332602966305906",
     "holds": true
   },
   "solvency": {
-    "ethClaimableAfterRepair": "628345204658992653037",
-    "contractBalance": "628561836940942212474",
+    "ethClaimableAfterRepair": "628435310369195629485",
+    "contractBalance": "628651972862942212474",
     "solvent": true,
-    "headroom": "216632281949559437"
+    "headroom": "216662493746582989"
   },
   "holderImpact": {
     "legacyRequestsReopened": 38,

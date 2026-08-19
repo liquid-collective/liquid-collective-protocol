@@ -106,7 +106,11 @@ export async function readPreUpgradeFromArchive(
   const rm = await redeemManagerAt(hre, archive);
   const at = { blockTag: UPGRADE_BLOCK - 1 };
   const out = new Map<number, RedeemRequest>();
-  for (let i = 0; i < (await requestCount(rm, at)); ++i) {
+  // Read the count once, as currentQueueHash already does. In the loop condition it was re-read every
+  // iteration, doubling the archive call volume and getting the endpoint to drop the connection part
+  // way through.
+  const count = await requestCount(rm, at);
+  for (let i = 0; i < count; ++i) {
     const d = await detail(rm, i, at);
     out.set(i, {
       amount: d.amount,
