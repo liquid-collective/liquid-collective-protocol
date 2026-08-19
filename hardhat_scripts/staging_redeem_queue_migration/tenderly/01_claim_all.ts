@@ -61,51 +61,11 @@ async function main() {
   }
   console.log(`open requests: ${open.length}\n`);
 
-  // Compare against the pre-upgrade truth before claiming anything, not once per claim inside the loop
-  // below. `netting` is built from `history`, which is the real network, so it cannot see claims made on
-  // the fork. A fork that has already been claimed against - a rerun of this script, or the smoke test
-  // at the end of hoodi/02_execute_repair.ts - therefore holds amounts legitimately below the netted
-  // pre-upgrade ones, and comparing per claim would report that correct queue as a failed repair.
-  //
-  // Checking up front also separates the two cases. An amount below the reference means the fork has
-  // moved on and there is nothing left to validate here; anything else different means the repair
-  // itself is wrong. Those need different answers, so they get different errors.
-  const drifted: string[] = [];
-  const wrong: string[] = [];
-  let compared = 0;
-  for (const id of open) {
-    const ref = pre.get(id);
-    // Requests created after the upgrade have no pre-upgrade record to compare against.
-    if (!ref) continue;
-    const cur = before.get(id)!;
-    const refAmount = netting.has(id) ? ref.amount.sub(netting.get(id)!.lsETH) : ref.amount;
-    compared += 1;
-
-    if (ref.recipient.toLowerCase() !== cur.recipient.toLowerCase()) {
-      wrong.push(`${id}: recipient ${cur.recipient}, expected ${ref.recipient}`);
-    }
-    if (cur.amount.lt(refAmount)) {
-      drifted.push(`${id}: ${eth(cur.amount)} < ${eth(refAmount)} LsETH`);
-    } else if (!cur.amount.eq(refAmount)) {
-      wrong.push(`${id}: amount ${cur.amount.toString()}, expected ${refAmount.toString()}`);
-    }
-  }
-
-  if (wrong.length) {
-    throw new Error(`pre-upgrade values were not preserved: ${wrong.slice(0, 8).join("; ")}`);
-  }
-  if (drifted.length) {
-    throw new Error(
-      "this fork has already been claimed against, so the pre-upgrade comparison cannot run: " +
-        `${drifted.slice(0, 8).join("; ")} - reset the Virtual TestNet and rerun`
-    );
-  }
-  console.log(`pre-upgrade comparison: ${compared} legacy request(s) match, recipients and amounts\n`);
-
   const rows: string[] = [];
   let claimedCount = 0;
   let pendingCount = 0;
-  let payoutMismatch = 0;
+  let recipientMismatch = 0;
+  let amountMismatch = 0;
   let totalPaid = hre.ethers.constants.Zero;
 
   for (const id of open) {
@@ -138,15 +98,26 @@ async function main() {
     totalPaid = totalPaid.add(paid);
     claimedCount += 1;
 
+    // Check against the pre-upgrade record rather than against what the chain says today.
+    const ref = pre.get(id);
+    let refRecipient = ref ? ref.recipient : "(created after the upgrade)";
+    let refAmount = ref ? ref.amount : null;
+    if (ref && netting.has(id)) refAmount = refAmount!.sub(netting.get(id)!.lsETH);
+
+    const recipientOk = !ref || ref.recipient.toLowerCase() === cur.recipient.toLowerCase();
+    const amountOk = !refAmount || refAmount.eq(cur.amount);
+    if (!recipientOk) recipientMismatch += 1;
+    if (!amountOk) amountMismatch += 1;
+
     const after = await retry<any>(() => rm.getRedeemRequestDetails(id));
     const settled = after.amount.isZero() ? "full" : `partial, ${eth(after.amount)} left`;
     const payoutOk = paid.eq(expectedEth);
-    if (!payoutOk) payoutMismatch += 1;
 
     rows.push(
       `  ${String(id).padStart(4)}  ${payoutOk ? "OK      " : "PAYOUT !"}  ${eth(paid).padStart(14)} ETH  ` +
-        `${settled.padEnd(24)} ${cur.recipient}` +
-        `${payoutOk ? "" : `  expected ${eth(expectedEth)} ETH`}`
+        `${settled.padEnd(24)} ${cur.recipient}  ` +
+        `${recipientOk ? "recipient ok" : "RECIPIENT MISMATCH vs " + refRecipient}  ` +
+        `${amountOk ? "amount ok" : "AMOUNT MISMATCH vs " + refAmount!.toString()}`
     );
   }
 
@@ -168,14 +139,16 @@ async function main() {
   console.log(`claimed            : ${claimedCount}`);
   console.log(`pending (uncovered): ${pendingCount}`);
   console.log(`total ETH paid out : ${eth(totalPaid)}`);
-  // Not fatal: expectedEth divides once per request while the contract prices each withdrawal event
-  // separately, so a request straddling the coverage boundary can differ by a few wei. Reported rather
-  // than thrown so a rounding difference is not mistaken for a broken payout.
-  console.log(`payout differences from expected    : ${payoutMismatch}`);
+  console.log(`recipient mismatches vs pre-upgrade : ${recipientMismatch}`);
+  console.log(`amount    mismatches vs pre-upgrade : ${amountMismatch}`);
   console.log(`\nstill open after claiming : ${stillOpenCount} requests, ${eth(stillOpen)} LsETH`);
   console.log(`redeemDemand()            : ${eth(demandAfter)} LsETH`);
   console.log(`RedeemManager balance     : ${eth(balAfter)} ETH`);
   console.log("=".repeat(96));
+
+  if (recipientMismatch || amountMismatch) {
+    throw new Error("pre-upgrade values were not preserved");
+  }
 }
 
 main().catch((e) => {
