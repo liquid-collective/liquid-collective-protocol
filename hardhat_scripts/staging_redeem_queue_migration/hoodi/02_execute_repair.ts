@@ -263,18 +263,52 @@ async function main() {
     30_000_000
   );
 
-  // Step 3: compare the repaired queue with preflight before allowing the original implementation back.
-  console.log("\n3 verify migration");
-  await verifyRepair(redeemManager, records);
+  // Step 3: compare the repaired queue with preflight.
+  //
+  // A failure here must not leave the recovery implementation installed. By this point the repair
+  // transaction has landed, so the one-off flag is already consumed and repairRedeemQueue can never run
+  // again - the recovery implementation is functionally just RedeemManagerV1 with a dead entry point, and
+  // keeping it on the proxy adds surface for nothing. A verify failure is also as likely to be a dropped
+  // RPC read partway through 125 record fetches as it is a bad repair. Restoring touches no queue state,
+  // so it costs nothing for a post-mortem either way.
+  //
+  // Deliberately not a try/finally: a throw from the restore inside `finally` would replace the
+  // verification error, which is the diagnostic that matters most. Catch it, restore exactly once, then
+  // decide which error to surface.
+  let verifyError: unknown;
+  try {
+    console.log("\n3 verify migration");
+    await verifyRepair(redeemManager, records);
+  } catch (error) {
+    verifyError = error;
+    console.error(`\n  VERIFICATION FAILED: ${(error as Error).message}`);
+    console.error("  restoring the original implementation first, then reporting this failure");
+  }
 
   // Step 4: remove the recovery surface and confirm the proxy points back to the original implementation.
   console.log("\n4 restore old implementation");
-  await send(signer!, "restore", PROXY_INTERFACE.encodeFunctionData("upgradeTo", [liveImplementation]), 500_000);
-  const restored = await readImplementation(provider);
-  if (restored.toLowerCase() !== liveImplementation.toLowerCase()) {
-    throw new Error(`restore did not take: implementation is ${restored}`);
+  const restoreCalldata = PROXY_INTERFACE.encodeFunctionData("upgradeTo", [liveImplementation]);
+  try {
+    await send(signer!, "restore", restoreCalldata, 500_000);
+    const restored = await readImplementation(provider);
+    if (restored.toLowerCase() !== liveImplementation.toLowerCase()) {
+      throw new Error(`restore did not take: implementation is ${restored}`);
+    }
+    console.log(`  implementation back to ${restored}`);
+  } catch (restoreError) {
+    // The recovery implementation is still installed. That is the more urgent of the two problems, so
+    // it wins, but the verification failure is printed above so both are in the transcript.
+    console.error("\n  RESTORE FAILED - the recovery implementation is still installed. Submit manually:");
+    console.error(`    to        ${REDEEM_MANAGER_PROXY_ADMIN}`);
+    console.error(`    calldata  ${restoreCalldata}`);
+    throw restoreError;
   }
-  console.log(`  implementation back to ${restored}`);
+
+  // Surface the verification failure now that the proxy is back on the reviewed implementation. Stops
+  // short of the smoke test below, which would be meaningless against a queue that did not verify.
+  if (verifyError) {
+    throw verifyError;
+  }
 
   // Fork-only smoke test: claim one repaired request and report the actual ETH paid. Gated on the
   // chain id so it can never be switched on against real holders' funds.
