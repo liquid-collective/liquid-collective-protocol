@@ -75,7 +75,7 @@ export async function redeemManagerAt(
 }
 
 /// Chunked getLogs, because public endpoints cap the block range.
-async function scanLogs(
+export async function scanLogs(
   rm: EthersType.Contract,
   filter: EthersType.EventFilter,
   from: number,
