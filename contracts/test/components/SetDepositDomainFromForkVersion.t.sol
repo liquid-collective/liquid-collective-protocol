@@ -25,9 +25,6 @@ contract SetDepositDomainFromForkVersionTest is Test {
         verifier = new AttestationVerifierV1();
         LibImplementationUnbricker.unbrick(vm, address(verifier));
 
-        // onlyRiverAdmin resolves via IAdministrable(RiverAddress.get()).getAdmin()
-        vm.mockCall(river, abi.encodeWithSignature("getAdmin()"), abi.encode(admin));
-
         address[] memory rootAttesters = new address[](1);
         rootAttesters[0] = makeAddr("rootAttester");
         address[] memory consolidationAttesters = new address[](1);
@@ -36,7 +33,7 @@ contract SetDepositDomainFromForkVersionTest is Test {
         // init with bytes4(0) — accepted here because the default Foundry chain (31337) is unknown,
         // so init is permissive; the strict admin setter below is what enforces correctness.
         verifier.initAttestationVerifierV1(
-            river, makeAddr("buffer"), rootAttesters, 1, bytes4(0), consolidationAttesters, 1
+            admin, river, makeAddr("buffer"), rootAttesters, 1, bytes4(0), consolidationAttesters, 1
         );
     }
 
@@ -94,7 +91,7 @@ contract SetDepositDomainFromForkVersionTest is Test {
         assertEq(verifier.DEPOSIT_DOMAIN(), expected, "unknown chain should accept the supplied value");
     }
 
-    /// @dev Only River's admin may call.
+    /// @dev Only the verifier's admin may call.
     function testRevert_notAdmin() public {
         vm.chainId(1);
         address stranger = makeAddr("stranger");
@@ -120,7 +117,9 @@ contract SetDepositDomainFromForkVersionTest is Test {
         rootAttesters[0] = makeAddr("rootAttester");
         address[] memory consolidationAttesters = new address[](1);
         consolidationAttesters[0] = makeAddr("consolidationAttester");
-        v.initAttestationVerifierV1(river, makeAddr("buffer"), rootAttesters, 1, forkVersion, consolidationAttesters, 1);
+        v.initAttestationVerifierV1(
+            admin, river, makeAddr("buffer"), rootAttesters, 1, forkVersion, consolidationAttesters, 1
+        );
     }
 
     /// @dev init reverts at deploy on a known chain when the fork version is wrong.

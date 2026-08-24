@@ -112,12 +112,6 @@ contract AttestationDepositHarness is ConsensusLayerDepositManagerV1 {
         _admin = admin_;
     }
 
-    /// @notice Exposes the harness's admin so the AttestationVerifier's
-    ///         `onlyRiverAdmin` cross-contract lookup (IAdministrable.getAdmin) works.
-    function getAdmin() external view returns (address) {
-        return _admin;
-    }
-
     function getOperatorsRegistry() external view returns (address) {
         return operatorsRegistry;
     }
@@ -326,7 +320,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         verifier = new AttestationVerifierV1();
         LibImplementationUnbricker.unbrick(vm, address(verifier));
         verifier.initAttestationVerifierV1(
-            address(dm), address(buffer), rootAttesters, 2, bytes4(0), consolidationCommitteeAttesters, 1
+            admin, address(dm), address(buffer), rootAttesters, 2, bytes4(0), consolidationCommitteeAttesters, 1
         );
 
         // 3. Wire the verifier address into the harness.
@@ -1326,7 +1320,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         pubkeys[0] = _fakePubkey(640);
 
         // The removal hook has the same governance blast radius as migration, so it must
-        // use the River admin check instead of allowing arbitrary callers to clear keys.
+        // use the admin check instead of allowing arbitrary callers to clear keys.
         vm.prank(stranger);
         vm.expectRevert(abi.encodeWithSelector(LibErrors.Unauthorized.selector, stranger));
         verifier.removePrePectraValidatorPubkeys(pubkeys);
@@ -1877,9 +1871,9 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     }
 
     /// @dev The `onlyRiver` modifier compares msg.sender against the River CONTRACT address
-    ///      (RiverAddress.get()), NOT the River admin EOA. Calling as the admin must still
+    ///      (RiverAddress.get()), NOT the verifier's admin EOA. Calling as the admin must still
     ///      revert with `LibErrors.Unauthorized(admin)`. Documents the distinction from
-    ///      `onlyRiverAdmin` so future refactors don't conflate the two gates.
+    ///      `onlyAdmin` so future refactors don't conflate the two gates.
     function testRevert_recordNewlyFundedPubkeys_notRiverAdmin() public {
         bytes[] memory pubkeys = new bytes[](1);
         pubkeys[0] = _fakePubkey(0xBEEF);
@@ -1992,7 +1986,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     }
 
     // -----------------------------------------------------------------------
-    // Admin setters — happy paths + onlyRiverAdmin gate
+    // Admin setters — happy paths + onlyAdmin gate
     // -----------------------------------------------------------------------
 
     /// @dev Admin can register a new attester; count increments; the attester becomes recognised.
@@ -2012,7 +2006,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         assertEq(verifier.getRootAttesterCount(), 3);
     }
 
-    /// @dev Non-admin caller must be rejected by onlyRiverAdmin.
+    /// @dev Non-admin caller must be rejected by onlyAdmin.
     function testRevert_setRootAttester_unauthorized() public {
         address stranger = address(0xC0FFEE);
         vm.prank(stranger);
@@ -2113,7 +2107,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         LibImplementationUnbricker.unbrick(vm, address(freshVerifier));
         address[] memory empty = new address[](0);
         vm.expectRevert(LibErrors.InvalidArgument.selector);
-        freshVerifier.initAttestationVerifierV1(address(dm), address(buffer), empty, 1, bytes4(0), empty, 1);
+        freshVerifier.initAttestationVerifierV1(admin, address(dm), address(buffer), empty, 1, bytes4(0), empty, 1);
     }
 
     /// @dev Cannot init with a root quorum of zero. This is distinct from an empty
@@ -2128,7 +2122,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
         vm.expectRevert(IAttestationVerifierV1.ZeroQuorum.selector);
         freshVerifier.initAttestationVerifierV1(
-            address(dm), address(buffer), rootAttesters, 0, bytes4(0), consolidationAttesters, 1
+            admin, address(dm), address(buffer), rootAttesters, 0, bytes4(0), consolidationAttesters, 1
         );
     }
 
@@ -2147,7 +2141,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
         vm.expectRevert(LibErrors.InvalidArgument.selector);
         freshVerifier.initAttestationVerifierV1(
-            address(dm), address(buffer), tooManyRootAttesters, 1, bytes4(0), consolidationAttesters, 1
+            admin, address(dm), address(buffer), tooManyRootAttesters, 1, bytes4(0), consolidationAttesters, 1
         );
     }
 
@@ -2159,7 +2153,9 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         attesters[0] = rootAttester1;
         attesters[1] = rootAttester2;
         vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.QuorumExceedsRootAttesterCount.selector, 3, 2));
-        freshVerifier.initAttestationVerifierV1(address(dm), address(buffer), attesters, 3, bytes4(0), attesters, 3);
+        freshVerifier.initAttestationVerifierV1(
+            admin, address(dm), address(buffer), attesters, 3, bytes4(0), attesters, 3
+        );
     }
 
     /// @dev Cannot add an attester that would push the total past MAX_ROOT_ATTESTERS.
@@ -2217,7 +2213,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(IAttestationVerifierV1.QuorumExceedsMaxSignatures.selector, max + 1, max)
         );
-        fresh.initAttestationVerifierV1(address(dm), address(buffer), atts, max + 1, bytes4(0), atts, max + 1);
+        fresh.initAttestationVerifierV1(admin, address(dm), address(buffer), atts, max + 1, bytes4(0), atts, max + 1);
     }
 
     /// @dev Admin cannot set quorum > MAX_SIGNATURES via the post-init setter. Distinct code
@@ -2344,7 +2340,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         atts[0] = makeAddr("a");
         atts[1] = makeAddr("b");
         vm.expectRevert(abi.encodeWithSelector(Initializable.InvalidInitialization.selector, 0, 1));
-        verifier.initAttestationVerifierV1(address(dm), address(buffer), atts, 1, bytes4(0), atts, 1);
+        verifier.initAttestationVerifierV1(admin, address(dm), address(buffer), atts, 1, bytes4(0), atts, 1);
     }
 
     // -----------------------------------------------------------------------

@@ -230,6 +230,7 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
         address[] memory _initConsolidationCommitteeAttesters = new address[](1);
         _initConsolidationCommitteeAttesters[0] = makeAddr("consolidationCommitteeAttesterStub");
         attestationVerifier.initAttestationVerifierV1(
+            admin,
             address(river),
             address(depositBuffer),
             _initRootAttesters,
