@@ -93,8 +93,18 @@ contract RiverMock {
         return (balance * 1e18) / rate;
     }
 
+    /// @notice Reports a stopped-earning amount valued at the mock's current rate, the way River values
+    ///         it from its pre-report snapshot
     function sudoReportStoppedEarning(address redeemManager, uint256 stoppedEarningEth) external {
-        RedeemManagerV1(redeemManager).reportStoppedEarning(stoppedEarningEth);
+        RedeemManagerV1(redeemManager).reportStoppedEarning(stoppedEarningEth, (stoppedEarningEth * 1e18) / rate);
+    }
+
+    /// @notice Reports a stopped-earning amount with an explicitly chosen LsETH leg, so tests can pin the
+    ///         locked rate to something other than the mock's live rate
+    function sudoReportStoppedEarningAt(address redeemManager, uint256 stoppedEarningEth, uint256 stoppedEarningLsETH)
+        external
+    {
+        RedeemManagerV1(redeemManager).reportStoppedEarning(stoppedEarningEth, stoppedEarningLsETH);
     }
 
     function pullExceedingEth(address redeemManager, uint256 amount) external {
@@ -1859,6 +1869,55 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         // a second report has nothing left to mark and must not push an empty mark
         river.sudoReportStoppedEarning(address(redeemManager), 100e18);
         assertEq(redeemManager.getRateMarkCount(), 1);
+    }
+
+    /// The locked rate is the (eth, LsETH) pair River passes in, and nothing else. River values the
+    /// delta from its pre-report snapshot; by the time this call lands River has already applied the
+    /// report and minted the interval's fee, so reading the rate live here would credit the redeemer
+    /// with the very interval during which their principal stopped earning.
+    function testMarkUsesReportedPairNotLiveRate() external {
+        address user = _generateAllowlistedUser(0);
+        river.sudoSetRate(1e18);
+        uint32 id = _openRequest(user, 30e18);
+
+        // River reports 30 LsETH of principal valued at its pre-report rate of 1.02, while its live
+        // rate has already rebased to 1.1
+        river.sudoSetRate(1.1e18);
+        river.sudoReportStoppedEarningAt(address(redeemManager), applyRate(30e18, 1.02e18), 30e18);
+
+        RateMarkStack.RateMark memory mark = redeemManager.getRateMarkDetails(0);
+        assertEq(mark.amount, 30e18);
+        assertEq(mark.markedEth, applyRate(30e18, 1.02e18));
+
+        // and the cap follows the mark, not the rate the pool ended the interval on
+        uint256 received = _settleAndClaim(id, 30e18, 1.1e18);
+        assertEq(received, applyRate(30e18, 1.02e18));
+        assertEq(redeemManager.getBufferedExceedingEth(), applyRate(30e18, 1.1e18) - applyRate(30e18, 1.02e18));
+    }
+
+    /// When the reported principal overshoots the markable demand, the eth leg must be scaled down in
+    /// the same proportion as the LsETH leg: the clamp shortens the marked span, it must not re-rate
+    /// it. testReportStoppedEarningClampsToMarkableDemand runs at a 1:1 rate, where a mis-scaled eth
+    /// leg is indistinguishable from a correct one.
+    function testClampedMarkPreservesReportedRate() external {
+        address user = _generateAllowlistedUser(0);
+        river.sudoSetRate(1e18);
+        uint32 id = _openRequest(user, 30e18);
+
+        // 100 LsETH of principal stopped earning at a rate of 1.05, but only 30 LsETH is markable
+        uint256 reportedEth = applyRate(100e18, 1.05e18);
+        vm.expectEmit(true, true, true, true);
+        emit StoppedEarningExceededMarkableDemand(100e18, 30e18);
+        river.sudoReportStoppedEarningAt(address(redeemManager), reportedEth, 100e18);
+
+        RateMarkStack.RateMark memory mark = redeemManager.getRateMarkDetails(0);
+        assertEq(mark.amount, 30e18);
+        assertEq(mark.markedEth, applyRate(30e18, 1.05e18));
+        // the locked rate survives the clamp exactly
+        assertEq(mark.markedEth * 100e18, reportedEth * 30e18);
+
+        river.sudoSetRate(1.05e18);
+        assertEq(_settleAndClaim(id, 30e18, 1.05e18), applyRate(30e18, 1.05e18));
     }
 
     /// Marks never cover demand that a withdrawal event has already priced. Otherwise a redeemer
