@@ -64,6 +64,7 @@ library LibOracleReporting {
         uint256 totalExternalConsolidationETHIncrease;
         uint256 totalExitViaConsolidationETHIncrease;
         uint256 stoppedEarningAmountIncrease;
+        uint256 stoppedEarningLsETH;
         uint256 timeElapsedSinceLastReport;
         uint256 availableAmountToUpperBound;
         IOracleManagerV1.ConsensusLayerDataReportingTrace trace;
@@ -204,6 +205,19 @@ library LibOracleReporting {
 
         // we retrieve the current total underlying balance before any reporting data is applied to the system
         vars.preReportUnderlyingBalance = ISharesManagerV1(address(this)).totalUnderlyingSupply();
+
+        // the stopped-earning delta is valued here, at the PREVIOUS interval's rate, and carried down to
+        // the reportStoppedEarning call as data. This is the last point where the conversion views are
+        // meaningful: _pullCLFunds below credits the exited and skimmed eth to the buffers while
+        // LastConsensusLayerReport still counts the same eth in validatorsBalance, so the asset balance is
+        // double counted until the stored report is updated, and past that point it already carries this
+        // interval's rewards and the fee mint. Valuing it here is the whole point of the mark: principal
+        // that crossed exit_epoch must stop accruing pool rewards from that moment, so the demand it backs
+        // may not be credited with the very interval during which it stopped earning.
+        if (vars.stoppedEarningAmountIncrease > 0) {
+            vars.stoppedEarningLsETH =
+                ISharesManagerV1(address(this)).sharesFromUnderlyingBalance(vars.stoppedEarningAmountIncrease);
+        }
 
         // if we have new exited / skimmed eth available, we pull funds from the consensus layer recipient
         if (vars.exitedAmountIncrease + vars.skimmedAmountIncrease > 0) {
@@ -362,16 +376,22 @@ library LibOracleReporting {
         );
 
         // we mark the pending redeem demand whose backing principal stopped earning in this interval, at
-        // this report's rate. This must run BEFORE _reportWithdrawToRedeemManager: settlement burns the
-        // corresponding shares and removes that LsETH from the redeem demand, so demand settled in this
-        // same report would otherwise never be marked and would be paid at its request-time rate.
+        // the rate that was in force before this report was applied. The two arguments are the same
+        // amount denominated in eth and in LsETH, both valued at the pre-report snapshot taken above, and
+        // their ratio is the rate the mark locks. It is passed as data rather than read here on purpose:
+        // by this point the stored report and the fee mint have landed, so anything the redeem manager
+        // could read from River would be this interval's rate.
+        // This must run BEFORE _reportWithdrawToRedeemManager: settlement burns the corresponding shares
+        // and removes that LsETH from the redeem demand, so demand settled in this same report would
+        // otherwise never be marked and would be paid at its request-time rate.
         // Called unconditionally on a non-zero delta — the cumulative validatorsStoppedEarningBalance was
         // already persisted above, so skipping the call would discard the delta permanently. In
         // particular it is NOT gated on slashing containment: containment freezes new exits while leaving
         // settlement priced at the depressed rate, which lengthens a queued redeemer's wait, so
         // suspending accrual there would penalise them twice.
         if (vars.stoppedEarningAmountIncrease > 0) {
-            IRedeemManagerV1(RedeemManagerAddress.get()).reportStoppedEarning(vars.stoppedEarningAmountIncrease);
+            IRedeemManagerV1(RedeemManagerAddress.get())
+                .reportStoppedEarning(vars.stoppedEarningAmountIncrease, vars.stoppedEarningLsETH);
         }
 
         // we use the updated balanceToRedeem value to report a withdraw event on the redeem manager
