@@ -373,22 +373,41 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
     /// @return found True if any mark starts at or before `_height`
     /// @return index The index of that mark
     function _findRateMarkAtOrBefore(uint256 _height) internal view returns (bool found, uint256 index) {
+        // Answers one question: which is the last mark that STARTS at or before `_height`?
+        // It does not answer whether that mark reaches `_height`. The stack is not contiguous, so the mark
+        // returned may end well below it — checking coverage is left to the caller.
         RateMarkStack.RateMark[] storage rateMarks = RateMarkStack.get();
         uint256 length = rateMarks.length;
+
+        // Nothing starts early enough: either the stack is empty, or `_height` is below the very first
+        // mark. Handled up front so that the search can treat index 0 as a valid candidate.
         if (length == 0 || rateMarks[0].height > _height) {
             return (false, 0);
         }
+
+        // Marks are stored in ascending order of start, so the search halves the range rather than
+        // scanning it. The two bounds read as:
+        //   `low`  — the best candidate so far, always a mark starting at or before `_height`
+        //   `high` — the furthest index that could still beat it
         uint256 low = 0;
         uint256 high = length - 1;
         while (low < high) {
-            // bias upward so the loop always makes progress
+            // Rounded up, which keeps `mid > low` and so guarantees progress. Rounding down would give
+            // `mid == low` whenever `high == low + 1`, and the `low = mid` branch below would then leave
+            // both bounds untouched, looping forever.
             uint256 mid = (low + high + 1) / 2;
             if (rateMarks[mid].height <= _height) {
+                // starts early enough and sits further right than the current candidate, so it becomes
+                // the candidate and everything below it is now irrelevant
                 low = mid;
             } else {
+                // starts too late, so it and everything above it are out. `mid` is at least 1 here, being
+                // strictly above `low`, so the decrement cannot underflow.
                 high = mid - 1;
             }
         }
+
+        // the bounds have met, and they meet on the answer
         return (true, low);
     }
 
@@ -412,31 +431,52 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
         view
         returns (uint256 cap)
     {
+        // MODEL: all LsETH ever queued for redemption forms a single ascending axis, oldest demand first.
+        // This slice is one interval on that axis. Rate marks are ascending, disjoint intervals on the same
+        // axis, each recording that the principal backing it stopped earning and the eth it was worth at
+        // that moment. The function performs an ordered walk over the slice, splitting it at every mark
+        // boundary and valuing each sub-range at the rate that applies to it: a mark's locked rate where
+        // one covers it, the request-time rate everywhere else.
         RateMarkStack.RateMark[] storage rateMarks = RateMarkStack.get();
         uint256 markCount = rateMarks.length;
 
+        // walk state: `position` is the next position on the axis to value, `remaining` the part of the
+        // slice not yet accumulated into `cap`
         uint256 position = _sliceStart;
         uint256 remaining = _sliceAmount;
 
+        // seek the entry point rather than scanning from the head of the stack: marks are ascending and
+        // disjoint, so the only candidate that can cover `position` is the last mark starting at or before
+        // it
         (bool found, uint256 index) = _findRateMarkAtOrBefore(position);
         if (!found) {
-            // the slice starts before every mark; the first mark, if any, is the next boundary
+            // the slice starts below every mark, so enter at the head of the stack: the uncovered-range
+            // branch below values everything up to the first mark's start
             index = 0;
         }
 
         while (remaining > 0) {
             if (index >= markCount) {
-                // past the end of the stack: the rest of the slice is unmarked
+                // the walk has passed the last mark, so no mark can cover the remainder of the slice: it
+                // is uncovered by construction and is valued in full at the request-time rate
                 cap += (remaining * _anchor.ethAtRequest) / _anchor.lsETHAtRequest;
                 return cap;
             }
 
+            // the candidate mark, covering the half-open interval [markStart, markEnd)
             RateMarkStack.RateMark storage mark = rateMarks[index];
             uint256 markStart = mark.height;
             uint256 markEnd = markStart + mark.amount;
 
+            // case 1 — `position` lies in the uncovered range below the candidate mark
             if (position < markStart) {
-                // gap before this mark: pay the request-time rate up to the mark's start
+                // marks are ascending, so nothing covers [position, markStart): no report ever valued this
+                // range, there is no locked rate to apply, and it therefore retains the request-time rate.
+                // This is a statement about mark coverage alone and not about the provenance of the
+                // settling eth: eth is fungible in the redeem buffer and marks are placed on the oldest
+                // unsettled demand, so an uncovered range may well be settled with eth from principal that
+                // did stop earning, whose mark was clamped, rounded to zero or placed over other demand.
+                // Advance to the mark's start, or to the end of the slice if that comes first.
                 uint256 gap = markStart - position;
                 if (gap > remaining) {
                     gap = remaining;
@@ -444,15 +484,23 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
                 cap += (gap * _anchor.ethAtRequest) / _anchor.lsETHAtRequest;
                 position += gap;
                 remaining -= gap;
+                // `index` is deliberately not advanced: the candidate mark was not consumed and remains
+                // the candidate for the new `position`
                 continue;
             }
 
+            // case 2 — the candidate mark terminates at or below `position` and so covers no part of the
+            // slice
             if (position >= markEnd) {
-                // this mark is entirely behind the slice
+                // the seek only guarantees `markStart <= position`; because the stack is not contiguous the
+                // mark it returns may end below `position`. Discard it and test the next one.
                 ++index;
                 continue;
             }
 
+            // case 3 — `position` lies within [markStart, markEnd), the case the mark exists for: this
+            // range stopped earning, so it is valued at the mark's locked rate (`markedEth` per `amount`)
+            // instead of the request-time rate, up to the mark's end or the end of the slice
             uint256 take = markEnd - position;
             if (take > remaining) {
                 take = remaining;
@@ -460,6 +508,7 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
             cap += (take * mark.markedEth) / mark.amount;
             position += take;
             remaining -= take;
+            // the candidate mark is now consumed up to its end; continue from the next one
             ++index;
         }
     }
