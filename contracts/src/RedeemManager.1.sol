@@ -259,7 +259,7 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
             WithdrawalStack.WithdrawalEvent({height: height, amount: _lsETHWithdrawable, withdrawnEth: msgValue})
         );
         unchecked {
-            _setRedeemDemand(redeemDemand - _lsETHWithdrawable);
+            _setRedeemDemand(redeemDemand, redeemDemand - _lsETHWithdrawable);
         }
         emit ReportedWithdrawal(height, _lsETHWithdrawable, msgValue, withdrawalEventId);
     }
@@ -327,9 +327,10 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
 
     /// @inheritdoc IRedeemManagerV1
     function pullExceedingEth(uint256 _max) external onlyRiver {
-        uint256 amountToSend = LibUint256.min(BufferedExceedingEth.get(), _max);
+        uint256 bufferedExceedingEth = BufferedExceedingEth.get();
+        uint256 amountToSend = LibUint256.min(bufferedExceedingEth, _max);
         if (amountToSend > 0) {
-            BufferedExceedingEth.set(BufferedExceedingEth.get() - amountToSend);
+            BufferedExceedingEth.set(bufferedExceedingEth - amountToSend);
             _castedRiver().sendRedeemManagerExceedingFunds{value: amountToSend}();
         }
     }
@@ -459,7 +460,8 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
             // the candidate mark, covering the half-open interval [markStart, markEnd)
             RateMarkStack.RateMark storage mark = rateMarks[markIndex];
             uint256 markStart = mark.height;
-            uint256 markEnd = markStart + mark.amount;
+            uint256 markAmount = mark.amount;
+            uint256 markEnd = markStart + markAmount;
 
             // case 1 — `sliceCursor` lies in the uncovered range below the candidate mark
             if (sliceCursor < markStart) {
@@ -483,7 +485,10 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
             if (sliceCursor >= markEnd) {
                 // the seek only guarantees `markStart <= sliceCursor`; because the stack is not contiguous
                 // the mark it returns may end below `sliceCursor`. Discard it and test the next one.
-                ++markIndex;
+                unchecked {
+                    // bounded by `markCount`, which is the length of a storage array
+                    ++markIndex;
+                }
                 continue;
             }
 
@@ -495,11 +500,14 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
             if (markedAmount > remainingAmount) {
                 markedAmount = remainingAmount;
             }
-            cap += (markedAmount * mark.markedEth) / mark.amount;
+            cap += (markedAmount * mark.markedEth) / markAmount;
             sliceCursor += markedAmount;
             remainingAmount -= markedAmount;
             // the candidate mark is now consumed up to its end; continue from the next one
-            ++markIndex;
+            unchecked {
+                // bounded by `markCount`, which is the length of a storage array
+                ++markIndex;
+            }
         }
     }
 
@@ -602,7 +610,8 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
         if (_lsETHAmount == 0) {
             revert InvalidZeroAmount();
         }
-        if (!_castedRiver().transferFrom(msg.sender, address(this), _lsETHAmount)) {
+        IRiverV1 river = _castedRiver();
+        if (!river.transferFrom(msg.sender, address(this), _lsETHAmount)) {
             revert TransferError();
         }
         RedeemQueueV2.RedeemRequest[] storage redeemRequests = RedeemQueueV2.get();
@@ -613,7 +622,7 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
             height = previousRedeemRequest.height + previousRedeemRequest.amount;
         }
 
-        uint256 maxRedeemableEth = _castedRiver().underlyingBalanceFromShares(_lsETHAmount);
+        uint256 maxRedeemableEth = river.underlyingBalanceFromShares(_lsETHAmount);
 
         redeemRequests.push(
             RedeemQueueV2.RedeemRequest({
@@ -631,7 +640,8 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
         RedeemRequestAnchor.get()[redeemRequestId] =
             RedeemRequestAnchor.Anchor({lsETHAtRequest: _lsETHAmount, ethAtRequest: maxRedeemableEth});
 
-        _setRedeemDemand(RedeemDemand.get() + _lsETHAmount);
+        uint256 redeemDemand = RedeemDemand.get();
+        _setRedeemDemand(redeemDemand, redeemDemand + _lsETHAmount);
 
         emit RequestedRedeem(_recipient, height, _lsETHAmount, maxRedeemableEth, redeemRequestId);
     }
@@ -669,10 +679,12 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
     /// @notice Internal utility to save a redeem request to storage
     /// @param _params The parameters of the claim redeem request call
     function _saveRedeemRequest(ClaimRedeemRequestParameters memory _params) internal {
-        RedeemQueueV2.RedeemRequest[] storage redeemRequests = RedeemQueueV2.get();
-        redeemRequests[_params.redeemRequestId].height = _params.redeemRequest.height;
-        redeemRequests[_params.redeemRequestId].amount = _params.redeemRequest.amount;
-        redeemRequests[_params.redeemRequestId].maxRedeemableEth = _params.redeemRequest.maxRedeemableEth;
+        // The element pointer is taken once: the queue lives at a raw keccak slot, so each
+        // `redeemRequests[id]` would otherwise re-derive the element offset from scratch.
+        RedeemQueueV2.RedeemRequest storage redeemRequest = RedeemQueueV2.get()[_params.redeemRequestId];
+        redeemRequest.height = _params.redeemRequest.height;
+        redeemRequest.amount = _params.redeemRequest.amount;
+        redeemRequest.maxRedeemableEth = _params.redeemRequest.maxRedeemableEth;
     }
 
     /// @notice Internal utility to claim a redeem request if possible
@@ -723,8 +735,13 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
             // of the next withdrawal event
             // the end position of a redeem request (height + amount) is an invariant that never changes throughout the lifetime of a request
             // this end position is used to define the starting position of the next redeem request
-            _params.redeemRequest.height += vars.matchingAmount;
-            _params.redeemRequest.amount -= vars.matchingAmount;
+            unchecked {
+                // `matchingAmount` is a `min()` against `redeemRequest.amount` above, so the
+                // decrement cannot underflow; the end position it preserves is bounded by the total
+                // LsETH ever queued, so the increment cannot overflow.
+                _params.redeemRequest.height += vars.matchingAmount;
+                _params.redeemRequest.amount -= vars.matchingAmount;
+            }
             // Saturating. For a pre-upgrade request this is exact, because the cap above is derived from
             // this very field and so can never exceed it. For a marked request the payout may legitimately
             // exceed the request-time budget, and this subtraction is checked arithmetic — an unguarded
@@ -815,12 +832,19 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
             }
 
             // we load the redeem request in memory
-            params.redeemRequest = redeemRequests[_redeemRequestIds[idx]];
+            params.redeemRequest = redeemRequests[params.redeemRequestId];
 
             if (allowList.isDenied(params.redeemRequest.recipient)) {
                 revert ClaimRecipientIsDenied();
             }
-            if (allowList.isDenied(params.redeemRequest.initiator)) {
+            // `isDenied` is a view over a single account, so when the initiator IS the recipient the
+            // check above has already answered for it and the second call would be redundant. The
+            // two errors stay distinguishable: this branch is only skipped when the addresses are
+            // equal, in which case a denial would already have reverted as ClaimRecipientIsDenied.
+            if (
+                params.redeemRequest.initiator != params.redeemRequest.recipient
+                    && allowList.isDenied(params.redeemRequest.initiator)
+            ) {
                 revert ClaimInitiatorIsDenied();
             }
 
@@ -834,7 +858,7 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
             }
 
             // we load the withdrawal event in memory
-            params.withdrawalEvent = withdrawalEvents[_withdrawalEventIds[idx]];
+            params.withdrawalEvent = withdrawalEvents[params.withdrawalEventId];
 
             // now that both entities are loaded in memory, we verify that they indeed match, otherwise we revert
             if (!_isMatch(params.redeemRequest, params.withdrawalEvent)) {
@@ -856,7 +880,7 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
                 }
             }
             emit ClaimedRedeemRequest(
-                _redeemRequestIds[idx],
+                params.redeemRequestId,
                 params.redeemRequest.recipient,
                 params.ethAmount,
                 params.lsETHAmount,
@@ -866,9 +890,12 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
     }
 
     /// @notice Internal utility to set the redeem demand
+    /// @dev The old value is passed in rather than re-read: both call sites already hold it in a
+    ///      local to compute the new one, so reloading it here would only pay for a second SLOAD.
+    /// @param _oldValue The current value, emitted as the previous demand
     /// @param _newValue The new value to set
-    function _setRedeemDemand(uint256 _newValue) internal {
-        emit SetRedeemDemand(RedeemDemand.get(), _newValue);
+    function _setRedeemDemand(uint256 _oldValue, uint256 _newValue) internal {
+        emit SetRedeemDemand(_oldValue, _newValue);
         RedeemDemand.set(_newValue);
     }
 
