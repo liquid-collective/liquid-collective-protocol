@@ -385,29 +385,22 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
             return (false, 0);
         }
 
-        // Marks are stored in ascending order of start, so the search halves the range rather than
-        // scanning it. The two bounds read as:
-        //   `low`  — the best candidate so far, always a mark starting at or before `_height`
-        //   `high` — the furthest index that could still beat it
+        // Binary search for the rightmost mark with `height <= _height`.
         uint256 low = 0;
         uint256 high = length - 1;
         while (low < high) {
-            // Rounded up, which keeps `mid > low` and so guarantees progress. Rounding down would give
-            // `mid == low` whenever `high == low + 1`, and the `low = mid` branch below would then leave
-            // both bounds untouched, looping forever.
+            // Round up so `mid` is always greater than `low`.
             uint256 mid = (low + high + 1) / 2;
             if (rateMarks[mid].height <= _height) {
-                // starts early enough and sits further right than the current candidate, so it becomes
-                // the candidate and everything below it is now irrelevant
+                // Valid candidate; try to move right.
                 low = mid;
             } else {
-                // starts too late, so it and everything above it are out. `mid` is at least 1 here, being
-                // strictly above `low`, so the decrement cannot underflow.
+                // Too far right; search left side.
                 high = mid - 1;
             }
         }
 
-        // the bounds have met, and they meet on the answer
+        // `low` is the last mark that starts at or before `_height`.
         return (true, low);
     }
 
@@ -440,76 +433,73 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
         RateMarkStack.RateMark[] storage rateMarks = RateMarkStack.get();
         uint256 markCount = rateMarks.length;
 
-        // walk state: `position` is the next position on the axis to value, `remaining` the part of the
-        // slice not yet accumulated into `cap`
-        uint256 position = _sliceStart;
-        uint256 remaining = _sliceAmount;
+        // walk state: `sliceCursor` is the next position on the axis to value, `remainingAmount` the part
+        // of the slice not yet accumulated into `cap`
+        uint256 sliceCursor = _sliceStart;
+        uint256 remainingAmount = _sliceAmount;
 
         // seek the entry point rather than scanning from the head of the stack: marks are ascending and
-        // disjoint, so the only candidate that can cover `position` is the last mark starting at or before
-        // it
-        (bool found, uint256 index) = _findRateMarkAtOrBefore(position);
-        if (!found) {
+        // disjoint, so the only candidate that can cover `sliceCursor` is the last mark starting at or
+        // before it
+        (bool markFound, uint256 markIndex) = _findRateMarkAtOrBefore(sliceCursor);
+        if (!markFound) {
             // the slice starts below every mark, so enter at the head of the stack: the uncovered-range
             // branch below values everything up to the first mark's start
-            index = 0;
+            markIndex = 0;
         }
 
-        while (remaining > 0) {
-            if (index >= markCount) {
+        while (remainingAmount > 0) {
+            if (markIndex >= markCount) {
                 // the walk has passed the last mark, so no mark can cover the remainder of the slice: it
                 // is uncovered by construction and is valued in full at the request-time rate
-                cap += (remaining * _anchor.ethAtRequest) / _anchor.lsETHAtRequest;
+                cap += (remainingAmount * _anchor.ethAtRequest) / _anchor.lsETHAtRequest;
                 return cap;
             }
 
             // the candidate mark, covering the half-open interval [markStart, markEnd)
-            RateMarkStack.RateMark storage mark = rateMarks[index];
+            RateMarkStack.RateMark storage mark = rateMarks[markIndex];
             uint256 markStart = mark.height;
             uint256 markEnd = markStart + mark.amount;
 
-            // case 1 — `position` lies in the uncovered range below the candidate mark
-            if (position < markStart) {
-                // marks are ascending, so nothing covers [position, markStart): no report ever valued this
-                // range, there is no locked rate to apply, and it therefore retains the request-time rate.
-                // This is a statement about mark coverage alone and not about the provenance of the
-                // settling eth: eth is fungible in the redeem buffer and marks are placed on the oldest
-                // unsettled demand, so an uncovered range may well be settled with eth from principal that
-                // did stop earning, whose mark was clamped, rounded to zero or placed over other demand.
-                // Advance to the mark's start, or to the end of the slice if that comes first.
-                uint256 gap = markStart - position;
-                if (gap > remaining) {
-                    gap = remaining;
+            // case 1 — `sliceCursor` lies in the uncovered range below the candidate mark
+            if (sliceCursor < markStart) {
+                // No mark over [sliceCursor, markStart) means no locked report rate applies there,
+                // so that interval keeps the request-time rate.
+                // Coverage does not imply ETH source (buffer ETH is fungible); advance to min(markStart, sliceEnd).
+                uint256 unmarkedAmount = markStart - sliceCursor;
+                if (unmarkedAmount > remainingAmount) {
+                    unmarkedAmount = remainingAmount;
                 }
-                cap += (gap * _anchor.ethAtRequest) / _anchor.lsETHAtRequest;
-                position += gap;
-                remaining -= gap;
-                // `index` is deliberately not advanced: the candidate mark was not consumed and remains
-                // the candidate for the new `position`
+                cap += (unmarkedAmount * _anchor.ethAtRequest) / _anchor.lsETHAtRequest;
+                sliceCursor += unmarkedAmount;
+                remainingAmount -= unmarkedAmount;
+                // `markIndex` is deliberately not advanced: the candidate mark was not consumed and
+                // remains the candidate for the new `sliceCursor`
                 continue;
             }
 
-            // case 2 — the candidate mark terminates at or below `position` and so covers no part of the
-            // slice
-            if (position >= markEnd) {
-                // the seek only guarantees `markStart <= position`; because the stack is not contiguous the
-                // mark it returns may end below `position`. Discard it and test the next one.
-                ++index;
+            // case 2 — the candidate mark terminates at or below `sliceCursor` and so covers no part of
+            // the slice
+            if (sliceCursor >= markEnd) {
+                // the seek only guarantees `markStart <= sliceCursor`; because the stack is not contiguous
+                // the mark it returns may end below `sliceCursor`. Discard it and test the next one.
+                ++markIndex;
                 continue;
             }
 
-            // case 3 — `position` lies within [markStart, markEnd), the case the mark exists for: this
-            // range stopped earning, so it is valued at the mark's locked rate (`markedEth` per `amount`)
-            // instead of the request-time rate, up to the mark's end or the end of the slice
-            uint256 take = markEnd - position;
-            if (take > remaining) {
-                take = remaining;
+            // case 3 — `sliceCursor` lies within [markStart, markEnd), the case the mark exists for: this
+            // range stopped earning, so it is valued at the mark's locked rate, which is the mark's whole
+            // `markedEth` per its whole `amount`, instead of the request-time rate. `markedAmount` below is
+            // only the portion of that mark consumed here: up to the mark's end, or the end of the slice.
+            uint256 markedAmount = markEnd - sliceCursor;
+            if (markedAmount > remainingAmount) {
+                markedAmount = remainingAmount;
             }
-            cap += (take * mark.markedEth) / mark.amount;
-            position += take;
-            remaining -= take;
+            cap += (markedAmount * mark.markedEth) / mark.amount;
+            sliceCursor += markedAmount;
+            remainingAmount -= markedAmount;
             // the candidate mark is now consumed up to its end; continue from the next one
-            ++index;
+            ++markIndex;
         }
     }
 
