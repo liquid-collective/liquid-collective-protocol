@@ -81,11 +81,12 @@ contract RedemptionRoundingAndCapsTests is RedemptionTestBase {
     ///           ETH it has not received. The sum of the three payouts is exactly the event's
     ///           `withdrawnEth` minus 1 wei of truncation dust.
     /// @dev The dust is deliberate and quantified below: each payout is
-    ///      `(amount_i * withdrawnEth) / 60e18`, three independent floors of a value whose fractional
-    ///      parts are 2/3, 1/3 and 1/2. Those fractions sum to 1.5, of which 1 whole wei is lost to the
-    ///      three floors (the remaining 0.5 was never a whole wei to begin with). The lost wei is NOT
-    ///      routed to `BufferedExceedingEth` - it simply stays in the RedeemManager's ETH balance, where
-    ///      it is neither claimable by a redeemer nor pullable by River via `pullExceedingEth`.
+    ///      `(amount_i * withdrawnEth) / 60e18`, three independent floors. With `withdrawnEth == 61e18 - 1`
+    ///      the exact shares are W/6, W/3 and W/2, so the fractional parts are 1/2, 0 and 1/2 - B's third
+    ///      divides exactly, A's and C's halves do not. The two halves sum to exactly 1 wei, and that is
+    ///      the whole of the loss. The lost wei is NOT routed to `BufferedExceedingEth` - it simply stays
+    ///      in the RedeemManager's ETH balance, where it is neither claimable by a redeemer nor pullable by
+    ///      River via `pullExceedingEth`.
     function testCapAboveWithdrawalEventStillClampsToEventEth() external {
         _upgradeToV1_3();
         address userA = _generateAllowlistedUser(0);
@@ -111,7 +112,7 @@ contract RedemptionRoundingAndCapsTests is RedemptionTestBase {
         assertEq((30e18 * mark.markedEth) / mark.amount, 60e18);
 
         // one withdrawal event settles all 60 LsETH but carries only 61 ETH minus 1 wei - far below the
-        // 120 ETH of aggregate cap, and deliberately not divisible by the three request sizes
+        // 120 ETH of aggregate cap, and chosen so two of the three pro-rata divisions truncate
         uint256 withdrawnEth = 61e18 - 1;
         vm.deal(address(this), withdrawnEth);
         river.sudoReportWithdraw{value: withdrawnEth}(address(redeemManager), 60e18);
@@ -363,8 +364,13 @@ contract RedemptionRoundingAndCapsTests is RedemptionTestBase {
     /// Expected: `reportStoppedEarning`'s dual-nonzero guard absorbs every degenerate pair without
     ///           reverting and without pushing an empty mark, a genuine full-supply report then marks the
     ///           whole axis through the un-clamped branch (no division at all), and the claim settles.
-    /// @dev The zero legs are what make the trailing `(stoppedEarningEth * lsETHToMark) / reportedLsETH`
-    ///      unconditionally safe: `reportedLsETH` is the guarded value, so it can never be 0 there.
+    /// @dev What this pins is the absence of a mark, not the safety of the trailing
+    ///      `(stoppedEarningEth * lsETHToMark) / reportedLsETH`. That division is guarded by the
+    ///      `lsETHToMark == 0` return, not by the zero-leg check here: a zero `reportedLsETH` forces
+    ///      `lsETHToMark == 0`, so `lsETHToMark > markable` is never true and the clamp is skipped
+    ///      entirely. Cases (b) and (d) below therefore never reach the division, and would not reach it
+    ///      even if the `|| _stoppedEarningLsETH == 0` term were deleted. The denominator bound is pinned
+    ///      at its boundary in `RateMarkPlacementTests.testClampedMarkDivisionOnlyRunsWithADenominatorOfTwoOrMore`.
     function testEntireSupplyQueuedThenDegenerateStoppedEarningReports() external {
         _upgradeToV1_3();
         address user = _generateAllowlistedUser(0);
@@ -381,7 +387,8 @@ contract RedemptionRoundingAndCapsTests is RedemptionTestBase {
         assertEq(redeemManager.getRateMarkCount(), 0);
 
         // (b) zero LsETH leg with a non-zero eth leg: exactly what River passes when its own
-        // `sharesFromUnderlyingBalance` degenerates to 0. Guarded, because dividing by it would panic.
+        // `sharesFromUnderlyingBalance` degenerates to 0. Dropped, because a mark of 0 LsETH would
+        // record credit against no demand.
         river.sudoReportStoppedEarningAt(address(redeemManager), 5e18, 0);
         assertEq(redeemManager.getRateMarkCount(), 0);
 

@@ -370,10 +370,14 @@ contract RedemptionInvariantsTest is RedemptionMirror {
     /// @custom:attribute The rate mark floor observed before the most recent handler action
     uint256 internal ghost_lastFloor;
 
-    /// @dev Assertion failures raised inside a handler-driven call would be rolled back together with
-    ///      that call under `fail_on_revert = false`, so violations are recorded into the ghost
-    ///      counters above and asserted from the `invariant_` functions, which the fuzzer evaluates
-    ///      outside the handler's call frame.
+    /// @dev Violations are recorded into the ghost counters above and asserted from the `invariant_`
+    ///      functions rather than asserted in place. Not because an in-frame assertion would be lost:
+    ///      ds-test's `fail()` writes the flag via `vm.store(HEVM_ADDRESS, "failed", 1)`, which Foundry
+    ///      intercepts outside the EVM journal, so it survives both the handler frame and
+    ///      `fail_on_revert = false`. What is lost is the DIAGNOSIS - an in-frame failure surfaces as
+    ///      `[FAIL: <empty revert data>]` on every invariant at once, with the message gone. Recording the
+    ///      offending delta in a ghost and asserting it from a named `invariant_` keeps the message and
+    ///      points at one property.
     function setUp() public override {
         super.setUp();
 
@@ -429,11 +433,14 @@ contract RedemptionInvariantsTest is RedemptionMirror {
     // ─── handler action wrappers (own the cheatcodes and the ghost accounting) ──
 
     /// @notice Opens a request and records its immutable end position for I3.
+    /// @dev The push relies on ids staying dense and sequential, so that `ghost_endPositions[i]` is the
+    ///      record for request `i`. That is not asserted here: an in-frame assertion would lose its
+    ///      message per the note on `setUp`, and `invariant_RequestEndPositionIsImmutable` already
+    ///      catches any divergence via its length check, with a message and outside the handler frame.
     function handler_openRequest(uint256 actorIdx, uint256 amount) external {
         ghost_lastFloor = redeemManager.getRateMarkFloor();
         uint32 id = _openRequest(actors[actorIdx], amount);
         RedeemQueueV2.RedeemRequest memory request = redeemManager.getRedeemRequestDetails(id);
-        assertEq(uint256(id), ghost_endPositions.length, "queue ids must stay dense and sequential");
         ghost_endPositions.push(request.height + request.amount);
     }
 
