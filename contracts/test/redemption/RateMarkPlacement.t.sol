@@ -85,10 +85,17 @@ contract RateMarkPlacementTests is RedemptionTestBase {
     /// Scenario: River reports a non-zero ETH leg with a zero LsETH leg. This is how River's conversion
     /// surfaces on a degenerate pool -- `sharesFromUnderlyingBalance` returns 0 when there are no shares
     /// or no asset balance -- so it is a reachable state, not a fuzz artifact.
-    /// Expected: early return. No mark, no event, and critically no revert: `markedEth` divides by
-    /// `reportedLsETH`, so the zero-LsETH guard is the only thing standing between this call and a
-    /// Panic(0x12). The contract is not wedged afterwards.
-    function testReportStoppedEarningWithZeroLsETHLegDoesNotDivideByZero() external {
+    /// Expected: early return at the dual-nonzero guard. No mark, no event, and the report path is not
+    /// poisoned for the well-formed delta that follows.
+    /// @dev This test does NOT pin the safety of the clamped-mark division, and the guard it exercises is
+    ///      not what makes that division safe -- deleting `|| _stoppedEarningLsETH == 0` from
+    ///      `reportStoppedEarning` leaves this whole suite green. A zero `reportedLsETH` forces
+    ///      `lsETHToMark == 0`, so `lsETHToMark > markable` is never true, the clamp (and with it the
+    ///      division) is skipped, and the `lsETHToMark == 0` return fires first. The zero-LsETH leg guard
+    ///      is a cheap early-out that saves four SLOADs, nothing more; it is observationally identical to
+    ///      its own absence. What actually bounds the denominator is asserted in
+    ///      `testClampedMarkDivisionOnlyRunsWithADenominatorOfTwoOrMore` below.
+    function testReportStoppedEarningWithZeroLsETHLegIsDiscarded() external {
         address user = _generateAllowlistedUser(0);
         river.sudoSetRate(1e18);
         uint32 id = _openRequest(user, 30e18);
@@ -97,10 +104,11 @@ contract RateMarkPlacementTests is RedemptionTestBase {
         vm.recordLogs();
         river.sudoReportStoppedEarningAt(address(redeemManager), 30e18, 0);
 
-        // returns cleanly rather than reverting on the `_stoppedEarningEth * lsETHToMark / reportedLsETH`
-        // division that a clamped mark would perform
+        // returns cleanly, records nothing, and leaves the axis exactly as it was
         assertEq(vm.getRecordedLogs().length, 0, "zero LsETH leg must emit nothing");
         assertEq(redeemManager.getRateMarkCount(), 0);
+        assertEq(_markCursor(), 0);
+        assertEq(redeemManager.getRedeemDemand(), 30e18);
 
         // the report path is not poisoned: a well-formed delta immediately after still marks normally
         river.sudoSetRate(1.05e18);
@@ -111,6 +119,46 @@ contract RateMarkPlacementTests is RedemptionTestBase {
 
         // and only that second delta is reflected in the payout
         assertEq(_settleAndClaim(id, 30e18, 1.05e18), applyRate(30e18, 1.05e18));
+    }
+
+    /// Scenario: the tightest state in which the clamped-mark rescaling
+    /// `(_stoppedEarningEth * lsETHToMark) / reportedLsETH` actually executes -- 1 wei of markable demand
+    /// against a reported LsETH leg of 2 wei.
+    /// Expected: the division runs, with a denominator of 2, and truncates 3/2 down to 1 wei.
+    /// @dev This is the test that pins the division's safety, which neither zero-leg test above does.
+    ///      The rescaling is reached only from the `lsETHToMark > markable` branch, and only after the
+    ///      `lsETHToMark == 0` return has been passed, so at that point
+    ///      `reportedLsETH > markable == lsETHToMark >= 1` and the denominator is at least 2 by
+    ///      construction -- which is why no reachable state can divide by zero there, with or without the
+    ///      zero-LsETH-leg early-out. Asserted at the boundary: a denominator of 2 is the smallest the
+    ///      division can ever be handed, since `reportedLsETH == 1` would need `markable == 0` to clamp,
+    ///      and that returns at `lsETHToMark == 0` instead.
+    function testClampedMarkDivisionOnlyRunsWithADenominatorOfTwoOrMore() external {
+        address user = _generateAllowlistedUser(0);
+        river.sudoSetRate(1e18);
+        // exactly 1 wei of markable demand, so `markable == 1` is the clamp target
+        uint32 id = _openRequest(user, 1);
+
+        // 2 wei of principal worth 3 wei: over-reported, so the eth leg is rescaled rather than taken
+        // verbatim, which is the only path that divides
+        vm.expectEmit(true, true, true, true);
+        emit StoppedEarningExceededMarkableDemand(2, 1);
+        river.sudoReportStoppedEarningAt(address(redeemManager), 3, 2);
+
+        RateMarkStack.RateMark memory mark = redeemManager.getRateMarkDetails(0);
+        assertEq(mark.height, 0);
+        assertEq(mark.amount, 1);
+        // (3 * 1) / 2 == 1, truncated down from 1.5 in the protocol's favour
+        assertEq(mark.markedEth, 1);
+        assertEq(mark.markedEth, (uint256(3) * mark.amount) / 2);
+        _assertMarkStackWellFormed(id);
+
+        // the mark is real and prices the payout: an event offering 3 wei for the 1 wei of demand is
+        // clamped to the locked 1 wei, so the division's result is what the redeemer is actually held to
+        vm.deal(address(this), 3);
+        river.sudoReportWithdraw{value: 3}(address(redeemManager), 1);
+        assertEq(_claim(id), 1);
+        assertEq(redeemManager.getBufferedExceedingEth(), 2);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
