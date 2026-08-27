@@ -122,10 +122,6 @@ contract AttestationDepositHarness is ConsensusLayerDepositManagerV1 {
         return operatorsRegistry;
     }
 
-    function _getRiverAdmin() internal view override returns (address) {
-        return _admin;
-    }
-
     function _setCommittedBalance(uint256 v) internal override {
         CommittedBalance.set(v);
     }
