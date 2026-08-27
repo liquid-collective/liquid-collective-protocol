@@ -3765,6 +3765,667 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         assertEq(redeemManager.getBufferedExceedingEth(), we.withdrawnEth - mark.markedEth);
     }
 
+    // ── Shared scaffolding for the end-to-end stopped-earning settlement tests below ──
+    //
+    // Every test in this block drives the real `setConsensusLayerData` pipeline: no direct calls into
+    // the redeem manager, so the ordering inside LibOracleReporting (pull CL funds -> rebase -> fee mint
+    // -> rebalance -> reportStoppedEarning -> reportWithdraw -> skim -> commit) is exercised as deployed.
+
+    /// @dev 1000 frames between reports. Long enough that the upper reporting bound (10% APR) leaves room
+    ///      for the multi-ETH rate moves these tests need, so every report stays inside the bound.
+    uint256 private constant REPORT_GAP = uint256(epochsPerFrame) * 1000;
+    /// @dev alice's pool deposit, and the LsETH she queues for redemption out of it.
+    uint256 private constant SEED_DEPOSIT = 64 ether;
+    uint256 private constant SEED_REDEEM_LSETH = 8e18;
+    /// @dev CL rewards landed by the scaffold's first report. 16 < maxIncrease(64 ETH, 1000 frames) ~ 17.53.
+    uint256 private constant SEED_CL_REWARD = 16 ether;
+
+    /// @dev A blank, always-valid report body; callers override only the fields under test.
+    ///      `exitedETHPerOperator` is `[total]` with no per-operator cells, i.e. "no exits reported".
+    function _baseReport(uint256 epoch) private pure returns (IOracleManagerV1.ConsensusLayerReport memory clr) {
+        clr.epoch = epoch;
+        clr.totalDepositedActivatedETH = 0;
+        clr.exitedETHPerOperator = new uint256[](1);
+        clr.activeCLETHPerOperator = new uint256[](1);
+    }
+
+    /// @dev Same, but reporting the single operator's cumulative exited ETH. `_setExitedETH` requires
+    ///      element 0 to be the sum of the per-operator cells, so both cells carry the same value, and
+    ///      the array may never shrink again on a later report.
+    function _exitReport(uint256 epoch, uint256 cumulativeExitedEth)
+        private
+        pure
+        returns (IOracleManagerV1.ConsensusLayerReport memory clr)
+    {
+        clr = _baseReport(epoch);
+        clr.validatorsExitedBalance = cumulativeExitedEth;
+        clr.exitedETHPerOperator = new uint256[](2);
+        clr.exitedETHPerOperator[0] = cumulativeExitedEth;
+        clr.exitedETHPerOperator[1] = cumulativeExitedEth;
+    }
+
+    /// @dev Common scaffold. alice deposits 64 ETH and queues 8 LsETH at the genesis 1:1 rate, so her
+    ///      anchor is exactly 8 ETH for 8e18 LsETH — a rate of one wei per 1e-18 LsETH, which is what
+    ///      lets the tests below add a raw LsETH amount to an ETH amount when spelling out a blended cap.
+    ///      One rewards-only report then lands 16 ETH of CL rewards, so by the time the report under test
+    ///      runs the pool rate is strictly above her request rate and a mark taken at that rate is
+    ///      distinguishable from both the anchor and the settling report's own rate.
+    /// @return epoch1 The epoch of that first report. The report under test uses `epoch1 + REPORT_GAP`.
+    function _seedAppreciatedRequest() private returns (uint256 epoch1) {
+        _initRiverMinimalForReporting();
+        epoch1 = REPORT_GAP;
+        uint256 maxIncrease = _seedRedeemDemandAndBound(SEED_DEPOSIT, SEED_REDEEM_LSETH, epoch1);
+        assertGt(maxIncrease, SEED_CL_REWARD, "seed reward must fit under the upper reporting bound");
+
+        // the anchor is frozen at request time and never moves again; every expected payout below is
+        // quoted against it
+        RedeemRequestAnchor.Anchor memory anchor = redeemManager.getRedeemRequestAnchor(0);
+        assertEq(anchor.lsETHAtRequest, SEED_REDEEM_LSETH);
+        assertEq(anchor.ethAtRequest, 8 ether);
+
+        IOracleManagerV1.ConsensusLayerReport memory clr = _baseReport(epoch1);
+        clr.validatorsBalance = SEED_CL_REWARD; // pure rewards: no exit, no rebalance, no stopped earning
+        vm.prank(address(oracle));
+        river.setConsensusLayerData(clr);
+
+        // 64 + 16 ETH, minus the 5% fee minted as shares: the request is now worth strictly more than
+        // the 8 ETH it was opened at, and nothing has been marked or settled yet.
+        assertGt(river.underlyingBalanceFromShares(SEED_REDEEM_LSETH), 8 ether);
+        assertEq(redeemManager.getRateMarkCount(), 0);
+        assertEq(redeemManager.getWithdrawalEventCount(), 0);
+        // the whole deposit buffer was committed for staking, so any later rebalance has to be funded by
+        // a fresh deposit — which is what makes "filled from the deposit buffer" unambiguous below.
+        assertEq(river.getBalanceToDeposit(), 0);
+    }
+
+    /// @dev Refills River's deposit buffer with a fresh deposit from an unrelated account. Depositing at
+    ///      the prevailing rate does not move that rate, so this only changes which buffer holds the ETH.
+    function _refillDepositBuffer(uint256 amount) private {
+        address filler = makeAddr("bufferFiller");
+        _allowDeposit(filler);
+        vm.deal(filler, amount);
+        vm.prank(filler);
+        river.deposit{value: amount}();
+        assertEq(river.getBalanceToDeposit(), amount);
+    }
+
+    /// @dev Claims redeem request 0 starting at withdrawal event 0 and returns the ETH alice received.
+    function _claimAlice(uint16 depth) private returns (uint256 received) {
+        uint32[] memory ids = new uint32[](1);
+        uint32[] memory eventIds = new uint32[](1);
+        address alice = makeAddr("alice");
+        uint256 balanceBefore = alice.balance;
+        redeemManager.claimRedeemRequests(ids, eventIds, true, depth);
+        received = alice.balance - balanceBefore;
+    }
+
+    /// @dev Mirrors LibOracleReporting._maxIncrease for a report covering `lastEpoch`..`epoch`. Must be
+    ///      called on the state the report will see, i.e. after any warp and any deposit.
+    function _maxIncreaseBetween(uint256 lastEpoch, uint256 epoch) private view returns (uint256) {
+        uint256 elapsed = (epoch - lastEpoch) * slotsPerEpoch * secondsPerSlot;
+        return (river.totalUnderlyingSupply() * river.getReportBounds().annualAprUpperBound * elapsed)
+            / (LibBasisPoints.BASIS_POINTS_MAX * 365 days);
+    }
+
+    /// **Scenario:** a post-upgrade request is filled entirely out of the deposit buffer — rebalance mode
+    /// on, no validator exit, no stopped-earning delta — while the pool rate has risen since the request
+    /// was opened.
+    /// **Expected:** nothing is marked, so `_sliceCap` values the whole slice at the request-time anchor
+    /// rate and the redeemer is paid exactly `rate_at_request`. The withdrawal event was funded at the
+    /// (higher) current rate, so the difference is redirected to `BufferedExceedingEth` rather than paid
+    /// out. Rebalanced buffer ETH on its own never earns a redeemer any yield.
+    function testDepositBufferFillWithoutMarkPaysRequestRate() public {
+        uint256 epoch1 = _seedAppreciatedRequest();
+
+        // fund the rebalance: 32 ETH is comfortably more than the ~9.9 ETH the 8 LsETH demand is now worth
+        _refillDepositBuffer(32 ether);
+
+        // report 2 carries no rewards of its own (validatorsBalance unchanged), so the rate it prices the
+        // fill at is exactly the rate observable right now
+        uint256 expectedFill = river.underlyingBalanceFromShares(SEED_REDEEM_LSETH);
+        assertGt(expectedFill, 8 ether, "the pool must have appreciated since the request");
+
+        uint256 epoch2 = epoch1 + REPORT_GAP;
+        _warpToFinalizedEpoch(epoch2);
+        IOracleManagerV1.ConsensusLayerReport memory clr = _baseReport(epoch2);
+        clr.validatorsBalance = SEED_CL_REWARD;
+        clr.rebalanceDepositToRedeemMode = true;
+        vm.prank(address(oracle));
+        river.setConsensusLayerData(clr);
+
+        // no exit was ever reported and the withdraw contract was never funded, so every wei of this fill
+        // came out of the deposit buffer
+        assertEq(river.getLastConsensusLayerReport().validatorsExitedBalance, 0);
+        assertEq(address(withdraw).balance, 0);
+
+        // no stopped-earning delta means no mark, anywhere on the axis
+        assertEq(redeemManager.getRateMarkCount(), 0);
+
+        assertEq(redeemManager.getWithdrawalEventCount(), 1);
+        WithdrawalStack.WithdrawalEvent memory we = redeemManager.getWithdrawalEventDetails(0);
+        assertEq(we.height, 0);
+        assertEq(we.amount, SEED_REDEEM_LSETH);
+        assertEq(we.withdrawnEth, expectedFill);
+
+        // paid the request-time anchor to the wei, not the richer rate the event was funded at
+        uint256 received = _claimAlice(type(uint16).max);
+        assertEq(received, 8 ether);
+        assertEq(redeemManager.getBufferedExceedingEth(), expectedFill - 8 ether);
+    }
+
+    /// **Scenario:** identical to the test above — the fill is funded purely by a deposit-buffer rebalance,
+    /// with no validator exit anywhere in the report — except that a stopped-earning delta is reported in
+    /// that same report.
+    /// **Expected:** the request IS marked and IS paid at the mark rate. Marks are positional, not
+    /// source-attributed: `reportStoppedEarning` runs before `_reportWithdrawToRedeemManager` and places the
+    /// mark at the head of unsettled demand regardless of which pot of ETH ends up paying, because ETH in
+    /// River is fungible. The mark, priced at the pre-report rate, caps a payout the report would otherwise
+    /// have made at the (higher) post-report rate.
+    function testDepositBufferFillIsMarkedWhenStoppedEarningLandsSameReport() public {
+        uint256 epoch1 = _seedAppreciatedRequest();
+        _refillDepositBuffer(32 ether);
+
+        // 12 ETH of principal crossed exit_epoch. Valued at the CURRENT (pre-report) rate that is ~9.7
+        // LsETH, more than the 8 LsETH of markable demand, so the mark is clamped down to the demand and
+        // its eth leg is scaled in the same proportion — preserving the locked rate exactly.
+        uint256 stoppedEarningEth = 12 ether;
+        uint256 reportedLsETH = river.sharesFromUnderlyingBalance(stoppedEarningEth);
+        assertGt(reportedLsETH, SEED_REDEEM_LSETH);
+        uint256 expectedMarkedEth = (stoppedEarningEth * SEED_REDEEM_LSETH) / reportedLsETH;
+
+        uint256 epoch2 = epoch1 + REPORT_GAP;
+        _warpToFinalizedEpoch(epoch2);
+        IOracleManagerV1.ConsensusLayerReport memory clr = _baseReport(epoch2);
+        // +8 ETH of fresh rewards in this report, so the rate the fill is priced at is strictly above the
+        // rate the mark locks; without this the mark and the event would price identically and the test
+        // could not tell which one bound.
+        clr.validatorsBalance = SEED_CL_REWARD + 8 ether;
+        clr.validatorsStoppedEarningBalance = stoppedEarningEth;
+        clr.rebalanceDepositToRedeemMode = true;
+        vm.expectEmit(true, true, true, true);
+        emit StoppedEarningExceededMarkableDemand(reportedLsETH, SEED_REDEEM_LSETH);
+        vm.prank(address(oracle));
+        river.setConsensusLayerData(clr);
+
+        // the fungibility property: no exit ETH existed in this report at all
+        assertEq(river.getLastConsensusLayerReport().validatorsExitedBalance, 0);
+        assertEq(address(withdraw).balance, 0);
+
+        assertEq(redeemManager.getRateMarkCount(), 1);
+        RateMarkStack.RateMark memory mark = redeemManager.getRateMarkDetails(0);
+        assertEq(mark.height, 0, "mark sits at the head of unsettled demand");
+        assertEq(mark.amount, SEED_REDEEM_LSETH);
+        assertEq(mark.markedEth, expectedMarkedEth);
+        assertGt(mark.markedEth, 8 ether, "the mark is richer than the request-time anchor");
+
+        WithdrawalStack.WithdrawalEvent memory we = redeemManager.getWithdrawalEventDetails(0);
+        assertEq(we.amount, SEED_REDEEM_LSETH);
+        assertGt(we.withdrawnEth, mark.markedEth, "the cap, not the event, must be the binding constraint");
+
+        uint256 received = _claimAlice(type(uint16).max);
+        assertEq(received, mark.markedEth);
+        assertEq(redeemManager.getBufferedExceedingEth(), we.withdrawnEth - mark.markedEth);
+    }
+
+    /// **Scenario:** one request is filled in two pieces — a small deposit-buffer rebalance settles the
+    /// front of it with no stopped-earning delta, and a later exit-funded report settles the remainder
+    /// while a stopped-earning delta lands.
+    /// **Expected:** two withdrawal events. The first slice sits below every mark, so it keeps the
+    /// request-time rate; the mark for the second report starts at the settled height (marks may only
+    /// cover demand that is still unsettled) and covers the tail exactly, so the tail is paid at the mark
+    /// rate. A claim with depth >= 2 walks both events and pays the blended sum.
+    function testDepositFillThenExitFillPaysBlendedRequestAndMarkRates() public {
+        uint256 epoch1 = _seedAppreciatedRequest();
+
+        // only 4 ETH of buffer against a ~9.9 ETH demand: the rebalance can settle less than half of it
+        _refillDepositBuffer(4 ether);
+
+        uint256 epoch2 = epoch1 + REPORT_GAP;
+        _warpToFinalizedEpoch(epoch2);
+        IOracleManagerV1.ConsensusLayerReport memory clr2 = _baseReport(epoch2);
+        clr2.validatorsBalance = SEED_CL_REWARD; // no rewards this report, so the rate does not move
+        clr2.rebalanceDepositToRedeemMode = true;
+        vm.prank(address(oracle));
+        river.setConsensusLayerData(clr2);
+
+        // partial fill, and nothing marked: the first slice will be valued at the anchor rate
+        assertEq(redeemManager.getRateMarkCount(), 0);
+        assertEq(redeemManager.getWithdrawalEventCount(), 1);
+        WithdrawalStack.WithdrawalEvent memory we1 = redeemManager.getWithdrawalEventDetails(0);
+        assertEq(we1.height, 0);
+        assertEq(we1.withdrawnEth, 4 ether);
+        assertLt(we1.amount, SEED_REDEEM_LSETH, "the deposit buffer must not have covered the request");
+
+        // report 3: the exit sweep lands. Over-fund it so the remaining demand is settled in full and the
+        // event's LsETH leg is exactly the outstanding demand (no re-derivation, hence no rounding).
+        uint256 exitedEth = 12 ether;
+        vm.deal(address(withdraw), exitedEth);
+
+        uint256 stoppedEarningEth = 12 ether;
+        uint256 reportedLsETH = river.sharesFromUnderlyingBalance(stoppedEarningEth);
+        uint256 markable = SEED_REDEEM_LSETH - we1.amount;
+        assertGt(reportedLsETH, markable, "the delta must over-cover, so the mark clamps to the tail");
+        uint256 expectedMarkedEth = (stoppedEarningEth * markable) / reportedLsETH;
+
+        uint256 epoch3 = epoch2 + REPORT_GAP;
+        _warpToFinalizedEpoch(epoch3);
+        IOracleManagerV1.ConsensusLayerReport memory clr3 = _exitReport(epoch3, exitedEth);
+        // 16 - 12 swept out of the CL balance, +8 of fresh rewards: the settling rate ends up above the
+        // pre-report rate the mark is priced at, so the mark binds on the tail.
+        clr3.validatorsBalance = SEED_CL_REWARD - exitedEth + 8 ether;
+        clr3.validatorsStoppedEarningBalance = stoppedEarningEth;
+        vm.prank(address(oracle));
+        river.setConsensusLayerData(clr3);
+
+        assertEq(redeemManager.getWithdrawalEventCount(), 2);
+        WithdrawalStack.WithdrawalEvent memory we2 = redeemManager.getWithdrawalEventDetails(1);
+        assertEq(we2.height, we1.amount, "the second event starts where the first ended");
+        assertEq(we2.amount, markable);
+
+        // the mark starts at the settled height, not at 0: the already-settled slice keeps its own price
+        assertEq(redeemManager.getRateMarkCount(), 1);
+        RateMarkStack.RateMark memory mark = redeemManager.getRateMarkDetails(0);
+        assertEq(mark.height, we1.amount);
+        assertEq(mark.amount, markable);
+        assertEq(mark.markedEth, expectedMarkedEth);
+        assertGt(we2.withdrawnEth, mark.markedEth, "the cap must bind on the tail slice");
+
+        // depth 2 lets the single claim walk both events. The anchor rate is exactly one wei per 1e-18
+        // LsETH, so the unmarked front slice is worth `we1.amount` wei; the marked tail is worth the
+        // mark's whole locked value because the mark covers it exactly.
+        uint256 received = _claimAlice(2);
+        assertEq(received, we1.amount + mark.markedEth);
+        assertGt(received, 8 ether, "the blended payout beats a flat request-rate payout");
+        assertEq(
+            redeemManager.getBufferedExceedingEth(),
+            (we1.withdrawnEth - we1.amount) + (we2.withdrawnEth - mark.markedEth)
+        );
+    }
+
+    /// **Scenario:** a single report whose `BalanceToRedeem` is exit ETH PLUS rebalanced deposit ETH, all
+    /// of it consumed by one request, with a stopped-earning delta smaller than that request.
+    /// **Expected:** one blended withdrawal event. The mark is placed at the head of the demand and only
+    /// covers as much of it as stopped earning, so the very same request is paid at the mark rate over its
+    /// front and at the request-time rate over its tail. The gap above the mark is not a bug: it is exactly
+    /// the LsETH whose backing principal never stopped earning.
+    function testBlendedExitAndDepositFillMarksOnlyHeadSlice() public {
+        uint256 epoch1 = _seedAppreciatedRequest();
+
+        // 4 ETH of exit + up to 6 ETH of buffer against a ~9.9 ETH demand: neither source alone suffices
+        uint256 exitedEth = 4 ether;
+        vm.deal(address(withdraw), exitedEth);
+        _refillDepositBuffer(6 ether);
+
+        // a small delta: ~2.42 LsETH of the 8 LsETH request stopped earning, the rest did not
+        uint256 stoppedEarningEth = 3 ether;
+        uint256 expectedMarkAmount = river.sharesFromUnderlyingBalance(stoppedEarningEth);
+        assertLt(expectedMarkAmount, SEED_REDEEM_LSETH, "the mark must not cover the whole request");
+        uint256 expectedFill = river.underlyingBalanceFromShares(SEED_REDEEM_LSETH);
+
+        uint256 epoch2 = epoch1 + REPORT_GAP;
+        _warpToFinalizedEpoch(epoch2);
+        IOracleManagerV1.ConsensusLayerReport memory clr = _exitReport(epoch2, exitedEth);
+        // the swept ETH leaves validatorsBalance and reappears in BalanceToRedeem, so the pool is flat
+        // over this report and the fill is priced at the same rate the mark locks
+        clr.validatorsBalance = SEED_CL_REWARD - exitedEth;
+        clr.validatorsStoppedEarningBalance = stoppedEarningEth;
+        clr.rebalanceDepositToRedeemMode = true;
+        vm.prank(address(oracle));
+        river.setConsensusLayerData(clr);
+
+        // one event, covering the request in full, funded by strictly more than the exit alone provided
+        assertEq(redeemManager.getWithdrawalEventCount(), 1);
+        WithdrawalStack.WithdrawalEvent memory we = redeemManager.getWithdrawalEventDetails(0);
+        assertEq(we.height, 0);
+        assertEq(we.amount, SEED_REDEEM_LSETH);
+        assertEq(we.withdrawnEth, expectedFill);
+        assertGt(we.withdrawnEth, exitedEth, "the exit alone could not have funded this event");
+
+        assertEq(redeemManager.getRateMarkCount(), 1);
+        RateMarkStack.RateMark memory mark = redeemManager.getRateMarkDetails(0);
+        assertEq(mark.height, 0);
+        assertEq(mark.amount, expectedMarkAmount);
+        assertEq(mark.markedEth, stoppedEarningEth);
+        assertLt(mark.amount, we.amount, "only the head slice is covered");
+
+        // cap = marked head at the locked rate + unmarked tail at the anchor rate (one wei per 1e-18 LsETH)
+        uint256 expectedPayout = mark.markedEth + (SEED_REDEEM_LSETH - mark.amount);
+        assertLt(expectedPayout, we.withdrawnEth, "the cap must bind, otherwise this proves nothing");
+        uint256 received = _claimAlice(type(uint16).max);
+        assertEq(received, expectedPayout);
+        assertGt(received, 8 ether, "the marked head earned more than the flat request rate");
+        assertEq(redeemManager.getBufferedExceedingEth(), we.withdrawnEth - expectedPayout);
+    }
+
+    /// **Scenario:** the canonical positional-marking proof. Validators cross exit_epoch at report N, so a
+    /// stopped-earning delta is reported then — but the sweep ETH does not land until report N+2. In
+    /// between, at report N+1, a deposit-buffer rebalance fills the request.
+    /// **Expected:** the mark taken at N still covers the position at N+1, so the deposit-funded fill is
+    /// paid at the N mark rate. Marks are positions on the cumulative LsETH axis, and ETH in River is
+    /// fungible; nothing ties a mark to the ETH that eventually settles it.
+    function testMarkFromEarlierReportPricesLaterDepositBufferFill() public {
+        uint256 epoch1 = _seedAppreciatedRequest();
+
+        // ── report N: the principal stops earning, but nothing is available to settle with ──
+        uint256 stoppedEarningEth = 12 ether;
+        uint256 reportedLsETH = river.sharesFromUnderlyingBalance(stoppedEarningEth);
+        assertGt(reportedLsETH, SEED_REDEEM_LSETH);
+        uint256 expectedMarkedEth = (stoppedEarningEth * SEED_REDEEM_LSETH) / reportedLsETH;
+
+        uint256 epochN = epoch1 + REPORT_GAP;
+        _warpToFinalizedEpoch(epochN);
+        IOracleManagerV1.ConsensusLayerReport memory clrN = _baseReport(epochN);
+        clrN.validatorsBalance = SEED_CL_REWARD;
+        clrN.validatorsStoppedEarningBalance = stoppedEarningEth;
+        vm.prank(address(oracle));
+        river.setConsensusLayerData(clrN);
+
+        assertEq(redeemManager.getRateMarkCount(), 1);
+        RateMarkStack.RateMark memory mark = redeemManager.getRateMarkDetails(0);
+        assertEq(mark.height, 0);
+        assertEq(mark.amount, SEED_REDEEM_LSETH);
+        assertEq(mark.markedEth, expectedMarkedEth);
+        // nothing settled: BalanceToRedeem was empty and rebalancing was off
+        assertEq(redeemManager.getWithdrawalEventCount(), 0);
+
+        // ── report N+1: a deposit-buffer rebalance fills the request, with no stopped-earning delta ──
+        _refillDepositBuffer(32 ether);
+        uint256 epochN1 = epochN + REPORT_GAP;
+        _warpToFinalizedEpoch(epochN1);
+        IOracleManagerV1.ConsensusLayerReport memory clrN1 = _baseReport(epochN1);
+        clrN1.validatorsBalance = SEED_CL_REWARD + 8 ether; // fresh rewards push the fill rate above the mark
+        clrN1.validatorsStoppedEarningBalance = stoppedEarningEth; // unchanged: no new delta
+        clrN1.rebalanceDepositToRedeemMode = true;
+        vm.prank(address(oracle));
+        river.setConsensusLayerData(clrN1);
+
+        assertEq(redeemManager.getRateMarkCount(), 1, "no second mark: the delta was already consumed");
+        assertEq(redeemManager.getWithdrawalEventCount(), 1);
+        WithdrawalStack.WithdrawalEvent memory we = redeemManager.getWithdrawalEventDetails(0);
+        assertEq(we.amount, SEED_REDEEM_LSETH);
+        assertGt(we.withdrawnEth, mark.markedEth);
+        // still no CL ETH anywhere in the system: the fill was pure buffer ETH
+        assertEq(river.getLastConsensusLayerReport().validatorsExitedBalance, 0);
+
+        // ── report N+2: the sweep finally arrives, into a queue that no longer has demand ──
+        uint256 exitedEth = 12 ether;
+        vm.deal(address(withdraw), exitedEth);
+        uint256 epochN2 = epochN1 + REPORT_GAP;
+        _warpToFinalizedEpoch(epochN2);
+        IOracleManagerV1.ConsensusLayerReport memory clrN2 = _exitReport(epochN2, exitedEth);
+        clrN2.validatorsBalance = SEED_CL_REWARD + 8 ether - exitedEth;
+        clrN2.validatorsStoppedEarningBalance = stoppedEarningEth;
+        vm.prank(address(oracle));
+        river.setConsensusLayerData(clrN2);
+
+        assertEq(redeemManager.getWithdrawalEventCount(), 1, "the sweep settled nothing: demand was zero");
+        assertEq(river.getBalanceToRedeem(), 0, "the sweep was skimmed back to the deposit balance");
+
+        // the fill at N+1 was capped by the mark taken two reports earlier, not by the anchor
+        uint256 received = _claimAlice(type(uint16).max);
+        assertEq(received, mark.markedEth);
+        assertGt(received, 8 ether);
+        assertEq(redeemManager.getBufferedExceedingEth(), we.withdrawnEth - mark.markedEth);
+    }
+
+    /// **Scenario:** exit ETH arrives and settles a request in full, but `validatorsStoppedEarningBalance`
+    /// is left unchanged — an exit that the oracle has not (yet) reported as having crossed exit_epoch.
+    /// **Expected:** no mark is created and the redeemer is paid the flat request-time rate, with the
+    /// surplus buffered. Pins that marking is driven purely by `validatorsStoppedEarningBalance` and never
+    /// inferred from `validatorsExitedBalance`.
+    function testExitFillWithoutStoppedEarningPaysRequestRate() public {
+        uint256 epoch1 = _seedAppreciatedRequest();
+
+        uint256 exitedEth = 12 ether;
+        vm.deal(address(withdraw), exitedEth);
+        uint256 expectedFill = river.underlyingBalanceFromShares(SEED_REDEEM_LSETH);
+        assertGt(expectedFill, 8 ether);
+        assertLt(expectedFill, exitedEth, "the exit must cover the demand in full");
+
+        uint256 epoch2 = epoch1 + REPORT_GAP;
+        _warpToFinalizedEpoch(epoch2);
+        IOracleManagerV1.ConsensusLayerReport memory clr = _exitReport(epoch2, exitedEth);
+        // swept ETH moves from validatorsBalance to BalanceToRedeem: the pool is flat over this report
+        clr.validatorsBalance = SEED_CL_REWARD - exitedEth;
+        // validatorsStoppedEarningBalance deliberately left at 0 while validatorsExitedBalance jumps
+        vm.prank(address(oracle));
+        river.setConsensusLayerData(clr);
+
+        assertEq(river.getLastConsensusLayerReport().validatorsExitedBalance, exitedEth);
+        assertEq(river.getLastConsensusLayerReport().validatorsStoppedEarningBalance, 0);
+        assertEq(redeemManager.getRateMarkCount(), 0, "an exit alone must never create a mark");
+
+        assertEq(redeemManager.getWithdrawalEventCount(), 1);
+        WithdrawalStack.WithdrawalEvent memory we = redeemManager.getWithdrawalEventDetails(0);
+        assertEq(we.amount, SEED_REDEEM_LSETH);
+        assertEq(we.withdrawnEth, expectedFill);
+
+        uint256 received = _claimAlice(type(uint16).max);
+        assertEq(received, 8 ether, "unmarked demand is paid at exactly rate_at_request");
+        assertEq(redeemManager.getBufferedExceedingEth(), expectedFill - 8 ether);
+    }
+
+    /// **Scenario:** exit ETH arrives in a report where the redeem queue holds no outstanding demand (the
+    /// only request was already settled), and a stopped-earning delta is reported alongside it.
+    /// **Expected:** `_skimExcessBalanceToRedeem` hands the whole exit back to the deposit balance, and the
+    /// delta is discarded because `markable == 0` — the settled height has already reached the end of the
+    /// queue, so there is no position left to mark. The stack must stay empty rather than accumulate a
+    /// mark that would silently price the next request that gets queued.
+    function testExitEthWithNoDemandSkimsBackAndDiscardsMark() public {
+        uint256 epoch1 = _seedAppreciatedRequest();
+
+        // report 2 settles the whole request out of the deposit buffer, unmarked
+        _refillDepositBuffer(32 ether);
+        uint256 epoch2 = epoch1 + REPORT_GAP;
+        _warpToFinalizedEpoch(epoch2);
+        IOracleManagerV1.ConsensusLayerReport memory clr2 = _baseReport(epoch2);
+        clr2.validatorsBalance = SEED_CL_REWARD;
+        clr2.rebalanceDepositToRedeemMode = true;
+        vm.prank(address(oracle));
+        river.setConsensusLayerData(clr2);
+
+        assertEq(redeemManager.getRedeemDemand(), 0, "the queue must be fully settled");
+        assertEq(redeemManager.getRateMarkCount(), 0);
+        assertEq(redeemManager.getWithdrawalEventCount(), 1);
+
+        // report 3: the sweep lands while a stopped-earning delta is reported
+        uint256 exitedEth = 12 ether;
+        vm.deal(address(withdraw), exitedEth);
+        uint256 stoppedEarningEth = 12 ether;
+        uint256 reportedLsETH = river.sharesFromUnderlyingBalance(stoppedEarningEth);
+        uint256 depositSideBefore = river.getBalanceToDeposit() + river.getCommittedBalance();
+
+        uint256 epoch3 = epoch2 + REPORT_GAP;
+        _warpToFinalizedEpoch(epoch3);
+        IOracleManagerV1.ConsensusLayerReport memory clr3 = _exitReport(epoch3, exitedEth);
+        clr3.validatorsBalance = SEED_CL_REWARD - exitedEth;
+        clr3.validatorsStoppedEarningBalance = stoppedEarningEth;
+        // the whole delta is clamped away: markable is zero because the settled height already equals the
+        // end of the queue, so the clamp event reports a marked amount of zero and nothing is pushed
+        vm.expectEmit(true, true, true, true);
+        emit StoppedEarningExceededMarkableDemand(reportedLsETH, 0);
+        vm.prank(address(oracle));
+        river.setConsensusLayerData(clr3);
+
+        assertEq(redeemManager.getRateMarkCount(), 0, "markable == 0 must leave the stack empty");
+        assertEq(redeemManager.getWithdrawalEventCount(), 1, "no demand, so no new withdrawal event");
+        assertEq(river.getBalanceToRedeem(), 0, "the exit was skimmed out of the redeem balance");
+        assertEq(
+            river.getBalanceToDeposit() + river.getCommittedBalance(),
+            depositSideBefore + exitedEth,
+            "the exit landed on the deposit side in full"
+        );
+    }
+
+    /// **Scenario:** slashing containment is active on a report whose `BalanceToRedeem` was already funded
+    /// by the exit sweep pulled earlier in that same report, with a stopped-earning delta alongside.
+    /// **Expected:** containment only suppresses forward-looking actions — it skips deposit-to-redeem
+    /// rebalancing plus exit demand, and skips committing to deposit — but settlement out of the funds
+    /// already in hand proceeds, and the demand it settles is still marked. Suspending accrual under
+    /// containment would penalise a queued redeemer twice: once by the depressed rate, once by the longer
+    /// wait containment causes.
+    function testSlashingContainmentStillSettlesAndMarksFundedDemand() public {
+        uint256 epoch1 = _seedAppreciatedRequest();
+
+        uint256 exitedEth = 12 ether;
+        vm.deal(address(withdraw), exitedEth);
+
+        uint256 stoppedEarningEth = 12 ether;
+        uint256 reportedLsETH = river.sharesFromUnderlyingBalance(stoppedEarningEth);
+        uint256 expectedMarkedEth = (stoppedEarningEth * SEED_REDEEM_LSETH) / reportedLsETH;
+        uint256 exitsDemandBefore = operatorsRegistry.getCurrentETHExitsDemand();
+        uint256 committedBefore = river.getCommittedBalance();
+
+        uint256 epoch2 = epoch1 + REPORT_GAP;
+        _warpToFinalizedEpoch(epoch2);
+        IOracleManagerV1.ConsensusLayerReport memory clr = _exitReport(epoch2, exitedEth);
+        clr.validatorsBalance = SEED_CL_REWARD - exitedEth + 8 ether;
+        clr.validatorsStoppedEarningBalance = stoppedEarningEth;
+        clr.slashingContainmentMode = true;
+
+        vm.expectEmit(true, true, true, true, address(river));
+        emit IRiverV1.SkippedExitRequestsDueToSlashingContainment();
+        vm.expectEmit(true, true, true, true, address(river));
+        emit IRiverV1.SkippedCommitToDepositDueToSlashingContainment();
+        vm.prank(address(oracle));
+        river.setConsensusLayerData(clr);
+
+        // forward-looking work really was skipped. `reportExitedETH` runs BEFORE the containment gate, so
+        // the 12 ETH sweep is first booked as answering the standing exit demand left over from the seed
+        // report and zeroes it; containment then returns before any NEW demand can be raised, which is why
+        // this lands at exactly zero instead of being re-armed at the still-outstanding balance.
+        assertGt(exitsDemandBefore, 0, "the seed report left a standing exit demand to observe");
+        assertEq(operatorsRegistry.getCurrentETHExitsDemand(), 0, "containment must not raise new exit demand");
+        assertEq(river.getCommittedBalance(), committedBefore, "nothing committed to deposit");
+
+        // settlement out of the already-pulled exit ETH still happened, and it was still marked
+        assertEq(redeemManager.getRateMarkCount(), 1);
+        RateMarkStack.RateMark memory mark = redeemManager.getRateMarkDetails(0);
+        assertEq(mark.height, 0);
+        assertEq(mark.amount, SEED_REDEEM_LSETH);
+        assertEq(mark.markedEth, expectedMarkedEth);
+
+        assertEq(redeemManager.getWithdrawalEventCount(), 1);
+        WithdrawalStack.WithdrawalEvent memory we = redeemManager.getWithdrawalEventDetails(0);
+        assertEq(we.height, 0);
+        assertEq(we.amount, SEED_REDEEM_LSETH);
+        assertGt(we.withdrawnEth, mark.markedEth);
+
+        uint256 received = _claimAlice(type(uint16).max);
+        assertEq(received, mark.markedEth);
+        assertGt(received, 8 ether, "containment did not cost the redeemer their accrued yield");
+    }
+
+    /// **Scenario:** a containment report marks and partially settles, then containment is switched off and
+    /// a second stopped-earning delta lands.
+    /// **Expected:** exit demand resumes on the second report, and the mark cursor is continuous across the
+    /// containment gap. The second mark starts exactly where the first ended — no axis position is marked
+    /// twice, and none is skipped — because `reportStoppedEarning` advances from
+    /// `max(lastMarkEnd, settledHeight, floor)` and the containment report left the mark cursor ahead of
+    /// the settled height.
+    function testContainmentToggleOffResumesExitsWithContinuousMarkCursor() public {
+        _initRiverMinimalForReporting();
+        uint256 epochA = REPORT_GAP;
+        uint256 maxIncrease = _seedRedeemDemandAndBound(SEED_DEPOSIT, SEED_REDEEM_LSETH, epochA);
+        assertGt(maxIncrease, SEED_CL_REWARD);
+
+        // ── report A: containment on. 4 ETH of sweep lands and 6 ETH of principal stops earning. ──
+        uint256 exitedEth = 4 ether;
+        vm.deal(address(withdraw), exitedEth);
+        IOracleManagerV1.ConsensusLayerReport memory clrA = _exitReport(epochA, exitedEth);
+        clrA.validatorsBalance = SEED_CL_REWARD - exitedEth;
+        clrA.validatorsStoppedEarningBalance = 6 ether;
+        clrA.slashingContainmentMode = true;
+        vm.prank(address(oracle));
+        river.setConsensusLayerData(clrA);
+
+        // the pre-report rate was still the genesis 1:1, so 6 ETH marks exactly 6 LsETH
+        assertEq(redeemManager.getRateMarkCount(), 1);
+        RateMarkStack.RateMark memory mark1 = redeemManager.getRateMarkDetails(0);
+        assertEq(mark1.height, 0);
+        assertEq(mark1.amount, 6e18);
+        assertEq(mark1.markedEth, 6 ether);
+
+        // the 4 ETH in hand settled a slice smaller than the mark, so the cursor now sits ABOVE the
+        // settled height — the case where taking max(cursor, settled) actually matters
+        assertEq(redeemManager.getWithdrawalEventCount(), 1);
+        WithdrawalStack.WithdrawalEvent memory we1 = redeemManager.getWithdrawalEventDetails(0);
+        assertEq(we1.withdrawnEth, exitedEth);
+        assertLt(we1.amount, mark1.amount);
+        // containment skipped the exit-demand branch entirely
+        assertEq(operatorsRegistry.getCurrentETHExitsDemand(), 0, "containment must not demand exits");
+
+        // ── report B: containment off, a second delta lands, no new sweep ──
+        uint256 epochB = epochA + REPORT_GAP;
+        _warpToFinalizedEpoch(epochB);
+        IOracleManagerV1.ConsensusLayerReport memory clrB = _exitReport(epochB, exitedEth);
+        clrB.validatorsBalance = SEED_CL_REWARD - exitedEth; // flat report: no rewards, no new exit
+        clrB.validatorsStoppedEarningBalance = 6 ether + 6 ether;
+        vm.prank(address(oracle));
+        river.setConsensusLayerData(clrB);
+
+        assertEq(redeemManager.getRateMarkCount(), 2);
+        RateMarkStack.RateMark memory mark2 = redeemManager.getRateMarkDetails(1);
+        // continuity: starts exactly at the first mark's end, above the settled height, and the two marks
+        // together tile the request exactly once
+        assertEq(mark2.height, mark1.height + mark1.amount);
+        assertGt(mark2.height, we1.amount);
+        assertEq(mark2.amount, SEED_REDEEM_LSETH - mark1.amount);
+        assertEq(mark1.amount + mark2.amount, SEED_REDEEM_LSETH);
+
+        // exit demand resumed, sized at the still-outstanding demand valued at the current rate
+        uint256 outstandingInEth = river.underlyingBalanceFromShares(redeemManager.getRedeemDemand());
+        assertGt(outstandingInEth, 0);
+        assertEq(operatorsRegistry.getCurrentETHExitsDemand(), outstandingInEth, "exit demand resumed");
+    }
+
+    /// **Scenario:** the redeem manager's `BufferedExceedingEth` is larger than a single report's APR
+    /// headroom, across two consecutive one-day reports.
+    /// **Expected:** `_pullRedeemManagerExceedingEth` is handed `availableAmountToUpperBound` as its max, so
+    /// it pulls exactly the headroom and no more; the remainder stays buffered in the redeem manager and is
+    /// pulled by the next report. Pulling the whole buffer at once would push the reported balance increase
+    /// past the upper reporting bound.
+    function testExceedingEthPullBoundedByAprHeadroomAcrossReports() public {
+        _initRiverMinimalForReporting();
+        address alice = makeAddr("alice");
+        _allowDeposit(alice);
+        vm.deal(alice, SEED_DEPOSIT);
+        vm.prank(alice);
+        river.deposit{value: SEED_DEPOSIT}();
+
+        // 1 ETH buffered against a headroom of ~0.0175 ETH per one-day report
+        uint256 buffered = 1 ether;
+        vm.store(address(redeemManager), BUFFERED_EXCEEDING_ETH_SLOT, bytes32(buffered));
+        vm.deal(address(redeemManager), buffered);
+
+        uint256 epoch1 = epochsPerFrame; // exactly one day of reporting period
+        _warpToFinalizedEpoch(epoch1);
+        uint256 headroom1 = _maxIncreaseBetween(0, epoch1);
+        assertGt(headroom1, 0);
+        assertLt(headroom1, buffered, "the headroom must be the binding constraint");
+
+        // a flat report: no CL movement, so rewards are zero and the whole headroom is available to pull
+        IOracleManagerV1.ConsensusLayerReport memory clr1 = _baseReport(epoch1);
+        vm.prank(address(oracle));
+        river.setConsensusLayerData(clr1);
+
+        assertEq(redeemManager.getBufferedExceedingEth(), buffered - headroom1, "pulled exactly the headroom");
+        assertEq(address(redeemManager).balance, buffered - headroom1);
+
+        uint256 epoch2 = epoch1 + epochsPerFrame;
+        _warpToFinalizedEpoch(epoch2);
+        // the first pull grew the pool, so this report's headroom is strictly larger
+        uint256 headroom2 = _maxIncreaseBetween(epoch1, epoch2);
+        assertGt(headroom2, headroom1);
+
+        IOracleManagerV1.ConsensusLayerReport memory clr2 = _baseReport(epoch2);
+        vm.prank(address(oracle));
+        river.setConsensusLayerData(clr2);
+
+        assertEq(redeemManager.getBufferedExceedingEth(), buffered - headroom1 - headroom2);
+        assertGt(redeemManager.getBufferedExceedingEth(), 0, "the remainder is still buffered");
+    }
+
     function testReportConsolidationsUnchangedKeepsBuffer() public {
         _initRiverMinimalForReporting();
         // No consolidation coverage fund configured, so the end-of-report pull path cannot touch the buffer.
