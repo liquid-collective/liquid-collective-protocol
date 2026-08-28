@@ -47,8 +47,11 @@ contract ConsolidationAttestation is IConsolidationAttestation {
         bytes32 structHash = errorData.length == 0
             ? _computeConsolidationHash(consolidation)
             : _computeConsolidationErrorHash(consolidation, errorData);
-        bytes32 digest = ECDSA.toTypedDataHash(_domainSeparator, structHash);
-        if (_recover(digest, signature) != msg.sender) revert InvalidSignature();
+
+        {
+            bytes32 digest = ECDSA.toTypedDataHash(_domainSeparator, structHash);
+            if (_recover(digest, signature) != msg.sender) revert InvalidSignature();
+        }
 
         emit ConsolidationAttestationSubmitted(
             lastAttestationIdx,
