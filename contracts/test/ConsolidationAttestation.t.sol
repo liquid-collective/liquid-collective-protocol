@@ -342,6 +342,91 @@ contract ConsolidationAttestationTest is Test {
         buffer.submitAttestation(c, hex"deadbeef", "");
     }
 
+    /// @dev `_recover` normalizes a legacy `v` of 0/1 by adding 27, so a signature produced by a
+    ///      library that emits the raw recovery id must recover to the same signer as the 27/28 form.
+    function test_AcceptsLegacyRecoveryIdVZeroOrOne() public {
+        (address signer, uint256 pk) = makeAddrAndKey("signer");
+        IConsolidationAttestation.ConsolidationObject memory c =
+            _consolidation(makeAddr("withdrawal"), 22, _epochs(200));
+        bytes memory sig = _sign(pk, c, "");
+
+        // Downshift v from {27,28} to the raw recovery id {0,1}; `_recover` must add 27 back.
+        uint8 canonicalV = uint8(sig[64]);
+        assertTrue(canonicalV == 27 || canonicalV == 28);
+        sig[64] = bytes1(canonicalV - 27);
+
+        vm.prank(signer);
+        buffer.submitAttestation(c, sig, "");
+
+        assertEq(buffer.lastAttestationIdx(), 1);
+    }
+
+    /// @dev A `v` of 29 is already >= 27, so no normalization applies and it fails the {27,28} check:
+    ///      `_recover` returns address(0) and the msg.sender equality check reverts.
+    function test_RevertsWhenVIsAboveTwentyEight() public {
+        (address signer, uint256 pk) = makeAddrAndKey("signer");
+        IConsolidationAttestation.ConsolidationObject memory c =
+            _consolidation(makeAddr("withdrawal"), 23, _epochs(201));
+        bytes memory sig = _sign(pk, c, "");
+        sig[64] = bytes1(uint8(29));
+
+        vm.expectRevert(IConsolidationAttestation.InvalidSignature.selector);
+        vm.prank(signer);
+        buffer.submitAttestation(c, sig, "");
+
+        assertEq(buffer.lastAttestationIdx(), 0);
+    }
+
+    /// @dev A `v` of 26 is < 27 so it is normalized to 53, which is still outside {27,28}. Guards the
+    ///      normalization from turning an out-of-range value into an accepted one.
+    function test_RevertsWhenNormalizedVIsStillOutOfRange() public {
+        (address signer, uint256 pk) = makeAddrAndKey("signer");
+        IConsolidationAttestation.ConsolidationObject memory c =
+            _consolidation(makeAddr("withdrawal"), 24, _epochs(202));
+        bytes memory sig = _sign(pk, c, "");
+        sig[64] = bytes1(uint8(26)); // 26 + 27 = 53
+
+        vm.expectRevert(IConsolidationAttestation.InvalidSignature.selector);
+        vm.prank(signer);
+        buffer.submitAttestation(c, sig, "");
+
+        assertEq(buffer.lastAttestationIdx(), 0);
+    }
+
+    /// @dev Malleable counterpart of a valid signature: s is replaced by `n - s` and v is flipped.
+    ///      `v` is in range, so this exercises the `ECDSA.tryRecover` error branch (InvalidSignatureS)
+    ///      rather than the v checks — `_recover` must return address(0) instead of the signer.
+    function test_RevertsOnUpperRangeSValue() public {
+        (address signer, uint256 pk) = makeAddrAndKey("signer");
+        IConsolidationAttestation.ConsolidationObject memory c =
+            _consolidation(makeAddr("withdrawal"), 25, _epochs(203));
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(pk, _digest(c, ""));
+
+        uint256 n = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141;
+        bytes32 malleableS = bytes32(n - uint256(s));
+        uint8 flippedV = v == 27 ? 28 : 27;
+
+        vm.expectRevert(IConsolidationAttestation.InvalidSignature.selector);
+        vm.prank(signer);
+        buffer.submitAttestation(c, abi.encodePacked(r, malleableS, flippedV), "");
+
+        assertEq(buffer.lastAttestationIdx(), 0);
+    }
+
+    /// @dev A zero r/s pair keeps `v` valid and s inside the lower half order, so `ecrecover` itself
+    ///      fails and `tryRecover` reports `InvalidSignature` — the second arm of the error branch.
+    function test_RevertsWhenEcrecoverYieldsZeroAddress() public {
+        address signer = makeAddr("signer");
+        IConsolidationAttestation.ConsolidationObject memory c =
+            _consolidation(makeAddr("withdrawal"), 26, _epochs(204));
+
+        vm.expectRevert(IConsolidationAttestation.InvalidSignature.selector);
+        vm.prank(signer);
+        buffer.submitAttestation(c, abi.encodePacked(bytes32(0), bytes32(0), uint8(27)), "");
+
+        assertEq(buffer.lastAttestationIdx(), 0);
+    }
+
     function test_HashChangesWhenExitEpochChanges() public {
         IConsolidationAttestation.ConsolidationObject memory early =
             _consolidation(makeAddr("withdrawal"), 21, _epochs(1000));

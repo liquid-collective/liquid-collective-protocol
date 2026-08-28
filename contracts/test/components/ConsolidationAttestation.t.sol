@@ -526,6 +526,67 @@ contract ConsolidationAttestationTest is Test {
         _validateConsolidationAsRiver(c);
     }
 
+    /// @dev `exitEpoch` carries one entry per (source, target) pair. A short array would leave the
+    ///      trailing pairs' exit epochs unbound in the signed digest, so it must be rejected outright.
+    function testRevert_exitEpochShorterThanPairs() public {
+        bytes[] memory sources = new bytes[](2);
+        sources[0] = _pubkey(1);
+        sources[1] = _pubkey(2);
+        bytes[] memory targets = new bytes[](2);
+        targets[0] = _pubkey(3);
+        targets[1] = _pubkey(4);
+
+        IAttestationVerifierV1.ConsolidationObject memory c = IAttestationVerifierV1.ConsolidationObject({
+            withdrawalAddress: address(0xAA),
+            sourcePubkeys: sources,
+            targetPubkeys: targets,
+            totalAmount: 64 ether,
+            exitEpoch: _defaultEpochs(1),
+            signatures: new bytes[](0)
+        });
+        vm.expectRevert(IAttestationVerifierV1.ExitEpochArrayLengthMismatch.selector);
+        _validateConsolidationAsRiver(c);
+    }
+
+    /// @dev The reverse skew: extra exit epochs with no pair to attach to are equally rejected.
+    function testRevert_exitEpochLongerThanPairs() public {
+        bytes[] memory sources = new bytes[](1);
+        sources[0] = _pubkey(1);
+        bytes[] memory targets = new bytes[](1);
+        targets[0] = _pubkey(2);
+
+        IAttestationVerifierV1.ConsolidationObject memory c = IAttestationVerifierV1.ConsolidationObject({
+            withdrawalAddress: address(0xAA),
+            sourcePubkeys: sources,
+            targetPubkeys: targets,
+            totalAmount: 32 ether,
+            exitEpoch: _defaultEpochs(2),
+            signatures: new bytes[](0)
+        });
+        vm.expectRevert(IAttestationVerifierV1.ExitEpochArrayLengthMismatch.selector);
+        _validateConsolidationAsRiver(c);
+    }
+
+    /// @dev An empty `exitEpoch` alongside a well-formed pair hits the same guard — it is not treated
+    ///      as "no epochs supplied, default them".
+    function testRevert_exitEpochEmptyWithPairs() public {
+        bytes[] memory sources = new bytes[](1);
+        sources[0] = _pubkey(1);
+        bytes[] memory targets = new bytes[](1);
+        targets[0] = _pubkey(2);
+
+        IAttestationVerifierV1.ConsolidationObject memory c = IAttestationVerifierV1.ConsolidationObject({
+            withdrawalAddress: address(0xAA),
+            sourcePubkeys: sources,
+            targetPubkeys: targets,
+            totalAmount: 32 ether,
+            exitEpoch: new uint256[](0),
+            signatures: new bytes[](0)
+        });
+        vm.expectRevert(IAttestationVerifierV1.ExitEpochArrayLengthMismatch.selector);
+        _validateConsolidationAsRiver(c);
+    }
+
     function testRevert_zeroTotalAmount() public {
         bytes[] memory sources = new bytes[](1);
         sources[0] = _pubkey(1);
