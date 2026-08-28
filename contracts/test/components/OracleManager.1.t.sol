@@ -16,7 +16,7 @@ pragma solidity 0.8.34;
 //     getLastConsensusLayerReport)
 //   - the EARLY bound-check reverts inside setConsensusLayerData that fire in LibOracleReporting BEFORE the first
 //     self-call (validator-count decrease, totalDepositedActivatedETH increase-over-in-flight / decrease,
-//     totalExternalConsolidationsAmountReported decrease).
+//     totalExternalConsolidationETH decrease).
 // ─────────────────────────────────────────────────────────────────────────────
 
 import "forge-std/Test.sol";
@@ -50,8 +50,8 @@ contract OracleManagerV1ExposeInitializer is OracleManagerV1 {
         LastConsensusLayerReport.get().validatorsCount = uint32(amount);
     }
 
-    function supersedeTotalConsolidationsAmountReported(uint256 amount) external {
-        LastConsensusLayerReport.get().totalExternalConsolidationsAmountReported = amount;
+    function supersedeTotalExternalConsolidationETH(uint256 amount) external {
+        LastConsensusLayerReport.get().totalExternalConsolidationETH = amount;
     }
 
     function supersedeDepositedValidatorCount(uint256 amount) external {
@@ -350,17 +350,17 @@ contract OracleManagerV1CoverageTests is OracleManagerV1Tests {
     }
 
     /// Asserts that setConsensusLayerData reverts with InvalidTotalConsolidationsAmountReportedDecrease when the
-    /// reported totalExternalConsolidationsAmountReported is lower than the previously stored value.
+    /// reported totalExternalConsolidationETH is lower than the previously stored value.
     function testSetConsensusLayerDataRevertsOnConsolidationsAmountDecrease() public {
         OracleManagerV1ExposeInitializer om = OracleManagerV1ExposeInitializer(address(oracleManager));
-        om.supersedeTotalConsolidationsAmountReported(5 ether);
+        om.supersedeTotalExternalConsolidationETH(5 ether);
 
         uint256 epoch = epochsPerFrame;
         vm.warp(genesisTime + (epoch + epochsToAssumedFinality) * slotsPerEpoch * secondsPerSlot);
         IOracleManagerV1.ConsensusLayerReport memory clr;
         clr.epoch = epoch;
         clr.exitedETHPerOperator = new uint256[](1);
-        clr.totalExternalConsolidationsAmountReported = 4 ether;
+        clr.totalExternalConsolidationETH = 4 ether;
 
         vm.prank(oracle);
         vm.expectRevert(
