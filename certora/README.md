@@ -78,6 +78,35 @@ redeem-path rules back, and verifies against production rather than a stale mirr
 **not** been made here because it cannot be validated without `CERTORAKEY` and a Certora cloud run —
 do it in the same change that runs the prover.
 
+## SERL — stopped-earning rate lock
+
+`conf/RedeemManagerSERL.conf` → `specs/RedeemManagerSERL.spec` → `harness/RedeemManagerSERLHarness.sol`
+covers the redemption-rewards state: `RateMarkStack`, `RedeemRequestAnchor`, `RateMarkFloor`, and
+`_sliceCap`.
+
+It sidesteps the breakage above rather than waiting on it. `RedeemManagerSERLHarness` is the **only**
+contract in the scene; River and the Allowlist are `NONDET`-summarised in the spec, so the rules hold
+for an arbitrary River — arbitrary share rate, arbitrary allowlist verdicts, arbitrary transfer
+outcomes — which is strictly stronger than pinning one implementation. No `RiverV1Harness`, so it
+compiles and typechecks today:
+
+```bash
+solc-select use 0.8.34
+certoraRun certora/conf/RedeemManagerSERL.conf --compilation_steps_only
+```
+
+The harness is separate from `RedeemManagerV1Harness` on purpose: that one is referenced by two confs
+whose specs have runtimes tuned to their current parametric method set, and adding methods there
+would widen it.
+
+**Not yet run against the prover** — that needs `CERTORAKEY`. The conf is deliberately kept out of
+`confs_for_CI/` and out of the workflow matrix in `.github/workflows/Certora.yaml` until a cloud run
+confirms which rules pass. `specs/RedeemManagerSERL.spec` marks one rule,
+`sliceCap_never_below_request_rate`, as **expected to fail**: a mark reprices its range rather than
+taking a maximum against the request-time rate, so a pool rate that fell between request and report
+lowers the cap. Read the counterexample and either tighten `_sliceCap` or delete the rule and record
+the decision.
+
 ## Rules that a per-tranche redemption rate model would invalidate
 
 Relevant if the redemption accounting changes. In `specs_for_CI/RedeemManagerV1_for_CI.spec`:
