@@ -71,6 +71,22 @@ abstract contract RedemptionTestBase is RedeeManagerV1TestBase {
         return (amount * rate) / 1e18;
     }
 
+    /// @dev River's live pool rate, i.e. the ETH value of 1 LsETH.
+    /// @dev This is the number every reachable scenario has to price against. River derives BOTH legs of
+    ///      a stopped-earning report and BOTH legs of a withdrawal event from this single value --
+    ///      `stoppedEarningLsETH = sharesFromUnderlyingBalance(stoppedEarningEth)` and
+    ///      `withdrawnEth = underlyingBalanceFromShares(amount)` (or its inverse on the
+    ///      balance-limited branch). A test that hands the RedeemManager a pair whose ratio is not this
+    ///      rate is describing a state the protocol cannot produce.
+    function _poolRate() internal view returns (uint256) {
+        return river.underlyingBalanceFromShares(1e18);
+    }
+
+    /// @dev `_poolRate` bound to an explicit mock, for the suites that deploy their own pairs.
+    function _poolRateOn(RiverMock _river) internal view returns (uint256) {
+        return _river.underlyingBalanceFromShares(1e18);
+    }
+
     /// @dev Opens a redeem request of `amount` LsETH for `user` at the current pool rate.
     function _openRequest(address user, uint256 amount) internal returns (uint32 id) {
         river.sudoDeal(user, amount);

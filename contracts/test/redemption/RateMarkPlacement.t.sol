@@ -53,11 +53,22 @@ contract RateMarkPlacementTests is RedemptionTestBase {
     // C7 — degenerate legs
     // ─────────────────────────────────────────────────────────────────────────
 
-    /// Scenario: River reports a stopped-earning delta with a zero ETH leg and a non-zero LsETH leg,
+    /// Scenario: `reportStoppedEarning` is called directly with a zero ETH leg and a non-zero LsETH leg,
     /// with real markable demand pending.
-    /// Expected: the first guard in `reportStoppedEarning` returns immediately. No mark, no event at
-    /// all -- not even `StoppedEarningExceededMarkableDemand` -- and the delta is gone for good, because
-    /// River has already persisted the cumulative `validatorsStoppedEarningBalance` that produced it.
+    /// Expected: the first guard returns immediately. No mark, no event at all -- not even
+    /// `StoppedEarningExceededMarkableDemand` -- and the pending demand is left exactly as it was.
+    /// @dev UNREACHABLE INPUT, asserted as defensive coverage on the external entry point. River cannot
+    ///      produce this pair, for two independent reasons:
+    ///        1. The LsETH leg is DERIVED from the eth leg --
+    ///           `stoppedEarningLsETH = sharesFromUnderlyingBalance(stoppedEarningAmountIncrease)`
+    ///           (LibOracleReporting L217-219) -- so a zero eth leg forces a zero LsETH leg.
+    ///        2. The call is gated on `stoppedEarningAmountIncrease > 0` (LibOracleReporting L392), so a
+    ///           zero eth leg means `reportStoppedEarning` is never invoked at all.
+    ///      The guard is still worth keeping and worth pinning: `reportStoppedEarning` is `external`, and
+    ///      nothing in the RedeemManager re-derives the caller's arithmetic. What this test must NOT be
+    ///      read as is a description of how a real stopped-earning delta gets lost -- for the reachable
+    ///      form of a discarded delta see `testStoppedEarningWithOnlyLegacyDemandIsDiscardedPermanently`
+    ///      (clamped to zero markable demand) and `testReportStoppedEarningOnEmptyQueueIsDropped`.
     function testReportStoppedEarningWithZeroEthLegIsDiscarded() external {
         address user = _generateAllowlistedUser(0);
         river.sudoSetRate(1e18);
@@ -73,20 +84,28 @@ contract RateMarkPlacementTests is RedemptionTestBase {
         // either, since the guard fires before the clamp is ever reached
         assertEq(vm.getRecordedLogs().length, 0, "zero eth leg must emit nothing");
         assertEq(redeemManager.getRateMarkCount(), 0);
+        assertEq(_markCursor(), 0);
+        assertEq(redeemManager.getRedeemDemand(), 30e18);
 
-        // and the discard is permanent: the 30 LsETH is paid at its request rate of 1.0 even though the
-        // pool rose to 1.05, exactly as if the report had never mentioned it
+        // the rejected call leaves the request on the unmarked path, so it is paid at its own request
+        // rate of 1.0 when the pool has since risen to 1.05
         river.sudoSetRate(1.05e18);
         assertEq(_settleAndClaim(id, 30e18, 1.05e18), applyRate(30e18, 1e18));
-        // the appreciation the discarded delta would have credited goes back to remaining holders
+        // and the appreciation above that cap goes back to the remaining holders
         assertEq(redeemManager.getBufferedExceedingEth(), applyRate(30e18, 1.05e18) - applyRate(30e18, 1e18));
     }
 
-    /// Scenario: River reports a non-zero ETH leg with a zero LsETH leg. This is how River's conversion
-    /// surfaces on a degenerate pool -- `sharesFromUnderlyingBalance` returns 0 when there are no shares
-    /// or no asset balance -- so it is a reachable state, not a fuzz artifact.
+    /// Scenario: a stopped-earning delta so small that River's own conversion truncates its LsETH leg to
+    /// zero -- 1 wei of principal at a pool rate above 1.0, where
+    /// `sharesFromUnderlyingBalance(1) == 1 * 1e18 / 1.05e18 == 0`.
     /// Expected: early return at the dual-nonzero guard. No mark, no event, and the report path is not
     /// poisoned for the well-formed delta that follows.
+    /// @dev This is the REACHABLE way to reach the zero-LsETH-leg guard, and the only one. The legs are
+    ///      not independent -- `stoppedEarningLsETH = sharesFromUnderlyingBalance(stoppedEarningEth)`
+    ///      (LibOracleReporting L217-219) -- so a zero LsETH leg against a pool that has shares can only
+    ///      come from a dust eth leg, never from a large one. The delta is passed through the mock's
+    ///      rate-deriving helper rather than as an explicit pair precisely so that the pair asserted here
+    ///      is one River would actually compute.
     /// @dev This test does NOT pin the safety of the clamped-mark division, and the guard it exercises is
     ///      not what makes that division safe -- deleting `|| _stoppedEarningLsETH == 0` from
     ///      `reportStoppedEarning` leaves this whole suite green. A zero `reportedLsETH` forces
@@ -100,9 +119,10 @@ contract RateMarkPlacementTests is RedemptionTestBase {
         river.sudoSetRate(1e18);
         uint32 id = _openRequest(user, 30e18);
 
-        // 30 eth of principal stopped earning, but the pool converts it to 0 shares
+        // the pool has appreciated to 1.05, so 1 wei of principal converts to zero shares
+        river.sudoSetRate(1.05e18);
         vm.recordLogs();
-        river.sudoReportStoppedEarningAt(address(redeemManager), 30e18, 0);
+        river.sudoReportStoppedEarning(address(redeemManager), 1);
 
         // returns cleanly, records nothing, and leaves the axis exactly as it was
         assertEq(vm.getRecordedLogs().length, 0, "zero LsETH leg must emit nothing");
@@ -110,8 +130,7 @@ contract RateMarkPlacementTests is RedemptionTestBase {
         assertEq(_markCursor(), 0);
         assertEq(redeemManager.getRedeemDemand(), 30e18);
 
-        // the report path is not poisoned: a well-formed delta immediately after still marks normally
-        river.sudoSetRate(1.05e18);
+        // the report path is not poisoned: a well-formed delta at the same rate still marks normally
         river.sudoReportStoppedEarning(address(redeemManager), applyRate(30e18, 1.05e18));
         assertEq(redeemManager.getRateMarkCount(), 1);
         assertEq(redeemManager.getRateMarkDetails(0).height, 0);
@@ -133,6 +152,13 @@ contract RateMarkPlacementTests is RedemptionTestBase {
     ///      zero-LsETH-leg early-out. Asserted at the boundary: a denominator of 2 is the smallest the
     ///      division can ever be handed, since `reportedLsETH == 1` would need `markable == 0` to clamp,
     ///      and that returns at `lsETHToMark == 0` instead.
+    /// @dev Every leg below is one River can actually compute at the rate in force when it is reported,
+    ///      so the geometry is reachable and not merely hand-assembled:
+    ///        mark:  at 1.5, `sharesFromUnderlyingBalance(3) == 3 * 1e18 / 1.5e18 == 2`
+    ///        event: at 3.0, `underlyingBalanceFromShares(1) == 1 * 3e18 / 1e18 == 3`
+    ///      The two `sudoSetRate` calls stand for the intervening oracle reports that moved the rate; a
+    ///      mark is priced at the pre-report rate and the event that follows at the post-report rate, so
+    ///      request rate 1.0 < mark rate 1.5 < settlement rate 3.0 is an ordinary appreciating sequence.
     function testClampedMarkDivisionOnlyRunsWithADenominatorOfTwoOrMore() external {
         address user = _generateAllowlistedUser(0);
         river.sudoSetRate(1e18);
@@ -141,9 +167,10 @@ contract RateMarkPlacementTests is RedemptionTestBase {
 
         // 2 wei of principal worth 3 wei: over-reported, so the eth leg is rescaled rather than taken
         // verbatim, which is the only path that divides
+        river.sudoSetRate(1.5e18);
         vm.expectEmit(true, true, true, true);
         emit StoppedEarningExceededMarkableDemand(2, 1);
-        river.sudoReportStoppedEarningAt(address(redeemManager), 3, 2);
+        river.sudoReportStoppedEarning(address(redeemManager), 3);
 
         RateMarkStack.RateMark memory mark = redeemManager.getRateMarkDetails(0);
         assertEq(mark.height, 0);
@@ -155,8 +182,8 @@ contract RateMarkPlacementTests is RedemptionTestBase {
 
         // the mark is real and prices the payout: an event offering 3 wei for the 1 wei of demand is
         // clamped to the locked 1 wei, so the division's result is what the redeemer is actually held to
-        vm.deal(address(this), 3);
-        river.sudoReportWithdraw{value: 3}(address(redeemManager), 1);
+        river.sudoSetRate(3e18);
+        assertEq(_reportWithdraw(1, 3e18), 3);
         assertEq(_claim(id), 1);
         assertEq(redeemManager.getBufferedExceedingEth(), 2);
     }
@@ -180,9 +207,9 @@ contract RateMarkPlacementTests is RedemptionTestBase {
         // nothing has ever been requested
         assertEq(redeemManager.getRedeemRequestCount(), 0);
 
-        // River reports 100 LsETH of principal that stopped earning at a rate of 1.05
+        // River reports 100 LsETH of principal that stopped earning, valued at the pool rate in force
         vm.recordLogs();
-        river.sudoReportStoppedEarningAt(address(redeemManager), applyRate(100e18, 1.05e18), 100e18);
+        river.sudoReportStoppedEarning(address(redeemManager), applyRate(100e18, 1e18));
 
         // silent: the empty-queue guard precedes the clamp, so not even the "exceeded markable demand"
         // event fires despite the whole 100 LsETH being unmarkable
@@ -193,7 +220,9 @@ contract RateMarkPlacementTests is RedemptionTestBase {
         uint32 id = _openRequest(user, 30e18);
         assertEq(redeemManager.getRateMarkCount(), 0, "no mark may appear retroactively");
 
-        // it is paid at 1.0, its own request rate, not at the 1.05 the dropped delta was valued at
+        // the pool then appreciates and the request settles at 1.05, but it is paid at 1.0 -- its own
+        // request rate. Had the dropped delta carried forward, a mark over [0, 30) would have raised
+        // this cap and the payout with it.
         river.sudoSetRate(1.05e18);
         assertEq(_settleAndClaim(id, 30e18, 1.05e18), applyRate(30e18, 1e18));
     }
