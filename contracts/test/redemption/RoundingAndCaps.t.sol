@@ -87,6 +87,19 @@ contract RedemptionRoundingAndCapsTests is RedemptionTestBase {
     ///      the whole of the loss. The lost wei is NOT routed to `BufferedExceedingEth` - it simply stays
     ///      in the RedeemManager's ETH balance, where it is neither claimable by a redeemer nor pullable by
     ///      River via `pullExceedingEth`.
+    /// @dev UNREACHABLE WITHDRAWAL EVENT. The mark below is one River would compute
+    ///      (`sharesFromUnderlyingBalance(120e18) == 60e18` at a pool rate of 2.0), but the
+    ///      `{withdrawnEth: 61e18 - 1, amount: 60e18}` event is not, at ANY pool rate.
+    ///      `_reportWithdrawToRedeemManager` derives the pair from a single rate on one of two branches:
+    ///      `withdrawnEth = underlyingBalanceFromShares(60e18) == 60 * rate`, always a multiple of 60 and
+    ///      so never `61e18 - 1`; or, when the demand outruns `BalanceToRedeem`,
+    ///      `amount = sharesFromUnderlyingBalance(withdrawnEth)`, whose rate interval for `amount == 60e18`
+    ///      contains no integer. The event is hand-built because it is the shortest way to put three
+    ///      independent floors of the same quotient into one claim.
+    ///      Consequence worth knowing: with a REACHABLE full-demand event `withdrawnEth == 60 * rate`, so
+    ///      each payout `size * withdrawnEth / 60e18 == (size / 1e18) * rate` divides exactly and this
+    ///      stranded-dust phenomenon cannot arise from whole-ether request sizes at all - it needs sizes
+    ///      that are not whole multiples of 1e18. Reproducing it realistically is deferred.
     function testCapAboveWithdrawalEventStillClampsToEventEth() external {
         _upgradeToV1_3();
         address userA = _generateAllowlistedUser(0);
@@ -100,9 +113,12 @@ contract RedemptionRoundingAndCapsTests is RedemptionTestBase {
         uint32 idC = _openRequest(userC, 30e18);
         assertEq(redeemManager.getRedeemDemand(), 60e18);
 
-        // the whole 60 LsETH of demand is marked at a rate of 2.0, doubling every cap. Nothing in the
-        // system has supplied that ETH; the mark is pure entitlement.
-        river.sudoReportStoppedEarningAt(address(redeemManager), 120e18, 60e18);
+        // the pool doubles, then the whole 60 LsETH of demand is marked at that rate of 2.0, doubling
+        // every cap. At 2.0 `sharesFromUnderlyingBalance(120e18) == 60e18`, so this is the pair River
+        // itself would derive. Nothing has yet SUPPLIED that ETH though: the mark is pure entitlement
+        // until a withdrawal event arrives, which is what the rest of the test leans on.
+        river.sudoSetRate(2e18);
+        river.sudoReportStoppedEarning(address(redeemManager), 120e18);
         RateMarkStack.RateMark memory mark = redeemManager.getRateMarkDetails(0);
         assertEq(mark.amount, 60e18);
         assertEq(mark.markedEth, 120e18);
@@ -154,6 +170,13 @@ contract RedemptionRoundingAndCapsTests is RedemptionTestBase {
     ///      exercises `(markedAmount * mark.markedEth) / markAmount` with markAmount == 1, and the
     ///      second request exercises `_sliceCap`'s case-2 branch (a mark that ENDS at the slice start,
     ///      one wei wide) followed by the past-the-last-mark branch.
+    /// @dev Every leg is derived from the rate in force when it is reported rather than hand-assembled,
+    ///      so the whole sequence is one River could produce:
+    ///        mark:  at 2.0, `sharesFromUnderlyingBalance(2) == 2 * 1e18 / 2e18 == 1`
+    ///        event: at 1.5, `underlyingBalanceFromShares(2) == 2 * 1.5e18 / 1e18 == 3`
+    ///      The `sudoSetRate` calls stand for the intervening oracle reports; request rate 1.0, mark rate
+    ///      2.0 (the pre-report rate of a later report) and settlement rate 1.5 (the post-report rate) is
+    ///      an appreciate-then-slash sequence, which is exactly when a mark becomes a binding ceiling.
     function testDustScaleRequestAndMarkTruncateAsDocumented() external {
         _upgradeToV1_3();
         address userA = _generateAllowlistedUser(0);
@@ -168,18 +191,21 @@ contract RedemptionRoundingAndCapsTests is RedemptionTestBase {
         assertEq(redeemManager.getRedeemRequestDetails(idB).height, 1);
         assertEq(redeemManager.getRedeemDemand(), 2);
 
-        // 1 wei of principal, worth 2 wei, stopped earning: a mark covering [0, 1) at a locked rate of
-        // 2.0. reportedLsETH (1) <= markable (2), so no clamp and no clamped-mark division.
-        river.sudoReportStoppedEarningAt(address(redeemManager), 2, 1);
+        // the pool doubles, then 1 wei of principal - worth 2 wei at that rate - stops earning: a mark
+        // covering [0, 1) at a locked rate of 2.0. reportedLsETH (1) <= markable (2), so no clamp and no
+        // clamped-mark division.
+        river.sudoSetRate(2e18);
+        river.sudoReportStoppedEarning(address(redeemManager), 2);
         RateMarkStack.RateMark memory mark = redeemManager.getRateMarkDetails(0);
         assertEq(mark.height, 0);
         assertEq(mark.amount, 1);
         assertEq(mark.markedEth, 2);
         assertEq(_markCursor(), 1);
 
-        // one withdrawal event settles both wei of demand while carrying 3 wei: 1.5 wei per wei of LsETH
-        vm.deal(address(this), 3);
-        river.sudoReportWithdraw{value: 3}(address(redeemManager), 2);
+        // the pool is then slashed back to 1.5 and one withdrawal event settles both wei of demand,
+        // carrying `underlyingBalanceFromShares(2) == 3` wei: 1.5 wei per wei of LsETH
+        river.sudoSetRate(1.5e18);
+        assertEq(_reportWithdraw(2, 1.5e18), 3);
         assertEq(redeemManager.getRedeemDemand(), 0);
 
         // request A: pro-rata is (1 * 3) / 2 == 1, truncated DOWN from 1.5 in the protocol's favour.
@@ -314,6 +340,13 @@ contract RedemptionRoundingAndCapsTests is RedemptionTestBase {
     ///      locked rate is preserved to the wei. This is the other side: when the rescaling cannot be
     ///      exact, the residual must be dropped downwards. The clamped payout below shows the truncation
     ///      flowing all the way through to the redeemer's ETH.
+    /// @dev Both legs are ones River derives from the rate in force, not hand-assembled pairs:
+    ///        mark:  at 1.4, `sharesFromUnderlyingBalance(10) == 10 * 1e18 / 1.4e18 == 7` (floored from 7.14)
+    ///        event: at 1.6, the demand outruns `BalanceToRedeem`, so the balance-limited branch applies
+    ///               and `amount = sharesFromUnderlyingBalance(5) == 5 * 1e18 / 1.6e18 == 3` (from 3.125)
+    ///      Note that the reported rate 10/7 is itself a rounding artifact of the 1.4 pool rate, which is
+    ///      the point: at dust scale the reported pair never expresses the pool rate exactly, and the
+    ///      rescaling has to truncate in the protocol's favour on top of that.
     function testClampedMarkTruncatesLockedRateDownwards() external {
         _upgradeToV1_3();
         address user = _generateAllowlistedUser(0);
@@ -322,13 +355,15 @@ contract RedemptionRoundingAndCapsTests is RedemptionTestBase {
         river.sudoSetRate(1e18);
         uint32 id = _openRequest(user, 3);
 
-        // River reports 7 wei of principal worth 10 wei (a rate of 10/7 ~= 1.42857), but only 3 wei is
-        // markable, so the eth leg is rescaled: (10 * 3) / 7 == 30 / 7 == 4.2857 -> 4 wei
+        // the pool appreciates to 1.4, then 10 wei of principal stops earning. River values it at
+        // `sharesFromUnderlyingBalance(10) == 7` wei of LsETH, a reported rate of 10/7 ~= 1.42857, but
+        // only 3 wei is markable, so the eth leg is rescaled: (10 * 3) / 7 == 30 / 7 == 4.2857 -> 4 wei
         uint256 reportedEth = 10;
         uint256 reportedLsETH = 7;
+        river.sudoSetRate(1.4e18);
         vm.expectEmit(true, true, true, true);
         emit StoppedEarningExceededMarkableDemand(reportedLsETH, 3);
-        river.sudoReportStoppedEarningAt(address(redeemManager), reportedEth, reportedLsETH);
+        river.sudoReportStoppedEarning(address(redeemManager), reportedEth);
 
         RateMarkStack.RateMark memory mark = redeemManager.getRateMarkDetails(0);
         assertEq(mark.height, 0);
@@ -344,8 +379,11 @@ contract RedemptionRoundingAndCapsTests is RedemptionTestBase {
         // and it is never above - the direction is what matters, the magnitude is sub-wei (2/7 of a wei)
         assertTrue(mark.markedEth * reportedLsETH <= reportedEth * mark.amount);
 
-        // the truncation flows through to the payout: a withdrawal event carrying 5 wei against the
-        // 3 wei of demand offers more than the locked rate, so the cap binds at (3 * 4) / 3 == 4 wei
+        // the truncation flows through to the payout. The pool rises again to 1.6 and 5 wei of
+        // `BalanceToRedeem` settles the 3 wei of demand - the balance-limited branch, where the LsETH leg
+        // is `sharesFromUnderlyingBalance(5) == 3`. That offers more than the locked rate, so the cap
+        // binds at (3 * 4) / 3 == 4 wei
+        river.sudoSetRate(1.6e18);
         vm.deal(address(this), 5);
         river.sudoReportWithdraw{value: 5}(address(redeemManager), 3);
         uint256 received = _claim(id);
@@ -358,19 +396,27 @@ contract RedemptionRoundingAndCapsTests is RedemptionTestBase {
     }
 
     /// Scenario: the ENTIRE LsETH supply is queued for redemption in a single request, and River then
-    ///           makes stopped-earning reports whose legs are degenerate - the shapes a real River
-    ///           produces when its conversion views bottom out (`sharesFromUnderlyingBalance` returning
-    ///           0 on an empty pool, or a zero-valued delta).
-    /// Expected: `reportStoppedEarning`'s dual-nonzero guard absorbs every degenerate pair without
-    ///           reverting and without pushing an empty mark, a genuine full-supply report then marks the
-    ///           whole axis through the un-clamped branch (no division at all), and the claim settles.
+    ///           makes a stopped-earning report whose LsETH leg its own conversion truncates to zero,
+    ///           followed by a genuine full-supply report.
+    /// Expected: `reportStoppedEarning`'s dual-nonzero guard absorbs the degenerate pair without
+    ///           reverting and without pushing an empty mark, the genuine report then marks the whole
+    ///           axis through the un-clamped branch (no division at all), and the claim settles.
+    /// @dev Case (a) is the ONLY reachable way into the zero-leg guard while the pool has shares. The two
+    ///      legs are not independent - `stoppedEarningLsETH = sharesFromUnderlyingBalance(stoppedEarningEth)`
+    ///      (LibOracleReporting L217-219) - so a zero LsETH leg against a live 100e18 supply can only come
+    ///      from a dust eth leg, and a zero ETH leg forces a zero LsETH leg AND means River never makes the
+    ///      call at all (it is gated on `stoppedEarningAmountIncrease > 0`, L392). Earlier revisions of this
+    ///      test also passed `(5e18, 0)` and `(0, 5e18)` explicitly; both were removed as unreachable, and
+    ///      the first directly contradicted the `totalSupply() == 100e18` assertion above it. The guard
+    ///      itself is still exercised defensively against a hand-built pair in
+    ///      `RateMarkPlacementTests.testReportStoppedEarningWithZeroEthLegIsDiscarded`.
     /// @dev What this pins is the absence of a mark, not the safety of the trailing
     ///      `(stoppedEarningEth * lsETHToMark) / reportedLsETH`. That division is guarded by the
     ///      `lsETHToMark == 0` return, not by the zero-leg check here: a zero `reportedLsETH` forces
     ///      `lsETHToMark == 0`, so `lsETHToMark > markable` is never true and the clamp is skipped
-    ///      entirely. Cases (b) and (d) below therefore never reach the division, and would not reach it
-    ///      even if the `|| _stoppedEarningLsETH == 0` term were deleted. The denominator bound is pinned
-    ///      at its boundary in `RateMarkPlacementTests.testClampedMarkDivisionOnlyRunsWithADenominatorOfTwoOrMore`.
+    ///      entirely. Case (a) therefore never reaches the division, and would not reach it even if the
+    ///      `|| _stoppedEarningLsETH == 0` term were deleted. The denominator bound is pinned at its
+    ///      boundary in `RateMarkPlacementTests.testClampedMarkDivisionOnlyRunsWithADenominatorOfTwoOrMore`.
     function testEntireSupplyQueuedThenDegenerateStoppedEarningReports() external {
         _upgradeToV1_3();
         address user = _generateAllowlistedUser(0);
@@ -382,22 +428,8 @@ contract RedemptionRoundingAndCapsTests is RedemptionTestBase {
         assertEq(river.balanceOf(address(redeemManager)), 100e18);
         assertEq(redeemManager.getRedeemDemand(), 100e18);
 
-        // (a) both legs zero: the interval produced no stopped-earning delta at all
-        river.sudoReportStoppedEarningAt(address(redeemManager), 0, 0);
-        assertEq(redeemManager.getRateMarkCount(), 0);
-
-        // (b) zero LsETH leg with a non-zero eth leg: exactly what River passes when its own
-        // `sharesFromUnderlyingBalance` degenerates to 0. Dropped, because a mark of 0 LsETH would
-        // record credit against no demand.
-        river.sudoReportStoppedEarningAt(address(redeemManager), 5e18, 0);
-        assertEq(redeemManager.getRateMarkCount(), 0);
-
-        // (c) zero eth leg with a non-zero LsETH leg: a mark worth nothing, which must not be recorded
-        river.sudoReportStoppedEarningAt(address(redeemManager), 0, 5e18);
-        assertEq(redeemManager.getRateMarkCount(), 0);
-
-        // (d) a 1 wei delta at a rate of 2.0: River's own conversion truncates the LsETH leg to
-        // (1 * 1e18) / 2e18 == 0, so this reaches the same guard through the realistic path
+        // (a) a 1 wei delta at a rate of 2.0: River's own conversion truncates the LsETH leg to
+        // (1 * 1e18) / 2e18 == 0, which is the only way a live pool reaches the zero-leg guard
         river.sudoSetRate(2e18);
         river.sudoReportStoppedEarning(address(redeemManager), 1);
         assertEq(redeemManager.getRateMarkCount(), 0);
