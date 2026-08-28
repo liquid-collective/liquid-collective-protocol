@@ -157,7 +157,7 @@ interface IOracleManagerV1 {
         // this will only include the consolidations that happened due to external validators merging into LC
         // this value cannot decrease over reports and must increase in the same report in which the corresponding
         // consolidated principal first appears in validatorsBalance
-        uint256 totalExternalConsolidationsAmountReported;
+        uint256 totalExternalConsolidationETH;
         // the count of activated validators
         // even validators that are exited are still accounted
         // this value cannot decrease over reports
@@ -193,7 +193,7 @@ interface IOracleManagerV1 {
         bool rebalanceDepositToRedeemMode;
         bool slashingContainmentMode;
         uint256 totalDepositedActivatedETH;
-        uint256 totalExternalConsolidationsAmountReported;
+        uint256 totalExternalConsolidationETH;
     }
 
     /// @notice Get oracle address

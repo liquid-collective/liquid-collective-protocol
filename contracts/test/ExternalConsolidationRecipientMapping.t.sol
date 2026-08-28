@@ -8,7 +8,7 @@ import "./utils/UserFactory.sol";
 import "./utils/LibImplementationUnbricker.sol";
 
 import "../src/Allowlist.1.sol";
-import "../src/ExternalConsolidationRecipientMapping.sol";
+import "../src/ExternalConsolidationRecipientMapping.1.sol";
 import "../src/interfaces/IExternalConsolidationRecipientMapping.1.sol";
 import "../src/libraries/LibAllowlistMasks.sol";
 

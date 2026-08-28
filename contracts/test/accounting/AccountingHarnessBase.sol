@@ -17,7 +17,7 @@ import "../../src/ELFeeRecipient.1.sol";
 import "../../src/CoverageFund.1.sol";
 import "../../src/RedeemManager.1.sol";
 import "../../src/Withdraw.1.sol";
-import "../../src/ExternalConsolidationRecipientMapping.sol";
+import "../../src/ExternalConsolidationRecipientMapping.1.sol";
 
 import "../../src/interfaces/IOperatorRegistry.1.sol";
 import "../../src/interfaces/IDepositDataBuffer.sol";
@@ -60,7 +60,11 @@ contract AccountingMockDepositDataBuffer is IDepositDataBuffer {
         ++lastQueuedIdx;
     }
 
-    function getDepositData(bytes32 depositDataBufferId) external view returns (DepositObject memory, uint256 nonce) {
+    function getDepositData(bytes32 depositDataBufferId)
+        external
+        view
+        returns (DepositObject memory, uint256 nonce)
+    {
         if (!_exists[depositDataBufferId]) revert DepositDataBufferIdNotFound(depositDataBufferId);
         return (_batches[depositDataBufferId], _nonce[depositDataBufferId]);
     }

@@ -5,6 +5,7 @@ import "../AccountingInvariants.sol";
 import "../../utils/LibImplementationUnbricker.sol";
 import "../../../src/ConsolidationCoverageFund.1.sol";
 import "../../../src/interfaces/components/IOracleManager.1.sol";
+import "../../../src/interfaces/IAttestationVerifier.1.sol";
 import "../../../src/state/river/ReportBounds.sol";
 
 /// @title ConsolidationCoverageScenarioTest
@@ -78,15 +79,15 @@ contract ConsolidationCoverageScenarioTest is AccountingInvariants {
         // Report a consolidation increase within the available buffer.
         uint256 delta = 1 ether;
         IOracleManagerV1.ConsensusLayerReport memory report = _buildBadReport(false, false);
-        report.totalExternalConsolidationsAmountReported = delta;
+        report.totalExternalConsolidationETH = delta;
         vm.prank(oracleMember);
         oracle.reportConsensusLayerData(report);
 
         // The reported value is persisted into the stored report.
         assertEq(
-            river.getLastConsensusLayerReport().totalExternalConsolidationsAmountReported,
+            river.getLastConsensusLayerReport().totalExternalConsolidationETH,
             delta,
-            "totalExternalConsolidationsAmountReported persisted"
+            "totalExternalConsolidationETH persisted"
         );
         // Buffer: reduced by `delta` on the consolidation increase, then the remaining `buffer - delta`
         // is pulled from the coverage fund (coverage >= remaining), draining it to zero.
@@ -124,17 +125,79 @@ contract ConsolidationCoverageScenarioTest is AccountingInvariants {
         // report; the buffer is drawn down by the same delta (no coverage residual, so no fund pull).
         IOracleManagerV1.ConsensusLayerReport memory report = _buildBadReport(false, false);
         report.validatorsBalance += delta;
-        report.totalExternalConsolidationsAmountReported = delta;
+        report.totalExternalConsolidationETH = delta;
         vm.prank(oracleMember);
         oracle.reportConsensusLayerData(report);
 
         // The reported value is persisted and the buffer is fully drawn down by the consolidation reduction.
-        assertEq(river.getLastConsensusLayerReport().totalExternalConsolidationsAmountReported, delta);
+        assertEq(river.getLastConsensusLayerReport().totalExternalConsolidationETH, delta);
         assertEq(uint256(vm.load(address(river), CONSOLIDATION_BUFFER_SLOT)), 0, "buffer drawn down by delta");
         // Core invariant: the consolidated principal is exactly offset, so the total underlying is UNCHANGED
         // (neither a drop nor an increase) and no fee shares are minted on the principal.
         assertEq(river.totalUnderlyingSupply(), underlyingBefore, "total underlying unchanged (netted out)");
         assertEq(river.totalSupply(), sharesBefore, "no fee shares minted on consolidated principal");
+    }
+
+    function testMintedConsolidationPartiallyLandsAndCoverageCoversTheShortfall() public {
+        _baseline();
+
+        uint256 coverage = 5 ether;
+        _donateConsolidationCoverage(coverage);
+
+        address consolidated = makeAddr("consolidatedUser");
+        address[] memory addrs = new address[](1);
+        addrs[0] = consolidated;
+        uint256[] memory masks = new uint256[](1);
+        masks[0] = LibAllowlistMasks.CONSOLIDATE_MASK;
+        vm.prank(allower);
+        allowlist.setAllowPermissions(addrs, masks);
+
+        uint256 amount = 4 ether;
+        IAttestationVerifierV1.ConsolidationObject memory consolidation = IAttestationVerifierV1.ConsolidationObject({
+            withdrawalAddress: consolidated,
+            sourcePubkeys: new bytes[](1),
+            targetPubkeys: new bytes[](1),
+            totalAmount: amount,
+            signatures: new bytes[](1)
+        });
+        vm.mockCall(
+            address(attestationVerifier),
+            abi.encodeWithSelector(IAttestationVerifierV1.validateConsolidation.selector),
+            abi.encode(true)
+        );
+
+        uint256 underlyingBeforeMint = river.totalUnderlyingSupply();
+        uint256 supplyBeforeMint = river.totalSupply();
+        uint256 expectedShares = (amount * supplyBeforeMint) / underlyingBeforeMint;
+
+        vm.prank(consolidator);
+        river.mintLsETHForConsolidation(consolidation);
+
+        assertEq(river.getBalanceToConsolidate(), amount, "mint increases buffer by totalAmount");
+        assertEq(
+            river.totalUnderlyingSupply(), underlyingBeforeMint + amount, "mint increases underlying by totalAmount"
+        );
+        assertEq(river.balanceOf(consolidated), expectedShares, "mint converts totalAmount at share price");
+
+        uint256 delta = 1 ether;
+        IOracleManagerV1.ConsensusLayerReport memory report = _buildBadReport(false, false);
+        report.validatorsBalance += delta;
+        report.totalExternalConsolidationETH += delta;
+        vm.prank(oracleMember);
+        oracle.reportConsensusLayerData(report);
+
+        assertEq(river.getBalanceToConsolidate(), 0, "report drawdown plus fund pull drains buffer");
+        assertEq(
+            address(consolidationCoverageFund).balance,
+            coverage - (amount - delta),
+            "fund covers exactly the residual buffer"
+        );
+        assertEq(
+            river.totalUnderlyingSupply(),
+            underlyingBeforeMint + amount,
+            "underlying conserved across drawdown and pull"
+        );
+        assertEq(river.totalSupply(), supplyBeforeMint + expectedShares, "no shares minted by drawdown or pull");
     }
 
     /// @notice End-to-end regression for source-validator rewards earned after the external-consolidation
@@ -157,9 +220,7 @@ contract ConsolidationCoverageScenarioTest is AccountingInvariants {
 
         IOracleManagerV1.StoredConsensusLayerReport memory stored = river.getLastConsensusLayerReport();
         assertEq(
-            stored.totalExternalConsolidationsAmountReported,
-            bufferedPrincipal + rewardSurplus,
-            "reported principal plus surplus"
+            stored.totalExternalConsolidationETH, bufferedPrincipal + rewardSurplus, "reported principal plus surplus"
         );
         assertEq(stored.validatorsBalance, 4 * DEPOSIT_SIZE + rewardSurplus, "surplus landed in validatorsBalance");
         assertEq(uint256(vm.load(address(river), CONSOLIDATION_BUFFER_SLOT)), 0, "buffer drawn to zero");

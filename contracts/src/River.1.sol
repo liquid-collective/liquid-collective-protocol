@@ -124,7 +124,7 @@ contract RiverV1 is
         storedReport.rebalanceDepositToRedeemMode = lastReport.rebalanceDepositToRedeemMode;
         storedReport.slashingContainmentMode = lastReport.slashingContainmentMode;
         storedReport.totalDepositedActivatedETH = depositedValidatorCount * DEPOSIT_SIZE - InFlightDeposit.get();
-        /// We don't set the totalExternalConsolidationsAmountReported here because consolidations were not enabled before this version.
+        /// We don't set the totalExternalConsolidationETH here because consolidations were not enabled before this version.
         /// And the default value will be 0, so we don't need to set it here.
         LastConsensusLayerReport.set(storedReport);
     }
@@ -390,12 +390,7 @@ contract RiverV1 is
 
     /// @notice Overridden handler to pass the system admin inside components
     /// @return The address of the admin
-    function _getRiverAdmin()
-        internal
-        view
-        override(OracleManagerV1, ConsensusLayerDepositManagerV1)
-        returns (address)
-    {
+    function _getRiverAdmin() internal view override(OracleManagerV1) returns (address) {
         return Administrable._getAdmin();
     }
 

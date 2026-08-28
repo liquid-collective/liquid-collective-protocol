@@ -46,14 +46,6 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         _;
     }
 
-    modifier onlyRiverAdmin() {
-        if (msg.sender != _getRiverAdmin()) revert LibErrors.Unauthorized(msg.sender);
-        _;
-    }
-
-    /// @notice Handler called to retrieve the internal River admin address
-    function _getRiverAdmin() internal view virtual returns (address);
-
     /// @notice Handler called to increment the funded ETH for the operators
     /// @param _deltas The per-operator funding deltas (sorted by operatorIndex)
     function _incrementFundedETH(IOperatorsRegistryV1.OperatorFundingDelta[] memory _deltas) internal virtual;
