@@ -25,7 +25,6 @@ import "./state/attestationVerifier/RootAttesters.sol";
 import "./state/attestationVerifier/DepositDataBufferAddress.sol";
 import "./state/attestationVerifier/DepositDomainValue.sol";
 import "./state/attestationVerifier/DomainSeparator.sol";
-import "./state/attestationVerifier/ProcessedDepositDataBufferIds.sol";
 import "./state/attestationVerifier/PectraValidatorPubkeyLookup.sol";
 import "./state/attestationVerifier/PrePectraValidatorPubkeyLookup.sol";
 import "./state/attestationVerifier/ProcessedConsolidationSourcePubkeys.sol";
@@ -101,6 +100,15 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
     ///         they credit already-activated validators and may be below this amount.
     uint256 internal constant MIN_INITIAL_DEPOSIT_AMOUNT = 32 ether;
 
+    /// @notice Minimum top-up amount accepted by the consensus-layer deposit path.
+    uint256 internal constant MIN_TOP_UP_AMOUNT = 1 ether;
+
+    /// @notice Maximum deposit amount — the Pectra 0x02 maximum effective balance.
+    uint256 internal constant MAX_DEPOSIT_AMOUNT = 2048 ether;
+
+    /// @notice Maximum stateless top-up: a funded validator should already have at least 32 ETH.
+    uint256 internal constant MAX_TOP_UP_AMOUNT = MAX_DEPOSIT_AMOUNT - MIN_INITIAL_DEPOSIT_AMOUNT;
+
     /// @dev Expected length for BLS pubkeys in a ConsolidationObject (source or target).
     uint256 internal constant CONSOLIDATION_PUBKEY_LENGTH = 48;
 
@@ -169,6 +177,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
         RiverAddress.set(_river);
         emit SetRiver(_river);
 
+        _assertDepositDataBufferProcessor(_depositDataBuffer, _river);
         DepositDataBufferAddress.set(_depositDataBuffer);
         emit SetDepositDataBuffer(_depositDataBuffer);
 
@@ -237,9 +246,24 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
     // -----------------------------------------------------------------------
 
     /// @inheritdoc IAttestationVerifierV1
+    /// @dev Validates that the new buffer authorizes River as its processor before storing it. A buffer
+    ///      whose processor is not River would let attested deposits pass validation only to revert at
+    ///      `markDepositDataProcessed` — this rejects such a misconfiguration up front. The same
+    ///      invariant is enforced during initialization.
     function setDepositDataBuffer(address _depositDataBuffer) external onlyRiverAdmin {
+        _assertDepositDataBufferProcessor(_depositDataBuffer, RiverAddress.get());
         DepositDataBufferAddress.set(_depositDataBuffer);
         emit SetDepositDataBuffer(_depositDataBuffer);
+    }
+
+    /// @notice Revert unless `depositDataBuffer` authorizes `expectedProcessor` (River) as its processor.
+    /// @param depositDataBuffer The DepositDataBuffer to validate
+    /// @param expectedProcessor The address that must be authorized to mark deposit data processed
+    function _assertDepositDataBufferProcessor(address depositDataBuffer, address expectedProcessor) internal view {
+        address actualProcessor = IDepositDataBuffer(depositDataBuffer).getProcessor();
+        if (actualProcessor != expectedProcessor) {
+            revert InvalidDepositDataBufferProcessor(depositDataBuffer, expectedProcessor, actualProcessor);
+        }
     }
 
     /// @inheritdoc IAttestationVerifierV1
@@ -415,22 +439,26 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
         bytes32 withdrawalCredentials,
         uint256 committedBalance
     ) external view returns (IDepositDataBuffer.DepositObject memory batch, uint256 totalAmount) {
-        // 0. Replay protection — reject any batch ID already processed
-        if (ProcessedDepositDataBufferIds.isProcessed(depositDataBufferId)) {
+        // 0. Replay protection — reject any batch ID the buffer has already marked processed.
+        //    The buffer is the authoritative source for this flag (the processor flips it after execution).
+        address depositDataBuffer = DepositDataBufferAddress.get();
+        if (IDepositDataBuffer(depositDataBuffer).isDepositDataProcessed(depositDataBufferId)) {
             revert DepositDataBufferIdAlreadyProcessed(depositDataBufferId);
         }
 
         // 1. Verify attestation quorum
         _verifyAttestationQuorum(depositDataBufferId, depositRootHash, signatures, depositContract);
 
-        // 2. Get deposit batch from buffer
-        batch = IDepositDataBuffer(DepositDataBufferAddress.get()).getDepositData(depositDataBufferId);
+        // 2. Get deposit batch (and its stored nonce) from buffer
+        uint256 nonce;
+        (batch, nonce) = IDepositDataBuffer(depositDataBuffer).getDepositData(depositDataBufferId);
         uint256 depositCount = batch.deposits.length;
         uint256 topUpCount = batch.topUps.length;
         if (depositCount == 0 && topUpCount == 0) revert NoDeposits();
 
-        // 3. Re-compute and check the bufferId binding so the buffer cannot tamper post-attestation
-        bytes32 computedId = keccak256(abi.encode(batch));
+        // 3. Re-compute and check the bufferId binding so the buffer cannot tamper post-attestation.
+        //    The nonce is folded into the id, so it is included in the recompute.
+        bytes32 computedId = keccak256(abi.encode(batch, nonce));
         if (computedId != depositDataBufferId) revert BufferIdMismatch(depositDataBufferId, computedId);
 
         // 4. Validate initial deposits: field lengths, amount bounds, pubkey-not-already-funded
@@ -452,7 +480,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
             // InFlightDeposit / _assetBalance() (issue #441/#309). The upper bound and gwei-alignment
             // mirror `_depositValidator`; the 32-ETH floor is stricter here because this loop only
             // covers initial deposits (top-ups are validated separately below and stay >= 1 ETH).
-            if (d.amount < MIN_INITIAL_DEPOSIT_AMOUNT || d.amount > 2048 ether || d.amount % 1 gwei != 0) {
+            if (d.amount < MIN_INITIAL_DEPOSIT_AMOUNT || d.amount > MAX_DEPOSIT_AMOUNT || d.amount % 1 gwei != 0) {
                 revert InvalidDepositAmount(i, d.amount);
             }
             totalAmount += d.amount;
@@ -484,7 +512,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
             if (t.pubkey.length != DEPOSIT_PUBKEY_LENGTH) {
                 revert InvalidTopUpPubkeyLength(i, t.pubkey.length);
             }
-            if (t.amount < 1 ether || t.amount > 2048 ether || t.amount % 1 gwei != 0) {
+            if (t.amount < MIN_TOP_UP_AMOUNT || t.amount > MAX_TOP_UP_AMOUNT || t.amount % 1 gwei != 0) {
                 revert InvalidTopUpAmount(i, t.amount);
             }
             totalAmount += t.amount;
@@ -620,16 +648,6 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
             PrePectraValidatorPubkeyLookup.remove(pubkey);
         }
         emit RemovedPrePectraValidatorPubkeys(pubkeys);
-    }
-
-    /// @inheritdoc IAttestationVerifierV1
-    function markDepositDataBufferIdProcessed(bytes32 depositDataBufferId) external onlyRiver {
-        ProcessedDepositDataBufferIds.markProcessed(depositDataBufferId);
-    }
-
-    /// @inheritdoc IAttestationVerifierV1
-    function isDepositDataBufferIdProcessed(bytes32 depositDataBufferId) external view returns (bool) {
-        return ProcessedDepositDataBufferIds.isProcessed(depositDataBufferId);
     }
 
     /// @inheritdoc IAttestationVerifierV1

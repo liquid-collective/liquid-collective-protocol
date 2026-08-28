@@ -155,8 +155,9 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
             depositDataBufferId, depositRootHash, signatures, depositContract, withdrawalCredentials, committedBalance
         );
 
-        // 5. Mark the batch ID processed BEFORE any external interactions.
-        verifier.markDepositDataBufferIdProcessed(depositDataBufferId);
+        // 5. Mark the batch ID processed on the buffer BEFORE any external interactions. The buffer
+        //    is the authoritative replay gate; `fetchAndValidateDeposits` reads this flag at step 0.
+        IDepositDataBuffer(verifier.getDepositDataBuffer()).markDepositDataProcessed(depositDataBufferId);
 
         // 6. Update operator funded validator accounting
         _updateFundedETHFromBuffer(batch.deposits, batch.topUps);
