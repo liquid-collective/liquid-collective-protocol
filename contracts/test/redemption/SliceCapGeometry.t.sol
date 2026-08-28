@@ -17,9 +17,21 @@ import "./RedemptionTestBase.sol";
 ///
 ///      The cap only ever raises a ceiling: the payout is
 ///      `min(pro-rata of the withdrawal event's ETH, cap)` and the excess is routed to
-///      `BufferedExceedingEth`. Every test below therefore OVER-FUNDS its withdrawal events, so that
-///      what lands in the recipient's balance is the cap itself and not the event's ETH. A test that
-///      funded at the honest settlement rate would pass no matter how the walk misbehaved.
+///      `BufferedExceedingEth`. Every test below therefore funds its withdrawal events at a settlement
+///      rate STRICTLY ABOVE the largest cap rate it relies on -- the request-time rate over unmarked
+///      spans, a mark's locked rate over marked ones -- so that what lands in the recipient's balance is
+///      the cap itself and not the event's ETH. If the settlement rate merely tied the binding cap rate
+///      the two sides of the `min()` would coincide and a broken walk would still produce the asserted
+///      number; the strict inequality is what keeps these tests discriminating.
+///
+///      The margin is deliberately small, and every event is priced at the pool rate live when it is
+///      reported. River derives a withdrawal event's pair from that single rate
+///      (`withdrawnEth = underlyingBalanceFromShares(amount)`, see `_poolRate` on the base contract), so
+///      an event funded at 2.0 against a 1.05 pool is not a state the protocol can reach. What IS
+///      reachable, and what these tests model, is the ordinary sequence: a mark locks the PRE-report
+///      pool rate, the pool then keeps appreciating across subsequent reports, and the sweep that
+///      settles the demand is priced at the later, higher POST-report rate. A few percent of drift is
+///      enough for the cap to bind; the over-funding never has to be extravagant to be visible.
 ///
 ///      `_findRateMarkAtOrBefore` answers only "which is the last mark that STARTS at or before this
 ///      position". It does not promise that mark reaches the position, which is why the walk has a
@@ -75,7 +87,7 @@ contract SliceCapGeometryTests is RedemptionTestBase {
     /// but mark0 ENDS at 30, so `case 2` discards it, `markIndex` walks off the end of the stack and
     /// the `markIndex >= markCount` early return values the whole remainder at the request rate.
     ///
-    /// Expected: B is paid 30 LsETH at its request rate of 1.0, i.e. 30 ETH, and the 6 ETH of
+    /// Expected: B is paid 30 LsETH at its request rate of 1.0, i.e. 30 ETH, and the 2.4 ETH of
     /// over-funding is confiscated to the exceeding buffer.
     function testSliceAboveLastMarkPaysRequestRate() external {
         address user = _generateAllowlistedUser(0);
@@ -90,17 +102,19 @@ contract SliceCapGeometryTests is RedemptionTestBase {
         RateMarkStack.RateMark memory mark0 = redeemManager.getRateMarkDetails(0);
         assertEq(mark0.height + mark0.amount, 30e18);
 
-        // event 0 settles A's range, event 1 settles B's and is deliberately over-funded at 1.2 so the
-        // cap is what binds rather than the event's ETH
+        // event 0 settles A's range at the rate live when it is swept. The pool then appreciates once
+        // more, and event 1 settles B's range at 1.08 -- above BOTH cap rates in play, mark0's 1.05 and
+        // B's request rate of 1.0 -- so the cap is what binds rather than the event's ETH.
         _reportWithdraw(30e18, 1.05e18);
-        _reportWithdraw(30e18, 1.2e18);
+        river.sudoSetRate(1.08e18);
+        _reportWithdraw(30e18, 1.08e18);
 
         uint256 received = _claim(b);
 
         // the whole slice is above mark0, so nothing is credited at 1.05: 30 * 1.0
         assertEq(received, 30e18);
-        // pro-rata ETH was 30 * 1.2 = 36; the 6 above the cap is confiscated
-        assertEq(redeemManager.getBufferedExceedingEth(), 6e18);
+        // pro-rata ETH was 30 * 1.08 = 32.4; the 2.4 above the cap is confiscated
+        assertEq(redeemManager.getBufferedExceedingEth(), 2.4e18);
     }
 
     /// D4. Scenario: the slice STARTS INSIDE a mark because an earlier partial claim already advanced
@@ -130,8 +144,11 @@ contract SliceCapGeometryTests is RedemptionTestBase {
         assertEq(mark0.amount, 40e18);
         assertEq(mark0.markedEth, 42e18);
 
-        // first fill covers only 15 of the 40 LsETH, both events over-funded at 1.2
-        _reportWithdraw(15e18, 1.2e18);
+        // the pool appreciates once more after the mark locked 1.05, so both events settle at 1.08 --
+        // strictly above the only cap rate in play, mark0's locked 42/40 == 1.05
+        river.sudoSetRate(1.08e18);
+        // first fill covers only 15 of the 40 LsETH
+        _reportWithdraw(15e18, 1.08e18);
         uint256 firstClaim = _claim(id);
         // slice [0, 15) inside mark0: 15 * 42 / 40
         assertEq(firstClaim, 15.75e18);
@@ -139,15 +156,15 @@ contract SliceCapGeometryTests is RedemptionTestBase {
         assertEq(redeemManager.getRedeemRequestDetails(id).height, 15e18);
         assertEq(redeemManager.getRedeemRequestDetails(id).amount, 25e18);
 
-        _reportWithdraw(25e18, 1.2e18);
+        _reportWithdraw(25e18, 1.08e18);
         uint256 secondClaim = _claim(id);
 
         // slice [15, 40): case 3 credits markEnd - cursor = 25 LsETH at 42/40, and nothing else
         assertEq(secondClaim, 26.25e18);
         // the two halves of the mark reconstruct it exactly, no more and no less
         assertEq(firstClaim + secondClaim, mark0.markedEth);
-        // 18 + 30 ETH was funded, 42 was payable
-        assertEq(redeemManager.getBufferedExceedingEth(), 6e18);
+        // 16.2 + 27 = 43.2 ETH was funded, 42 was payable
+        assertEq(redeemManager.getBufferedExceedingEth(), 1.2e18);
     }
 
     /// D5b. Scenario: the slice ENDS INSIDE a mark, so `markedAmount` is clipped by `remainingAmount`
@@ -174,21 +191,24 @@ contract SliceCapGeometryTests is RedemptionTestBase {
         assertEq(mark0.amount, 40e18);
         assertEq(mark0.markedEth, 42e18);
 
-        // both events over-funded at 1.2 so the cap binds in both claims
-        _reportWithdraw(20e18, 1.2e18);
+        // the pool appreciates once more after the mark locked 1.05, so both events settle at 1.08 --
+        // strictly above the only cap rate in play, mark0's locked 42/40 == 1.05 -- and the cap binds in
+        // both claims
+        river.sudoSetRate(1.08e18);
+        _reportWithdraw(20e18, 1.08e18);
         uint256 receivedA = _claim(a);
         // slice [0, 20): markedAmount would be 40, clipped to remainingAmount = 20 -> 20 * 42 / 40
         assertEq(receivedA, 21e18);
 
-        _reportWithdraw(20e18, 1.2e18);
+        _reportWithdraw(20e18, 1.08e18);
         uint256 receivedB = _claim(b);
         // slice [20, 40): the untouched tail of the very same mark, 20 * 42 / 40
         assertEq(receivedB, 21e18);
 
         // the clip left exactly the tail behind: the two claims reconstruct the mark
         assertEq(receivedA + receivedB, mark0.markedEth);
-        // 24 + 24 ETH funded, 42 payable
-        assertEq(redeemManager.getBufferedExceedingEth(), 6e18);
+        // 21.6 + 21.6 = 43.2 ETH funded, 42 payable
+        assertEq(redeemManager.getBufferedExceedingEth(), 1.2e18);
     }
 
     /// D6. Scenario: one request spans a GAP between two marks. This is precisely the non-contiguity
@@ -223,8 +243,11 @@ contract SliceCapGeometryTests is RedemptionTestBase {
         assertEq(_markCursor(), 20e18);
 
         // 30 LsETH is then settled from the deposit buffer -- no exit, so no mark -- which pushes the
-        // settled height past the mark cursor and opens the gap [20, 30)
-        _reportWithdraw(30e18, 1.5e18);
+        // settled height past the mark cursor and opens the gap [20, 30). The pool has moved on to 1.08
+        // by the time it is swept, above both cap rates this slice uses (mark0's 1.05 and the request's
+        // 1.00), so the cap and not the event is what binds.
+        river.sudoSetRate(1.08e18);
+        _reportWithdraw(30e18, 1.08e18);
         assertEq(_settledHeight(), 30e18);
 
         // the next report can only mark unsettled demand, so mark1 starts at 30, not at 20
@@ -234,7 +257,9 @@ contract SliceCapGeometryTests is RedemptionTestBase {
         assertEq(redeemManager.getRateMarkDetails(1).height, 30e18);
         assertEq(redeemManager.getRateMarkDetails(1).amount, 30e18);
 
-        _reportWithdraw(30e18, 1.5e18);
+        // the second sweep is priced at 1.13, above mark1's locked 1.10, so this slice is cap-bound too
+        river.sudoSetRate(1.13e18);
+        _reportWithdraw(30e18, 1.13e18);
 
         // claiming in one call walks event 0 then event 1 by recursion
         uint256 received = _claim(id);
@@ -243,8 +268,9 @@ contract SliceCapGeometryTests is RedemptionTestBase {
         // slice [30, 60) = mark1 in full:                 30 * 1.10             = 33
         assertEq(received, 31e18 + 33e18);
         assertEq(received, 64e18);
-        // 45 + 45 ETH funded at 1.5, 64 payable
-        assertEq(redeemManager.getBufferedExceedingEth(), 90e18 - 64e18);
+        // 32.4 ETH funded at 1.08 plus 33.9 at 1.13 == 66.3, 64 payable
+        assertEq(redeemManager.getBufferedExceedingEth(), 66.3e18 - 64e18);
+        assertEq(redeemManager.getBufferedExceedingEth(), 2.3e18);
     }
 
     /// D7. Scenario: one request spans four marks and the three gaps between them, each mark at a
@@ -268,28 +294,36 @@ contract SliceCapGeometryTests is RedemptionTestBase {
         river.sudoSetRate(1e18);
         uint32 id = _openRequest(user, 100e18); // occupies [0, 100)
 
+        // The pool ramps monotonically throughout: each mark locks a PRE-report rate and the sweep that
+        // follows it is priced one step higher, which is exactly what puts every event strictly above
+        // the largest cap rate its own slice uses.
+
         // mark0 = [0, 10) @ 1.02
         river.sudoSetRate(1.02e18);
         river.sudoReportStoppedEarning(address(redeemManager), applyRate(10e18, 1.02e18));
-        // settling 20 leaves the gap [10, 20)
-        _reportWithdraw(20e18, 2e18);
+        // settling 20 at 1.03 leaves the gap [10, 20); slice cap rates here are 1.02 and 1.00
+        river.sudoSetRate(1.03e18);
+        _reportWithdraw(20e18, 1.03e18);
 
         // mark1 = [20, 35) @ 1.04, starting at the settled height
         river.sudoSetRate(1.04e18);
         river.sudoReportStoppedEarning(address(redeemManager), applyRate(15e18, 1.04e18));
-        // settling 25 more leaves the gap [35, 45)
-        _reportWithdraw(25e18, 2e18);
+        // settling 25 more at 1.05 leaves the gap [35, 45); slice cap rates here are 1.04 and 1.00
+        river.sudoSetRate(1.05e18);
+        _reportWithdraw(25e18, 1.05e18);
 
         // mark2 = [45, 65) @ 1.06
         river.sudoSetRate(1.06e18);
         river.sudoReportStoppedEarning(address(redeemManager), applyRate(20e18, 1.06e18));
-        // settling 25 more leaves the gap [65, 70)
-        _reportWithdraw(25e18, 2e18);
+        // settling 25 more at 1.07 leaves the gap [65, 70); slice cap rates here are 1.06 and 1.00
+        river.sudoSetRate(1.07e18);
+        _reportWithdraw(25e18, 1.07e18);
 
         // mark3 = [70, 80) @ 1.08, leaving [80, 100) permanently unmarked above the stack
         river.sudoSetRate(1.08e18);
         river.sudoReportStoppedEarning(address(redeemManager), applyRate(10e18, 1.08e18));
-        _reportWithdraw(30e18, 2e18);
+        river.sudoSetRate(1.09e18);
+        _reportWithdraw(30e18, 1.09e18);
 
         // the geometry drawn above, asserted rather than assumed
         assertEq(redeemManager.getRateMarkCount(), 4);
@@ -318,8 +352,10 @@ contract SliceCapGeometryTests is RedemptionTestBase {
 
         // the request is fully claimed, so the loop terminated on every one of the four slices
         assertEq(redeemManager.getRedeemRequestDetails(id).amount, 0);
-        // 40 + 50 + 50 + 60 = 200 ETH funded at 2.0, 102.8 payable
-        assertEq(redeemManager.getBufferedExceedingEth(), 200e18 - 102.8e18);
+        // 20*1.03 + 25*1.05 + 25*1.07 + 30*1.09 = 20.6 + 26.25 + 26.75 + 32.7 = 106.3 ETH funded,
+        // 102.8 payable; every one of the four slices was cap-bound, none of them event-bound
+        assertEq(redeemManager.getBufferedExceedingEth(), 106.3e18 - 102.8e18);
+        assertEq(redeemManager.getBufferedExceedingEth(), 3.5e18);
     }
 
     /// D8. Scenario: the slice starts EXACTLY at the `markEnd` of its predecessor mark, with a gap
@@ -346,11 +382,16 @@ contract SliceCapGeometryTests is RedemptionTestBase {
         assertEq(mark0.height + mark0.amount, 20e18);
         assertEq(redeemManager.getRedeemRequestDetails(b).height, 20e18);
 
-        // one over-funded event settles A and the first 10 LsETH of B
-        _reportWithdraw(30e18, 1.5e18);
+        // one event settles A and the first 10 LsETH of B. It is priced at 1.12, the pool rate live when
+        // it is swept, which is above every rate the assertions below discriminate between: mark0's
+        // 1.05, mark1's 1.10 and B's request rate of 1.00.
+        river.sudoSetRate(1.12e18);
+        _reportWithdraw(30e18, 1.12e18);
 
         // the following report can only mark unsettled demand, so mark1 opens at 30 and the gap
-        // [20, 30) -- which is exactly B's first slice -- is left permanently unmarked
+        // [20, 30) -- which is exactly B's first slice -- is left permanently unmarked. The pool has
+        // slipped back to 1.10 by then, which is what mark1 locks: a mark records the PRE-report rate,
+        // and nothing requires it to be above the rate of the sweep that preceded it.
         river.sudoSetRate(1.1e18);
         river.sudoReportStoppedEarning(address(redeemManager), applyRate(30e18, 1.1e18));
         assertEq(redeemManager.getRateMarkDetails(1).height, 30e18);
@@ -359,8 +400,8 @@ contract SliceCapGeometryTests is RedemptionTestBase {
 
         // slice [20, 30): no credit from mark0 (would be 10.5) and none from mark1 (would be 11)
         assertEq(received, 10e18);
-        // pro-rata ETH for the slice was 10 * 45 / 30 = 15
-        assertEq(redeemManager.getBufferedExceedingEth(), 5e18);
+        // pro-rata ETH for the slice was 10 * 33.6 / 30 = 11.2, so 1.2 is confiscated
+        assertEq(redeemManager.getBufferedExceedingEth(), 1.2e18);
         // B is only partially claimed, and its remainder now sits at mark1's start
         assertEq(redeemManager.getRedeemRequestDetails(b).height, 30e18);
         assertEq(redeemManager.getRedeemRequestDetails(b).amount, 30e18);
@@ -386,9 +427,11 @@ contract SliceCapGeometryTests is RedemptionTestBase {
         uint32 a = _openRequest(user, 30e18); // occupies [0, 30)
         uint32 b = _openRequest(user, 30e18); // occupies [30, 60)
 
-        // both ranges settled, both over-funded at 1.2 so the cap binds
-        _reportWithdraw(30e18, 1.2e18);
-        _reportWithdraw(30e18, 1.2e18);
+        // the pool appreciates to 1.03 and both ranges are settled at it -- above the 1.00 request rate
+        // that caps both slices, and also above nothing else, since no mark exists yet
+        river.sudoSetRate(1.03e18);
+        _reportWithdraw(30e18, 1.03e18);
+        _reportWithdraw(30e18, 1.03e18);
 
         // (a) empty stack. B's slice starts at 30, so this exercises the `length == 0` guard at a
         // non-zero position rather than at the head of the axis.
@@ -407,8 +450,8 @@ contract SliceCapGeometryTests is RedemptionTestBase {
         // binary search runs and case 1 clips 60 - 0 = 60 down to the 30 LsETH actually in the slice
         assertEq(_claim(a), 30e18);
 
-        // 36 ETH pro-rata against a 30 ETH cap, twice
-        assertEq(redeemManager.getBufferedExceedingEth(), 12e18);
+        // 30.9 ETH pro-rata against a 30 ETH cap, twice
+        assertEq(redeemManager.getBufferedExceedingEth(), 1.8e18);
     }
 
     /// D10. Scenario: the slice's start height equals a mark's `height` EXACTLY, with marks on both
@@ -446,9 +489,11 @@ contract SliceCapGeometryTests is RedemptionTestBase {
         assertEq(redeemManager.getRateMarkDetails(3).height, 20e18);
         assertEq(redeemManager.getRedeemRequestDetails(b).height, 20e18);
 
-        // both events over-funded at 1.5 so the cap binds
-        _reportWithdraw(20e18, 1.5e18);
-        _reportWithdraw(30e18, 1.5e18);
+        // the pool appreciates once more past the last mark's 1.05, so both events settle at 1.08 --
+        // above every cap rate B's slice uses (1.04, 1.05 and its own 1.00) and the cap binds
+        river.sudoSetRate(1.08e18);
+        _reportWithdraw(20e18, 1.08e18);
+        _reportWithdraw(30e18, 1.08e18);
 
         uint256 received = _claim(b);
 
@@ -459,8 +504,9 @@ contract SliceCapGeometryTests is RedemptionTestBase {
         assertEq(fromM3, 10.4e18);
         assertEq(received, fromM3 + fromM4 + aboveStack);
         assertEq(received, 30.9e18);
-        // 45 ETH pro-rata against a 30.9 cap
-        assertEq(redeemManager.getBufferedExceedingEth(), 45e18 - 30.9e18);
+        // 32.4 ETH pro-rata against a 30.9 cap
+        assertEq(redeemManager.getBufferedExceedingEth(), 32.4e18 - 30.9e18);
+        assertEq(redeemManager.getBufferedExceedingEth(), 1.5e18);
     }
 
     /// D11. Scenario: a request that stayed pending across MANY marked reports (200 marks, one per
@@ -488,8 +534,10 @@ contract SliceCapGeometryTests is RedemptionTestBase {
         assertEq(redeemManager.getRateMarkCount(), 200);
         assertEq(_markCursor(), 200e18);
 
-        // one event covering the whole request, over-funded at 2.0 so the cap binds everywhere
-        _reportWithdraw(200e18, 2e18);
+        // one event covering the whole request, settled at 1.25 -- above the highest locked rate in the
+        // ramp (m199's 1.199) and so above every per-mark term, which makes the cap bind everywhere
+        river.sudoSetRate(1.25e18);
+        _reportWithdraw(200e18, 1.25e18);
         (uint256 received, uint256 gasUsed) = _claimMeasuringGas(single, 0);
 
         // `emit log_named_uint` rather than `console.log`: this profile builds with via_ir, under which
@@ -513,10 +561,12 @@ contract SliceCapGeometryTests is RedemptionTestBase {
         assertEq(redeemManager.getRateMarkCount(), 400);
         assertEq(redeemManager.getRateMarkDetails(200).height, 200e18);
 
-        // eight events of 25 LsETH each: every event boundary lands on a mark boundary, so the split
-        // introduces no rounding of its own
+        // eight events of 25 LsETH each, all settled at 1.25 as in phase 1: every event boundary lands
+        // on a mark boundary, so the split introduces no rounding of its own, and every slice is
+        // cap-bound because 1.25 is above the highest locked rate the ramp reaches
+        river.sudoSetRate(1.25e18);
         for (uint256 i = 0; i < 8; ++i) {
-            _reportWithdraw(25e18, 2e18);
+            _reportWithdraw(25e18, 1.25e18);
         }
 
         // depth 1 means each call handles its starting event plus one recursion, so two events per

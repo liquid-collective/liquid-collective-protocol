@@ -186,7 +186,9 @@ contract RedemptionClaimMechanicsTests is RedemptionTestBase {
         assertEq(redeemManager.getRateMarkDetails(0).amount, 15e18);
         assertEq(redeemManager.getRateMarkDetails(0).markedEth, 15.9e18);
 
-        // one event settles the whole queue at 1.10, i.e. above every cap in play
+        // the pool appreciates once more and one event settles the whole queue at 1.10, i.e. above every
+        // cap rate in play (the mark's 1.06 and the three request rates 1.00 / 1.02 / 1.04)
+        river.sudoSetRate(1.1e18);
         assertEq(_reportWithdraw(30e18, 1.1e18), 33e18);
 
         uint32[] memory ids = new uint32[](3);
@@ -249,7 +251,9 @@ contract RedemptionClaimMechanicsTests is RedemptionTestBase {
         // B starts exactly where the mark ends, so it is in the gap by construction
         assertEq(redeemManager.getRedeemRequestDetails(idB).height, _markCursor());
 
-        // settle both at a rate above every cap, so each payout is decided by its own cap
+        // the pool appreciates once more, and one event settles both at 1.10 -- above every cap rate in
+        // play (A's mark at 1.05 and B's request rate of 1.08) -- so each payout is decided by its own cap
+        river.sudoSetRate(1.1e18);
         assertEq(_reportWithdraw(60e18, 1.1e18), 66e18);
 
         // A: pro-rata 33 ETH clamped to the mark -> 31.5 ETH, 1.5 ETH confiscated
@@ -435,9 +439,13 @@ contract RedemptionClaimMechanicsTests is RedemptionTestBase {
         uint32 id = _openRequest(user, 30e18); // [0, 30), anchored at 30 ETH -> cap of 1.00 per LsETH
 
         // three consecutive events at three different settlement rates: one above the cap, one below,
-        // one above
+        // one above. Each is swept at the pool rate live at that moment, so the pool walks 1.05 -> 0.95
+        // (a slashing) -> 1.10 across the three reports that push them.
+        river.sudoSetRate(1.05e18);
         assertEq(_reportWithdraw(10e18, 1.05e18), 10.5e18); // event 0, [0, 10)
+        river.sudoSetRate(0.95e18);
         assertEq(_reportWithdraw(10e18, 0.95e18), 9.5e18); //  event 1, [10, 20)
+        river.sudoSetRate(1.1e18);
         assertEq(_reportWithdraw(10e18, 1.1e18), 11e18); //    event 2, [20, 30)
 
         // baseline: what one uninterrupted call pays
