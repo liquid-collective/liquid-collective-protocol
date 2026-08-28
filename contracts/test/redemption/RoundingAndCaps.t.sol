@@ -523,8 +523,10 @@ contract RedemptionRoundingAndCapsTests is RedemptionTestBase {
         assertEq(address(redeemManager).balance, 0);
 
         // ── (3) demand one wei BELOW the ETH available: 1 wei of demand, 2 wei of ETH ─────────────
-        // The last wei of demand is settled by an event funded at a rate of 2.0, so the event offers
-        // 2 wei where the request-time cap allows (1 * (20e18+1)) / (20e18+1) == 1 wei.
+        // The pool has doubled by the time the last wei is swept, so the event is funded at a rate of
+        // 2.0 - `underlyingBalanceFromShares(1) == 2` - and offers 2 wei where the request-time cap
+        // allows (1 * (20e18+1)) / (20e18+1) == 1 wei.
+        river.sudoSetRate(2e18);
         _reportWithdraw(1, 2e18);
         assertEq(redeemManager.getWithdrawalEventDetails(2).withdrawnEth, 2);
 

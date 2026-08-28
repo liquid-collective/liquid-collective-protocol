@@ -265,8 +265,10 @@ contract RateMarkPlacementTests is RedemptionTestBase {
         assertEq(redeemManager.getRateMarkCount(), 1);
         assertEq(redeemManager.getRateMarkDetails(0).amount, 30e18);
 
-        // settle the whole 50 LsETH at a much higher rate so the cap, not the settlement, is what binds
-        _reportWithdraw(50e18, 1.3e18);
+        // the pool appreciates once more and the whole 50 LsETH is swept at 1.15 -- above both cap rates
+        // in play, A's locked 1.05 and B's request rate of 1.10 -- so the cap, not the settlement, binds
+        river.sudoSetRate(1.15e18);
+        _reportWithdraw(50e18, 1.15e18);
 
         // A is covered by the mark: paid the locked 1.05, not the 1.3 the pool reached
         assertEq(_claim(requestA), applyRate(30e18, 1.05e18));
