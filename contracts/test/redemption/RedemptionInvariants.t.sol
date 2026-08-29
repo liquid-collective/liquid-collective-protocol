@@ -4,9 +4,8 @@ pragma solidity 0.8.34;
 
 import "forge-std/StdUtils.sol";
 
-import "./RedemptionTestBase.sol";
+import "./RedemptionReportBase.sol";
 
-import "../utils/LibImplementationUnbricker.sol";
 import "../../src/state/redeemManager/WithdrawalStack.sol";
 import "../../src/state/redeemManager/RateMarkStack.sol";
 import "../../src/state/redeemManager/RedeemRequestAnchor.sol";
@@ -37,7 +36,7 @@ interface IRedemptionActions {
 ///      is deliberate: a differential test is only worth running when the two sides are formulated
 ///      differently, so a bug in `_findRateMarkAtOrBefore`'s predecessor search cannot be reproduced
 ///      identically here and cancel out.
-abstract contract RedemptionMirror is RedemptionTestBase {
+abstract contract RedemptionMirror is RedemptionReportBase {
     /// @notice The result of mirroring a single `claimRedeemRequests` call for one request
     struct MirrorClaim {
         /// @custom:attribute ETH the recipient should receive
@@ -170,69 +169,30 @@ abstract contract RedemptionMirror is RedemptionTestBase {
         }
     }
 
-    /// @notice Deploys a fresh, fully upgraded RiverMock + RedeemManagerV1 pair on this test's allowlist
-    /// @dev The pair starts with an empty queue, so `initializeRedeemManagerV1_3` pins the rate mark
-    ///      floor at 0 and every request opened afterwards is anchored.
-    function _deployFreshPair() internal returns (RiverMock freshRiver, RedeemManagerV1 freshManager) {
-        freshManager = new RedeemManagerV1();
-        LibImplementationUnbricker.unbrick(vm, address(freshManager));
-        freshRiver = new RiverMock(address(allowlist));
-        freshManager.initializeRedeemManagerV1(address(freshRiver));
-        // `initializeRedeemManagerV1` leaves the version at 1; mainnet is at 2 before this upgrade
-        vm.store(address(freshManager), LibImplementationUnbricker.VERSION_SLOT, bytes32(uint256(2)));
-        freshManager.initializeRedeemManagerV1_3();
-    }
-
-    /// @dev `RedemptionTestBase._openRequest` bound to an explicit pair.
-    function _openRequestOn(RiverMock freshRiver, RedeemManagerV1 freshManager, address user, uint256 amount)
+    /// @notice Rolls the whole protocol back to `snapshotId` so a scenario can be replayed onto a
+    ///         pristine deployment, and hands back the pair to drive.
+    /// @dev Replaces the "deploy a second River + RedeemManagerV1 pair" idiom the differential
+    ///      tests below used to rely on. With the complete protocol under test a second world would
+    ///      mean a second River, Oracle, OperatorsRegistry, AttestationVerifier and so on, redeployed
+    ///      once per fuzz run per world -- thousands of full protocol deployments across a suite. A
+    ///      state rollback gives the same thing: a deployment with an empty queue, an empty withdrawal
+    ///      stack, an empty mark stack and the rate mark floor still at 0. `ClaimMechanics` uses the
+    ///      same snapshot idiom to replay a scenario under a second claim order.
+    /// @dev Anything the caller needs from the world it is leaving must be read BEFORE this call: the
+    ///      rollback restores contract storage, so only values already in memory survive it.
+    function _resetToPristineProtocol(uint256 snapshotId)
         internal
-        returns (uint32 id)
+        returns (RedemptionRiverV1 freshRiver, RedeemManagerV1 freshManager)
     {
-        freshRiver.sudoDeal(user, amount);
-        vm.prank(user);
-        freshRiver.approve(address(freshManager), amount);
-        vm.prank(user);
-        return freshManager.requestRedeem(amount, user);
-    }
-
-    /// @dev `RedemptionTestBase._reportWithdraw` bound to an explicit pair.
-    function _reportWithdrawOn(RiverMock freshRiver, RedeemManagerV1 freshManager, uint256 lsETH, uint256 rate)
-        internal
-        returns (uint256 withdrawnEth)
-    {
-        withdrawnEth = applyRate(lsETH, rate);
-        vm.deal(address(this), withdrawnEth);
-        freshRiver.sudoReportWithdraw{value: withdrawnEth}(address(freshManager), lsETH);
-    }
-
-    /// @dev `RedemptionTestBase._claimWithDepth` bound to an explicit pair.
-    function _claimOn(RedeemManagerV1 freshManager, uint32 id, uint32 withdrawalEventId, uint16 depth)
-        internal
-        returns (uint256 received)
-    {
-        uint32[] memory ids = new uint32[](1);
-        ids[0] = id;
-        uint32[] memory eventIds = new uint32[](1);
-        eventIds[0] = withdrawalEventId;
-        address recipient = freshManager.getRedeemRequestDetails(id).recipient;
-        uint256 balanceBefore = recipient.balance;
-        freshManager.claimRedeemRequests(ids, eventIds, true, depth);
-        return recipient.balance - balanceBefore;
-    }
-
-    /// @dev `RedemptionTestBase._stripAnchor` bound to an explicit pair.
-    function _stripAnchorOn(RedeemManagerV1 freshManager, uint32 id) internal {
-        bytes32 anchorSlot =
-            keccak256(abi.encode(uint256(id), bytes32(uint256(keccak256("river.state.redeemRequestAnchor")) - 1)));
-        vm.store(address(freshManager), anchorSlot, bytes32(0));
-        vm.store(address(freshManager), bytes32(uint256(anchorSlot) + 1), bytes32(0));
+        assertTrue(vm.revertTo(snapshotId), "failed to roll the protocol back to its pristine state");
+        return (river, redeemManager);
     }
 
     /// @dev Resolves `id` to the withdrawal event that currently satisfies it, or a negative code.
-    function _resolveOn(RedeemManagerV1 freshManager, uint32 id) internal view returns (int64) {
+    function _resolveOn(RedeemManagerV1 manager, uint32 id) internal view returns (int64) {
         uint32[] memory ids = new uint32[](1);
         ids[0] = id;
-        return freshManager.resolveRedeemRequests(ids)[0];
+        return manager.resolveRedeemRequests(ids)[0];
     }
 }
 
@@ -354,14 +314,18 @@ contract RedemptionInvariantHandler is StdUtils {
     /// @dev `reportWithdraw` reverts when the settled LsETH exceeds `RedeemDemand`, so the amount is
     ///      bounded by the live demand rather than by a constant — that is the difference between a
     ///      handler that exercises the claim path and one that only ever reverts.
-    /// @dev DECLARED CARVE-OUT: the lower bound is 1, not 0, so this handler never produces the
-    ///      zero-width withdrawal event (`{amount: 0, withdrawnEth: dust}`) that River can produce when
-    ///      `sharesFromUnderlyingBalance` truncates a dust ETH leg. That event is reachable and it
-    ///      BRICKS a spanning claim with Panic(0x12) — see
-    ///      `RedemptionRoundingAndCapsTests.testZeroWidthWithdrawalEventBricksSpanningClaim`. It is
-    ///      excluded here deliberately: under `fail_on_revert = false` the resulting revert would roll
-    ///      the whole handler call back and be silently invisible, which is worse than not sampling it.
-    ///      The two named unit tests own that case; this suite must not be read as evidence against it.
+    /// @dev DECLARED CARVE-OUT: this handler never produces the zero-width withdrawal event
+    ///      (`{amount: 0, withdrawnEth: dust}`) that River produces when `sharesFromUnderlyingBalance`
+    ///      truncates a dust ETH leg. That event is reachable and it BRICKS a spanning claim with
+    ///      Panic(0x12) — see `RedemptionRoundingAndCapsTests.testZeroWidthWithdrawalEventBricksSpanningClaim`.
+    ///      It is excluded here deliberately: under `fail_on_revert = false` the resulting revert would
+    ///      roll the whole handler call back and be silently invisible, which is worse than not sampling
+    ///      it. The two named unit tests own that case; this suite must not be read as evidence against it.
+    /// @dev Bounding the LsETH seed to `[1, demand]` USED to be enough to enforce that, because the mock
+    ///      took the settled LsETH as an argument. On the real report path a test funds the settlement in
+    ///      ETH and River derives the LsETH leg itself, so a dust settlement at a pool rate above 1.0
+    ///      lands right back on the zero-width event. The carve-out therefore has to be enforced on the
+    ///      funding rather than on the seed — see `handler_reportWithdraw`.
     /// @param lsETHSeed Seed for the settled LsETH, bounded to [1, outstanding demand].
     function reportWithdraw(uint256 lsETHSeed) external {
         if (_test.handler_withdrawalEventCount() >= MAX_ENTRIES) {
@@ -428,6 +392,11 @@ contract RedemptionInvariantsTest is RedemptionMirror {
     /// @custom:attribute Number of claims that reverted despite resolving to a real withdrawal event
     uint256 internal ghost_claimReverted;
 
+    /// @custom:attribute Exceeding eth that oracle reports have already reclaimed into River
+    /// @dev Every report drains the staged buffer, so this is the third term the conservation identity
+    ///      needs: what was confiscated is either still staged, or already back with the LsETH holders.
+    uint256 internal ghost_pulledExceedingEth;
+
     /// @custom:attribute Slices where the cap was the binding side of `min(pro-rata event ETH, cap)`
     uint256 internal ghost_capBoundSlices;
     /// @custom:attribute Slices where the event's ETH was the binding side (or tied with the cap)
@@ -468,7 +437,7 @@ contract RedemptionInvariantsTest is RedemptionMirror {
         // Two requests opened BEFORE the upgrade and then stripped of their anchors: this is exactly
         // what a live deployment's queue looks like at cutover. It pushes the rate mark floor to
         // 17 ether and keeps the legacy cap branch reachable from the fuzzed action set.
-        river.sudoSetRate(1e18);
+        _reportRateLoose(1e18);
         uint32 legacyA = _openRequest(actors[0], 10 ether);
         _stripAnchor(legacyA);
         ghost_endPositions.push(10 ether);
@@ -526,30 +495,60 @@ contract RedemptionInvariantsTest is RedemptionMirror {
     /// @dev No rate is passed: `_requestRedeem` anchors the request at the live pool rate itself, which
     ///      is what makes the anchor directly comparable to the mark and settlement rates that follow.
     function handler_openRequest(uint256 actorIdx, uint256 amount) external {
-        uint32 id = _openRequest(actors[actorIdx], amount);
+        (uint32 id,) = _openRequestLoose(actors[actorIdx], amount);
         RedeemQueueV2.RedeemRequest memory request = redeemManager.getRedeemRequestDetails(id);
         ghost_endPositions.push(request.height + request.amount);
     }
 
     /// @notice Lands an oracle report that only moves the pool rate. The sole source of rate movement.
     function handler_moveRate(uint256 rate) external {
-        river.sudoSetRate(rate);
+        uint256 bufferBefore = redeemManager.getBufferedExceedingEth();
+        _reportRateLoose(rate);
+        _recordExceedingEthPull(bufferBefore);
     }
 
     /// @notice Reports `stoppedEarningEth` of principal that crossed exit_epoch, valued at the live rate.
-    /// @dev Routed through the rate-deriving mock helper rather than the explicit-pair one, so the LsETH
-    ///      leg is `sharesFromUnderlyingBalance(stoppedEarningEth)` — the same conversion
-    ///      LibOracleReporting performs, flooring included. The resulting mark's locked rate is therefore
-    ///      the pool rate, never a number the fuzzer picked independently of it.
+    /// @dev The ETH leg is what the fuzzer chose; the LsETH leg is River's own
+    ///      `sharesFromUnderlyingBalance(stoppedEarningEth)`, flooring included, derived inside the
+    ///      report. The resulting mark's locked rate is therefore the pool rate, never a number the
+    ///      fuzzer picked independently of it.
     function handler_reportStoppedEarning(uint256 stoppedEarningEth) external {
-        river.sudoReportStoppedEarning(address(redeemManager), stoppedEarningEth);
+        uint256 bufferBefore = redeemManager.getBufferedExceedingEth();
+        _reportStoppedEarning(stoppedEarningEth);
+        _recordExceedingEthPull(bufferBefore);
     }
 
     /// @notice Pushes a withdrawal event settling `lsETH` of demand, funded at the live pool rate.
     /// @dev `withdrawnEth / amount` is the pool rate for the same reason: River funds the event out of
     ///      `BalanceToRedeem` and converts the two legs with the very same views.
+    /// @dev Enforces the zero-width carve-out declared on `RedemptionInvariantHandler.reportWithdraw`.
+    ///      River derives the event's LsETH leg from the ETH it was funded with, so a dust settlement at
+    ///      a pool rate above 1.0 would floor that leg to zero and push the very event this suite
+    ///      excludes. Funding is raised to the least that settles a single wei of demand instead.
     function handler_reportWithdraw(uint256 lsETH) external {
-        _reportWithdraw(lsETH, _poolRate());
+        uint256 rate = _poolRate();
+        uint256 exitedEth = applyRate(lsETH, rate);
+        if (river.sharesFromUnderlyingBalance(exitedEth) == 0) {
+            exitedEth = river.underlyingBalanceFromShares(1) + 1;
+        }
+
+        uint256 bufferBefore = redeemManager.getBufferedExceedingEth();
+        _reportWithdrawEth(exitedEth, rate);
+        _recordExceedingEthPull(bufferBefore);
+    }
+
+    /// @notice Records the exceeding eth the report just reclaimed, so I1 still balances.
+    /// @dev `_pullRedeemManagerExceedingEth` runs inside every report and moves the staged buffer back
+    ///      into River, so the buffer is no longer a running total of everything ever confiscated. The
+    ///      conservation identity has to carry what River has already taken back as its own term.
+    /// @dev A report can only ever DRAIN the buffer -- nothing on the report path adds to it, only a
+    ///      claim does -- so the drop across the call is an exact measure of the pull, and stays correct
+    ///      if the APR headroom ever bounds it to a partial one.
+    function _recordExceedingEthPull(uint256 bufferBefore) internal {
+        uint256 bufferAfter = redeemManager.getBufferedExceedingEth();
+        if (bufferBefore > bufferAfter) {
+            ghost_pulledExceedingEth += bufferBefore - bufferAfter;
+        }
     }
 
     /// @notice Claims `id` against its satisfying withdrawal event, mirroring the walk beforehand so
@@ -676,12 +675,14 @@ contract RedemptionInvariantsTest is RedemptionMirror {
     function invariant_ConservationPerWithdrawalEvent() public {
         assertEq(ghost_conservationMismatch, 0, "I1: paid + buffered != event ETH for some claim");
 
-        // global form: nothing is ever pulled out of the buffer in this handler, so the two sides
-        // must match exactly at all times
+        // global form. Every wei a withdrawal event supplied is in exactly one of three places: paid to
+        // a recipient, still staged in the exceeding-eth buffer, or already reclaimed into River by a
+        // later oracle report. The third term is what the report path adds -- `_pullRedeemManagerExceedingEth`
+        // runs inside every report, so the buffer alone stopped being a running total.
         assertEq(
-            ghost_totalPaid + redeemManager.getBufferedExceedingEth(),
+            ghost_totalPaid + redeemManager.getBufferedExceedingEth() + ghost_pulledExceedingEth,
             ghost_totalGross,
-            "I1: cumulative paid + buffered != cumulative event ETH"
+            "I1: cumulative paid + buffered + reclaimed != cumulative event ETH"
         );
 
         // per-event form, with the truncation dust bound stated explicitly
@@ -870,8 +871,11 @@ contract RedemptionInvariantsTest is RedemptionMirror {
 ///      restating it: `testFuzz_MarkedRequestPayoutRespectsCapAndConservesEth` pins the single-mark
 ///      single-event case, `testFuzz_SplitClaimNeverPaysMoreThanWholeClaim` pins an inequality across
 ///      differing event geometry. Everything below is a property those do not reach.
+/// @dev The two worlds a differential property needs are two STATES of the one protocol deployment,
+///      separated by a snapshot rollback, rather than two deployments. See
+///      `RedemptionMirror._resetToPristineProtocol` for why.
 contract RedemptionRateMarkFuzzTests is RedemptionMirror {
-    /// @notice Parameters of a scenario replayed identically onto two independent deployments
+    /// @notice Parameters of a scenario replayed identically onto two pristine protocol states
     struct Scenario {
         address user;
         uint256 amount;
@@ -883,11 +887,24 @@ contract RedemptionRateMarkFuzzTests is RedemptionMirror {
         uint256 rateC;
     }
 
+    /// @notice The single redeemer every scenario below is built for.
+    /// @dev Created in `setUp` rather than per run so it survives the snapshot rollback that separates
+    ///      the two worlds: an allowlist grant issued after the snapshot would be undone by the
+    ///      rollback and the second world's request would revert.
+    address internal fuzzUser;
+
     function setUp() public override {
         super.setUp();
+
+        fuzzUser = _generateAllowlistedUser(0);
+        // An empty queue at upgrade time pins the rate mark floor at 0, so every request opened by a
+        // scenario below is anchored and fully markable -- the state the old `_deployFreshPair` handed
+        // back.
+        _upgradeToV1_3();
+        assertEq(redeemManager.getRateMarkFloor(), 0, "fixture: an empty queue must pin the floor at 0");
     }
 
-    /// @dev Builds a fresh deployment carrying `s`: one anchored request, one rate mark over its
+    /// @dev Builds `s` onto a pristine protocol state: one anchored request, one rate mark over its
     ///      lower `markAmount`, and three withdrawal events settling it in thirds at three different
     ///      rates. Returns the pair and the request id.
     /// @dev The pool rate is MOVED before each action and every leg is then derived from it, rather
@@ -895,33 +912,44 @@ contract RedemptionRateMarkFuzzTests is RedemptionMirror {
     ///      River computes a mark's locked rate as `stoppedEarningEth / sharesFromUnderlyingBalance(...)`
     ///      and an event's settlement rate as `withdrawnEth / amount`, both from the single live rate, so
     ///      a mark priced at 2.0 while the pool sits at 1.0 is a state the protocol cannot reach. Each
-    ///      `sudoSetRate` here stands for however many oracle reports it took the pool to walk there --
-    ///      the rates are unconstrained relative to each other, only relative to the action they price.
+    ///      rate move here is its own oracle report, standing for however many it took the pool to walk
+    ///      there -- the rates are unconstrained relative to each other, only relative to the action they
+    ///      price.
+    /// @dev The last event settles the REMAINING demand rather than a computed third. A report funds the
+    ///      RedeemManager in ETH, and River converts back with `sharesFromUnderlyingBalance`, so the
+    ///      round trip `floor(floor(lsETH * rate) / rate)` can lose a wei per event. Asking for a third
+    ///      three times therefore leaves the request a few wei short of exhausted, which is a property of
+    ///      the conversion rather than of the claim path the caller is testing. Over-funding the last
+    ///      event puts `_reportWithdrawToRedeemManager` on its full-demand branch, where it clamps to the
+    ///      demand exactly and skims the excess back to the deposit buffer.
     function _buildScenario(Scenario memory s) internal returns (RedeemManagerV1 manager, uint32 id) {
-        RiverMock freshRiver;
-        (freshRiver, manager) = _deployFreshPair();
+        manager = redeemManager;
 
-        freshRiver.sudoSetRate(s.requestRate);
-        id = _openRequestOn(freshRiver, manager, s.user, s.amount);
+        _reportRateLoose(s.requestRate);
+        // deliberately NOT written back into `s`: the struct is memory, so a caller that replays the
+        // same scenario onto a second world would otherwise hand it the first world's opened amount as
+        // the target and build a geometry a wei or two different
+        (uint32 openedId, uint256 opened) = _openRequestLoose(s.user, s.amount);
+        id = openedId;
 
         if (s.markAmount > 0) {
-            freshRiver.sudoSetRate(s.markRate);
-            freshRiver.sudoReportStoppedEarning(address(manager), applyRate(s.markAmount, s.markRate));
+            _reportRateLoose(s.markRate);
+            _reportStoppedEarning(applyRate(s.markAmount, s.markRate));
         }
 
-        uint256 first = s.amount / 3;
-        uint256 second = s.amount / 3;
-        uint256 third = s.amount - first - second;
-        freshRiver.sudoSetRate(s.rateA);
-        _reportWithdrawOn(freshRiver, manager, first, s.rateA);
-        freshRiver.sudoSetRate(s.rateB);
-        _reportWithdrawOn(freshRiver, manager, second, s.rateB);
-        freshRiver.sudoSetRate(s.rateC);
-        _reportWithdrawOn(freshRiver, manager, third, s.rateC);
+        uint256 first = opened / 3;
+        uint256 second = opened / 3;
+        _reportRateLoose(s.rateA);
+        _reportWithdrawEth(applyRate(first, s.rateA), s.rateA);
+        _reportRateLoose(s.rateB);
+        _reportWithdrawEth(applyRate(second, s.rateB), s.rateB);
+        _reportRateLoose(s.rateC);
+        _reportWithdrawEth(applyRate(redeemManager.getRedeemDemand(), s.rateC) + 1, s.rateC);
+        assertEq(redeemManager.getRedeemDemand(), 0, "scenario: the three events must settle the whole request");
     }
 
     /// Scenario: the identical request, mark stack and withdrawal-event geometry is claimed twice on
-    /// two independent deployments — once in a single unbounded call, once in K calls whose recursion
+    /// two pristine protocol states — once in a single unbounded call, once in K calls whose recursion
     /// depths are fuzzed independently until the request is exhausted.
     /// Expected: the two totals are EQUAL, wei for wei, for every K and every depth sequence.
     /// Why it matters: `_depth` is the escape hatch a redeemer must use when their request has been
@@ -942,9 +970,10 @@ contract RedemptionRateMarkFuzzTests is RedemptionMirror {
         uint256 _depthSeed
     ) external {
         Scenario memory s;
-        s.user = _generateAllowlistedUser(0);
-        // at least 3 so every one of the three withdrawal events settles a non-zero span
-        s.amount = bound(_amount, 3, 1_000_000 ether);
+        s.user = fuzzUser;
+        // at least a gwei, so each of the three withdrawal events settles a span that survives the
+        // ETH round trip rather than flooring away to nothing
+        s.amount = bound(_amount, 1 gwei, 1_000 ether);
         s.requestRate = bound(_requestRate, 0.5e18, 2e18);
         s.markAmount = (s.amount * bound(_markFraction, 0, 1e18)) / 1e18;
         s.markRate = bound(_markRate, 0.5e18, 2e18);
@@ -952,13 +981,19 @@ contract RedemptionRateMarkFuzzTests is RedemptionMirror {
         s.rateB = bound(_rateB, 0.5e18, 2e18);
         s.rateC = bound(_rateC, 0.5e18, 2e18);
 
+        uint256 pristine = vm.snapshot();
+
         // ── world 1: one call, unbounded depth ──────────────────────────────────
         (RedeemManagerV1 whole, uint32 idWhole) = _buildScenario(s);
-        uint256 receivedWhole = _claimOn(whole, idWhole, 0, type(uint16).max);
+        uint256 receivedWhole = _claimWithDepth(idWhole, 0, type(uint16).max);
         assertEq(whole.getRedeemRequestDetails(idWhole).amount, 0, "whole claim did not exhaust the request");
+        // read out of the first world before the rollback discards its storage
+        uint256 bufferedWhole = whole.getBufferedExceedingEth();
 
-        // ── world 2: K calls, each with its own fuzzed depth ────────────────────
-        (RedeemManagerV1 split, uint32 idSplit) = _buildScenario(s);
+        // ── world 2: the same protocol rolled back, then K calls each with its own fuzzed depth ──
+        (, RedeemManagerV1 split) = _resetToPristineProtocol(pristine);
+        uint32 idSplit;
+        (split, idSplit) = _buildScenario(s);
         uint256 receivedSplit = 0;
         uint256 steps = 0;
         // three events means at most three steps are ever needed; the bound is a liveness guard, and
@@ -967,7 +1002,7 @@ contract RedemptionRateMarkFuzzTests is RedemptionMirror {
             int64 resolved = _resolveOn(split, idSplit);
             if (resolved < 0) break;
             uint16 depth = uint16(bound(uint256(keccak256(abi.encode(_depthSeed, i))), 0, 2));
-            receivedSplit += _claimOn(split, idSplit, uint32(uint64(resolved)), depth);
+            receivedSplit += _claimWithDepth(idSplit, uint32(uint64(resolved)), depth);
             steps += 1;
         }
         assertEq(split.getRedeemRequestDetails(idSplit).amount, 0, "split claim did not exhaust the request");
@@ -978,13 +1013,13 @@ contract RedemptionRateMarkFuzzTests is RedemptionMirror {
         // shifting wei into the buffer instead of to the recipient
         assertEq(
             split.getBufferedExceedingEth(),
-            whole.getBufferedExceedingEth(),
+            bufferedWhole,
             "I6: depth-split claim buffered a different amount of exceeding ETH"
         );
     }
 
-    /// Scenario: the same legacy (anchor-less) request, settled at the same rate, on two independent
-    /// deployments — one where a rate mark covers its entire span, one with no marks at all.
+    /// Scenario: the same legacy (anchor-less) request, settled at the same rate, on two pristine
+    /// protocol states — one where a rate mark covers its entire span, one with no marks at all.
     /// Expected: identical payout, and it equals the request-time ETH clamped by what the event
     /// supplied.
     /// Why it matters: the PRD excludes retroactive application. A pre-upgrade request has no anchor
@@ -998,38 +1033,42 @@ contract RedemptionRateMarkFuzzTests is RedemptionMirror {
         uint256 _markRate,
         uint256 _settlementRate
     ) external {
-        uint256 amount = bound(_amount, 1 gwei, 1_000_000 ether);
+        uint256 amount = bound(_amount, 1 gwei, 1_000 ether);
         uint256 requestRate = bound(_requestRate, 0.5e18, 2e18);
         // marked strictly above the request rate, so a mark that WERE read would visibly raise the cap
         uint256 markRate = bound(_markRate, 2.5e18, 4e18);
         uint256 settlementRate = bound(_settlementRate, 0.5e18, 4e18);
 
-        address user = _generateAllowlistedUser(0);
+        address user = fuzzUser;
+        uint256 pristine = vm.snapshot();
 
         // ── world 1: a mark covers the whole request ────────────────────────────
-        // each `sudoSetRate` moves the pool before the action it prices, so the mark's locked rate and
-        // the event's settlement rate are both ones River would derive rather than ones chosen for it
-        (RiverMock riverMarked, RedeemManagerV1 marked) = _deployFreshPair();
-        riverMarked.sudoSetRate(requestRate);
-        uint32 idMarked = _openRequestOn(riverMarked, marked, user, amount);
-        uint256 requestTimeEth = marked.getRedeemRequestAnchor(idMarked).ethAtRequest;
-        _stripAnchorOn(marked, idMarked);
-        riverMarked.sudoSetRate(markRate);
-        riverMarked.sudoReportStoppedEarning(address(marked), applyRate(amount, markRate));
-        assertEq(marked.getRateMarkCount(), 1, "the marked world must actually carry a mark");
-        riverMarked.sudoSetRate(settlementRate);
-        _reportWithdrawOn(riverMarked, marked, amount, settlementRate);
-        uint256 receivedMarked = _claimOn(marked, idMarked, 0, type(uint16).max);
+        // each rate move is its own oracle report, landed before the action it prices, so the mark's
+        // locked rate is the pre-report rate River derives and the event's settlement rate is the
+        // post-report rate it funds at -- neither is a number this test chose for it
+        _reportRateLoose(requestRate);
+        (uint32 idMarked, uint256 openedMarked) = _openRequestLoose(user, amount);
+        uint256 requestTimeEth = redeemManager.getRedeemRequestAnchor(idMarked).ethAtRequest;
+        _stripAnchor(idMarked);
+        _reportRateLoose(markRate);
+        _reportStoppedEarning(applyRate(openedMarked, markRate));
+        assertEq(redeemManager.getRateMarkCount(), 1, "the marked world must actually carry a mark");
+        _reportRateLoose(settlementRate);
+        _reportWithdrawEth(applyRate(openedMarked, settlementRate), settlementRate);
+        uint256 receivedMarked = _claimWithDepth(idMarked, 0, type(uint16).max);
 
-        // ── world 2: identical, minus the mark ──────────────────────────────────
-        (RiverMock riverPlain, RedeemManagerV1 plain) = _deployFreshPair();
-        riverPlain.sudoSetRate(requestRate);
-        uint32 idPlain = _openRequestOn(riverPlain, plain, user, amount);
-        _stripAnchorOn(plain, idPlain);
-        assertEq(plain.getRateMarkCount(), 0, "the plain world must carry no mark");
-        riverPlain.sudoSetRate(settlementRate);
-        uint256 withdrawnEth = _reportWithdrawOn(riverPlain, plain, amount, settlementRate);
-        uint256 receivedPlain = _claimOn(plain, idPlain, 0, type(uint16).max);
+        // ── world 2: the same protocol rolled back, identical, minus the mark ───
+        // the SAME fuzzed target is opened against the same pristine state at the same rate, so the two
+        // worlds carry the same position to the wei
+        _resetToPristineProtocol(pristine);
+        _reportRateLoose(requestRate);
+        (uint32 idPlain, uint256 openedPlain) = _openRequestLoose(user, amount);
+        assertEq(openedPlain, openedMarked, "the two worlds must open the same position");
+        _stripAnchor(idPlain);
+        assertEq(redeemManager.getRateMarkCount(), 0, "the plain world must carry no mark");
+        _reportRateLoose(settlementRate);
+        uint256 withdrawnEth = _reportWithdrawEth(applyRate(openedPlain, settlementRate), settlementRate);
+        uint256 receivedPlain = _claimWithDepth(idPlain, 0, type(uint16).max);
 
         assertEq(receivedMarked, receivedPlain, "I7: a legacy request's payout changed because a mark existed");
         // and it is exactly the original rule: request-time ETH, clamped by what the event supplied
@@ -1069,38 +1108,38 @@ contract RedemptionRateMarkFuzzTests is RedemptionMirror {
         uint256 _markRate,
         uint256 _settlementMargin
     ) external {
-        uint256 amount = bound(_amount, 1 gwei, 1_000_000 ether);
+        uint256 amount = bound(_amount, 1 gwei, 1_000 ether);
         uint256 requestRate = bound(_requestRate, 0.5e18, 2e18);
         uint256 markedAmount = (amount * bound(_markFraction, 0, 1e18)) / 1e18;
         uint256 markRate = bound(_markRate, 0.5e18, 3e18);
         uint256 capRate = markRate > requestRate ? markRate : requestRate;
         uint256 settlementRate = capRate + (capRate * bound(_settlementMargin, 0, 1_000)) / 10_000;
 
-        address user = _generateAllowlistedUser(0);
-        (RiverMock freshRiver, RedeemManagerV1 manager) = _deployFreshPair();
+        address user = fuzzUser;
 
-        freshRiver.sudoSetRate(requestRate);
-        uint32 id = _openRequestOn(freshRiver, manager, user, amount);
-        RedeemRequestAnchor.Anchor memory anchor = manager.getRedeemRequestAnchor(id);
+        _reportRateLoose(requestRate);
+        (uint32 id, uint256 openedAmount) = _openRequestLoose(user, amount);
+        amount = openedAmount;
+        RedeemRequestAnchor.Anchor memory anchor = redeemManager.getRedeemRequestAnchor(id);
 
         // the pool walks to `markRate`, and the delta is valued there by River's own conversion
         uint256 markedEth = 0;
         uint256 markedLsETH = 0;
         if (markedAmount > 0 && applyRate(markedAmount, markRate) > 0) {
-            freshRiver.sudoSetRate(markRate);
-            freshRiver.sudoReportStoppedEarning(address(manager), applyRate(markedAmount, markRate));
-            if (manager.getRateMarkCount() > 0) {
-                markedEth = manager.getRateMarkDetails(0).markedEth;
+            _reportRateLoose(markRate);
+            _reportStoppedEarning(applyRate(markedAmount, markRate));
+            if (redeemManager.getRateMarkCount() > 0) {
+                markedEth = redeemManager.getRateMarkDetails(0).markedEth;
                 // read the LsETH leg back rather than reusing `markedAmount`: River derives it with
                 // `sharesFromUnderlyingBalance`, which floors, so the mark can be a wei narrower
-                markedLsETH = manager.getRateMarkDetails(0).amount;
+                markedLsETH = redeemManager.getRateMarkDetails(0).amount;
             }
         }
 
-        freshRiver.sudoSetRate(settlementRate);
-        uint256 withdrawnEth = _reportWithdrawOn(freshRiver, manager, amount, settlementRate);
-        uint256 received = _claimOn(manager, id, 0, type(uint16).max);
-        assertEq(manager.getRedeemRequestDetails(id).amount, 0, "request must be fully claimed");
+        _reportRateLoose(settlementRate);
+        uint256 withdrawnEth = _reportWithdrawEth(applyRate(amount, settlementRate), settlementRate);
+        uint256 received = _claimWithDepth(id, 0, type(uint16).max);
+        assertEq(redeemManager.getRedeemRequestDetails(id).amount, 0, "request must be fully claimed");
 
         // the native-staker ceiling: request-time value, plus only the appreciation the marks locked
         uint256 requestValueOfMarkedSpan =
@@ -1111,8 +1150,9 @@ contract RedemptionRateMarkFuzzTests is RedemptionMirror {
         assertLe(received, ceiling, "I9: redeemer out-earned a native staker");
         // and the ceiling really is the binding constraint here, not the event's ETH
         assertLe(received, withdrawnEth, "I9: paid more than the withdrawal event supplied");
-        assertEq(redeemManager.getBufferedExceedingEth(), 0, "fixture manager must be untouched");
-        assertEq(manager.getBufferedExceedingEth(), withdrawnEth - received, "I9: unpaid event ETH was not buffered");
+        assertEq(
+            redeemManager.getBufferedExceedingEth(), withdrawnEth - received, "I9: unpaid event ETH was not buffered"
+        );
     }
 
     /// Scenario: an anchored request spanning two rate marks separated by a gap, settled by two
@@ -1131,18 +1171,18 @@ contract RedemptionRateMarkFuzzTests is RedemptionMirror {
         uint256 _settlementRateB
     ) external {
         // large enough that the quarter-splits below are all non-zero
-        uint256 amount = bound(_amount, 4 gwei, 1_000_000 ether);
+        uint256 amount = bound(_amount, 4 gwei, 1_000 ether);
         uint256 requestRate = bound(_requestRate, 0.5e18, 2e18);
         uint256 firstMarkRate = bound(_firstMarkRate, 0.5e18, 3e18);
         uint256 secondMarkRate = bound(_secondMarkRate, 0.5e18, 3e18);
         uint256 settlementRateA = bound(_settlementRateA, 0.5e18, 3e18);
         uint256 settlementRateB = bound(_settlementRateB, 0.5e18, 3e18);
 
-        address user = _generateAllowlistedUser(0);
-        (RiverMock freshRiver, RedeemManagerV1 manager) = _deployFreshPair();
+        address user = fuzzUser;
 
-        freshRiver.sudoSetRate(requestRate);
-        uint32 id = _openRequestOn(freshRiver, manager, user, amount);
+        _reportRateLoose(requestRate);
+        (uint32 id, uint256 openedAmount) = _openRequestLoose(user, amount);
+        amount = openedAmount;
 
         // mark [0, quarter). Marking always resumes at the cursor, so to leave a GAP the second mark
         // has to be pushed after a withdrawal event has advanced the settled height past the cursor —
@@ -1151,28 +1191,30 @@ contract RedemptionRateMarkFuzzTests is RedemptionMirror {
         // Each action is preceded by the rate move that prices it, so both marks carry a locked rate
         // River would have derived and both events carry a settlement rate it would have funded at.
         uint256 quarter = amount / 4;
-        freshRiver.sudoSetRate(firstMarkRate);
-        freshRiver.sudoReportStoppedEarning(address(manager), applyRate(quarter, firstMarkRate));
-        freshRiver.sudoSetRate(settlementRateA);
-        _reportWithdrawOn(freshRiver, manager, quarter * 2, settlementRateA);
-        freshRiver.sudoSetRate(secondMarkRate);
-        freshRiver.sudoReportStoppedEarning(address(manager), applyRate(quarter, secondMarkRate));
-        freshRiver.sudoSetRate(settlementRateB);
-        _reportWithdrawOn(freshRiver, manager, amount - quarter * 2, settlementRateB);
+        _reportRateLoose(firstMarkRate);
+        _reportStoppedEarning(applyRate(quarter, firstMarkRate));
+        _reportRateLoose(settlementRateA);
+        _reportWithdrawEth(applyRate(quarter * 2, settlementRateA), settlementRateA);
+        _reportRateLoose(secondMarkRate);
+        _reportStoppedEarning(applyRate(quarter, secondMarkRate));
+        _reportRateLoose(settlementRateB);
+        _reportWithdrawEth(applyRate(amount - quarter * 2, settlementRateB), settlementRateB);
 
         // the geometry the test exists for: two disjoint, non-contiguous marks
-        assertEq(manager.getRateMarkCount(), 2, "expected exactly two marks");
-        RateMarkStack.RateMark memory first = manager.getRateMarkDetails(0);
-        RateMarkStack.RateMark memory second = manager.getRateMarkDetails(1);
+        assertEq(redeemManager.getRateMarkCount(), 2, "expected exactly two marks");
+        RateMarkStack.RateMark memory first = redeemManager.getRateMarkDetails(0);
+        RateMarkStack.RateMark memory second = redeemManager.getRateMarkDetails(1);
         assertGt(second.height, first.height + first.amount, "expected a gap between the two marks");
 
-        MirrorClaim memory expected = _mirrorClaim(manager, id, 0, type(uint16).max);
-        uint256 received = _claimOn(manager, id, 0, type(uint16).max);
+        MirrorClaim memory expected = _mirrorClaim(redeemManager, id, 0, type(uint16).max);
+        uint256 received = _claimWithDepth(id, 0, type(uint16).max);
 
         assertEq(received, expected.paid, "I2: payout diverged from the independently derived slice math");
         assertLe(received, expected.capSum, "I2: payout exceeded the summed slice caps");
         assertEq(
-            received + manager.getBufferedExceedingEth(), expected.gross, "I2: paid + buffered != event ETH supplied"
+            received + redeemManager.getBufferedExceedingEth(),
+            expected.gross,
+            "I2: paid + buffered != event ETH supplied"
         );
     }
 }
