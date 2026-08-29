@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.34;
 
-import "./RedemptionTestBase.sol";
+import "./RedemptionReportBase.sol";
 
 /// @title Redemption claim mechanics
 /// @notice Covers the positional side of redemption fulfillment: how requests, withdrawal events and
@@ -12,7 +12,7 @@ import "./RedemptionTestBase.sol";
 ///      is the misalignment: a mark that stops between two requests, a mark that ends inside one, a
 ///      request created after a mark was taken, resolution across a long and partly degenerate
 ///      withdrawal stack, and a claim walk split by `_depth`.
-contract RedemptionClaimMechanicsTests is RedemptionTestBase {
+contract RedemptionClaimMechanicsTests is RedemptionReportBase {
     // ─────────────────────────────────────────────────────────────────────────
     // F1 — one withdrawal event, two requests, one mark covering only the first
     // ─────────────────────────────────────────────────────────────────────────
@@ -32,14 +32,14 @@ contract RedemptionClaimMechanicsTests is RedemptionTestBase {
         address userB = _generateAllowlistedUser(2);
 
         // both requests are anchored at rate 1.00, so each has a request-time value of 30 ETH
-        river.sudoSetRate(1e18);
+        _reportRate(1e18);
         uint32 idA = _openRequest(userA, 30e18); // occupies [0, 30) on the axis
         uint32 idB = _openRequest(userB, 30e18); // occupies [30, 60)
         assertEq(redeemManager.getRedeemRequestDetails(idB).height, 30e18);
 
         // the principal backing the FIRST 30 LsETH of the queue stopped earning at a pool rate of 1.05
-        river.sudoSetRate(1.05e18);
-        river.sudoReportStoppedEarning(address(redeemManager), applyRate(30e18, 1.05e18));
+        _reportRate(1.05e18);
+        _reportStoppedEarning(applyRate(30e18, 1.05e18));
 
         // the mark ends at 30e18, i.e. exactly where B begins — B is in the gap above it
         assertEq(redeemManager.getRateMarkCount(), 1);
@@ -80,13 +80,13 @@ contract RedemptionClaimMechanicsTests is RedemptionTestBase {
         address userA = _generateAllowlistedUser(1);
         address userB = _generateAllowlistedUser(2);
 
-        river.sudoSetRate(1e18);
+        _reportRate(1e18);
         uint32 idA = _openRequest(userA, 30e18); // [0, 30)
         uint32 idB = _openRequest(userB, 30e18); // [30, 60)
 
         // 40 LsETH of principal stopped earning at 1.05: enough for all of A and the first third of B
-        river.sudoSetRate(1.05e18);
-        river.sudoReportStoppedEarning(address(redeemManager), applyRate(40e18, 1.05e18));
+        _reportRate(1.05e18);
+        _reportStoppedEarning(applyRate(40e18, 1.05e18));
 
         RateMarkStack.RateMark memory mark = redeemManager.getRateMarkDetails(0);
         assertEq(mark.height, 0);
@@ -173,22 +173,22 @@ contract RedemptionClaimMechanicsTests is RedemptionTestBase {
         address userC = _generateAllowlistedUser(3);
 
         // three requests opened at three different pool rates, so each has a distinct request rate
-        river.sudoSetRate(1e18);
+        _reportRate(1e18);
         uint32 idA = _openRequest(userA, 10e18); // [0, 10), anchored at 10.0 ETH
-        river.sudoSetRate(1.02e18);
+        _reportRate(1.02e18);
         uint32 idB = _openRequest(userB, 10e18); // [10, 20), anchored at 10.2 ETH
-        river.sudoSetRate(1.04e18);
+        _reportRate(1.04e18);
         uint32 idC = _openRequest(userC, 10e18); // [20, 30), anchored at 10.4 ETH
 
         // 15 LsETH stopped earning at 1.06: covers A completely and the lower half of B
-        river.sudoSetRate(1.06e18);
-        river.sudoReportStoppedEarning(address(redeemManager), applyRate(15e18, 1.06e18));
+        _reportRate(1.06e18);
+        _reportStoppedEarning(applyRate(15e18, 1.06e18));
         assertEq(redeemManager.getRateMarkDetails(0).amount, 15e18);
         assertEq(redeemManager.getRateMarkDetails(0).markedEth, 15.9e18);
 
         // the pool appreciates once more and one event settles the whole queue at 1.10, i.e. above every
         // cap rate in play (the mark's 1.06 and the three request rates 1.00 / 1.02 / 1.04)
-        river.sudoSetRate(1.1e18);
+        _reportRate(1.1e18);
         assertEq(_reportWithdraw(30e18, 1.1e18), 33e18);
 
         uint32[] memory ids = new uint32[](3);
@@ -224,19 +224,19 @@ contract RedemptionClaimMechanicsTests is RedemptionTestBase {
         address userA = _generateAllowlistedUser(1);
         address userB = _generateAllowlistedUser(2);
 
-        river.sudoSetRate(1e18);
+        _reportRate(1e18);
         uint32 idA = _openRequest(userA, 30e18); // [0, 30) anchored at 30 ETH
 
         // A's backing principal stops earning at 1.05, marking [0, 30)
-        river.sudoSetRate(1.05e18);
-        river.sudoReportStoppedEarning(address(redeemManager), applyRate(30e18, 1.05e18));
+        _reportRate(1.05e18);
+        _reportStoppedEarning(applyRate(30e18, 1.05e18));
         RateMarkStack.RateMark memory markBefore = redeemManager.getRateMarkDetails(0);
         assertEq(markBefore.height, 0);
         assertEq(markBefore.amount, 30e18);
         assertEq(markBefore.markedEth, 31.5e18);
 
         // only now does B join the queue, at a higher pool rate
-        river.sudoSetRate(1.08e18);
+        _reportRate(1.08e18);
         uint32 idB = _openRequest(userB, 30e18); // [30, 60) anchored at 32.4 ETH
         assertEq(redeemManager.getRedeemRequestDetails(idB).height, 30e18);
         assertEq(redeemManager.getRedeemRequestDetails(idB).maxRedeemableEth, 32.4e18);
@@ -253,7 +253,7 @@ contract RedemptionClaimMechanicsTests is RedemptionTestBase {
 
         // the pool appreciates once more, and one event settles both at 1.10 -- above every cap rate in
         // play (A's mark at 1.05 and B's request rate of 1.08) -- so each payout is decided by its own cap
-        river.sudoSetRate(1.1e18);
+        _reportRate(1.1e18);
         assertEq(_reportWithdraw(60e18, 1.1e18), 66e18);
 
         // A: pro-rata 33 ETH clamped to the mark -> 31.5 ETH, 1.5 ETH confiscated
@@ -300,7 +300,7 @@ contract RedemptionClaimMechanicsTests is RedemptionTestBase {
 
         // everything runs at rate 1.00 so a payout equals its LsETH size and the arithmetic below is
         // about positions only
-        river.sudoSetRate(1e18);
+        _reportRate(1e18);
 
         // 9 requests, 90 LsETH of demand. Sizes are deliberately uneven so requests and events do not
         // line up one-to-one.
@@ -320,10 +320,14 @@ contract RedemptionClaimMechanicsTests is RedemptionTestBase {
         _reportWithdraw(5e18, 1e18); //  0: [0, 5)
         _reportWithdraw(5e18, 1e18); //  1: [5, 10)
         _reportWithdraw(10e18, 1e18); // 2: [10, 20)
-        // 3: [20, 20) -- zero LsETH but one wei of ETH, mirroring River's rounding path where
-        // sharesFromUnderlyingBalance() truncates a dust ETH leg to zero shares
-        vm.deal(address(this), 1);
-        river.sudoReportWithdraw{value: 1}(address(redeemManager), 0);
+        // 3: [20, 20) -- zero LsETH but one wei of ETH. This is River's own rounding path: a report that
+        // sweeps a single wei while the demand outruns it takes the balance-limited branch, where the
+        // LsETH leg is `sharesFromUnderlyingBalance(1)`. That truncates to zero shares only while the
+        // pool rate is ABOVE 1.0, so the report that produces it is the one report in this test that
+        // moves the pool -- at a rate of exactly 1.0 a one-wei sweep would settle one wei of demand.
+        // The pool returns to 1.0 on the very next report, and no request is opened in between, so
+        // nothing else in the scenario sees the excursion.
+        _reportWithdrawEth(1, 1.5e18);
         _reportWithdraw(10e18, 1e18); // 4:  [20, 30)
         _reportWithdraw(10e18, 1e18); // 5:  [30, 40)
         _reportWithdraw(10e18, 1e18); // 6:  [40, 50)
@@ -435,17 +439,17 @@ contract RedemptionClaimMechanicsTests is RedemptionTestBase {
     function testResidualAutoAssignsForwardAcrossDepthZeroClaims() external {
         address user = _generateAllowlistedUser(1);
 
-        river.sudoSetRate(1e18);
+        _reportRate(1e18);
         uint32 id = _openRequest(user, 30e18); // [0, 30), anchored at 30 ETH -> cap of 1.00 per LsETH
 
         // three consecutive events at three different settlement rates: one above the cap, one below,
         // one above. Each is swept at the pool rate live at that moment, so the pool walks 1.05 -> 0.95
         // (a slashing) -> 1.10 across the three reports that push them.
-        river.sudoSetRate(1.05e18);
+        _reportRate(1.05e18);
         assertEq(_reportWithdraw(10e18, 1.05e18), 10.5e18); // event 0, [0, 10)
-        river.sudoSetRate(0.95e18);
+        _reportRate(0.95e18);
         assertEq(_reportWithdraw(10e18, 0.95e18), 9.5e18); //  event 1, [10, 20)
-        river.sudoSetRate(1.1e18);
+        _reportRate(1.1e18);
         assertEq(_reportWithdraw(10e18, 1.1e18), 11e18); //    event 2, [20, 30)
 
         // baseline: what one uninterrupted call pays
@@ -510,18 +514,18 @@ contract RedemptionClaimMechanicsTests is RedemptionTestBase {
     function testClaimSpanningUnmarkedThenMarkedEventsBlendsAndEmitsPerEvent() external {
         address user = _generateAllowlistedUser(1);
 
-        river.sudoSetRate(1e18);
+        _reportRate(1e18);
         uint32 id = _openRequest(user, 20e18); // [0, 20), anchored at 20 ETH
 
         // event 0 — deposit-funded: it settles [0, 10) at a pool rate of 1.05, but no exit backed it,
         // so no mark is pushed and the slice stays in a gap
-        river.sudoSetRate(1.05e18);
+        _reportRate(1.05e18);
         assertEq(_reportWithdraw(10e18, 1.05e18), 10.5e18);
         assertEq(redeemManager.getRateMarkCount(), 0);
 
         // only now does principal stop earning. The mark starts at the settled height, never below it,
         // so it covers [10, 20) — precisely the range event 1 will settle.
-        river.sudoReportStoppedEarning(address(redeemManager), applyRate(10e18, 1.05e18));
+        _reportStoppedEarning(applyRate(10e18, 1.05e18));
         RateMarkStack.RateMark memory mark = redeemManager.getRateMarkDetails(0);
         assertEq(mark.height, 10e18);
         assertEq(mark.amount, 10e18);

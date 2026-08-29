@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.34;
 
-import "./RedemptionTestBase.sol";
+import "./RedemptionReportBase.sol";
 
 /// @title Stopped-earning launch cutover tests
 /// @notice Covers `initializeRedeemManagerV1_3` and the boundary it draws between pre-upgrade demand
@@ -19,7 +19,7 @@ import "./RedemptionTestBase.sol";
 ///      interaction of the floor with the settled height (B5), and the two ways a request can end up
 ///      excluded from marking — no anchor at all (B7, B8) or an anchor that the floor sits above
 ///      (B12).
-contract RedemptionCutoverTests is RedemptionTestBase {
+contract RedemptionCutoverTests is RedemptionReportBase {
     /// @dev Storage slot of `word` of queue element `index`. `RedeemQueueV2` is a dynamic array
     ///      living at a raw keccak slot with a stride of 5 words: amount, maxRedeemableEth,
     ///      recipient, height, initiator.
@@ -35,7 +35,7 @@ contract RedemptionCutoverTests is RedemptionTestBase {
     /// the first post-upgrade mark starts there.
     function testInitializeV1_3OnFullyClaimedQueuePinsFloorAtTotalRequested() external {
         address user = _generateAllowlistedUser(0);
-        river.sudoSetRate(1e18);
+        _reportRate(1e18);
 
         // two pre-upgrade requests: 30 + 20 == 50 LsETH ever requested
         uint32 first = _openRequest(user, 30e18);
@@ -66,8 +66,8 @@ contract RedemptionCutoverTests is RedemptionTestBase {
         assertEq(redeemManager.getRedeemRequestDetails(fresh).height, 50e18);
 
         // 10 LsETH of principal stops earning at 1.1 -> a mark of 11 ETH over [50, 60)
-        river.sudoSetRate(1.1e18);
-        river.sudoReportStoppedEarning(address(redeemManager), applyRate(10e18, 1.1e18));
+        _reportRate(1.1e18);
+        _reportStoppedEarning(applyRate(10e18, 1.1e18));
         assertEq(redeemManager.getRateMarkCount(), 1);
         RateMarkStack.RateMark memory mark = redeemManager.getRateMarkDetails(0);
         assertEq(mark.height, 50e18);
@@ -88,7 +88,7 @@ contract RedemptionCutoverTests is RedemptionTestBase {
     /// stopped earning, which the design excludes; the floor only ever raises `markStart`.
     function testMarkStartPrefersSettledHeightOverFloor() external {
         address user = _generateAllowlistedUser(0);
-        river.sudoSetRate(1e18);
+        _reportRate(1e18);
 
         // a pre-upgrade request, pinned as the floor at 30
         uint32 legacy = _openRequest(user, 30e18);
@@ -101,13 +101,13 @@ contract RedemptionCutoverTests is RedemptionTestBase {
         assertEq(redeemManager.getRedeemRequestDetails(fresh).height, 30e18);
 
         // one withdrawal event settles 40 LsETH: the legacy 30 plus the first 10 of the fresh request
-        river.sudoSetRate(1.05e18);
+        _reportRate(1.05e18);
         _reportWithdraw(40e18, 1.05e18);
         assertEq(_settledHeight(), 40e18);
         assertGt(_settledHeight(), redeemManager.getRateMarkFloor());
 
         // 10 LsETH stops earning at 1.05. markStart == max(cursor 0, settled 40, floor 30) == 40
-        river.sudoReportStoppedEarning(address(redeemManager), applyRate(10e18, 1.05e18));
+        _reportStoppedEarning(applyRate(10e18, 1.05e18));
         RateMarkStack.RateMark memory mark = redeemManager.getRateMarkDetails(0);
         assertEq(mark.height, 40e18);
         assertEq(mark.amount, 10e18);
@@ -135,7 +135,7 @@ contract RedemptionCutoverTests is RedemptionTestBase {
     ///      `testRequestBetweenV1_2AndV1_3HasAnchorButCannotBeMarked`, the same shape with an anchor).
     function testLegacyRequestPartiallyClaimedAcrossUpgradeKeepsDriftedCap() external {
         address user = _generateAllowlistedUser(0);
-        river.sudoSetRate(1e18);
+        _reportRate(1e18);
 
         // 100 LsETH quoted at 1.0, made to look pre-upgrade by clearing its anchor
         uint32 legacy = _openRequest(user, 100e18);
@@ -143,7 +143,7 @@ contract RedemptionCutoverTests is RedemptionTestBase {
         assertEq(redeemManager.getRedeemRequestAnchor(legacy).lsETHAtRequest, 0);
 
         // 99 of the 100 LsETH settles at half the request rate: 49.5 ETH paid against a 99 ETH cap
-        river.sudoSetRate(0.5e18);
+        _reportRate(0.5e18);
         assertEq(_settleAndClaim(legacy, 99e18, 0.5e18), 49.5e18);
         RedeemQueueV2.RedeemRequest memory residual = redeemManager.getRedeemRequestDetails(legacy);
         assertEq(residual.height, 99e18);
@@ -157,10 +157,10 @@ contract RedemptionCutoverTests is RedemptionTestBase {
         assertEq(redeemManager.getRateMarkFloor(), 100e18);
 
         // a post-upgrade cohort, and a mark that covers it and only it
-        river.sudoSetRate(1e18);
+        _reportRate(1e18);
         uint32 fresh = _openRequest(user, 10e18);
-        river.sudoSetRate(1.2e18);
-        river.sudoReportStoppedEarning(address(redeemManager), applyRate(10e18, 1.2e18));
+        _reportRate(1.2e18);
+        _reportStoppedEarning(applyRate(10e18, 1.2e18));
         RateMarkStack.RateMark memory mark = redeemManager.getRateMarkDetails(0);
         assertEq(mark.height, 100e18);
         assertEq(mark.amount, 10e18);
@@ -190,7 +190,7 @@ contract RedemptionCutoverTests is RedemptionTestBase {
     ///      behaviour cannot change silently.
     function testStoppedEarningWithOnlyLegacyDemandIsDiscardedPermanently() external {
         address user = _generateAllowlistedUser(0);
-        river.sudoSetRate(1e18);
+        _reportRate(1e18);
 
         // the entire queue is pre-upgrade demand, so the floor lands on top of it
         uint32 legacy = _openRequest(user, 30e18);
@@ -200,10 +200,10 @@ contract RedemptionCutoverTests is RedemptionTestBase {
 
         // 30 LsETH of principal stops earning at 1.05, worth 31.5 ETH. markStart == floor == 30 and
         // totalRequestedHeight == 30, so markable == 0 and the whole report is clamped away
-        river.sudoSetRate(1.05e18);
+        _reportRate(1.05e18);
         vm.expectEmit(true, true, true, true);
         emit StoppedEarningExceededMarkableDemand(30e18, 0);
-        river.sudoReportStoppedEarning(address(redeemManager), applyRate(30e18, 1.05e18));
+        _reportStoppedEarning(applyRate(30e18, 1.05e18));
         assertEq(redeemManager.getRateMarkCount(), 0);
 
         // the first post-upgrade cohort arrives immediately afterwards, quoted at the new 1.05 rate
@@ -214,17 +214,22 @@ contract RedemptionCutoverTests is RedemptionTestBase {
         assertEq(redeemManager.getRateMarkCount(), 0);
 
         // both settle at an appreciated 1.10, which would price 30 LsETH at 33 ETH
-        river.sudoSetRate(1.1e18);
+        _reportRate(1.1e18);
         // the legacy request is capped at its 1.0 request rate: 30 ETH paid, 3 ETH buffered
         assertEq(_settleAndClaim(legacy, 30e18, 1.1e18), 30e18);
+        assertEq(redeemManager.getBufferedExceedingEth(), 3e18);
         // and the fresh request at its own 1.05 request rate, NOT at any inherited mark rate:
         // 31.5 ETH paid, 1.5 ETH buffered. Had the discarded credit carried forward, a mark over
         // [30, 60) would have raised this cap and the payout with it.
         assertEq(_settleAndClaim(fresh, 30e18, 1.1e18), 31.5e18);
 
-        // 3 + 1.5 ETH of settlement value was redirected to the exceeding-eth buffer, which River
-        // pulls back: it ends up with the LsETH holders who stayed, not with either redeemer
-        assertEq(redeemManager.getBufferedExceedingEth(), 4.5e18);
+        // 3 + 1.5 ETH of settlement value was redirected to the exceeding-eth buffer, which River pulls
+        // back on the next report: it ends up with the LsETH holders who stayed, not with either
+        // redeemer. The report that funded the second settlement already collected the first 3 ETH, so
+        // what is staged here is the 1.5 ETH from the claim that followed it.
+        assertEq(redeemManager.getBufferedExceedingEth(), 1.5e18);
+        _reportRate(1.1e18);
+        assertEq(redeemManager.getBufferedExceedingEth(), 0, "River must reclaim the whole confiscated surplus");
     }
 
     /// Scenario: `initializeRedeemManagerV1_3` runs against a queue whose tail has been garbled by a
@@ -249,7 +254,7 @@ contract RedemptionCutoverTests is RedemptionTestBase {
     function testInitializeV1_3OnCorruptedQueuePinsNonsenseFloor() external {
         address userA = _generateAllowlistedUser(0);
         address userB = _generateAllowlistedUser(1);
-        river.sudoSetRate(1e18);
+        _reportRate(1e18);
 
         uint32 first = _openRequest(userA, 30e18);
         uint32 second = _openRequest(userB, 20e18);
@@ -279,26 +284,26 @@ contract RedemptionCutoverTests is RedemptionTestBase {
 
         // consequence 1: the existing queue can never be marked again. `markStart` is the floor and
         // `totalRequestedHeight` is the same garbled sum, so `markable` is 0 on every report.
-        river.sudoSetRate(1.05e18);
+        _reportRate(1.05e18);
         vm.expectEmit(true, true, true, true);
         emit StoppedEarningExceededMarkableDemand(10e18, 0);
-        river.sudoReportStoppedEarning(address(redeemManager), applyRate(10e18, 1.05e18));
+        _reportStoppedEarning(applyRate(10e18, 1.05e18));
         assertEq(redeemManager.getRateMarkCount(), 0);
 
         // consequence 2: marking "resumes" only above the garbled tail, because a new request appends
         // at the corrupt end position
-        river.sudoSetRate(1e18);
+        _reportRate(1e18);
         uint32 fresh = _openRequest(userA, 10e18);
         assertEq(redeemManager.getRedeemRequestDetails(fresh).height, expectedFloor);
-        river.sudoSetRate(1.05e18);
-        river.sudoReportStoppedEarning(address(redeemManager), applyRate(10e18, 1.05e18));
+        _reportRate(1.05e18);
+        _reportStoppedEarning(applyRate(10e18, 1.05e18));
         assertEq(redeemManager.getRateMarkCount(), 1);
         assertEq(redeemManager.getRateMarkDetails(0).height, expectedFloor);
         assertEq(redeemManager.getRateMarkDetails(0).amount, 10e18);
 
         // ...and that region of the axis is unreachable: withdrawal events are positioned by
         // cumulative settled LsETH, which can never climb to ~1e48, so the request stays unsatisfied
-        river.sudoSetRate(1e18);
+        _reportRate(1e18);
         _reportWithdraw(50e18, 1e18);
         assertEq(_settledHeight(), 50e18);
         uint32[] memory ids = new uint32[](1);
@@ -320,7 +325,7 @@ contract RedemptionCutoverTests is RedemptionTestBase {
     ///      pair, so the same residual is held at 1.0 ETH and the surplus is buffered.
     function testRequestBetweenV1_2AndV1_3HasAnchorButCannotBeMarked() external {
         address user = _generateAllowlistedUser(0);
-        river.sudoSetRate(1e18);
+        _reportRate(1e18);
 
         // the deployment is at V1_2; the V1_3 initializer has not run yet
         _pokeVersionTo(2);
@@ -341,14 +346,14 @@ contract RedemptionCutoverTests is RedemptionTestBase {
         );
 
         // so it can never be marked: markable == totalRequestedHeight (30) - markStart (30) == 0
-        river.sudoSetRate(1.05e18);
+        _reportRate(1.05e18);
         vm.expectEmit(true, true, true, true);
         emit StoppedEarningExceededMarkableDemand(30e18, 0);
-        river.sudoReportStoppedEarning(address(redeemManager), applyRate(30e18, 1.05e18));
+        _reportStoppedEarning(applyRate(30e18, 1.05e18));
         assertEq(redeemManager.getRateMarkCount(), 0);
 
         // 29 of the 30 LsETH settles at half the request rate: 14.5 ETH against a 29 ETH slice cap
-        river.sudoSetRate(0.5e18);
+        _reportRate(0.5e18);
         assertEq(_settleAndClaim(id, 29e18, 0.5e18), 14.5e18);
         RedeemQueueV2.RedeemRequest memory residual = redeemManager.getRedeemRequestDetails(id);
         assertEq(residual.height, 29e18);
@@ -360,7 +365,7 @@ contract RedemptionCutoverTests is RedemptionTestBase {
         // the residual settles at 1.2, which prices 1 LsETH at 1.2 ETH. The anchor holds the cap at
         // the request-time 1.0 ETH regardless of the drifted budget, so 0.2 ETH is buffered — where
         // the zero-anchor request of the previous test would have kept the whole 1.2 ETH
-        river.sudoSetRate(1.2e18);
+        _reportRate(1.2e18);
         assertEq(_settleAndClaim(id, 1e18, 1.2e18), 1e18);
         assertEq(redeemManager.getBufferedExceedingEth(), 0.2e18);
     }
