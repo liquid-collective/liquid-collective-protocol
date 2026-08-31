@@ -170,8 +170,12 @@ contract RateMarkPlacementTests is RedemptionReportBase {
         uint32 id = _openRequest(user, 1);
 
         // 2 wei of principal worth 3 wei: over-reported, so the eth leg is rescaled rather than taken
-        // verbatim, which is the only path that divides
-        _reportRate(1.5e18);
+        // verbatim, which is the only path that divides.
+        // The rate is asked for loosely: a 1 wei position leaves a supply that no fractional rate
+        // divides, so 1.5 is not exactly reportable here (see `_reportRate`). What the scenario needs is
+        // not the number 1.5 but the conversion it produces, which is pinned instead and is exact.
+        _reportRateLoose(1.5e18);
+        assertEq(river.sharesFromUnderlyingBalance(3), 2, "the 3 wei eth leg must be valued at 2 wei of LsETH");
         vm.expectEmit(true, true, true, true);
         emit StoppedEarningExceededMarkableDemand(2, 1);
         _reportStoppedEarning(3);

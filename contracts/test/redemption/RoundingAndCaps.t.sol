@@ -371,9 +371,18 @@ contract RedemptionRoundingAndCapsTests is RedemptionReportBase {
         // the pool appreciates to 1.4, then 10 wei of principal stops earning. River values it at
         // `sharesFromUnderlyingBalance(10) == 7` wei of LsETH, a reported rate of 10/7 ~= 1.42857, but
         // only 3 wei is markable, so the eth leg is rescaled: (10 * 3) / 7 == 30 / 7 == 4.2857 -> 4 wei
+        // Both rate moves are asked for loosely: a 3 wei position leaves a supply that no fractional
+        // rate divides, so neither 1.4 nor 1.7 is exactly reportable here (see `_reportRate`). Neither
+        // number is what the scenario rests on -- the conversions they produce are, and those are pinned
+        // below and are exact.
         uint256 reportedEth = 10;
         uint256 reportedLsETH = 7;
-        _reportRate(1.4e18);
+        _reportRateLoose(1.4e18);
+        assertEq(
+            river.sharesFromUnderlyingBalance(reportedEth),
+            reportedLsETH,
+            "the 10 wei eth leg must be valued at 7 wei of LsETH"
+        );
         vm.expectEmit(true, true, true, true);
         emit StoppedEarningExceededMarkableDemand(reportedLsETH, 3);
         _reportStoppedEarning(reportedEth);
@@ -396,6 +405,7 @@ contract RedemptionRoundingAndCapsTests is RedemptionReportBase {
         // demand is worth `underlyingBalanceFromShares(3) == 5` wei, and a 5 wei sweep settles it in
         // full. That offers more than the locked rate, so the cap binds at (3 * 4) / 3 == 4 wei
         assertEq(_reportWithdraw(3, 1.7e18), 5);
+        assertEq(river.underlyingBalanceFromShares(3), 5, "the 3 wei of demand must be worth 5 wei at the sweep rate");
         uint256 received = _claim(id);
 
         assertEq(received, 4);

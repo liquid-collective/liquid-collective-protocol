@@ -133,10 +133,14 @@ abstract contract RedemptionReportBase is Test {
 
     /// @notice LsETH held by a non-redeeming holder from `setUp`, so the pool always has a supply and
     ///         a defined rate.
-    /// @dev Also what keeps the rate exactly representable. River's conversions are exact rate
-    ///      arithmetic only when `totalSupply` is a whole number of ether and the asset balance is
-    ///      `(supply / 1e18) * rate`; a round ballast plus whole-ether request sizes keeps both true,
-    ///      which is what lets the suites keep asserting exact wei against the real share math.
+    /// @dev Also what keeps the round rates the suites ask for exactly representable. `_reportRate` lands
+    ///      the asset balance on `(totalSupply * rate) / 1e18`, and the pool rate River reads back out of
+    ///      that is exactly `rate` only when the division is exact -- see the note on `_reportRate` for
+    ///      the precise condition. A whole-ether ballast plus whole-ether positions satisfies it for any
+    ///      rate with at most 18 decimals, which is what lets the suites assert exact wei against the
+    ///      real share math. Positions are NEVER adjusted to keep it true: the dust-scale suites open the
+    ///      1, 2 and 3 wei positions they are about, and the reports that cannot express a round rate at
+    ///      the resulting supply say so by using `_reportRateLoose` instead.
     /// @dev The whole ballast is pushed onto the CONSENSUS LAYER during `setUp`, and that is not
     ///      cosmetic. `_assetBalance()` is the reported CL balance plus River's ETH buffers, and only
     ///      the CL leg is a report input -- ETH sitting in a buffer cannot be reported away. A pool
@@ -531,7 +535,20 @@ abstract contract RedemptionReportBase is Test {
         return targetAssetBalance - offConsensusLayer;
     }
 
-    /// @notice One report whose only effect is to move the pool rate.
+    /// @notice One report whose only effect is to move the pool rate, asserted to land on `rate` exactly.
+    /// @dev EXACT ONLY WHEN THE LIVE SUPPLY CAN EXPRESS THE RATE. The pool rate is `_assetBalance() /
+    ///      totalSupply()`, and the report can only choose the numerator, as the whole integer
+    ///      `(totalSupply * rate) / 1e18`. River reads the rate back out as `1e18 * assetBalance /
+    ///      totalSupply`, so the round trip returns `rate` unchanged precisely when
+    ///      `(totalSupply * rate) % 1e18 == 0`. A whole-ether supply satisfies that for any rate with at
+    ///      most 18 decimals, which is the case in every suite that deals in whole-ether positions.
+    /// @dev It is NOT satisfiable at every supply, and the fixture does not pretend otherwise. Once a
+    ///      dust-scale position has been opened -- 3 wei against the ballast, say -- a rate of 1.4 needs
+    ///      `3 * 1.4e18` to divide by 1e18, which it does not, and NO reported balance lands the pool on
+    ///      1.4 exactly. That is a property of the pool, not of the fixture: real supplies are not round
+    ///      numbers and real rates are not either. The assertion below is what surfaces it, rather than
+    ///      the fixture quietly reporting a different rate than the one it was asked for; the tests that
+    ///      hit it use `_reportRateLoose` and pin the conversions they actually depend on.
     function _reportRate(uint256 rate) internal {
         _report(
             ReportParams({
@@ -543,16 +560,24 @@ abstract contract RedemptionReportBase is Test {
                 slashingContainment: false
             })
         );
-        assertEq(_poolRate(), rate, "report: the pool did not land on the requested rate");
+        assertEq(
+            _poolRate(),
+            rate,
+            "report: the live supply cannot express this rate exactly -- use _reportRateLoose and pin the conversions"
+        );
     }
 
     /// @notice One report that moves the pool rate as close to `rate` as the live supply allows.
-    /// @dev The non-asserting form of `_reportRate`, for the fuzzed suites. `_reportRate` can promise an
-    ///      exact rate because every position it is used with is a whole number of ether at a rate with
-    ///      at most two decimals, so `(supply / 1e18) * rate` divides. A fuzzer draws neither, so the
-    ///      achieved rate can sit a wei below the requested one; the properties those suites assert are
-    ///      inequalities and differentials that do not care, and they read the achieved rate back from
-    ///      River rather than assuming it.
+    /// @dev The non-asserting form of `_reportRate`, for the two cases where the exactness condition on
+    ///      `_reportRate` is not satisfiable and a wei of shortfall is the honest outcome:
+    ///        * the FUZZED suites, which draw neither whole-ether positions nor two-decimal rates. The
+    ///          properties they assert are inequalities and differentials that do not care, and they read
+    ///          the achieved rate back from River rather than assuming it.
+    ///        * the DUST-SCALE tests, whose 1 and 3 wei positions leave a supply no fractional rate
+    ///          divides. Those tests do not actually depend on the round rate they ask for -- they depend
+    ///          on the conversion it produces, `sharesFromUnderlyingBalance(10) == 7` and the like -- so
+    ///          they ask for the rate loosely and then pin the conversion itself, which is the thing the
+    ///          scenario is built on and is exact either way.
     /// @return The pool rate the report actually landed on.
     function _reportRateLoose(uint256 rate) internal returns (uint256) {
         _report(
@@ -683,11 +708,16 @@ abstract contract RedemptionReportBase is Test {
 
     // ─── request helpers ──────────────────────────────────────────────────────
 
-    /// @dev Opens a redeem request of `amount` LsETH for `user` at the current pool rate.
-    /// @dev The LsETH is bought with a real deposit. `_mintShares` hands back `floor(eth / rate)`, so
-    ///      the ETH sent is the exact price of the position and the mint is asserted to be exact --
-    ///      every size these suites use is a whole number of ether at a rate with at most two decimals,
-    ///      or any size at all at a rate of exactly 1.0, and both divide.
+    /// @dev Opens a redeem request of exactly `amount` LsETH for `user` at the current pool rate.
+    /// @dev The LsETH is minted by a real `river.deposit()` of exactly what the position costs at the
+    ///      live rate, which is the only way LsETH comes into existence on mainnet. Nothing is rounded,
+    ///      padded or topped up: the redeemer deposits the price of `amount`, receives `amount`, and
+    ///      requests `amount`. A dust position therefore leaves `totalSupply` off the whole-ether
+    ///      boundary, exactly as it would in production -- see `_reportRate` for what that costs.
+    /// @dev `_mintShares` hands back `floor(eth / rate)`, so the ETH sent is the exact price of the
+    ///      position and the mint is asserted to be exact -- every size these suites use is a whole
+    ///      number of ether at a rate with at most two decimals, or any size at all at a rate of exactly
+    ///      1.0, and both divide.
     function _openRequest(address user, uint256 amount) internal returns (uint32 id) {
         uint256 cost = applyRate(amount, _poolRate());
         uint256 balanceBefore = river.balanceOf(user);
@@ -702,8 +732,6 @@ abstract contract RedemptionReportBase is Test {
         river.approve(address(redeemManager), amount);
         vm.prank(user);
         id = redeemManager.requestRedeem(amount, user);
-
-        _alignSupplyToWholeEther();
     }
 
     /// @dev Opens a redeem request for as much LsETH as `targetAmount` worth of ETH actually buys at the
@@ -729,29 +757,6 @@ abstract contract RedemptionReportBase is Test {
         river.approve(address(redeemManager), actualAmount);
         vm.prank(user);
         id = redeemManager.requestRedeem(actualAmount, user);
-    }
-
-    /// @notice Tops the share supply back up to a whole number of ether, on the ballast holder.
-    /// @dev River's conversions are exact rate arithmetic only while `totalSupply` is a whole number of
-    ///      ether: `_reportRate` lands the asset balance on `(supply / 1e18) * rate`, and that division
-    ///      is exact for any rate with at most 18 decimals precisely when the supply is. A dust-sized
-    ///      request -- the 1, 2 and 3 wei positions the rounding suites are built on -- knocks the supply
-    ///      off that boundary and leaves every subsequent rate a wei short of the figure the test asked
-    ///      for. Topping up restores it.
-    /// @dev A real deposit, like every other position in these suites, so it dilutes nobody: the ETH it
-    ///      adds to the pool is exactly what the shares it mints are worth at the live rate. Only called
-    ///      from `_openRequest`, and only ever a no-op or a sub-ether top-up.
-    function _alignSupplyToWholeEther() internal {
-        uint256 remainder = river.totalSupply() % 1e18;
-        if (remainder == 0) {
-            return;
-        }
-        uint256 topUp = 1e18 - remainder;
-        uint256 cost = applyRate(topUp, _poolRate());
-        vm.deal(ballastHolder, cost);
-        vm.prank(ballastHolder);
-        river.deposit{value: cost}();
-        assertEq(river.totalSupply() % 1e18, 0, "alignSupply: the top-up did not land on a whole ether");
     }
 
     /// @dev Puts the contract in the state a live deployment is in just before the stopped-earning
