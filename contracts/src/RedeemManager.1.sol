@@ -406,12 +406,20 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
     }
 
     /// @notice Internal utility computing the ETH payout cap for a slice of a redeem request
-    /// @dev The cap is the request-time value of the slice, raised over any sub-range whose backing
-    ///      principal has been marked as stopped earning. Sub-ranges in a mark gap stay at the
-    ///      request-time rate, which is what makes a fill that involved no exit pay exactly
-    ///      `rate_at_request`. The payout is still clamped against the withdrawal event's actual ETH by
-    ///      the caller, so this only ever relaxes a ceiling and never promises ETH the protocol has not
-    ///      received.
+    /// @dev The cap is the request-time value of the slice, REPLACED by the mark's locked rate over any
+    ///      sub-range whose backing principal has been marked as stopped earning. Sub-ranges in a mark
+    ///      gap stay at the request-time rate, which is what makes a fill that involved no exit pay
+    ///      exactly `rate_at_request`.
+    /// @dev The re-pricing is TWO-SIDED, and that is deliberate. Where a mark's locked rate is above the
+    ///      request rate it raises the cap; where it is BELOW -- the backing principal stopped earning
+    ///      during a drawdown -- it LOWERS the cap under `_anchor.ethAtRequest`. A redeemer marked during
+    ///      a drawdown therefore forfeits any later pool recovery on the marked span, including
+    ///      coverage-fund payouts, and that surplus returns to the holders who did not redeem. There is
+    ///      no floor at the request-time rate, and none at the marked rate either: the payout is
+    ///      `min(settlement rate, marked rate)` per sub-range, so the downside passes straight through
+    ///      while the upside is capped at the mark.
+    /// @dev The payout is still clamped against the withdrawal event's actual ETH by the caller, so a
+    ///      raised cap never promises ETH the protocol has not received.
     /// @dev Iterations are bounded by the number of marks the slice spans, which is at most the number
     ///      of oracle reports the request has been pending across (marks are pushed at most once per
     ///      report). The claimant pays for their own request's span and cannot be charged for anyone
@@ -714,8 +722,9 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
                     maxRedeemableEthAmount =
                         (vars.matchingAmount * _params.redeemRequest.maxRedeemableEth) / _params.redeemRequest.amount;
                 } else {
-                    // the cap is the request-time value of the matched slice, raised over whatever part of
-                    // it has been marked as having stopped earning
+                    // the cap is the request-time value of the matched slice, RE-PRICED to the locked
+                    // rate over whatever part of it has been marked as having stopped earning --
+                    // upwards or downwards. See `_sliceCap`.
                     maxRedeemableEthAmount = _sliceCap(anchor, _params.redeemRequest.height, vars.matchingAmount);
                 }
             }
