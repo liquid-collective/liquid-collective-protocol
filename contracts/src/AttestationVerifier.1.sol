@@ -25,7 +25,6 @@ import "./state/attestationVerifier/RootAttesters.sol";
 import "./state/attestationVerifier/DepositDataBufferAddress.sol";
 import "./state/attestationVerifier/DepositDomainValue.sol";
 import "./state/attestationVerifier/DomainSeparator.sol";
-import "./state/attestationVerifier/ProcessedDepositDataBufferIds.sol";
 import "./state/attestationVerifier/PectraValidatorPubkeyLookup.sol";
 import "./state/attestationVerifier/PrePectraValidatorPubkeyLookup.sol";
 import "./state/attestationVerifier/ProcessedConsolidationSourcePubkeys.sol";
@@ -81,13 +80,14 @@ contract AttestationVerifierV1 is
     ///         domain (chainId, verifyingContract, version) were identical.
     bytes32 internal constant CONSOLIDATION_NAME_HASH = keccak256("ConsolidationValidation");
 
-    /// @dev EIP-712 typehash for a consolidation attestation. The four request fields are
+    /// @dev EIP-712 typehash for a consolidation attestation. The five request fields are
     ///      hashed directly into the EIP-712 struct (rather than first being squashed into a
     ///      single `bytes32` id). `bytes[]` fields follow EIP-712 dynamic-array rules:
     ///      each element is replaced by `keccak256(element)`, then the resulting `bytes32`
-    ///      array is concatenated and hashed (`_hashBytesArray`).
+    ///      array is concatenated and hashed (`_hashBytesArray`). The `uint256[] exitEpoch`
+    ///      field hashes to `keccak256` over the concatenation of its elements (`_hashUintArray`).
     bytes32 internal constant ATTEST_CONSOLIDATION_TYPEHASH = keccak256(
-        "AttestConsolidation(address withdrawalAddress,bytes[] sourcePubkeys,bytes[] targetPubkeys,uint256 totalAmount)"
+        "AttestConsolidation(address withdrawalAddress,bytes[] sourcePubkeys,bytes[] targetPubkeys,uint256 totalAmount,uint256[] exitEpoch)"
     );
 
     /// @notice Maximum number of signatures accepted. Bounds the O(n^2) duplicate-detection loop.
@@ -109,6 +109,15 @@ contract AttestationVerifierV1 is
     ///         inflating River's `_assetBalance()` (issue #441/#309). Top-ups are intentionally exempt —
     ///         they credit already-activated validators and may be below this amount.
     uint256 internal constant MIN_INITIAL_DEPOSIT_AMOUNT = 32 ether;
+
+    /// @notice Minimum top-up amount accepted by the consensus-layer deposit path.
+    uint256 internal constant MIN_TOP_UP_AMOUNT = 1 ether;
+
+    /// @notice Maximum deposit amount — the Pectra 0x02 maximum effective balance.
+    uint256 internal constant MAX_DEPOSIT_AMOUNT = 2048 ether;
+
+    /// @notice Maximum stateless top-up: a funded validator should already have at least 32 ETH.
+    uint256 internal constant MAX_TOP_UP_AMOUNT = MAX_DEPOSIT_AMOUNT - MIN_INITIAL_DEPOSIT_AMOUNT;
 
     /// @dev Expected length for BLS pubkeys in a ConsolidationObject (source or target).
     uint256 internal constant CONSOLIDATION_PUBKEY_LENGTH = 48;
@@ -175,6 +184,7 @@ contract AttestationVerifierV1 is
         RiverAddress.set(_river);
         emit SetRiver(_river);
 
+        _assertDepositDataBufferProcessor(_depositDataBuffer, _river);
         DepositDataBufferAddress.set(_depositDataBuffer);
         emit SetDepositDataBuffer(_depositDataBuffer);
 
@@ -246,6 +256,16 @@ contract AttestationVerifierV1 is
     function setDepositDataBuffer(address _depositDataBuffer) external onlyAdmin {
         DepositDataBufferAddress.set(_depositDataBuffer);
         emit SetDepositDataBuffer(_depositDataBuffer);
+    }
+
+    /// @notice Revert unless `depositDataBuffer` authorizes `expectedProcessor` (River) as its processor.
+    /// @param depositDataBuffer The DepositDataBuffer to validate
+    /// @param expectedProcessor The address that must be authorized to mark deposit data processed
+    function _assertDepositDataBufferProcessor(address depositDataBuffer, address expectedProcessor) internal view {
+        address actualProcessor = IDepositDataBuffer(depositDataBuffer).getProcessor();
+        if (actualProcessor != expectedProcessor) {
+            revert InvalidDepositDataBufferProcessor(depositDataBuffer, expectedProcessor, actualProcessor);
+        }
     }
 
     /// @inheritdoc IAttestationVerifierV1
@@ -418,22 +438,26 @@ contract AttestationVerifierV1 is
         bytes32 withdrawalCredentials,
         uint256 committedBalance
     ) external view returns (IDepositDataBuffer.DepositObject memory batch, uint256 totalAmount) {
-        // 0. Replay protection — reject any batch ID already processed
-        if (ProcessedDepositDataBufferIds.isProcessed(depositDataBufferId)) {
+        // 0. Replay protection — reject any batch ID the buffer has already marked processed.
+        //    The buffer is the authoritative source for this flag (the processor flips it after execution).
+        address depositDataBuffer = DepositDataBufferAddress.get();
+        if (IDepositDataBuffer(depositDataBuffer).isDepositDataProcessed(depositDataBufferId)) {
             revert DepositDataBufferIdAlreadyProcessed(depositDataBufferId);
         }
 
         // 1. Verify attestation quorum
         _verifyAttestationQuorum(depositDataBufferId, depositRootHash, signatures, depositContract);
 
-        // 2. Get deposit batch from buffer
-        batch = IDepositDataBuffer(DepositDataBufferAddress.get()).getDepositData(depositDataBufferId);
+        // 2. Get deposit batch (and its stored nonce) from buffer
+        uint256 nonce;
+        (batch, nonce) = IDepositDataBuffer(depositDataBuffer).getDepositData(depositDataBufferId);
         uint256 depositCount = batch.deposits.length;
         uint256 topUpCount = batch.topUps.length;
         if (depositCount == 0 && topUpCount == 0) revert NoDeposits();
 
-        // 3. Re-compute and check the bufferId binding so the buffer cannot tamper post-attestation
-        bytes32 computedId = keccak256(abi.encode(batch));
+        // 3. Re-compute and check the bufferId binding so the buffer cannot tamper post-attestation.
+        //    The nonce is folded into the id, so it is included in the recompute.
+        bytes32 computedId = keccak256(abi.encode(batch, nonce));
         if (computedId != depositDataBufferId) revert BufferIdMismatch(depositDataBufferId, computedId);
 
         // 4. Validate initial deposits: field lengths, amount bounds, pubkey-not-already-funded
@@ -455,7 +479,7 @@ contract AttestationVerifierV1 is
             // InFlightDeposit / _assetBalance() (issue #441/#309). The upper bound and gwei-alignment
             // mirror `_depositValidator`; the 32-ETH floor is stricter here because this loop only
             // covers initial deposits (top-ups are validated separately below and stay >= 1 ETH).
-            if (d.amount < MIN_INITIAL_DEPOSIT_AMOUNT || d.amount > 2048 ether || d.amount % 1 gwei != 0) {
+            if (d.amount < MIN_INITIAL_DEPOSIT_AMOUNT || d.amount > MAX_DEPOSIT_AMOUNT || d.amount % 1 gwei != 0) {
                 revert InvalidDepositAmount(i, d.amount);
             }
             totalAmount += d.amount;
@@ -487,7 +511,7 @@ contract AttestationVerifierV1 is
             if (t.pubkey.length != DEPOSIT_PUBKEY_LENGTH) {
                 revert InvalidTopUpPubkeyLength(i, t.pubkey.length);
             }
-            if (t.amount < 1 ether || t.amount > 2048 ether || t.amount % 1 gwei != 0) {
+            if (t.amount < MIN_TOP_UP_AMOUNT || t.amount > MAX_TOP_UP_AMOUNT || t.amount % 1 gwei != 0) {
                 revert InvalidTopUpAmount(i, t.amount);
             }
             totalAmount += t.amount;
@@ -626,16 +650,6 @@ contract AttestationVerifierV1 is
     }
 
     /// @inheritdoc IAttestationVerifierV1
-    function markDepositDataBufferIdProcessed(bytes32 depositDataBufferId) external onlyRiver {
-        ProcessedDepositDataBufferIds.markProcessed(depositDataBufferId);
-    }
-
-    /// @inheritdoc IAttestationVerifierV1
-    function isDepositDataBufferIdProcessed(bytes32 depositDataBufferId) external view returns (bool) {
-        return ProcessedDepositDataBufferIds.isProcessed(depositDataBufferId);
-    }
-
-    /// @inheritdoc IAttestationVerifierV1
     /// @dev Trust boundary: this function validates structural shape (array shapes,
     ///      pubkey byte lengths, and single-use source pubkeys) plus the attestation
     ///      quorum (ECDSA signature recovery against the consolidation committee). It
@@ -656,6 +670,9 @@ contract AttestationVerifierV1 is
         if (sourceLen != targetLen) revert ConsolidationArrayLengthMismatch(sourceLen, targetLen);
         if (consolidation.totalAmount == 0) revert ZeroConsolidationTotalAmount();
         if (consolidation.withdrawalAddress == address(0)) revert ZeroConsolidationWithdrawalAddress();
+        if (consolidation.exitEpoch.length != sourceLen) {
+            revert ExitEpochArrayLengthMismatch();
+        }
 
         // 2. Per-pair pubkey length checks, before hashing dynamic bytes.
         for (uint256 i = 0; i < sourceLen; ++i) {
@@ -670,10 +687,11 @@ contract AttestationVerifierV1 is
         }
 
         // 3. Compute the EIP-712 digest the committee signed.
-        //    The struct's `signatures` field is NOT part of the typed data — only the four
+        //    The struct's `signatures` field is NOT part of the typed data — only the five
         //    request fields are. `bytes[]` arrays follow EIP-712 array rules: each element
         //    becomes `keccak256(element)`, then the array hashes to `keccak256` over the
-        //    concatenation of those 32-byte element hashes.
+        //    concatenation of those 32-byte element hashes. The `uint256[] exitEpoch` array
+        //    hashes to `keccak256` over the concatenation of its 32-byte elements.
         bytes32 domainSep = ConsolidationDomainSeparator.get();
         if (domainSep == bytes32(0)) revert ZeroConsolidationDomainSeparator();
         bytes32[] memory sourcePubkeyHashes = _hashBytesArrayElements(consolidation.sourcePubkeys);
@@ -683,7 +701,8 @@ contract AttestationVerifierV1 is
                 consolidation.withdrawalAddress,
                 keccak256(abi.encodePacked(sourcePubkeyHashes)),
                 _hashBytesArray(consolidation.targetPubkeys),
-                consolidation.totalAmount
+                consolidation.totalAmount,
+                _hashUintArray(consolidation.exitEpoch)
             )
         );
 
@@ -840,6 +859,12 @@ contract AttestationVerifierV1 is
             if (a[i] != b[i]) return false;
         }
         return true;
+    }
+
+    /// @dev EIP-712 array hash for a `uint256[]` field. Each element is already an atomic
+    ///      32-byte value, so the array hashes to `keccak256` over their concatenation.
+    function _hashUintArray(uint256[] calldata arr) internal pure returns (bytes32) {
+        return keccak256(abi.encodePacked(arr));
     }
 
     /// @notice Verify the BLS signatures of all initial deposits against the canonical River
