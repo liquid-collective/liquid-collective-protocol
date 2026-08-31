@@ -364,6 +364,20 @@ contract RedemptionInvariantHandler is StdUtils {
 ///      before `initializeRedeemManagerV1_3` runs. That is what makes the rate mark floor non-zero,
 ///      so I8 is a real check, and it keeps the legacy pro-rata cap branch of the claim path inside
 ///      the fuzzed state space alongside the anchored branch.
+///
+/// @dev NO PAYOUT FLOOR IS ASSERTED HERE, and that is by design rather than an omission. Every cap
+///      property below is a one-sided CEILING: I2 is `paid <= capSum`, and I9 over in
+///      `RedemptionRateMarkFuzzTests` is `received <= ethAtRequest + lockedAppreciation`. Nothing in
+///      this contract constrains the payout from below, so a mark whose locked rate sits BELOW a
+///      covered request's request-time rate — which re-prices that slice DOWNWARDS, under
+///      `ethAtRequest` — satisfies all six invariants. That outcome is supported: a mark locks the
+///      rate in force when the backing principal crossed exit_epoch, in both directions, so a
+///      redeemer marked during a drawdown forfeits any later recovery on the marked span. The
+///      handler's own rate band is deliberately wide enough to sample it (see `MIN_RATE` and
+///      `RATE_STEP_DOWN_BPS` on `RedemptionInvariantHandler`). The lower-bound behaviour is owned by
+///      two named tests instead, so it cannot drift silently:
+///      `RedemptionRateMarkFuzzTests.testFuzz_MarkBelowRequestRateForfeitsRecovery` and
+///      `SliceCapGeometryTests.testMarkBelowRequestRateRePricesSliceDownwards`.
 contract RedemptionInvariantsTest is RedemptionMirror {
     RedemptionInvariantHandler internal handler;
 
@@ -1215,6 +1229,86 @@ contract RedemptionRateMarkFuzzTests is RedemptionMirror {
             received + redeemManager.getBufferedExceedingEth(),
             expected.gross,
             "I2: paid + buffered != event ETH supplied"
+        );
+    }
+
+    /// Scenario: the identical anchored request on two pristine protocol states, both of which drop to
+    /// a fuzzed `markRate` STRICTLY BELOW the request rate and then fully recover before the sweep.
+    /// World 1 lands a stopped-earning report at the depressed rate; world 2 does not.
+    /// Expected: world 1 is paid STRICTLY LESS than world 2, and less than its own request-time value.
+    /// The difference is exactly what world 1 diverted to the exceeding-eth buffer.
+    /// Why it matters: this is the lower-bound half of the cap, which nothing else in this suite
+    /// asserts. `I2` and `I9` are both ceilings — `paid <= capSum` and
+    /// `received <= ethAtRequest + lockedAppreciation` — so a mark that RE-PRICES a slice DOWNWARDS is
+    /// invisible to them. It is a supported outcome, not a bug: a mark locks the rate in force when
+    /// the backing principal crossed exit_epoch, in both directions, so a redeemer marked during a
+    /// drawdown forfeits any later recovery on the marked span (a `CoverageFundV1` payout included).
+    /// Pinned here so the forfeiture cannot change silently in either direction — this test fails if a
+    /// floor at the request-time rate is ever introduced, and so does the deterministic
+    /// `SliceCapGeometryTests.testMarkBelowRequestRateRePricesSliceDownwards`.
+    /// @dev The settlement rate is derived as a small step ABOVE the request rate rather than fuzzed,
+    ///      for the same reason `testFuzz_RedeemerNeverOutEarnsNativeStaker` derives its own: the cap
+    ///      has to be the binding side of `min(pro-rata event ETH, sliceCap)` in BOTH worlds, or the
+    ///      comparison degenerates into two identically under-funded events. Above the request rate,
+    ///      world 2 is pinned at `ethAtRequest` and world 1 at the mark, so the gap between them is
+    ///      the forfeited recovery and nothing else.
+    /// @dev `markRate` is drawn strictly below `requestRate` by construction rather than by rejection,
+    ///      so no run is wasted and the property holds on every input.
+    function testFuzz_MarkBelowRequestRateForfeitsRecovery(
+        uint256 _amount,
+        uint256 _requestRate,
+        uint256 _drawdownBps,
+        uint256 _recoveryMargin
+    ) external {
+        // large enough that the drawdown's eth leg survives `sharesFromUnderlyingBalance` flooring
+        uint256 amount = bound(_amount, 1 gwei, 1_000 ether);
+        uint256 requestRate = bound(_requestRate, 1e18, 2e18);
+        // a 5% to 50% drawdown, so `markRate < requestRate` strictly, with no rejection sampling
+        uint256 markRate = (requestRate * bound(_drawdownBps, 5_000, 9_500)) / 10_000;
+        // recovery to just above the request rate, so the cap binds in both worlds
+        uint256 settlementRate = requestRate + (requestRate * bound(_recoveryMargin, 0, 1_000)) / 10_000;
+
+        address user = fuzzUser;
+        uint256 pristine = vm.snapshot();
+
+        // ── world 1: drawdown, mark at the depressed rate, then recovery ────────
+        _reportRateLoose(requestRate);
+        (uint32 idMarked, uint256 openedMarked) = _openRequestLoose(user, amount);
+        uint256 requestTimeEth = redeemManager.getRedeemRequestAnchor(idMarked).ethAtRequest;
+        _reportRateLoose(markRate);
+        _reportStoppedEarning(applyRate(openedMarked, markRate));
+        assertEq(redeemManager.getRateMarkCount(), 1, "the marked world must actually carry a mark");
+        _reportRateLoose(settlementRate);
+        _reportWithdrawEth(applyRate(openedMarked, settlementRate), settlementRate);
+        // mirrored before the claim, so the payout is pinned exactly and not merely bounded
+        MirrorClaim memory expected = _mirrorClaim(redeemManager, idMarked, 0, type(uint16).max);
+        uint256 receivedMarked = _claimWithDepth(idMarked, 0, type(uint16).max);
+        uint256 bufferedMarked = redeemManager.getBufferedExceedingEth();
+        assertEq(receivedMarked, expected.paid, "marked payout diverged from the independent mirror");
+
+        // ── world 2: the same protocol rolled back, same drawdown, no mark ──────
+        _resetToPristineProtocol(pristine);
+        _reportRateLoose(requestRate);
+        (uint32 idPlain, uint256 openedPlain) = _openRequestLoose(user, amount);
+        assertEq(openedPlain, openedMarked, "the two worlds must open the same position");
+        // the pool takes the same excursion; the only difference is that no exit crosses exit_epoch
+        _reportRateLoose(markRate);
+        assertEq(redeemManager.getRateMarkCount(), 0, "the control world must carry no mark");
+        _reportRateLoose(settlementRate);
+        _reportWithdrawEth(applyRate(openedPlain, settlementRate), settlementRate);
+        uint256 receivedPlain = _claimWithDepth(idPlain, 0, type(uint16).max);
+
+        // the control is held at its request-time value: the drawdown alone costs it nothing, because
+        // the pool recovered before the sweep
+        assertEq(receivedPlain, requestTimeEth, "control: an unmarked request is capped at ethAtRequest");
+        // the mark re-priced the slice downwards, so world 1 is paid strictly less
+        assertLt(receivedMarked, receivedPlain, "a mark below the request rate must lower the payout");
+        assertLt(receivedMarked, requestTimeEth, "the marked request forfeited part of its request-time value");
+        // and the shortfall is not lost: it was diverted to the holders who did not redeem
+        assertEq(
+            bufferedMarked - redeemManager.getBufferedExceedingEth(),
+            receivedPlain - receivedMarked,
+            "the forfeited recovery must equal the extra ETH the marked world buffered"
         );
     }
 }

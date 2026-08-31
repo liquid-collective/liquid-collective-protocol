@@ -602,4 +602,129 @@ contract SliceCapGeometryTests is RedemptionReportBase {
         assertEq(splitTotal, expected);
         assertEq(redeemManager.getRedeemRequestDetails(split).amount, 0);
     }
+
+    /// D12. Scenario: the mark's locked rate is BELOW the request rate, because the pool was in a
+    /// drawdown at the moment the backing principal crossed exit_epoch. The pool then fully recovers
+    /// before the sweep.
+    ///
+    ///     rates   request 1.20  ->  mark 1.00  ->  settlement 1.20
+    ///     marks   [========= mark0 (30 LsETH @ 1.00) =========)
+    ///     axis    0                                          30
+    ///     request [============ request R (30 LsETH @ 1.20) ==)
+    ///
+    /// Expected: 30 ETH, NOT the 36 ETH the anchor is worth and NOT the 36 ETH the event supplied.
+    /// `case 3` re-prices the whole slice DOWNWARDS to the mark's locked rate, and the 6 ETH the
+    /// recovery restored is confiscated to `BufferedExceedingEth` for the holders who did not redeem.
+    ///
+    /// @dev The direction is the point. Every other test in this suite ramps the pool monotonically
+    ///      upwards, so `mark.markedEth / mark.amount` is always at or above
+    ///      `anchor.ethAtRequest / anchor.lsETHAtRequest` and `case 3` only ever raises the ceiling.
+    ///      This is the mirror image, and it is deliberately supported: a mark is a two-sided
+    ///      re-pricing rather than a raise, so a redeemer marked during a drawdown forfeits any later
+    ///      recovery on the marked span -- including a `CoverageFundV1` payout, which is exactly what
+    ///      restores the rate in this scenario. See the `_sliceCap` @dev block.
+    /// @dev `assertLt(received, anchor.ethAtRequest)` is the assertion that fails the day a floor at
+    ///      the request-time rate is introduced. It is here so that change cannot land silently.
+    function testMarkBelowRequestRateRePricesSliceDownwards() external {
+        _upgradeToV1_3();
+        address user = _generateAllowlistedUser(0);
+
+        // the request is quoted at 1.20, so its anchor is worth 36 ETH
+        _reportRate(1.2e18);
+        uint32 id = _openRequest(user, 30e18);
+        RedeemRequestAnchor.Anchor memory anchor = redeemManager.getRedeemRequestAnchor(id);
+        assertEq(anchor.lsETHAtRequest, 30e18);
+        assertEq(anchor.ethAtRequest, 36e18);
+
+        // a report takes the pool down to 1.00, and the principal crosses exit_epoch there. A mark is
+        // priced at the PRE-report rate, so this locks 1.00 over the whole request -- below its 1.20
+        // request rate.
+        _reportRate(1e18);
+        _reportStoppedEarning(applyRate(30e18, 1e18));
+        RateMarkStack.RateMark memory mark = redeemManager.getRateMarkDetails(0);
+        assertEq(mark.height, 0);
+        assertEq(mark.amount, 30e18);
+        assertEq(mark.markedEth, 30e18);
+        // the locked rate really is below the request rate, cross-multiplied to avoid a truncation
+        // in the assertion itself: 30 * 30 < 36 * 30
+        assertLt(mark.markedEth * anchor.lsETHAtRequest, anchor.ethAtRequest * mark.amount);
+
+        // the pool fully recovers to 1.20 before the exit is swept, so the event carries 36 ETH --
+        // exactly the request-time value, and 6 ETH above the mark
+        _reportRate(1.2e18);
+        uint256 withdrawnEth = _reportWithdraw(30e18, 1.2e18);
+        assertEq(withdrawnEth, 36e18);
+
+        uint256 received = _claim(id);
+
+        // the mark, not the anchor and not the event, decides the payout
+        assertEq(received, 30e18);
+        assertEq(received, mark.markedEth);
+        assertLt(received, anchor.ethAtRequest);
+        assertLt(received, withdrawnEth);
+        // the recovery the redeemer forfeited goes back to the remaining holders
+        assertEq(redeemManager.getBufferedExceedingEth(), 6e18);
+        assertEq(redeemManager.getRedeemRequestDetails(id).amount, 0);
+    }
+
+    /// D13. Scenario: ONE report marks the whole queue during a drawdown, so a request anchored far
+    /// ABOVE the locked rate inherits it. Quantifies how much of a request's value a single depressed
+    /// mark can re-price away.
+    ///
+    ///     marks   [================ mark0 (200 LsETH @ 0.50) ================)
+    ///     axis    0                        100                              200
+    ///     request [==== A (100 LsETH @ 0.50) ==)[==== B (100 LsETH @ 2.00) ==)
+    ///
+    /// Expected: B, whose anchor is worth 200 ETH and whose pro-rata share of the event is also
+    /// 200 ETH, receives 50 ETH -- a quarter of its request-time value. `reportStoppedEarning` sizes a
+    /// mark from `totalRequestedHeight - markStart`, i.e. from the whole axis, so one report's locked
+    /// rate lands on every request it reaches regardless of what each of them was quoted at.
+    ///
+    /// @dev A's own payout is NOT the interesting number -- it was quoted at the same 0.50 the mark
+    ///      locks, so its cap is unchanged either way. B is the case worth pinning: nothing about B's
+    ///      own history is depressed, only the pool rate at the instant an unrelated pooled exit
+    ///      crossed exit_epoch.
+    function testSingleDrawdownMarkRePricesAHigherRateRequest() external {
+        _upgradeToV1_3();
+        address userA = _generateAllowlistedUser(0);
+        address userB = _generateAllowlistedUser(1);
+
+        // A is quoted cheaply, B expensively: the pool quadruples between the two requests
+        _reportRate(0.5e18);
+        uint32 idA = _openRequest(userA, 100e18); // [0, 100), anchored at 50 ETH
+        _reportRate(2e18);
+        uint32 idB = _openRequest(userB, 100e18); // [100, 200), anchored at 200 ETH
+        assertEq(redeemManager.getRedeemRequestAnchor(idA).ethAtRequest, 50e18);
+        assertEq(redeemManager.getRedeemRequestAnchor(idB).ethAtRequest, 200e18);
+        assertEq(redeemManager.getRedeemRequestDetails(idB).height, 100e18);
+
+        // the pool is slashed back to 0.50 and a single pooled exit crosses exit_epoch there. markable
+        // is the whole axis, so one mark covers BOTH requests at the depressed rate.
+        _reportRate(0.5e18);
+        _reportStoppedEarning(applyRate(200e18, 0.5e18));
+        RateMarkStack.RateMark memory mark = redeemManager.getRateMarkDetails(0);
+        assertEq(mark.height, 0);
+        assertEq(mark.amount, 200e18);
+        assertEq(mark.markedEth, 100e18);
+
+        // full recovery to 2.00 before the sweep: the event carries 400 ETH for the 200 LsETH it
+        // settles, so B's pro-rata share is the full 200 ETH its anchor is worth
+        _reportRate(2e18);
+        assertEq(_reportWithdraw(200e18, 2e18), 400e18);
+
+        uint256 receivedB = _claim(idB);
+
+        // B is held to the mark's 0.50 over its whole span: 100 * 100 / 200
+        assertEq(receivedB, 50e18);
+        assertEq(receivedB, (100e18 * mark.markedEth) / mark.amount);
+        // a quarter of what B was quoted, and a quarter of what the event offered it
+        assertEq(receivedB * 4, redeemManager.getRedeemRequestAnchor(idB).ethAtRequest);
+        assertEq(redeemManager.getBufferedExceedingEth(), 150e18);
+
+        // A, quoted at the same rate the mark locks, is unaffected by the re-pricing
+        uint256 receivedA = _claim(idA);
+        assertEq(receivedA, 50e18);
+        assertEq(receivedA, redeemManager.getRedeemRequestAnchor(idA).ethAtRequest);
+        assertEq(redeemManager.getRedeemRequestDetails(idA).amount, 0);
+    }
 }
