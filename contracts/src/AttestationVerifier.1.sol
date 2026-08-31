@@ -254,6 +254,7 @@ contract AttestationVerifierV1 is
 
     /// @inheritdoc IAttestationVerifierV1
     function setDepositDataBuffer(address _depositDataBuffer) external onlyAdmin {
+        _assertDepositDataBufferProcessor(_depositDataBuffer, RiverAddress.get());
         DepositDataBufferAddress.set(_depositDataBuffer);
         emit SetDepositDataBuffer(_depositDataBuffer);
     }

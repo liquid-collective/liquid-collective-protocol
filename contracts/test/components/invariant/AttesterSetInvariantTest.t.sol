@@ -7,6 +7,18 @@ import "../../../src/AttestationVerifier.1.sol";
 import "../../utils/LibImplementationUnbricker.sol";
 import "./AttesterSetHandler.sol";
 
+contract DepositBufferProcessorStub {
+    address internal immutable _processor;
+
+    constructor(address processor_) {
+        _processor = processor_;
+    }
+
+    function getProcessor() external view returns (address) {
+        return _processor;
+    }
+}
+
 /// @title AttesterSetInvariantTest
 /// @notice Foundry-native invariant test on the attester-set state machine of
 ///         `AttestationVerifierV1`. Fuzzes random sequences of
@@ -39,7 +51,8 @@ contract AttesterSetInvariantTest is Test {
         initial[1] = makeAddr("att2");
         initial[2] = makeAddr("att3");
 
-        verifier.initAttestationVerifierV1(ADMIN, riverStub, address(0xBEEF), initial, 2, bytes4(0), initial, 2);
+        address depositBufferStub = address(new DepositBufferProcessorStub(riverStub));
+        verifier.initAttestationVerifierV1(ADMIN, riverStub, depositBufferStub, initial, 2, bytes4(0), initial, 2);
 
         handler = new AttesterSetHandler(verifier, ADMIN, initial);
         targetContract(address(handler));

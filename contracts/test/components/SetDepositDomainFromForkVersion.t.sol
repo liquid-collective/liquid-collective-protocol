@@ -46,9 +46,7 @@ contract SetDepositDomainFromForkVersionTest is Test {
 
         // init with bytes4(0) — accepted here because the default Foundry chain (31337) is unknown,
         // so init is permissive; the strict admin setter below is what enforces correctness.
-        verifier.initAttestationVerifierV1(
-            admin, river, makeAddr("buffer"), rootAttesters, 1, bytes4(0), consolidationAttesters, 1
-        );
+        verifier.initAttestationVerifierV1(admin, river, buffer, rootAttesters, 1, bytes4(0), consolidationAttesters, 1);
     }
 
     /// @dev Happy path on mainnet — the value that ships.
@@ -131,9 +129,7 @@ contract SetDepositDomainFromForkVersionTest is Test {
         rootAttesters[0] = makeAddr("rootAttester");
         address[] memory consolidationAttesters = new address[](1);
         consolidationAttesters[0] = makeAddr("consolidationAttester");
-        v.initAttestationVerifierV1(
-            admin, river, makeAddr("buffer"), rootAttesters, 1, forkVersion, consolidationAttesters, 1
-        );
+        v.initAttestationVerifierV1(admin, river, buffer, rootAttesters, 1, forkVersion, consolidationAttesters, 1);
     }
 
     /// @dev init reverts at deploy on a known chain when the fork version is wrong.

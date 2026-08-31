@@ -16,6 +16,18 @@ contract AttestationVerifierBytesEqualHarness is AttestationVerifierV1 {
     }
 }
 
+contract DepositBufferProcessorStub {
+    address internal immutable _processor;
+
+    constructor(address processor_) {
+        _processor = processor_;
+    }
+
+    function getProcessor() external view returns (address) {
+        return _processor;
+    }
+}
+
 // ---------------------------------------------------------------------------
 // ConsolidationAttestationTest — exercises the consolidation half of
 // AttestationVerifierV1. The verifier now takes a `ConsolidationObject` directly
@@ -69,9 +81,9 @@ contract ConsolidationAttestationTest is Test {
         attester3 = vm.addr(pk3);
 
         river = makeAddr("river");
-        // The consolidation tests do not exercise the deposit `validate` path; a non-zero
-        // EOA satisfies the deposit buffer's LibSanitize._notZeroAddress check at init.
-        depositBufferStub = makeAddr("depositDataBufferStub");
+        // Init now validates the buffer processor against River, so this must be a real
+        // contract exposing getProcessor() and returning `river`.
+        depositBufferStub = address(new DepositBufferProcessorStub(address(river)));
 
         verifier = new AttestationVerifierV1();
         LibImplementationUnbricker.unbrick(vm, address(verifier));

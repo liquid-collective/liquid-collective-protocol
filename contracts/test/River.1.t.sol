@@ -59,11 +59,7 @@ contract MockDepositDataBuffer is IDepositDataBuffer {
         ++lastQueuedIdx;
     }
 
-    function getDepositData(bytes32 depositDataBufferId)
-        external
-        view
-        returns (DepositObject memory, uint256 nonce)
-    {
+    function getDepositData(bytes32 depositDataBufferId) external view returns (DepositObject memory, uint256 nonce) {
         if (!_exists[depositDataBufferId]) revert DepositDataBufferIdNotFound(depositDataBufferId);
         return (_batches[depositDataBufferId], _nonce[depositDataBufferId]);
     }
@@ -3118,14 +3114,7 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         v = new AttestationVerifierV1();
         LibImplementationUnbricker.unbrick(vm, address(v));
         v.initAttestationVerifierV1(
-            admin,
-            _river,
-            makeAddr("depositBuffer"),
-            _rootAttesters_,
-            1,
-            bytes4(0),
-            _consolidationCommitteeAttesters_,
-            1
+            admin, _river, address(mockBuffer), _rootAttesters_, 1, bytes4(0), _consolidationCommitteeAttesters_, 1
         );
     }
 

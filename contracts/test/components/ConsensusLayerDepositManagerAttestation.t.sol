@@ -458,11 +458,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     /// @dev Recover the signer of an EIP-712 attestation from its raw signature — exactly what an
     ///      off-chain daemon does to attribute an emitted attestation (incl. a `depositRootHash == 0`
     ///      veto). Mirrors `_signAttestation`'s digest construction.
-    function _recoverAttestation(bytes32 bufferId, bytes32 rootHash, bytes memory sig)
-        internal
-        view
-        returns (address)
-    {
+    function _recoverAttestation(bytes32 bufferId, bytes32 rootHash, bytes memory sig) internal view returns (address) {
         bytes32 domainSep =
             keccak256(abi.encode(EIP712_DOMAIN_TYPEHASH, NAME_HASH, VERSION_HASH, block.chainid, address(dm)));
         bytes32 structHash = keccak256(abi.encode(ATTEST_TYPEHASH, bufferId, rootHash));
@@ -2326,7 +2322,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
             )
         );
         freshVerifier.initAttestationVerifierV1(
-            address(dm), badBuffer, rootAttesters, 1, bytes4(0), consolidationAttesters, 1
+            admin, address(dm), badBuffer, rootAttesters, 1, bytes4(0), consolidationAttesters, 1
         );
     }
 

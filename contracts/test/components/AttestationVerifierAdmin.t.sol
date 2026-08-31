@@ -25,6 +25,18 @@ contract RiverAdminStub {
     }
 }
 
+contract DepositBufferProcessorStub {
+    address internal immutable _processor;
+
+    constructor(address processor_) {
+        _processor = processor_;
+    }
+
+    function getProcessor() external view returns (address) {
+        return _processor;
+    }
+}
+
 /// @title AttestationVerifierAdminTest
 /// @notice Covers the verifier's local governance: the admin is set at initialization, is
 ///         independent of River's admin, gates every admin setter, and rotates through the
@@ -36,17 +48,18 @@ contract AttestationVerifierAdminTest is Test {
     address internal admin = makeAddr("verifierAdmin");
     address internal riverAdmin = makeAddr("riverAdmin");
     address internal stranger = makeAddr("stranger");
-    address internal depositBuffer = makeAddr("depositDataBuffer");
 
     address internal rootAttester1 = makeAddr("rootAttester1");
     address internal rootAttester2 = makeAddr("rootAttester2");
     address internal consolidationAttester1 = makeAddr("consolidationAttester1");
     address internal consolidationAttester2 = makeAddr("consolidationAttester2");
+    address internal depositBufferForRiver;
 
     function setUp() public {
         river = new RiverAdminStub(riverAdmin);
+        depositBufferForRiver = address(new DepositBufferProcessorStub(address(river)));
         verifier = _freshVerifier();
-        _init(verifier, admin, address(river));
+        _init(verifier, admin, address(river), depositBufferForRiver);
     }
 
     // -----------------------------------------------------------------------
@@ -59,7 +72,7 @@ contract AttestationVerifierAdminTest is Test {
     }
 
     /// @dev Internal so `vm.expectRevert` pierces through to the init external call.
-    function _init(AttestationVerifierV1 target, address admin_, address river_) internal {
+    function _init(AttestationVerifierV1 target, address admin_, address river_, address depositBuffer_) internal {
         address[] memory rootAttesters = new address[](2);
         rootAttesters[0] = rootAttester1;
         rootAttesters[1] = rootAttester2;
@@ -68,7 +81,7 @@ contract AttestationVerifierAdminTest is Test {
         consolidationAttesters[1] = consolidationAttester2;
 
         target.initAttestationVerifierV1(
-            admin_, river_, depositBuffer, rootAttesters, 1, bytes4(0), consolidationAttesters, 1
+            admin_, river_, depositBuffer_, rootAttesters, 1, bytes4(0), consolidationAttesters, 1
         );
     }
 
@@ -119,7 +132,7 @@ contract AttestationVerifierAdminTest is Test {
         AttestationVerifierV1 fresh = _freshVerifier();
         vm.expectEmit(true, true, true, true);
         emit IAdministrable.SetAdmin(admin);
-        _init(fresh, admin, address(river));
+        _init(fresh, admin, address(river), depositBufferForRiver);
     }
 
     /// @dev `AdministratorAddress.set` runs `LibSanitize._notZeroAddress`, so a deploy cannot
@@ -127,7 +140,7 @@ contract AttestationVerifierAdminTest is Test {
     function testInit_revertsOnZeroAdmin() public {
         AttestationVerifierV1 fresh = _freshVerifier();
         vm.expectRevert(LibErrors.InvalidZeroAddress.selector);
-        _init(fresh, address(0), address(river));
+        _init(fresh, address(0), address(river), depositBufferForRiver);
     }
 
     /// @dev The admin is independent of River's — passing the same address is a deployment
@@ -175,9 +188,10 @@ contract AttestationVerifierAdminTest is Test {
     function testAdminFunctions_workWhenRiverHasNoCode() public {
         address riverEoa = makeAddr("riverEoa");
         assertEq(riverEoa.code.length, 0, "River stand-in must have no code");
+        address depositBufferForRiverEoa = address(new DepositBufferProcessorStub(riverEoa));
 
         AttestationVerifierV1 fresh = _freshVerifier();
-        _init(fresh, admin, riverEoa);
+        _init(fresh, admin, riverEoa, depositBufferForRiverEoa);
 
         vm.prank(admin);
         fresh.setRootAttestationQuorum(2);
