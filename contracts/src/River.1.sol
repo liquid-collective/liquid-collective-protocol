@@ -229,7 +229,9 @@ contract RiverV1 is
         uint256 oldConsolidationBuffer = ConsolidationBuffer.get();
         _setConsolidationBuffer(oldConsolidationBuffer, oldConsolidationBuffer + consolidation.totalAmount);
         uint256 sharesMinted = _mintShares(recipient, consolidation.totalAmount);
-        emit LsETHMintedForConsolidation(recipient, consolidation.totalAmount, sharesMinted);
+        emit LsETHMintedForConsolidation(
+            recipient, consolidation.totalAmount, sharesMinted, consolidation.sourcePubkeys, consolidation.targetPubkeys
+        );
     }
 
     /// @inheritdoc IRiverV1
