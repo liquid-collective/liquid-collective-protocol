@@ -4,7 +4,9 @@ pragma solidity 0.8.34;
 import "forge-std/Test.sol";
 
 import "../../src/AttestationVerifier.1.sol";
+import "../../src/ConsolidationAttestation.sol";
 import "../../src/interfaces/IAttestationVerifier.1.sol";
+import "../../src/interfaces/IConsolidationAttestation.sol";
 import "../../src/libraries/LibErrors.sol";
 import "../utils/LibImplementationUnbricker.sol";
 
@@ -79,7 +81,7 @@ contract ConsolidationAttestationTest is Test {
     bytes32 internal constant CONSOLIDATION_NAME_HASH = keccak256("ConsolidationValidation");
     bytes32 internal constant VERSION_HASH = keccak256("1");
     bytes32 internal constant ATTEST_CONSOLIDATION_TYPEHASH = keccak256(
-        "AttestConsolidation(address withdrawalAddress,bytes[] sourcePubkeys,bytes[] targetPubkeys,uint256 totalAmount)"
+        "AttestConsolidation(address withdrawalAddress,bytes[] sourcePubkeys,bytes[] targetPubkeys,uint256 totalAmount,uint256[] exitEpoch)"
     );
 
     // Storage slots (must match contracts/src/state/attestationVerifier/*)
@@ -158,6 +160,18 @@ contract ConsolidationAttestationTest is Test {
         return keccak256(abi.encodePacked(hashes));
     }
 
+    /// @dev EIP-712 array-hash for a `uint256[]`. Mirrors `AttestationVerifierV1._hashUintArray`.
+    function _hashUintArray(uint256[] memory arr) internal pure returns (bytes32) {
+        return keccak256(abi.encodePacked(arr));
+    }
+
+    /// @dev Canonical per-pair exit-epoch array used by the test helpers: one zero entry per
+    ///      consolidation pair. The verifier binds this array in the digest, so objects and
+    ///      digests must use the same array.
+    function _defaultEpochs(uint256 count) internal pure returns (uint256[] memory arr) {
+        arr = new uint256[](count);
+    }
+
     /// @dev Compute the EIP-712 digest the consolidation committee is expected to sign,
     ///      derived directly from the request fields (no intermediate bufferId).
     function _consolidationDigest(
@@ -166,18 +180,20 @@ contract ConsolidationAttestationTest is Test {
         bytes[] memory targets,
         uint256 totalAmount
     ) internal view returns (bytes32) {
+        return _consolidationDigest(withdrawalAddress, sources, targets, totalAmount, _defaultEpochs(sources.length));
+    }
+
+    function _consolidationDigest(
+        address withdrawalAddress,
+        bytes[] memory sources,
+        bytes[] memory targets,
+        uint256 totalAmount,
+        uint256[] memory exitEpoch
+    ) internal view returns (bytes32) {
         bytes32 domainSep = keccak256(
             abi.encode(EIP712_DOMAIN_TYPEHASH, CONSOLIDATION_NAME_HASH, VERSION_HASH, block.chainid, address(river))
         );
-        bytes32 structHash = keccak256(
-            abi.encode(
-                ATTEST_CONSOLIDATION_TYPEHASH,
-                withdrawalAddress,
-                _hashBytesArray(sources),
-                _hashBytesArray(targets),
-                totalAmount
-            )
-        );
+        bytes32 structHash = _consolidationStructHash(withdrawalAddress, sources, targets, totalAmount, exitEpoch);
         return keccak256(abi.encodePacked("\x19\x01", domainSep, structHash));
     }
 
@@ -187,13 +203,26 @@ contract ConsolidationAttestationTest is Test {
         bytes[] memory targets,
         uint256 totalAmount
     ) internal pure returns (bytes32) {
+        return _consolidationStructHash(
+            withdrawalAddress, sources, targets, totalAmount, _defaultEpochs(sources.length)
+        );
+    }
+
+    function _consolidationStructHash(
+        address withdrawalAddress,
+        bytes[] memory sources,
+        bytes[] memory targets,
+        uint256 totalAmount,
+        uint256[] memory exitEpoch
+    ) internal pure returns (bytes32) {
         return keccak256(
             abi.encode(
                 ATTEST_CONSOLIDATION_TYPEHASH,
                 withdrawalAddress,
                 _hashBytesArray(sources),
                 _hashBytesArray(targets),
-                totalAmount
+                totalAmount,
+                _hashUintArray(exitEpoch)
             )
         );
     }
@@ -227,6 +256,7 @@ contract ConsolidationAttestationTest is Test {
             sourcePubkeys: sources,
             targetPubkeys: targets,
             totalAmount: totalAmount,
+            exitEpoch: _defaultEpochs(sources.length),
             signatures: sigs
         });
     }
@@ -262,6 +292,59 @@ contract ConsolidationAttestationTest is Test {
         _validateConsolidationAsRiver(c);
     }
 
+    /// @dev Approval signatures accepted and emitted by the L2 relay must be consumable byte-for-byte
+    ///      by the L1 verifier. `exitEpoch` is part of the shared five-field digest, so both sides
+    ///      must carry the identical array.
+    function testL2ApprovalSignaturesAreAcceptedByL1() public {
+        address withdrawalAddress = address(0xBEEF);
+        bytes[] memory sources = new bytes[](1);
+        sources[0] = _pubkey(101);
+        bytes[] memory targets = new bytes[](1);
+        targets[0] = _pubkey(1101);
+        uint256 totalAmount = 32 ether;
+        uint256[] memory exitEpoch = _epochs(12345);
+
+        ConsolidationAttestation relay = new ConsolidationAttestation(verifier.getConsolidationDomainSeparator());
+        IConsolidationAttestation.ConsolidationObject memory relayConsolidation =
+            IConsolidationAttestation.ConsolidationObject({
+                withdrawalAddress: withdrawalAddress,
+                sourcePubkeys: sources,
+                targetPubkeys: targets,
+                totalAmount: totalAmount,
+                exitEpoch: exitEpoch
+            });
+
+        bytes32 structHash = _consolidationStructHash(withdrawalAddress, sources, targets, totalAmount, exitEpoch);
+        bytes32 digest = _consolidationDigest(withdrawalAddress, sources, targets, totalAmount, exitEpoch);
+        bytes[] memory signatures = new bytes[](2);
+        signatures[0] = _sign(pk1, digest);
+        signatures[1] = _sign(pk2, digest);
+
+        assertEq(relay.computeConsolidationHash(relayConsolidation), structHash);
+
+        vm.prank(attester1);
+        relay.submitAttestation(relayConsolidation, signatures[0], "");
+        vm.prank(attester2);
+        relay.submitAttestation(relayConsolidation, signatures[1], "");
+        assertEq(relay.lastAttestationIdx(), 2);
+
+        IAttestationVerifierV1.ConsolidationObject memory l1Consolidation = IAttestationVerifierV1.ConsolidationObject({
+            withdrawalAddress: withdrawalAddress,
+            sourcePubkeys: sources,
+            targetPubkeys: targets,
+            totalAmount: totalAmount,
+            exitEpoch: exitEpoch,
+            signatures: signatures
+        });
+        _validateConsolidationAsRiver(l1Consolidation);
+    }
+
+    /// @dev A single-element exit-epoch helper for tests that bind a specific epoch.
+    function _epochs(uint256 value) internal pure returns (uint256[] memory arr) {
+        arr = new uint256[](1);
+        arr[0] = value;
+    }
+
     function testValidateConsolidation_multiplePairs_succeeds() public {
         address user = address(0xCAFE);
         bytes[] memory sources = new bytes[](3);
@@ -283,6 +366,7 @@ contract ConsolidationAttestationTest is Test {
             sourcePubkeys: sources,
             targetPubkeys: targets,
             totalAmount: totalAmount,
+            exitEpoch: _defaultEpochs(sources.length),
             signatures: sigs
         });
         _validateConsolidationAsRiver(c);
@@ -416,6 +500,7 @@ contract ConsolidationAttestationTest is Test {
             sourcePubkeys: empty,
             targetPubkeys: empty,
             totalAmount: 1 ether,
+            exitEpoch: _defaultEpochs(empty.length),
             signatures: new bytes[](0)
         });
         vm.expectRevert(IAttestationVerifierV1.NoConsolidations.selector);
@@ -434,9 +519,71 @@ contract ConsolidationAttestationTest is Test {
             sourcePubkeys: sources,
             targetPubkeys: targets,
             totalAmount: 32 ether,
+            exitEpoch: _defaultEpochs(sources.length),
             signatures: new bytes[](0)
         });
         vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.ConsolidationArrayLengthMismatch.selector, 2, 1));
+        _validateConsolidationAsRiver(c);
+    }
+
+    /// @dev `exitEpoch` carries one entry per (source, target) pair. A short array would leave the
+    ///      trailing pairs' exit epochs unbound in the signed digest, so it must be rejected outright.
+    function testRevert_exitEpochShorterThanPairs() public {
+        bytes[] memory sources = new bytes[](2);
+        sources[0] = _pubkey(1);
+        sources[1] = _pubkey(2);
+        bytes[] memory targets = new bytes[](2);
+        targets[0] = _pubkey(3);
+        targets[1] = _pubkey(4);
+
+        IAttestationVerifierV1.ConsolidationObject memory c = IAttestationVerifierV1.ConsolidationObject({
+            withdrawalAddress: address(0xAA),
+            sourcePubkeys: sources,
+            targetPubkeys: targets,
+            totalAmount: 64 ether,
+            exitEpoch: _defaultEpochs(1),
+            signatures: new bytes[](0)
+        });
+        vm.expectRevert(IAttestationVerifierV1.ExitEpochArrayLengthMismatch.selector);
+        _validateConsolidationAsRiver(c);
+    }
+
+    /// @dev The reverse skew: extra exit epochs with no pair to attach to are equally rejected.
+    function testRevert_exitEpochLongerThanPairs() public {
+        bytes[] memory sources = new bytes[](1);
+        sources[0] = _pubkey(1);
+        bytes[] memory targets = new bytes[](1);
+        targets[0] = _pubkey(2);
+
+        IAttestationVerifierV1.ConsolidationObject memory c = IAttestationVerifierV1.ConsolidationObject({
+            withdrawalAddress: address(0xAA),
+            sourcePubkeys: sources,
+            targetPubkeys: targets,
+            totalAmount: 32 ether,
+            exitEpoch: _defaultEpochs(2),
+            signatures: new bytes[](0)
+        });
+        vm.expectRevert(IAttestationVerifierV1.ExitEpochArrayLengthMismatch.selector);
+        _validateConsolidationAsRiver(c);
+    }
+
+    /// @dev An empty `exitEpoch` alongside a well-formed pair hits the same guard — it is not treated
+    ///      as "no epochs supplied, default them".
+    function testRevert_exitEpochEmptyWithPairs() public {
+        bytes[] memory sources = new bytes[](1);
+        sources[0] = _pubkey(1);
+        bytes[] memory targets = new bytes[](1);
+        targets[0] = _pubkey(2);
+
+        IAttestationVerifierV1.ConsolidationObject memory c = IAttestationVerifierV1.ConsolidationObject({
+            withdrawalAddress: address(0xAA),
+            sourcePubkeys: sources,
+            targetPubkeys: targets,
+            totalAmount: 32 ether,
+            exitEpoch: new uint256[](0),
+            signatures: new bytes[](0)
+        });
+        vm.expectRevert(IAttestationVerifierV1.ExitEpochArrayLengthMismatch.selector);
         _validateConsolidationAsRiver(c);
     }
 
@@ -451,6 +598,7 @@ contract ConsolidationAttestationTest is Test {
             sourcePubkeys: sources,
             targetPubkeys: targets,
             totalAmount: 0,
+            exitEpoch: _defaultEpochs(sources.length),
             signatures: new bytes[](0)
         });
         vm.expectRevert(IAttestationVerifierV1.ZeroConsolidationTotalAmount.selector);
@@ -468,6 +616,7 @@ contract ConsolidationAttestationTest is Test {
             sourcePubkeys: sources,
             targetPubkeys: targets,
             totalAmount: 32 ether,
+            exitEpoch: _defaultEpochs(sources.length),
             signatures: new bytes[](0)
         });
         vm.expectRevert(IAttestationVerifierV1.ZeroConsolidationWithdrawalAddress.selector);
@@ -485,6 +634,7 @@ contract ConsolidationAttestationTest is Test {
             sourcePubkeys: sources,
             targetPubkeys: targets,
             totalAmount: 32 ether,
+            exitEpoch: _defaultEpochs(sources.length),
             signatures: new bytes[](0)
         });
         vm.expectRevert(
@@ -504,6 +654,7 @@ contract ConsolidationAttestationTest is Test {
             sourcePubkeys: sources,
             targetPubkeys: targets,
             totalAmount: 32 ether,
+            exitEpoch: _defaultEpochs(sources.length),
             signatures: new bytes[](0)
         });
         vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.ZeroConsolidationSourcePubkey.selector, 0));
@@ -521,6 +672,7 @@ contract ConsolidationAttestationTest is Test {
             sourcePubkeys: sources,
             targetPubkeys: targets,
             totalAmount: 32 ether,
+            exitEpoch: _defaultEpochs(sources.length),
             signatures: new bytes[](0)
         });
         vm.expectRevert(
@@ -542,6 +694,7 @@ contract ConsolidationAttestationTest is Test {
             sourcePubkeys: sources,
             targetPubkeys: targets,
             totalAmount: 32 ether,
+            exitEpoch: _defaultEpochs(sources.length),
             signatures: new bytes[](0)
         });
         vm.expectRevert(
@@ -563,6 +716,7 @@ contract ConsolidationAttestationTest is Test {
             sourcePubkeys: sources,
             targetPubkeys: targets,
             totalAmount: 32 ether,
+            exitEpoch: _defaultEpochs(sources.length),
             signatures: new bytes[](0)
         });
         vm.expectRevert(
@@ -609,6 +763,7 @@ contract ConsolidationAttestationTest is Test {
                 sourcePubkeys: sources,
                 targetPubkeys: targets,
                 totalAmount: totalAmount,
+                exitEpoch: _defaultEpochs(sources.length),
                 signatures: sigsB
             })
         );
@@ -625,6 +780,7 @@ contract ConsolidationAttestationTest is Test {
                 sourcePubkeys: sources,
                 targetPubkeys: targets,
                 totalAmount: totalAmount,
+                exitEpoch: _defaultEpochs(sources.length),
                 signatures: sigsA
             })
         );
@@ -637,14 +793,15 @@ contract ConsolidationAttestationTest is Test {
         IAttestationVerifierV1.ConsolidationObject memory c = _validConsolidation(user, 1);
         _validateConsolidationAsRiver(c);
 
-        // The expected key is the EIP-712 structHash over the four request fields.
+        // The expected key is the EIP-712 structHash over the five request fields.
         bytes32 structHash = keccak256(
             abi.encode(
                 ATTEST_CONSOLIDATION_TYPEHASH,
                 c.withdrawalAddress,
                 _hashBytesArray(c.sourcePubkeys),
                 _hashBytesArray(c.targetPubkeys),
-                c.totalAmount
+                c.totalAmount,
+                _hashUintArray(c.exitEpoch)
             )
         );
 
@@ -700,6 +857,7 @@ contract ConsolidationAttestationTest is Test {
                 sourcePubkeys: firstSources,
                 targetPubkeys: firstTargets,
                 totalAmount: firstAmount,
+                exitEpoch: _defaultEpochs(firstSources.length),
                 signatures: firstSigs
             })
         );
@@ -713,6 +871,7 @@ contract ConsolidationAttestationTest is Test {
                 sourcePubkeys: secondSources,
                 targetPubkeys: secondTargets,
                 totalAmount: secondAmount,
+                exitEpoch: _defaultEpochs(secondSources.length),
                 signatures: firstSigs
             })
         );
@@ -747,6 +906,7 @@ contract ConsolidationAttestationTest is Test {
                 sourcePubkeys: firstSources,
                 targetPubkeys: firstTargets,
                 totalAmount: firstAmount,
+                exitEpoch: _defaultEpochs(firstSources.length),
                 signatures: firstSigs
             })
         );
@@ -760,6 +920,7 @@ contract ConsolidationAttestationTest is Test {
                 sourcePubkeys: secondSources,
                 targetPubkeys: secondTargets,
                 totalAmount: secondAmount,
+                exitEpoch: _defaultEpochs(secondSources.length),
                 signatures: firstSigs
             })
         );
@@ -798,6 +959,7 @@ contract ConsolidationAttestationTest is Test {
                 sourcePubkeys: firstSources,
                 targetPubkeys: firstTargets,
                 totalAmount: firstAmount,
+                exitEpoch: _defaultEpochs(firstSources.length),
                 signatures: firstSigs
             })
         );
@@ -811,6 +973,7 @@ contract ConsolidationAttestationTest is Test {
                 sourcePubkeys: secondSources,
                 targetPubkeys: secondTargets,
                 totalAmount: secondAmount,
+                exitEpoch: _defaultEpochs(secondSources.length),
                 signatures: secondSigs
             })
         );
@@ -841,6 +1004,7 @@ contract ConsolidationAttestationTest is Test {
                 sourcePubkeys: sources,
                 targetPubkeys: targets,
                 totalAmount: totalAmount,
+                exitEpoch: _defaultEpochs(sources.length),
                 signatures: sigs
             })
         );
@@ -871,6 +1035,7 @@ contract ConsolidationAttestationTest is Test {
                 sourcePubkeys: sources,
                 targetPubkeys: targets,
                 totalAmount: totalAmount,
+                exitEpoch: _defaultEpochs(sources.length),
                 signatures: signatures
             })
         );
@@ -897,6 +1062,7 @@ contract ConsolidationAttestationTest is Test {
                 sourcePubkeys: sources,
                 targetPubkeys: targets,
                 totalAmount: totalAmount,
+                exitEpoch: _defaultEpochs(sources.length),
                 signatures: signatures
             })
         );
@@ -920,6 +1086,7 @@ contract ConsolidationAttestationTest is Test {
                 sourcePubkeys: sources,
                 targetPubkeys: targets,
                 totalAmount: totalAmount,
+                exitEpoch: _defaultEpochs(sources.length),
                 signatures: signatures
             })
         );
@@ -952,6 +1119,7 @@ contract ConsolidationAttestationTest is Test {
                 sourcePubkeys: sources,
                 targetPubkeys: targets,
                 totalAmount: totalAmount,
+                exitEpoch: _defaultEpochs(sources.length),
                 signatures: underQuorumSigs
             })
         );
@@ -970,6 +1138,7 @@ contract ConsolidationAttestationTest is Test {
                 sourcePubkeys: sources,
                 targetPubkeys: targets,
                 totalAmount: totalAmount,
+                exitEpoch: _defaultEpochs(sources.length),
                 signatures: quorumSigs
             })
         );
@@ -984,7 +1153,8 @@ contract ConsolidationAttestationTest is Test {
                 c.withdrawalAddress,
                 _hashBytesArray(c.sourcePubkeys),
                 _hashBytesArray(c.targetPubkeys),
-                c.totalAmount
+                c.totalAmount,
+                _hashUintArray(c.exitEpoch)
             )
         );
         vm.expectEmit(true, false, false, true);
@@ -1017,6 +1187,7 @@ contract ConsolidationAttestationTest is Test {
                 sourcePubkeys: sources,
                 targetPubkeys: targets,
                 totalAmount: totalAmount,
+                exitEpoch: _defaultEpochs(sources.length),
                 signatures: sigs
             })
         );
@@ -1043,6 +1214,7 @@ contract ConsolidationAttestationTest is Test {
                 sourcePubkeys: sources,
                 targetPubkeys: targets,
                 totalAmount: totalAmount,
+                exitEpoch: _defaultEpochs(sources.length),
                 signatures: sigs
             })
         );
@@ -1070,6 +1242,7 @@ contract ConsolidationAttestationTest is Test {
                 sourcePubkeys: sources,
                 targetPubkeys: targets,
                 totalAmount: totalAmount,
+                exitEpoch: _defaultEpochs(sources.length),
                 signatures: sigs
             })
         );
@@ -1097,6 +1270,7 @@ contract ConsolidationAttestationTest is Test {
                 sourcePubkeys: sources,
                 targetPubkeys: targets,
                 totalAmount: totalAmount,
+                exitEpoch: _defaultEpochs(sources.length),
                 signatures: sigs
             })
         );
@@ -1124,6 +1298,7 @@ contract ConsolidationAttestationTest is Test {
                 sourcePubkeys: sources,
                 targetPubkeys: targets,
                 totalAmount: totalAmount,
+                exitEpoch: _defaultEpochs(sources.length),
                 signatures: sigs
             })
         );
@@ -1156,6 +1331,7 @@ contract ConsolidationAttestationTest is Test {
                 sourcePubkeys: sources,
                 targetPubkeys: targets,
                 totalAmount: totalAmount,
+                exitEpoch: _defaultEpochs(sources.length),
                 signatures: sigs
             })
         );
@@ -1181,6 +1357,7 @@ contract ConsolidationAttestationTest is Test {
                 sourcePubkeys: sources,
                 targetPubkeys: targets,
                 totalAmount: totalAmount,
+                exitEpoch: _defaultEpochs(sources.length),
                 signatures: new bytes[](0)
             })
         );

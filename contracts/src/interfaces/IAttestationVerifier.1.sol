@@ -23,8 +23,8 @@ interface IAttestationVerifierV1 {
     /// @dev    `sourcePubkeys[i]` is consolidated INTO `targetPubkeys[i]` — same-index pairing.
     ///         `signatures` are the consolidation-committee attestor EIP-712 ECDSA signatures
     ///         over the typed-data struct
-    ///             AttestConsolidation(address withdrawalAddress, bytes[] sourcePubkeys, bytes[] targetPubkeys, uint256 totalAmount)
-    ///         The `signatures` field itself is NOT part of the typed data — only the four
+    ///             AttestConsolidation(address withdrawalAddress, bytes[] sourcePubkeys, bytes[] targetPubkeys, uint256 totalAmount, uint256[] exitEpoch)
+    ///         The `signatures` field itself is NOT part of the typed data — only the five
     ///         request fields are. This is what lets attestors produce signatures over the
     ///         request without a circular dependency.
     struct ConsolidationObject {
@@ -36,6 +36,8 @@ interface IAttestationVerifierV1 {
         bytes[] targetPubkeys;
         /// @dev Total ETH being consolidated, in wei.
         uint256 totalAmount;
+        /// @dev The exit epoch marked for each consolidation present in the object (one per pair).
+        uint256[] exitEpoch;
         /// @dev Consolidation-committee attestor EIP-712 ECDSA signatures (65 bytes each).
         ///      Not part of the EIP-712 typed data the committee signs.
         bytes[] signatures;
@@ -227,6 +229,9 @@ interface IAttestationVerifierV1 {
     /// @param sourceLength The length of the source pubkey array
     /// @param targetLength The length of the target pubkey array
     error ConsolidationArrayLengthMismatch(uint256 sourceLength, uint256 targetLength);
+
+    /// @notice The exit epoch array is different from source pubkey array
+    error ExitEpochArrayLengthMismatch();
 
     /// @notice A pubkey field has an unexpected byte length
     /// @param index The pair index

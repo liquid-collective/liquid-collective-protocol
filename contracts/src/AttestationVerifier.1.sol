@@ -71,13 +71,14 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
     ///         domain (chainId, verifyingContract, version) were identical.
     bytes32 internal constant CONSOLIDATION_NAME_HASH = keccak256("ConsolidationValidation");
 
-    /// @dev EIP-712 typehash for a consolidation attestation. The four request fields are
+    /// @dev EIP-712 typehash for a consolidation attestation. The five request fields are
     ///      hashed directly into the EIP-712 struct (rather than first being squashed into a
     ///      single `bytes32` id). `bytes[]` fields follow EIP-712 dynamic-array rules:
     ///      each element is replaced by `keccak256(element)`, then the resulting `bytes32`
-    ///      array is concatenated and hashed (`_hashBytesArray`).
+    ///      array is concatenated and hashed (`_hashBytesArray`). The `uint256[] exitEpoch`
+    ///      field hashes to `keccak256` over the concatenation of its elements (`_hashUintArray`).
     bytes32 internal constant ATTEST_CONSOLIDATION_TYPEHASH = keccak256(
-        "AttestConsolidation(address withdrawalAddress,bytes[] sourcePubkeys,bytes[] targetPubkeys,uint256 totalAmount)"
+        "AttestConsolidation(address withdrawalAddress,bytes[] sourcePubkeys,bytes[] targetPubkeys,uint256 totalAmount,uint256[] exitEpoch)"
     );
 
     /// @notice Maximum number of signatures accepted. Bounds the O(n^2) duplicate-detection loop.
@@ -671,6 +672,9 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
         if (sourceLen != targetLen) revert ConsolidationArrayLengthMismatch(sourceLen, targetLen);
         if (consolidation.totalAmount == 0) revert ZeroConsolidationTotalAmount();
         if (consolidation.withdrawalAddress == address(0)) revert ZeroConsolidationWithdrawalAddress();
+        if (consolidation.exitEpoch.length != sourceLen) {
+            revert ExitEpochArrayLengthMismatch();
+        }
 
         // 2. Per-pair pubkey length checks, before hashing dynamic bytes.
         for (uint256 i = 0; i < sourceLen; ++i) {
@@ -685,10 +689,11 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
         }
 
         // 3. Compute the EIP-712 digest the committee signed.
-        //    The struct's `signatures` field is NOT part of the typed data — only the four
+        //    The struct's `signatures` field is NOT part of the typed data — only the five
         //    request fields are. `bytes[]` arrays follow EIP-712 array rules: each element
         //    becomes `keccak256(element)`, then the array hashes to `keccak256` over the
-        //    concatenation of those 32-byte element hashes.
+        //    concatenation of those 32-byte element hashes. The `uint256[] exitEpoch` array
+        //    hashes to `keccak256` over the concatenation of its 32-byte elements.
         bytes32 domainSep = ConsolidationDomainSeparator.get();
         if (domainSep == bytes32(0)) revert ZeroConsolidationDomainSeparator();
         bytes32[] memory sourcePubkeyHashes = _hashBytesArrayElements(consolidation.sourcePubkeys);
@@ -698,7 +703,8 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
                 consolidation.withdrawalAddress,
                 keccak256(abi.encodePacked(sourcePubkeyHashes)),
                 _hashBytesArray(consolidation.targetPubkeys),
-                consolidation.totalAmount
+                consolidation.totalAmount,
+                _hashUintArray(consolidation.exitEpoch)
             )
         );
 
@@ -855,6 +861,12 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
             if (a[i] != b[i]) return false;
         }
         return true;
+    }
+
+    /// @dev EIP-712 array hash for a `uint256[]` field. Each element is already an atomic
+    ///      32-byte value, so the array hashes to `keccak256` over their concatenation.
+    function _hashUintArray(uint256[] calldata arr) internal pure returns (bytes32) {
+        return keccak256(abi.encodePacked(arr));
     }
 
     /// @notice Verify the BLS signatures of all initial deposits against the canonical River
