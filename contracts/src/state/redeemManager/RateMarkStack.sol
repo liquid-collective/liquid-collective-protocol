@@ -5,9 +5,11 @@ pragma solidity 0.8.34;
 /// @notice Utility to manage the Rate Mark Stack in the Redeem Manager
 /// @dev Records, per oracle report, the slice of pending redeem demand whose backing principal
 ///      stopped earning in that reporting interval, together with the pool rate at that report.
-///      A redeem request's payout cap is raised to the marked rate over the marked slice, which is
-///      what lets a redeemer keep the yield their stake earned while it was still in the exit
-///      queue, and stop earning exactly where a native staker would.
+///      A redeem request's payout cap is re-priced to the marked rate over the marked slice, which
+///      is what lets a redeemer keep the yield their stake earned while it was still in the exit
+///      queue, and stop earning exactly where a native staker would. The re-pricing is two-sided: a
+///      mark locked BELOW a covered request's request-time rate lowers that request's cap, so a
+///      redeemer marked during a drawdown forfeits any later recovery on that span.
 ///
 ///      Positions are on the same cumulative-LsETH axis as RedeemQueue heights and WithdrawalStack
 ///      heights, so a request's marked portion is located the same way its withdrawal event is.
