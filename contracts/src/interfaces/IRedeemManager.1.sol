@@ -62,7 +62,9 @@ interface IRedeemManagerV1 {
     /// @param newRedeemDemand The new redeem demand
     event SetRedeemDemand(uint256 oldRedeemDemand, uint256 newRedeemDemand);
 
-    /// @notice Emitted when a rate mark is created, raising the payout cap of the covered redeem demand
+    /// @notice Emitted when a rate mark is created, re-pricing the payout cap of the covered redeem demand
+    /// @dev The re-pricing is two-sided -- a `markedEth / amount` ratio below a covered request's
+    ///      request-time rate LOWERS that request's cap. See `RedeemManagerV1._sliceCap`.
     /// @param height The start position of the mark on the cumulative LsETH axis
     /// @param amount The amount of LsETH marked
     /// @param markedEth The ETH value of `amount` at the pool rate of this report

@@ -1771,9 +1771,10 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         assertEq(redeemManager.getBufferedExceedingEth(), applyRate(30e18, 1.1e18) - applyRate(30e18, 1.05e18));
     }
 
-    /// FR2/AC1+AC2: the downside still passes through. The mark raises a ceiling; it is not a floor,
-    /// so a redeemer whose pool loses value between the mark and settlement is paid the depressed
-    /// settlement rate, on the same terms as a holder who stayed.
+    /// FR2/AC1+AC2: the downside passes through. The mark is a two-sided re-pricing with no floor on
+    /// either side, so a redeemer whose pool loses value between the mark and settlement is paid the
+    /// depressed settlement rate. This is NOT the same terms as a holder who stayed: a holder would
+    /// receive a later recovery, whereas a marked redeemer's cap stays pinned at the marked rate.
     function testMarkIsNotAFloorOnSlashing() external {
         address user = _generateAllowlistedUser(0);
         river.sudoSetRate(1e18);
