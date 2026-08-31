@@ -5,6 +5,7 @@ import "../AccountingInvariants.sol";
 import "../../utils/LibImplementationUnbricker.sol";
 import "../../../src/ConsolidationCoverageFund.1.sol";
 import "../../../src/interfaces/components/IOracleManager.1.sol";
+import "../../../src/interfaces/IAttestationVerifier.1.sol";
 import "../../../src/state/river/ReportBounds.sol";
 
 /// @title ConsolidationCoverageScenarioTest
@@ -141,6 +142,69 @@ contract ConsolidationCoverageScenarioTest is AccountingInvariants {
         assertEq(river.totalSupply(), sharesBefore, "no fee shares minted on consolidated principal");
     }
 
+    function testMintedConsolidationPartiallyLandsAndCoverageCoversTheShortfall() public {
+        _baseline();
+
+        uint256 coverage = 5 ether;
+        _donateConsolidationCoverage(coverage);
+
+        address consolidated = makeAddr("consolidatedUser");
+        address[] memory addrs = new address[](1);
+        addrs[0] = consolidated;
+        uint256[] memory masks = new uint256[](1);
+        masks[0] = LibAllowlistMasks.CONSOLIDATE_MASK;
+        vm.prank(allower);
+        allowlist.setAllowPermissions(addrs, masks);
+
+        uint256 amount = 4 ether;
+        IAttestationVerifierV1.ConsolidationObject memory consolidation = IAttestationVerifierV1.ConsolidationObject({
+            withdrawalAddress: consolidated,
+            sourcePubkeys: new bytes[](1),
+            targetPubkeys: new bytes[](1),
+            totalAmount: amount,
+            exitEpoch: new uint256[](1),
+            signatures: new bytes[](1)
+        });
+        vm.mockCall(
+            address(attestationVerifier),
+            abi.encodeWithSelector(IAttestationVerifierV1.validateConsolidation.selector),
+            abi.encode(true)
+        );
+
+        uint256 underlyingBeforeMint = river.totalUnderlyingSupply();
+        uint256 supplyBeforeMint = river.totalSupply();
+        uint256 expectedShares = (amount * supplyBeforeMint) / underlyingBeforeMint;
+
+        vm.prank(consolidator);
+        river.mintLsETHForConsolidation(consolidation);
+
+        assertEq(river.getBalanceToConsolidate(), amount, "mint increases buffer by totalAmount");
+        assertEq(
+            river.totalUnderlyingSupply(), underlyingBeforeMint + amount, "mint increases underlying by totalAmount"
+        );
+        assertEq(river.balanceOf(consolidated), expectedShares, "mint converts totalAmount at share price");
+
+        uint256 delta = 1 ether;
+        IOracleManagerV1.ConsensusLayerReport memory report = _buildBadReport(false, false);
+        report.validatorsBalance += delta;
+        report.totalExternalConsolidationETH += delta;
+        vm.prank(oracleMember);
+        oracle.reportConsensusLayerData(report);
+
+        assertEq(river.getBalanceToConsolidate(), 0, "report drawdown plus fund pull drains buffer");
+        assertEq(
+            address(consolidationCoverageFund).balance,
+            coverage - (amount - delta),
+            "fund covers exactly the residual buffer"
+        );
+        assertEq(
+            river.totalUnderlyingSupply(),
+            underlyingBeforeMint + amount,
+            "underlying conserved across drawdown and pull"
+        );
+        assertEq(river.totalSupply(), supplyBeforeMint + expectedShares, "no shares minted by drawdown or pull");
+    }
+
     /// @notice End-to-end regression for source-validator rewards earned after the external-consolidation
     ///         request was buffered. The simulator report exceeds the buffer, the buffer is drawn to zero,
     ///         the surplus is booked as APR-bounded rewards, and the Oracle -> River flow does not revert.
@@ -206,7 +270,7 @@ contract ConsolidationCoverageScenarioTest is AccountingInvariants {
     /// @dev Lands `amount` wei of validator ETH on the Withdraw contract as exited ETH, so the next report
     ///      carries a `validatorsExitedBalance` increase of `amount`. An exit-via-consolidation arrival must
     ///      be backed by such an increase, otherwise the report is rejected with
-    ///      `InvalidTotalExitViaConsolidationsAmountReportedIncrease`.
+    ///      `ExitViaConsolidationETHIncreaseExceedsExitedETHIncrease`.
     function _simExitArrival(uint256 amount) internal {
         sim_requestExit(operatorOneIndex, amount);
         sim_completeExit(operatorOneIndex, amount, 0);
@@ -306,7 +370,7 @@ contract ConsolidationCoverageScenarioTest is AccountingInvariants {
 
     /// @notice An arrival must be backed by exited ETH landing in the same report: an increase of one wei above
     ///         the matching `validatorsExitedBalance` increase is rejected with
-    ///         `InvalidTotalExitViaConsolidationsAmountReportedIncrease`. This pins the exact boundary — the
+    ///         `ExitViaConsolidationETHIncreaseExceedsExitedETHIncrease`. This pins the exact boundary — the
     ///         existing `testExitViaConsolidationArrivalDebitsBufferByPerReportDelta` accepts increase ==
     ///         exitedIncrease, so together they fix the comparison as strict.
     function testExitViaConsolidationIncreaseAboveExitedIncreaseReverts() public {
@@ -319,7 +383,7 @@ contract ConsolidationCoverageScenarioTest is AccountingInvariants {
         vm.prank(oracleMember);
         vm.expectRevert(
             abi.encodeWithSelector(
-                IOracleManagerV1.InvalidTotalExitViaConsolidationsAmountReportedIncrease.selector, 3 ether + 1, 3 ether
+                IOracleManagerV1.ExitViaConsolidationETHIncreaseExceedsExitedETHIncrease.selector, 3 ether + 1, 3 ether
             )
         );
         oracle.reportConsensusLayerData(report);
@@ -340,7 +404,7 @@ contract ConsolidationCoverageScenarioTest is AccountingInvariants {
         vm.prank(oracleMember);
         vm.expectRevert(
             abi.encodeWithSelector(
-                IOracleManagerV1.InvalidTotalExitViaConsolidationsAmountReportedIncrease.selector, 1 ether, 0
+                IOracleManagerV1.ExitViaConsolidationETHIncreaseExceedsExitedETHIncrease.selector, 1 ether, 0
             )
         );
         oracle.reportConsensusLayerData(report);

@@ -171,7 +171,7 @@ library LibOracleReporting {
 
                 // we ensure that the total exit via consolidation amount reported is not larger than the increase in the amount of exited ETH
                 if (vars.totalExitViaConsolidationETHIncrease > vars.exitedAmountIncrease) {
-                    revert IOracleManagerV1.InvalidTotalExitViaConsolidationsAmountReportedIncrease(
+                    revert IOracleManagerV1.ExitViaConsolidationETHIncreaseExceedsExitedETHIncrease(
                         vars.totalExitViaConsolidationETHIncrease, vars.exitedAmountIncrease
                     );
                 }

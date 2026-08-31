@@ -3234,6 +3234,38 @@ contract OperatorsRegistryV1ELExitTests is Test {
         reg.requestETHExits(_noCL, _noEL, _makeConsolidationAlloc(_ops1(0), _amts1(20 ether)), 0, 0);
     }
 
+    /// @notice A consolidation reservation exactly equal to remaining demand fills it to zero without
+    ///         tripping the ExitsGreaterThanExitDemand / ExitsRequestedExceedExitDemand `>` guards.
+    function testConsolidationExitExactlyFillsDemandToZero() public {
+        _setupConsolidationOperators(1, 100 ether, 50 ether);
+
+        vm.prank(keeper);
+        reg.requestETHExits(_noCL, _noEL, _makeConsolidationAlloc(_ops1(0), _amts1(50 ether)), 0, 0);
+
+        assertEq(reg.getCurrentETHExitsDemand(), 0, "demand fully satisfied via consolidation");
+        assertEq(reg.getExitConsolidationBuffer(), 50 ether, "buffer holds full reservation");
+        assertEq(reg.getTotalETHExitsRequested(), 50 ether, "total = exact demand");
+        assertEq(reg.getOperator(0).requestedExits, 50 ether, "op0 reserved");
+        assertEq(mockWithdraw.consolidateForExitCallCount(), 1, "dispatched once");
+    }
+
+    /// @notice CL exits plus a consolidation reservation summing exactly to demand drive it to zero;
+    ///         exercises the post-CL recompute of remainingETHExitsDemand at the equality boundary.
+    function testMixedCLAndConsolidationExactlyFillsDemandToZero() public {
+        _setupConsolidationOperators(1, 100 ether, 50 ether);
+
+        IOperatorsRegistryV1.ExitETHAllocation[] memory cl = new IOperatorsRegistryV1.ExitETHAllocation[](1);
+        cl[0] = IOperatorsRegistryV1.ExitETHAllocation({operatorIndex: 0, ethAmount: 30 ether});
+
+        vm.prank(keeper);
+        reg.requestETHExits(cl, _noEL, _makeConsolidationAlloc(_ops1(0), _amts1(20 ether)), 0, 0);
+
+        assertEq(reg.getCurrentETHExitsDemand(), 0, "CL+consolidation exactly satisfy demand");
+        assertEq(reg.getExitConsolidationBuffer(), 20 ether, "buffer only counts the consolidation leg");
+        assertEq(reg.getTotalETHExitsRequested(), 50 ether, "total = 30 CL + 20 consolidation");
+        assertEq(reg.getOperator(0).requestedExits, 50 ether, "both legs reserve against same operator");
+    }
+
     /// @notice The summed consolidation reservation cannot exceed the remaining exit demand.
     function testConsolidationExitRevertsExceedsDemand() public {
         _setupConsolidationOperators(1, 100 ether, 10 ether);
