@@ -162,6 +162,7 @@ contract ConsolidationCoverageScenarioTest is AccountingInvariants {
             sourcePubkeys: new bytes[](1),
             targetPubkeys: new bytes[](1),
             totalAmount: amount,
+            exitEpoch: new uint256[](1),
             signatures: new bytes[](1)
         });
         vm.mockCall(
