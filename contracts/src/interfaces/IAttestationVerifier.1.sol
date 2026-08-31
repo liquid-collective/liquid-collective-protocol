@@ -304,12 +304,16 @@ interface IAttestationVerifierV1 {
     /// @notice One-shot initializer for v1 of the AttestationVerifier.
     /// @dev    Configures both the deposit and consolidation attestation flows in a single call.
     ///         Each flow has its own committee, quorum, and EIP-712 domain separator (distinct
-    ///         NAME_HASH per flow); they share only the River anchor and the admin lookup.
+    ///         NAME_HASH per flow); they share only the River anchor and the admin.
     ///         Quorum and committee constraints are validated independently per flow. The deposit
     ///         flow uses a pre-commit `DepositDataBuffer` contract; the consolidation flow has no
     ///         on-chain buffer — callers pass `ConsolidationObject` directly into `validateConsolidation`.
+    /// @param _admin                Administrator of this verifier, governing every admin setter here.
+    ///                              Independent of River's admin — it may be the same address, but the
+    ///                              verifier never reads River to resolve it. Rotated via the standard
+    ///                              two-step `proposeAdmin`/`acceptAdmin` flow. Must be non-zero.
     /// @param _river                The River proxy address; used for the EIP-712 verifyingContract
-    ///                              binding and for the cross-contract admin lookup.
+    ///                              binding and as the sole authorized caller of the `onlyRiver` entry points.
     /// @param _depositDataBuffer    The pre-commit buffer the keeper writes to.
     /// @param _rootAttesters Initial set of root attester EOAs.
     /// @param _quorum               Initial attestation quorum (1 ≤ quorum ≤ rootAttesters.length).
@@ -318,6 +322,7 @@ interface IAttestationVerifierV1 {
     /// @param _consolidationQuorum              Initial consolidation-attestation quorum
     ///                                          (1 ≤ q ≤ consolidationCommitteeAttesters.length, ≤ MAX_SIGNATURES).
     function initAttestationVerifierV1(
+        address _admin,
         address _river,
         address _depositDataBuffer,
         address[] calldata _rootAttesters,
@@ -412,35 +417,35 @@ interface IAttestationVerifierV1 {
     // Admin setters
     // -----------------------------------------------------------------------
 
-    /// @notice Add or remove a root attester. Only callable by River's admin.
+    /// @notice Add or remove a root attester. Only callable by this verifier's admin.
     /// @param rootAttester The root attester address to update
     /// @param value True to register the root attester, false to deregister
     function setRootAttester(address rootAttester, bool value) external;
 
-    /// @notice Update the root attestation quorum. Only callable by River's admin.
+    /// @notice Update the root attestation quorum. Only callable by this verifier's admin.
     /// @param newQuorum The new quorum (1 ≤ newQuorum ≤ rootAttesterCount, ≤ MAX_SIGNATURES)
     function setRootAttestationQuorum(uint256 newQuorum) external;
 
-    /// @notice Update the DepositDataBuffer address. Only callable by River's admin.
+    /// @notice Update the DepositDataBuffer address. Only callable by this verifier's admin.
     /// @param _depositDataBuffer The new buffer address
     function setDepositDataBuffer(address _depositDataBuffer) external;
 
     /// @notice Recompute and store the BLS deposit domain from a genesis fork version. Admin recovery
     ///         path for a misconfigured deposit domain (e.g. a wrong fork version at init), which would
     ///         otherwise brick the attestation deposit path until a full redeploy. Only callable by
-    ///         River's admin.
+    ///         this verifier's admin.
     /// @dev On a known chain (mainnet or hoodi) reverts `InvalidGenesisForkVersion` unless
     ///      `genesisForkVersion` exactly matches that chain's canonical value; on any other chain the
     ///      value is accepted as-is (no canonical value to validate against). Same validation as init.
     /// @param genesisForkVersion The beacon-chain GENESIS_FORK_VERSION for the current chain
     function setDepositDomainFromForkVersion(bytes4 genesisForkVersion) external;
 
-    /// @notice Add or remove a consolidation-committee attester. Only callable by River's admin.
+    /// @notice Add or remove a consolidation-committee attester. Only callable by this verifier's admin.
     /// @param consolidationCommitteeAttester The consolidation-committee attester address to update
     /// @param value True to register, false to deregister
     function setConsolidationCommitteeAttester(address consolidationCommitteeAttester, bool value) external;
 
-    /// @notice Update the consolidation-committee attestation quorum. Only callable by River's admin.
+    /// @notice Update the consolidation-committee attestation quorum. Only callable by this verifier's admin.
     /// @param newQuorum The new quorum (1 ≤ newQuorum ≤ consolidationCommitteeAttesterCount, ≤ MAX_SIGNATURES)
     function setConsolidationCommitteeAttestationQuorum(uint256 newQuorum) external;
 

@@ -60,11 +60,7 @@ contract AccountingMockDepositDataBuffer is IDepositDataBuffer {
         ++lastQueuedIdx;
     }
 
-    function getDepositData(bytes32 depositDataBufferId)
-        external
-        view
-        returns (DepositObject memory, uint256 nonce)
-    {
+    function getDepositData(bytes32 depositDataBufferId) external view returns (DepositObject memory, uint256 nonce) {
         if (!_exists[depositDataBufferId]) revert DepositDataBufferIdNotFound(depositDataBufferId);
         return (_batches[depositDataBufferId], _nonce[depositDataBufferId]);
     }
@@ -273,6 +269,7 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
         address[] memory _initConsolidationCommitteeAttesters = new address[](1);
         _initConsolidationCommitteeAttesters[0] = makeAddr("consolidationCommitteeAttesterStub");
         attestationVerifier.initAttestationVerifierV1(
+            admin,
             address(river),
             address(depositBuffer),
             _initRootAttesters,
