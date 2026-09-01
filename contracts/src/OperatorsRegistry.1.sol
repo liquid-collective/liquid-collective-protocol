@@ -397,7 +397,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         uint256 requestedETHAmount = _requestCLETHExits(_allocations);
         uint256 remainingETHExitsDemand =
             requestedETHAmount >= currentETHExitsDemand ? 0 : currentETHExitsDemand - requestedETHAmount;
-        (uint256 elRequestedETHAmount, uint256 totalFeePaid) =
+        (uint256 elRequestedETHAmount, uint256 amountSentToWithdrawContract) =
             _requestELETHExits(_elAllocations, _maxFeePerWithdrawal, remainingETHExitsDemand);
         requestedETHAmount += elRequestedETHAmount;
 
@@ -417,11 +417,11 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
             // Forward the value remaining after EL fees; the Withdraw contract refunds any excess to the
             // keeper directly, so the whole budget is counted as spent here and the outer refund is a no-op.
-            uint256 consolidationValueBudget = msg.value - totalFeePaid;
+            uint256 consolidationValueBudget = msg.value - amountSentToWithdrawContract;
             IWithdrawV1(WithdrawAddress.get()).consolidateForExit{value: consolidationValueBudget}(
                 _exitViaConsolidationAllocation.consolidationRequests, _maxFeePerConsolidation, msg.sender
             );
-            totalFeePaid += consolidationValueBudget;
+            amountSentToWithdrawContract = msg.value;
             requestedETHAmount += consolidationReserved;
 
             // Update the buffer for ETH to be received via consolidation
@@ -434,8 +434,8 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         if (requestedETHAmount > currentETHExitsDemand) {
             revert ExitsRequestedExceedExitDemand(requestedETHAmount, currentETHExitsDemand);
         }
-        if (totalFeePaid < msg.value) {
-            uint256 excess = msg.value - totalFeePaid;
+        if (amountSentToWithdrawContract < msg.value) {
+            uint256 excess = msg.value - amountSentToWithdrawContract;
             (bool ok,) = msg.sender.call{value: excess}("");
             if (!ok) {
                 revert UnsentRefund(msg.sender, excess);
