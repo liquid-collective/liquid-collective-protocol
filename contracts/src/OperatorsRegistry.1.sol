@@ -428,12 +428,15 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             uint256 old = ExitConsolidationBuffer.get();
             ExitConsolidationBuffer.set(old + consolidationReserved);
             emit SetExitConsolidationBuffer(old, old + consolidationReserved);
-        }
+        } 
 
         // Check that the exits requested do not exceed the current ETH exits demand
         if (requestedETHAmount > currentETHExitsDemand) {
             revert ExitsRequestedExceedExitDemand(requestedETHAmount, currentETHExitsDemand);
         }
+        // The Excess sent to the Withdraw contract are refunded by Withdraw contract
+        // The only time when there would be excess refunded via the following code is when:
+        // There are exits only via EL & the msg.value was larger than required for EL exits
         if (amountSentToWithdrawContract < msg.value) {
             uint256 excess = msg.value - amountSentToWithdrawContract;
             (bool ok,) = msg.sender.call{value: excess}("");
