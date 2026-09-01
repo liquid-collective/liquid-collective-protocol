@@ -187,9 +187,10 @@ contract WithdrawV1 is IWithdrawV1, Initializable, ReentrancyGuard, IProtocolVer
         bytes calldata targetPubkey = request.targetPubkey;
         _validatePubkeyLength(targetPubkey);
 
+        bytes32 targetPubkeyHash = keccak256(targetPubkey);
         bool isTargetFunded = attestationVerifier.isPubkeyFunded(targetPubkey);
         bool isSelfConsolidation =
-            request.srcPubkeys.length == 1 && keccak256(request.srcPubkeys[0]) == keccak256(targetPubkey);
+            request.srcPubkeys.length == 1 && keccak256(request.srcPubkeys[0]) == targetPubkeyHash;
 
         // A consolidation target must be post-Pectra funded (0x02), or be the self-consolidation
         // of a known pre-Pectra (0x01) key — i.e. the on-chain 0x01 -> 0x02 upgrade.
@@ -200,12 +201,16 @@ contract WithdrawV1 is IWithdrawV1, Initializable, ReentrancyGuard, IProtocolVer
             revert TargetPubkeyNotFunded(targetPubkey);
         }
 
+        if (rejectSelfConsolidation && isSelfConsolidation) {
+            revert SelfConsolidationNotAllowed(targetPubkey);
+        }
+
         for (uint256 j = 0; j < request.srcPubkeys.length; j++) {
             bytes calldata srcPubkey = request.srcPubkeys[j];
             _validatePubkeyLength(srcPubkey);
             // Checked per source rather than via `isSelfConsolidation` so that a self-pair hidden in a
             // multi-source request is caught too.
-            if (rejectSelfConsolidation && keccak256(srcPubkey) == keccak256(targetPubkey)) {
+            if (rejectSelfConsolidation && keccak256(srcPubkey) == targetPubkeyHash) {
                 revert SelfConsolidationNotAllowed(srcPubkey);
             }
             if (!_isKnownValidatorPubkey(attestationVerifier, srcPubkey)) {

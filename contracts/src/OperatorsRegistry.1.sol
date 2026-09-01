@@ -327,7 +327,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         uint256 old = ExitConsolidationBuffer.get();
         uint256 newAmount = old < exitedAmount ? 0 : old - exitedAmount;
         ExitConsolidationBuffer.set(newAmount);
-        emit ExitConsolidationBufferSet(old, newAmount);
+        emit SetExitConsolidationBuffer(old, newAmount);
     }
 
     /// @inheritdoc IOperatorsRegistryV1
@@ -388,8 +388,8 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
         if (
             _allocations.length == 0 && _elAllocations.length == 0
-                && _exitViaConsolidationAllocation.consolidationRequests.length == 0
-                && _exitViaConsolidationAllocation.ethPerOperator.length == 0
+                && (_exitViaConsolidationAllocation.consolidationRequests.length == 0
+                || _exitViaConsolidationAllocation.ethPerOperator.length == 0)
         ) {
             revert InvalidEmptyArray();
         }
@@ -405,23 +405,12 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             _exitViaConsolidationAllocation.consolidationRequests.length > 0
                 || _exitViaConsolidationAllocation.ethPerOperator.length > 0
         ) {
-            // Reservations and dispatch must come together: a one-sided allocation would either reserve
-            // exit demand for consolidations that never dispatch, or dispatch consolidations whose exited
-            // ETH is never reserved/reconciled.
-            if (
-                _exitViaConsolidationAllocation.consolidationRequests.length == 0
-                    || _exitViaConsolidationAllocation.ethPerOperator.length == 0
-            ) {
-                revert InvalidEmptyArray();
-            }
-
             // Reserve the projected exited ETH per operator (against each operator's active-CL headroom),
             // exactly like CL exits; emits RequestedETHExitsViaConsolidation per operator.
             uint256 consolidationReserved =
                 _reserveExitAllocations(_exitViaConsolidationAllocation.ethPerOperator, true);
 
-            remainingETHExitsDemand =
-                requestedETHAmount >= currentETHExitsDemand ? 0 : currentETHExitsDemand - requestedETHAmount;
+            remainingETHExitsDemand -= elRequestedETHAmount;
             if (consolidationReserved > remainingETHExitsDemand) {
                 revert ExitsGreaterThanExitDemand(consolidationReserved, remainingETHExitsDemand);
             }
@@ -438,7 +427,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             // Update the buffer for ETH to be received via consolidation
             uint256 old = ExitConsolidationBuffer.get();
             ExitConsolidationBuffer.set(old + consolidationReserved);
-            emit ExitConsolidationBufferSet(old, old + consolidationReserved);
+            emit SetExitConsolidationBuffer(old, old + consolidationReserved);
         }
 
         // Check that the exits requested do not exceed the current ETH exits demand
@@ -458,7 +447,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         _setCurrentETHExitsDemand(currentETHExitsDemand, currentETHExitsDemand - requestedETHAmount);
     }
 
-    /// @notice Reserves full ETH exits per operator via CL and returns the total requested amount.
+    /// @notice Reserves ETH exits per operator via CL and returns the total requested amount.
     function _requestCLETHExits(ExitETHAllocation[] calldata _allocations)
         private
         returns (uint256 requestedETHAmount)
@@ -466,7 +455,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         return _reserveExitAllocations(_allocations, false);
     }
 
-    /// @notice Reserves full ETH exits per operator from an allocation array against each operator's exit
+    /// @notice Reserves ETH exits per operator from an allocation array against each operator's exit
     ///         headroom, and returns the total requested amount. Shared by the CL exit path and the
     ///         internal-consolidation exit path; `_viaConsolidation` only selects which event is emitted.
     /// @param _allocations Per-operator {operatorIndex, ethAmount}, strictly increasing by operatorIndex

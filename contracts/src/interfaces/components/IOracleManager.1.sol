@@ -165,7 +165,7 @@ interface IOracleManagerV1 {
         // this value cannot decrease over reports and must increase in the same report in which the corresponding
         // consolidated principal first appears in validatorsBalance
         uint256 totalExternalConsolidationETH;
-
+        // the sum of all exit that happened via consolidation of validators
         uint256 totalExitViaConsolidationETH;
         // the count of activated validators
         // even validators that are exited are still accounted
