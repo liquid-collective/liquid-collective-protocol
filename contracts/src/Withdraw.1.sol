@@ -192,13 +192,15 @@ contract WithdrawV1 is IWithdrawV1, Initializable, ReentrancyGuard, IProtocolVer
         bool isSelfConsolidation =
             request.srcPubkeys.length == 1 && keccak256(request.srcPubkeys[0]) == targetPubkeyHash;
 
-        // A consolidation target must be post-Pectra funded (0x02), or be the self-consolidation
-        // of a known pre-Pectra (0x01) key — i.e. the on-chain 0x01 -> 0x02 upgrade.
-        bool check = isTargetFunded
-            || (isSelfConsolidation && _isKnownPrePectraValidatorPubkey(attestationVerifier, targetPubkey));
+        {
+            // A consolidation target must be post-Pectra funded (0x02), or be the self-consolidation
+            // of a known pre-Pectra (0x01) key — i.e. the on-chain 0x01 -> 0x02 upgrade.
+            bool isValidTarget = isTargetFunded
+                || (isSelfConsolidation && _isKnownPrePectraValidatorPubkey(attestationVerifier, targetPubkey));
 
-        if (!check) {
-            revert TargetPubkeyNotFunded(targetPubkey);
+            if (!isValidTarget) {
+                revert TargetPubkeyNotFunded(targetPubkey);
+            }
         }
 
         if (rejectSelfConsolidation && isSelfConsolidation) {
@@ -218,8 +220,8 @@ contract WithdrawV1 is IWithdrawV1, Initializable, ReentrancyGuard, IProtocolVer
             }
 
             bytes memory callData = bytes.concat(srcPubkey, targetPubkey);
-            (check,) = consolidationContract.call{value: fee}(callData);
-            if (!check) {
+            (bool writeOK,) = consolidationContract.call{value: fee}(callData);
+            if (!writeOK) {
                 revert RequestFailed();
             }
             emit ConsolidationRequested(srcPubkey, targetPubkey, fee);
