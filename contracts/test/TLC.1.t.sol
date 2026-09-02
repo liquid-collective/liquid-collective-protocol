@@ -3,12 +3,13 @@
 pragma solidity 0.8.34;
 
 import "../src/TLC.1.sol";
+import "./utils/TLCV1WithLegacyInit.sol";
 import "../src/TUPProxy.sol";
 import "forge-std/Test.sol";
 
 abstract contract TLCTestBase is Test {
-    TLCV1 internal tlcImplem;
-    TLCV1 internal tlc;
+    TLCV1WithLegacyInit internal tlcImplem;
+    TLCV1WithLegacyInit internal tlc;
 
     address internal escrowImplem;
     address internal initAccount;
@@ -24,11 +25,11 @@ contract TLCInitializationTest is TLCTestBase {
         joe = makeAddr("joe");
         admin = makeAddr("admin");
 
-        tlcImplem = new TLCV1();
+        tlcImplem = new TLCV1WithLegacyInit();
     }
 
     function testInitialization() external {
-        tlc = TLCV1(
+        tlc = TLCV1WithLegacyInit(
             address(
                 new TUPProxy(
                     address(tlcImplem), admin, abi.encodeWithSelector(tlcImplem.initTLCV1.selector, initAccount)
@@ -47,8 +48,8 @@ contract TLCTests is TLCTestBase {
         joe = makeAddr("joe");
         admin = makeAddr("admin");
 
-        tlcImplem = new TLCV1();
-        tlc = TLCV1(
+        tlcImplem = new TLCV1WithLegacyInit();
+        tlc = TLCV1WithLegacyInit(
             address(
                 new TUPProxy(
                     address(tlcImplem), admin, abi.encodeWithSelector(tlcImplem.initTLCV1.selector, initAccount)

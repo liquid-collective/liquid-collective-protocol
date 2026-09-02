@@ -3,8 +3,12 @@ pragma solidity 0.8.34;
 
 import { RedeemManagerV1, WithdrawalStack } from "contracts/src/RedeemManager.1.sol";
 import "contracts/src/state/redeemManager/RedeemQueue.2.sol";
+// Verified against the legacy-init subclass so the specs can keep naming
+// `initializeRedeemManagerV1_2`, which production RedeemManagerV1 no longer ships because
+// every deployed proxy has run it.
+import "contracts/test/utils/LegacyInit.sol";
 
-contract RedeemManagerV1Harness is RedeemManagerV1 {
+contract RedeemManagerV1Harness is RedeemManagerV1WithLegacyInit {
 
     function isMatchByID(uint32 requestID, uint32 eventID) external view returns (bool) {
         if (eventID >= WithdrawalStack.get().length) return false;

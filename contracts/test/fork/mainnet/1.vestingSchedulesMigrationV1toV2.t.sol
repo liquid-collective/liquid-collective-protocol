@@ -11,6 +11,8 @@ import {
     ITransparentUpgradeableProxy
 } from "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
+import "../../utils/TLCV1WithLegacyInit.sol";
+
 contract VestingSchedulesMigrationV1ToV2 is Test {
     bool internal _skip = false;
 
@@ -35,12 +37,12 @@ contract VestingSchedulesMigrationV1ToV2 is Test {
     function test_migration() external shouldSkip {
         TUPProxy tlcProxy = TUPProxy(payable(TLC_MAINNET_ADDRESS));
 
-        TLCV1 newImplementation = new TLCV1();
+        TLCV1WithLegacyInit newImplementation = new TLCV1WithLegacyInit();
 
         vm.prank(TLC_MAINNET_PROXY_ADMIN_ADDRESS);
         ITransparentUpgradeableProxy(address(tlcProxy))
             .upgradeToAndCall(
-                address(newImplementation), abi.encodeWithSelector(TLCV1.migrateVestingSchedules.selector)
+                address(newImplementation), abi.encodeWithSelector(TLCV1WithLegacyInit.migrateVestingSchedules.selector)
             );
 
         TLCV1 tlc = TLCV1(TLC_MAINNET_ADDRESS);

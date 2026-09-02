@@ -12,6 +12,8 @@ import "../src/ExternalConsolidationRecipientMapping.1.sol";
 import "../src/interfaces/IExternalConsolidationRecipientMapping.1.sol";
 import "../src/libraries/LibAllowlistMasks.sol";
 
+import "./utils/LegacyInit.sol";
+
 contract ExternalConsolidationRecipientMappingRiverMock {
     address internal allowlist;
 
@@ -26,7 +28,7 @@ contract ExternalConsolidationRecipientMappingRiverMock {
 
 abstract contract ExternalConsolidationRecipientMappingV1TestBase is Test {
     ExternalConsolidationRecipientMappingV1 internal mappingContract;
-    AllowlistV1 internal allowlist;
+    AllowlistV1WithLegacyInit internal allowlist;
     ExternalConsolidationRecipientMappingRiverMock internal river;
     UserFactory internal uf = new UserFactory();
     address internal admin;
@@ -58,7 +60,7 @@ abstract contract ExternalConsolidationRecipientMappingV1TestBase is Test {
 contract ExternalConsolidationRecipientMappingV1InitializationTests is ExternalConsolidationRecipientMappingV1TestBase {
     function setUp() public {
         admin = makeAddr("admin");
-        allowlist = new AllowlistV1();
+        allowlist = new AllowlistV1WithLegacyInit();
         LibImplementationUnbricker.unbrick(vm, address(allowlist));
         allowlist.initAllowlistV1(admin, admin);
         river = new ExternalConsolidationRecipientMappingRiverMock(address(allowlist));
@@ -83,7 +85,7 @@ contract ExternalConsolidationRecipientMappingV1InitializationTests is ExternalC
 contract ExternalConsolidationRecipientMappingV1Tests is ExternalConsolidationRecipientMappingV1TestBase {
     function setUp() public {
         admin = makeAddr("admin");
-        allowlist = new AllowlistV1();
+        allowlist = new AllowlistV1WithLegacyInit();
         LibImplementationUnbricker.unbrick(vm, address(allowlist));
         allowlist.initAllowlistV1(admin, admin);
         allowlist.initAllowlistV1_1(admin);

@@ -329,14 +329,6 @@ interface IOperatorsRegistryV1 {
     /// @param stopIndex The exclusive stop key index
     error InvalidPrePectraRange(uint256 operatorIndex, uint256 startIndex, uint256 stopIndex);
 
-    /// @notice Initializes the operators registry
-    /// @param _admin Admin in charge of managing operators
-    /// @param _river Address of River system
-    function initOperatorsRegistryV1(address _admin, address _river) external;
-
-    /// @notice Initializes the operators registry for V1_1, migrating operators from V1 to V2 storage
-    function initOperatorsRegistryV1_1() external;
-
     /// @notice Migrates operators from V2 to V3 storage, dropping key-management fields
     /// @dev    Migrated operators start with `activeCLETH == 0`, which is only populated by the first
     ///         post-upgrade oracle report. Since `requestETHExits` caps each operator's allocation by

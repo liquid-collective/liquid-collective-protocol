@@ -10,8 +10,9 @@ import "./utils/UserFactory.sol";
 import "./utils/LibImplementationUnbricker.sol";
 
 import "../src/Allowlist.1.sol";
+import "./utils/LegacyInit.sol";
 
-contract AllowlistV1Sudo is AllowlistV1 {
+contract AllowlistV1Sudo is AllowlistV1WithLegacyInit {
     function sudoSetAdmin(address admin) external {
         LibAdministrable._setAdmin(admin);
     }
@@ -26,7 +27,7 @@ abstract contract AllowlistV1TestBase is Test {
     address internal allower = address(0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8);
     address internal denier = makeAddr("denier");
 
-    AllowlistV1 internal allowlist;
+    AllowlistV1WithLegacyInit internal allowlist;
 
     event SetAllower(address indexed allower);
     event SetDenier(address indexed denier);

@@ -18,51 +18,15 @@ import "./state/oracle/ReportsPositions.sol";
 /// @title Oracle (v1)
 /// @author Alluvial Finance Inc.
 /// @notice This contract handles the input from the allowed oracle members. Highly inspired by Lido's implementation.
+/// @dev The v1.0 and v1.1 initializers are intentionally absent: every deployed proxy has already
+///      advanced past those `init` versions, so they are unreachable. Their bodies are preserved for
+///      test bootstrapping in contracts/test/utils/LegacyInit.sol.
 contract OracleV1 is IOracleV1, Initializable, Administrable, IProtocolVersion {
     modifier onlyAdminOrMember(address _oracleMember) {
         if (msg.sender != _getAdmin() && msg.sender != _oracleMember) {
             revert LibErrors.Unauthorized(msg.sender);
         }
         _;
-    }
-
-    /// @inheritdoc IOracleV1
-    function initOracleV1(
-        address _riverAddress,
-        address _administratorAddress,
-        uint64 _epochsPerFrame,
-        uint64 _slotsPerEpoch,
-        uint64 _secondsPerSlot,
-        uint64 _genesisTime,
-        uint256 _annualAprUpperBound,
-        uint256 _relativeLowerBound
-    ) external init(0) {
-        _setAdmin(_administratorAddress);
-        RiverAddress.set(_riverAddress);
-        emit SetRiver(_riverAddress);
-        CLSpec.set(
-            CLSpec.CLSpecStruct({
-                epochsPerFrame: _epochsPerFrame,
-                slotsPerEpoch: _slotsPerEpoch,
-                secondsPerSlot: _secondsPerSlot,
-                genesisTime: _genesisTime,
-                epochsToAssumedFinality: 0
-            })
-        );
-        emit SetSpec(_epochsPerFrame, _slotsPerEpoch, _secondsPerSlot, _genesisTime);
-        ReportBounds.set(
-            ReportBounds.ReportBoundsStruct({
-                annualAprUpperBound: _annualAprUpperBound, relativeLowerBound: _relativeLowerBound
-            })
-        );
-        emit SetBounds(_annualAprUpperBound, _relativeLowerBound);
-        Quorum.set(0);
-        emit SetQuorum(0);
-    }
-
-    /// @inheritdoc IOracleV1
-    function initOracleV1_1() external init(1) {
-        _clearReports();
     }
 
     /// @inheritdoc IOracleV1

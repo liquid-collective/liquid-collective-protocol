@@ -135,11 +135,6 @@ interface IRedeemManagerV1 {
     /// @notice Thrown when an action is blocked because slashing containment mode is active
     error SlashingContainmentModeEnabled();
 
-    /// @param _river The address of the River contract
-    function initializeRedeemManagerV1(address _river) external;
-
-    function initializeRedeemManagerV1_2() external;
-
     /// @notice Pins the launch cutover for stopped-earning rate marks at the end of the current queue
     /// @dev Must run in the same governance action that upgrades the implementation. Without it the
     ///      floor stays 0 and the first reports after the upgrade spend their stopped-earning credit on

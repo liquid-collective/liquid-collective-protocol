@@ -29,6 +29,8 @@ import "../../src/state/river/CommittedBalance.sol";
 import "../../src/state/river/BalanceToDeposit.sol";
 import "../../src/state/operatorsRegistry/Operators.3.sol";
 
+import "../utils/LegacyInit.sol";
+
 // -----------------------------------------------------------------------
 // Mock DepositDataBuffer — stores batches by ID for accounting harness deposits
 // -----------------------------------------------------------------------
@@ -65,7 +67,7 @@ contract AccountingMockDepositDataBuffer is IDepositDataBuffer {
 }
 
 /// @dev Test-only OperatorsRegistry subclass exposing raw exited ETH initialization.
-contract AccountingTestOperatorsRegistry is OperatorsRegistryV1 {
+contract AccountingTestOperatorsRegistry is OperatorsRegistryV1WithLegacyInit {
     function sudoSetRawExitedETH(uint256[] memory value) external {
         OperatorsV3.setRawExitedETH(value);
     }
@@ -95,13 +97,13 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
 
     // ─── contracts ────────────────────────────────────────────────────────────
     AccountingRiverV1 internal river;
-    OracleV1 internal oracle;
+    OracleV1WithLegacyInit internal oracle;
     AccountingTestOperatorsRegistry internal operatorsRegistry;
-    AllowlistV1 internal allowlist;
-    ELFeeRecipientV1 internal elFeeRecipient;
-    CoverageFundV1 internal coverageFund;
-    RedeemManagerV1 internal redeemManager;
-    WithdrawV1 internal withdraw;
+    AllowlistV1WithLegacyInit internal allowlist;
+    ELFeeRecipientV1WithLegacyInit internal elFeeRecipient;
+    CoverageFundV1WithLegacyInit internal coverageFund;
+    RedeemManagerV1WithLegacyInit internal redeemManager;
+    WithdrawV1WithLegacyInit internal withdraw;
     IDepositContract internal depositContract;
     AccountingMockDepositDataBuffer internal depositBuffer;
     AttestationVerifierV1 internal attestationVerifier;
@@ -164,12 +166,12 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
 
         depositContract = new DepositContractMock();
         depositBuffer = new AccountingMockDepositDataBuffer();
-        withdraw = new WithdrawV1();
-        oracle = new OracleV1();
-        allowlist = new AllowlistV1();
-        redeemManager = new RedeemManagerV1();
-        elFeeRecipient = new ELFeeRecipientV1();
-        coverageFund = new CoverageFundV1();
+        withdraw = new WithdrawV1WithLegacyInit();
+        oracle = new OracleV1WithLegacyInit();
+        allowlist = new AllowlistV1WithLegacyInit();
+        redeemManager = new RedeemManagerV1WithLegacyInit();
+        elFeeRecipient = new ELFeeRecipientV1WithLegacyInit();
+        coverageFund = new CoverageFundV1WithLegacyInit();
         externalConsolidationRecipientMapping = new ExternalConsolidationRecipientMappingV1();
         river = new AccountingRiverV1();
         operatorsRegistry = new AccountingTestOperatorsRegistry();
