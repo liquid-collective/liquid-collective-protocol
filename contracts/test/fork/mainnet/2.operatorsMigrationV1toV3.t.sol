@@ -10,6 +10,8 @@ import {
     ITransparentUpgradeableProxy
 } from "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
+import "../../utils/LegacyInit.sol";
+
 /// @notice Drives the full V1 → V2 → V3 operator migration against a pre-V1_1 mainnet fork using the
 /// @notice production initializers: initOperatorsRegistryV1_1 (V1 → V2) then initOperatorsRegistryV1_2
 /// @notice (V2 → V3). Both initializers ship on the mainnet OperatorsRegistryV1 implementation.
@@ -38,13 +40,14 @@ contract OperatorsMigrationV1ToV3 is Test {
     function test_migration() external shouldSkip {
         TUPProxy orProxy = TUPProxy(payable(OPERATORS_REGISTRY_MAINNET_ADDRESS));
 
-        OperatorsRegistryV1 migrationImplementation = new OperatorsRegistryV1();
+        OperatorsRegistryV1WithLegacyInit migrationImplementation = new OperatorsRegistryV1WithLegacyInit();
 
         // Run V1 → V2 migration (initOperatorsRegistryV1_1 migrates the operator structs from V1 to V2)
         vm.prank(OPERATORS_REGISTRY_MAINNET_PROXY_ADMIN_ADDRESS);
         ITransparentUpgradeableProxy(address(orProxy))
             .upgradeToAndCall(
-                address(migrationImplementation), abi.encodeCall(OperatorsRegistryV1.initOperatorsRegistryV1_1, ())
+                address(migrationImplementation),
+                abi.encodeCall(OperatorsRegistryV1WithLegacyInit.initOperatorsRegistryV1_1, ())
             );
 
         OperatorsRegistryV1 or = OperatorsRegistryV1(OPERATORS_REGISTRY_MAINNET_ADDRESS);

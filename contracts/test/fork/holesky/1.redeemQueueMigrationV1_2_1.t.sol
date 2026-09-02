@@ -13,6 +13,8 @@ import {
     ITransparentUpgradeableProxy
 } from "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
+import "../../utils/LegacyInit.sol";
+
 interface MockIRedeemManagerV1 {
     function getRedeemRequestDetails(uint32 _redeemRequestId) external view returns (RedeemQueueV1.RedeemRequest memory);
 
@@ -58,11 +60,12 @@ contract RedeemQueueMigrationV1_2 is Test {
         // Set up the fork at a new block for making the v1_2_1 upgrade, and testing
         vm.createSelectFork(_rpcUrl, 2440762);
         // Upgrade the RedeemManager
-        RedeemManagerV1 newImplementation = new RedeemManagerV1();
+        RedeemManagerV1WithLegacyInit newImplementation = new RedeemManagerV1WithLegacyInit();
         vm.prank(REDEEM_MANAGER_STAGING_PROXY_ADMIN_ADDRESS);
         ITransparentUpgradeableProxy(address(redeemManagerProxy))
             .upgradeToAndCall(
-                address(newImplementation), abi.encodeWithSelector(RedeemManagerV1.initializeRedeemManagerV1_2.selector)
+                address(newImplementation),
+                abi.encodeWithSelector(RedeemManagerV1WithLegacyInit.initializeRedeemManagerV1_2.selector)
             );
 
         // After upgrade: check that state before the upgrade, and state after upgrade are same.

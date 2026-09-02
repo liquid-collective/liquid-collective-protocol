@@ -11,12 +11,14 @@ import {
     ITransparentUpgradeableProxy
 } from "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
+import "../../utils/LegacyInit.sol";
+
 /// @notice Test-only subclass exposing V2-format read accessors. After initOperatorsRegistryV1_1
 /// @notice (V1 -> V2) the operators live in OperatorsV2 storage, but the production OperatorsRegistryV1
 /// @notice is V3-native: its getOperator decodes storage as V3 and the V2 stopped-validator getters were
 /// @notice removed. These views let this fork test observe the intermediate V2 state produced by the
 /// @notice V1 -> V2 migration in isolation, before the V2 -> V3 step runs.
-contract OperatorsRegistryV1WithV2Views is OperatorsRegistryV1 {
+contract OperatorsRegistryV1WithV2Views is OperatorsRegistryV1WithLegacyInit {
     function getOperatorV2(uint256 _index) external view returns (OperatorsV2.Operator memory) {
         return OperatorsV2.get(_index);
     }
@@ -69,7 +71,8 @@ contract OperatorsMigrationV1ToV2 is Test {
         vm.prank(OPERATORS_REGISTRY_MAINNET_PROXY_ADMIN_ADDRESS);
         ITransparentUpgradeableProxy(address(orProxy))
             .upgradeToAndCall(
-                address(newImplementation), abi.encodeCall(OperatorsRegistryV1.initOperatorsRegistryV1_1, ())
+                address(newImplementation),
+                abi.encodeCall(OperatorsRegistryV1WithLegacyInit.initOperatorsRegistryV1_1, ())
             );
 
         OperatorsRegistryV1WithV2Views or = OperatorsRegistryV1WithV2Views(OPERATORS_REGISTRY_MAINNET_ADDRESS);

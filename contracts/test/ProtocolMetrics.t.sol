@@ -6,15 +6,15 @@ import "forge-std/Test.sol";
 import {RiverMock} from "./RedeemManager.1.t.sol";
 import "./utils/LibImplementationUnbricker.sol";
 
-import {ProtocolMetricsV1} from "./../src/ProtocolMetrics.1.sol";
+import {ProtocolMetricsV1WithLegacyInit} from "./utils/LegacyInit.sol";
 
 contract ProtocolMetricsTest is Test {
     RiverMock river;
-    ProtocolMetricsV1 protocolMetrics;
+    ProtocolMetricsV1WithLegacyInit protocolMetrics;
 
     function setUp() external {
         river = new RiverMock(address(0x00));
-        protocolMetrics = new ProtocolMetricsV1();
+        protocolMetrics = new ProtocolMetricsV1WithLegacyInit();
         LibImplementationUnbricker.unbrick(vm, address(protocolMetrics));
 
         protocolMetrics.initProtocolMetricsV1(address(river));

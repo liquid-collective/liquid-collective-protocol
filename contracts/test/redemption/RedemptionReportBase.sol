@@ -32,6 +32,8 @@ import "../../src/state/redeemManager/RedeemQueue.2.sol";
 import "../../src/state/redeemManager/RedeemRequestAnchor.sol";
 import "../../src/state/redeemManager/WithdrawalStack.sol";
 
+import "../utils/LegacyInit.sol";
+
 /// @dev Concrete `RiverV1WithLegacyInit` so the fixture can `new` it. Production `RiverV1` no longer
 ///      ships `initRiverV1` / `_1` / `_2`, and the fixture bootstraps from genesis. The body is
 ///      deliberately EMPTY: this suite drives the RedeemManager entirely through real oracle reports,
@@ -167,14 +169,14 @@ abstract contract RedemptionReportBase is Test {
 
     // ─── contracts ────────────────────────────────────────────────────────────
     RedemptionRiverV1 internal river;
-    RedeemManagerV1 internal redeemManager;
-    AllowlistV1 internal allowlist;
-    OracleV1 internal oracle;
-    OperatorsRegistryV1 internal operatorsRegistry;
-    ELFeeRecipientV1 internal elFeeRecipient;
-    CoverageFundV1 internal coverageFund;
+    RedeemManagerV1WithLegacyInit internal redeemManager;
+    AllowlistV1WithLegacyInit internal allowlist;
+    OracleV1WithLegacyInit internal oracle;
+    OperatorsRegistryV1WithLegacyInit internal operatorsRegistry;
+    ELFeeRecipientV1WithLegacyInit internal elFeeRecipient;
+    CoverageFundV1WithLegacyInit internal coverageFund;
     ConsolidationCoverageFundV1 internal consolidationCoverageFund;
-    WithdrawV1 internal withdraw;
+    WithdrawV1WithLegacyInit internal withdraw;
     AttestationVerifierV1 internal attestationVerifier;
     ExternalConsolidationRecipientMappingV1 internal externalConsolidationRecipientMapping;
     RedemptionDepositDataBuffer internal depositBuffer;
@@ -255,14 +257,14 @@ abstract contract RedemptionReportBase is Test {
         depositContract = new DepositContractMock();
         depositBuffer = new RedemptionDepositDataBuffer();
         river = new RedemptionRiverV1();
-        redeemManager = new RedeemManagerV1();
-        allowlist = new AllowlistV1();
-        oracle = new OracleV1();
-        operatorsRegistry = new OperatorsRegistryV1();
-        elFeeRecipient = new ELFeeRecipientV1();
-        coverageFund = new CoverageFundV1();
+        redeemManager = new RedeemManagerV1WithLegacyInit();
+        allowlist = new AllowlistV1WithLegacyInit();
+        oracle = new OracleV1WithLegacyInit();
+        operatorsRegistry = new OperatorsRegistryV1WithLegacyInit();
+        elFeeRecipient = new ELFeeRecipientV1WithLegacyInit();
+        coverageFund = new CoverageFundV1WithLegacyInit();
         consolidationCoverageFund = new ConsolidationCoverageFundV1();
-        withdraw = new WithdrawV1();
+        withdraw = new WithdrawV1WithLegacyInit();
         attestationVerifier = new AttestationVerifierV1();
         externalConsolidationRecipientMapping = new ExternalConsolidationRecipientMappingV1();
 

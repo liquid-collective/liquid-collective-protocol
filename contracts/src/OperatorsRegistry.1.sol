@@ -13,7 +13,6 @@ import "./Administrable.sol";
 
 import "openzeppelin-contracts/contracts/security/ReentrancyGuard.sol";
 
-import "./state/operatorsRegistry/Operators.1.sol";
 import "./state/operatorsRegistry/Operators.2.sol";
 import "./state/operatorsRegistry/Operators.3.sol";
 import "./state/operatorsRegistry/ValidatorKeys.sol";
@@ -31,6 +30,10 @@ import "./state/shared/RiverAddress.sol";
 /// @dev Operator index is the position in the operators array. Operators are only
 /// @dev added, never removed, so the operator at index i is always the one at
 /// @dev array position i and indices are stable over time.
+/// @dev The v1.0 and v1.1 initializers are intentionally absent: every deployed proxy has already
+///      advanced past those `init` versions, so they are unreachable. Their bodies — including the
+///      V1 -> V2 operator migration — are preserved for test bootstrapping in
+///      contracts/test/utils/LegacyInit.sol.
 contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrable, ReentrancyGuard, IProtocolVersion {
     uint256 private constant DEPOSIT_SIZE = 32 ether;
 
@@ -47,40 +50,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     // A partial withdrawal cannot drop a validator below the activation floor, so the most it can wire
     // (and reserve) is MaxEB minus the 32 ETH floor.
     uint64 private constant MAX_PARTIAL_EL_EXIT_AMOUNT_GWEI = 2_016_000_000_000; // 2048 - 32 ETH
-
-    /// @inheritdoc IOperatorsRegistryV1
-    function initOperatorsRegistryV1(address _admin, address _river) external init(0) {
-        _setAdmin(_admin);
-        RiverAddress.set(_river);
-        emit SetRiver(_river);
-    }
-
-    /// @inheritdoc IOperatorsRegistryV1
-    function initOperatorsRegistryV1_1() external init(1) {
-        _migrateOperators_V1_1();
-    }
-
-    /// @notice Internal utility to migrate the operators from V1 to V2 format
-    function _migrateOperators_V1_1() internal {
-        uint256 opCount = OperatorsV1.getCount();
-
-        for (uint256 idx = 0; idx < opCount; ++idx) {
-            OperatorsV1.Operator memory oldOperatorValue = OperatorsV1.get(idx);
-
-            OperatorsV2.push(
-                OperatorsV2.Operator({
-                    limit: uint32(oldOperatorValue.limit),
-                    funded: uint32(oldOperatorValue.funded),
-                    requestedExits: 0,
-                    keys: uint32(oldOperatorValue.keys),
-                    latestKeysEditBlockNumber: uint64(oldOperatorValue.latestKeysEditBlockNumber),
-                    active: oldOperatorValue.active,
-                    name: oldOperatorValue.name,
-                    operator: oldOperatorValue.operator
-                })
-            );
-        }
-    }
 
     /// @inheritdoc IOperatorsRegistryV1
     function initOperatorsRegistryV1_2(address _withdrawAddress) external init(2) {

@@ -12,6 +12,8 @@ import "../src/OperatorsRegistry.1.sol";
 import "../src/libraries/LibErrors.sol";
 import "../src/AttestationVerifier.1.sol";
 
+import "./utils/LegacyInit.sol";
+
 contract RiverMock {
     event DebugReceivedCLFunds(uint256 amount);
 
@@ -141,10 +143,10 @@ contract MockELShortReturn {
 }
 
 abstract contract WithdrawV1TestBase is Test {
-    WithdrawV1 internal withdraw;
+    WithdrawV1WithLegacyInit internal withdraw;
     RiverMock internal river;
     UserFactory internal uf = new UserFactory();
-    OperatorsRegistryV1 internal operatorsRegistry;
+    OperatorsRegistryV1WithLegacyInit internal operatorsRegistry;
     AttestationVerifierV1 internal attestationVerifier;
 
     event DebugReceivedCLFunds(uint256 amount);
@@ -156,9 +158,9 @@ abstract contract WithdrawV1TestBase is Test {
 
     function setUp() public virtual {
         river = new RiverMock();
-        operatorsRegistry = new OperatorsRegistryV1();
+        operatorsRegistry = new OperatorsRegistryV1WithLegacyInit();
         LibImplementationUnbricker.unbrick(vm, address(operatorsRegistry));
-        withdraw = new WithdrawV1();
+        withdraw = new WithdrawV1WithLegacyInit();
         LibImplementationUnbricker.unbrick(vm, address(withdraw));
         attestationVerifier = new AttestationVerifierV1();
         LibImplementationUnbricker.unbrick(vm, address(attestationVerifier));
@@ -343,7 +345,7 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
     }
 
     function testInitWithdrawV1_1SetsAddresses() external {
-        WithdrawV1 w = new WithdrawV1();
+        WithdrawV1WithLegacyInit w = new WithdrawV1WithLegacyInit();
         LibImplementationUnbricker.unbrick(vm, address(w));
         w.initializeWithdrawV1(address(river));
         assertEq(w.getRiver(), address(river));
@@ -741,7 +743,7 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
 
     function testWithdrawRequestFailedReverts() external {
         MockELWithdrawalFails mockFail = new MockELWithdrawalFails();
-        WithdrawV1 w = new WithdrawV1();
+        WithdrawV1WithLegacyInit w = new WithdrawV1WithLegacyInit();
         LibImplementationUnbricker.unbrick(vm, address(w));
         w.initializeWithdrawV1(address(river));
         w.initWithdrawV1_1(
@@ -763,7 +765,7 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
     /// @notice Tests that consolidate reverts when fee read (staticcall) fails.
     function testConsolidateFailsIfNoValueSent() public {
         MockELConsolidationFeeReadFails mockConsolidationFeeReadFails = new MockELConsolidationFeeReadFails();
-        WithdrawV1 w = new WithdrawV1();
+        WithdrawV1WithLegacyInit w = new WithdrawV1WithLegacyInit();
         LibImplementationUnbricker.unbrick(vm, address(w));
         w.initializeWithdrawV1(address(river));
         w.initWithdrawV1_1(
@@ -908,7 +910,7 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         uint256 maxFeePerConsolidation = 0.1 ether;
         mockConsolidationFails.setFee(maxFeePerConsolidation);
 
-        WithdrawV1 w = new WithdrawV1();
+        WithdrawV1WithLegacyInit w = new WithdrawV1WithLegacyInit();
         LibImplementationUnbricker.unbrick(vm, address(w));
         w.initializeWithdrawV1(address(river));
         w.initWithdrawV1_1(
@@ -1021,7 +1023,7 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
     /// @notice Tests that withdraw reverts when the fee read fails.
     function testWithdrawFailsIfFeeReadFails() public {
         MockELWithdrawalFeeReadFails mockWithdrawalFeeReadFails = new MockELWithdrawalFeeReadFails();
-        WithdrawV1 w = new WithdrawV1();
+        WithdrawV1WithLegacyInit w = new WithdrawV1WithLegacyInit();
         LibImplementationUnbricker.unbrick(vm, address(w));
         w.initializeWithdrawV1(address(river));
         w.initWithdrawV1_1(
@@ -1064,7 +1066,7 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
     /// @notice Tests that withdraw reverts when the request fails.
     function testWithdrawFailsIfRequestFails() public {
         MockELWithdrawalFails mockWithdrawalFails = new MockELWithdrawalFails();
-        WithdrawV1 w = new WithdrawV1();
+        WithdrawV1WithLegacyInit w = new WithdrawV1WithLegacyInit();
         LibImplementationUnbricker.unbrick(vm, address(w));
         w.initializeWithdrawV1(address(river));
         w.initWithdrawV1_1(
@@ -1305,7 +1307,7 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
     /// @notice withdraw reverts when the withdrawal predeploy returns fewer than 32 bytes for the fee.
     function testWithdrawRevertsOnShortFeeReturndata() public {
         MockELShortReturn shortMock = new MockELShortReturn(2); // 2 bytes of returndata
-        WithdrawV1 w = new WithdrawV1();
+        WithdrawV1WithLegacyInit w = new WithdrawV1WithLegacyInit();
         LibImplementationUnbricker.unbrick(vm, address(w));
         w.initializeWithdrawV1(address(river));
         w.initWithdrawV1_1(
@@ -1329,7 +1331,7 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
     /// @notice consolidate reverts when the consolidation predeploy returns fewer than 32 bytes for the fee.
     function testConsolidateRevertsOnShortFeeReturndata() public {
         MockELShortReturn shortMock = new MockELShortReturn(31); // 31 bytes: one short of a full word
-        WithdrawV1 w = new WithdrawV1();
+        WithdrawV1WithLegacyInit w = new WithdrawV1WithLegacyInit();
         LibImplementationUnbricker.unbrick(vm, address(w));
         w.initializeWithdrawV1(address(river));
         w.initWithdrawV1_1(
@@ -1352,7 +1354,7 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
     /// @notice An empty fee return (0 bytes) also reverts: there is no 32-byte word to decode.
     function testWithdrawRevertsOnEmptyFeeReturndata() public {
         MockELShortReturn shortMock = new MockELShortReturn(0); // empty returndata
-        WithdrawV1 w = new WithdrawV1();
+        WithdrawV1WithLegacyInit w = new WithdrawV1WithLegacyInit();
         LibImplementationUnbricker.unbrick(vm, address(w));
         w.initializeWithdrawV1(address(river));
         w.initWithdrawV1_1(

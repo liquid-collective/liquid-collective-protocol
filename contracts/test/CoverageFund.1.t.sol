@@ -10,6 +10,8 @@ import "./utils/LibImplementationUnbricker.sol";
 import "../src/CoverageFund.1.sol";
 import "../src/Allowlist.1.sol";
 
+import "./utils/LegacyInit.sol";
+
 contract RiverMock {
     event BalanceUpdated(uint256 amount);
 
@@ -33,9 +35,9 @@ contract RiverMock {
 }
 
 abstract contract CoverageFundV1TestBase is Test {
-    CoverageFundV1 internal coverageFund;
+    CoverageFundV1WithLegacyInit internal coverageFund;
 
-    AllowlistV1 internal allowlist;
+    AllowlistV1WithLegacyInit internal allowlist;
     RiverMock internal river;
     UserFactory internal uf = new UserFactory();
     address internal admin;
@@ -48,11 +50,11 @@ abstract contract CoverageFundV1TestBase is Test {
 contract CoverageFundV1InitializationTests is CoverageFundV1TestBase {
     function setUp() public {
         admin = makeAddr("admin");
-        allowlist = new AllowlistV1();
+        allowlist = new AllowlistV1WithLegacyInit();
         LibImplementationUnbricker.unbrick(vm, address(allowlist));
         allowlist.initAllowlistV1(admin, admin);
         river = new RiverMock(address(allowlist));
-        coverageFund = new CoverageFundV1();
+        coverageFund = new CoverageFundV1WithLegacyInit();
         LibImplementationUnbricker.unbrick(vm, address(coverageFund));
     }
 
@@ -66,12 +68,12 @@ contract CoverageFundV1InitializationTests is CoverageFundV1TestBase {
 contract CoverageFundTestV1 is CoverageFundV1TestBase {
     function setUp() public {
         admin = makeAddr("admin");
-        allowlist = new AllowlistV1();
+        allowlist = new AllowlistV1WithLegacyInit();
         LibImplementationUnbricker.unbrick(vm, address(allowlist));
         allowlist.initAllowlistV1(admin, admin);
         allowlist.initAllowlistV1_1(admin);
         river = new RiverMock(address(allowlist));
-        coverageFund = new CoverageFundV1();
+        coverageFund = new CoverageFundV1WithLegacyInit();
         LibImplementationUnbricker.unbrick(vm, address(coverageFund));
         vm.expectEmit(true, true, true, true);
         emit SetRiver(address(river));

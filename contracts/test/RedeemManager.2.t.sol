@@ -8,12 +8,14 @@ import "../src/Allowlist.1.sol";
 
 import "./utils/LibImplementationUnbricker.sol";
 
+import "./utils/LegacyInit.sol";
+
 interface IRedeemManagerV1Mock {
     /// @notice Thrown when a transfer error occured with LsETH
     error TransferError();
 }
 
-contract RedeemManagerV1Mock is RedeemManagerV1 {
+contract RedeemManagerV1Mock is RedeemManagerV1WithLegacyInit {
     // The error we are testing for
     function redeem(uint256 _lsETHAmount) external onlyRiver {
         if (!_castedRiver().transferFrom(msg.sender, address(this), _lsETHAmount)) {
@@ -115,7 +117,7 @@ contract RiverMock is MockERC20 {
 
 contract RedeemManagerTest is Test {
     RedeemManagerV1Mock internal redeemManager;
-    AllowlistV1 internal allowlist;
+    AllowlistV1WithLegacyInit internal allowlist;
     RiverMock internal river;
     address internal allowlistAdmin;
     address internal allowlistAllower;
@@ -128,7 +130,7 @@ contract RedeemManagerTest is Test {
         allowlistDenier = makeAddr("allowlistDenier");
         redeemManager = new RedeemManagerV1Mock();
         LibImplementationUnbricker.unbrick(vm, address(redeemManager));
-        allowlist = new AllowlistV1();
+        allowlist = new AllowlistV1WithLegacyInit();
         LibImplementationUnbricker.unbrick(vm, address(allowlist));
         allowlist.initAllowlistV1(allowlistAdmin, allowlistAllower);
         allowlist.initAllowlistV1_1(allowlistDenier);

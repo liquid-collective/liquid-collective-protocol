@@ -19,19 +19,10 @@ import "./state/allowlist/Allowlist.sol";
 /// @notice each bit represents a right in the system. The DENY_MASK defined the mask
 /// @notice used to identify if the denied bit is on, preventing users from interacting
 /// @notice with the system
+/// @dev The v1.0 and v1.1 initializers are intentionally absent: every deployed proxy has already
+///      advanced past those `init` versions, so they are unreachable. Their bodies are preserved for
+///      test bootstrapping in contracts/test/utils/LegacyInit.sol.
 contract AllowlistV1 is IAllowlistV1, Initializable, Administrable, IProtocolVersion {
-    /// @inheritdoc IAllowlistV1
-    function initAllowlistV1(address _admin, address _allower) external init(0) {
-        _setAdmin(_admin);
-        AllowerAddress.set(_allower);
-        emit SetAllower(_allower);
-    }
-
-    function initAllowlistV1_1(address _denier) external init(1) {
-        DenierAddress.set(_denier);
-        emit SetDenier(_denier);
-    }
-
     /// @inheritdoc IAllowlistV1
     function getAllower() external view returns (address) {
         return AllowerAddress.get();

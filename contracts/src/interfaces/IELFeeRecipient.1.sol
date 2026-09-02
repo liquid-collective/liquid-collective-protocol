@@ -12,10 +12,6 @@ interface IELFeeRecipientV1 {
     /// @notice The fallback has been triggered
     error InvalidCall();
 
-    /// @notice Initialize the fee recipient with the required arguments
-    /// @param _riverAddress Address of River
-    function initELFeeRecipientV1(address _riverAddress) external;
-
     /// @notice Pulls ETH to the River contract
     /// @dev Only callable by the River contract
     /// @param _maxAmount The maximum amount to pull into the system

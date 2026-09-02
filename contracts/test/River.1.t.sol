@@ -32,6 +32,8 @@ import "../src/ConsolidationCoverageFund.1.sol";
 import "../src/ExternalConsolidationRecipientMapping.1.sol";
 import "../src/RedeemManager.1.sol";
 
+import "./utils/LegacyInit.sol";
+
 contract MockDepositDataBuffer is IDepositDataBuffer {
     mapping(bytes32 => DepositObject) internal _batches;
     mapping(bytes32 => bool) internal _exists;
@@ -63,7 +65,7 @@ contract MockDepositDataBuffer is IDepositDataBuffer {
     }
 }
 
-contract OperatorsRegistryWithOverridesV1 is OperatorsRegistryV1 {
+contract OperatorsRegistryWithOverridesV1 is OperatorsRegistryV1WithLegacyInit {
     function sudoReportExitedETH(uint256[] calldata exitedETH) external {
         _setExitedETH(exitedETH);
     }
@@ -112,13 +114,13 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
 
     RiverV1ForceCommittable internal river;
     IDepositContract internal deposit;
-    WithdrawV1 internal withdraw;
-    OracleV1 internal oracle;
-    ELFeeRecipientV1 internal elFeeRecipient;
-    CoverageFundV1 internal coverageFund;
+    WithdrawV1WithLegacyInit internal withdraw;
+    OracleV1WithLegacyInit internal oracle;
+    ELFeeRecipientV1WithLegacyInit internal elFeeRecipient;
+    CoverageFundV1WithLegacyInit internal coverageFund;
     ConsolidationCoverageFundV1 internal consolidationCoverageFund;
     ExternalConsolidationRecipientMappingV1 internal externalConsolidationRecipientMapping;
-    AllowlistV1 internal allowlist;
+    AllowlistV1WithLegacyInit internal allowlist;
     OperatorsRegistryWithOverridesV1 internal operatorsRegistry;
 
     MockDepositDataBuffer internal depositBuffer;
@@ -231,21 +233,21 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
 
         vm.warp(857034746);
 
-        elFeeRecipient = new ELFeeRecipientV1();
+        elFeeRecipient = new ELFeeRecipientV1WithLegacyInit();
         LibImplementationUnbricker.unbrick(vm, address(elFeeRecipient));
-        coverageFund = new CoverageFundV1();
+        coverageFund = new CoverageFundV1WithLegacyInit();
         LibImplementationUnbricker.unbrick(vm, address(coverageFund));
         consolidationCoverageFund = new ConsolidationCoverageFundV1();
         LibImplementationUnbricker.unbrick(vm, address(consolidationCoverageFund));
         externalConsolidationRecipientMapping = new ExternalConsolidationRecipientMappingV1();
         LibImplementationUnbricker.unbrick(vm, address(externalConsolidationRecipientMapping));
-        oracle = new OracleV1();
+        oracle = new OracleV1WithLegacyInit();
         LibImplementationUnbricker.unbrick(vm, address(oracle));
-        allowlist = new AllowlistV1();
+        allowlist = new AllowlistV1WithLegacyInit();
         LibImplementationUnbricker.unbrick(vm, address(allowlist));
         deposit = new DepositContractMock();
         LibImplementationUnbricker.unbrick(vm, address(deposit));
-        withdraw = new WithdrawV1();
+        withdraw = new WithdrawV1WithLegacyInit();
         LibImplementationUnbricker.unbrick(vm, address(withdraw));
         river = new RiverV1ForceCommittable();
         LibImplementationUnbricker.unbrick(vm, address(river));
@@ -619,8 +621,8 @@ contract RiverV1Tests is RiverV1TestBase {
 
     function testInit2(uint128 depositTotal, uint96 committedBalance) public {
         vm.assume(depositTotal > committedBalance && committedBalance > 0);
-        RedeemManagerV1 redeemManager;
-        redeemManager = new RedeemManagerV1();
+        RedeemManagerV1WithLegacyInit redeemManager;
+        redeemManager = new RedeemManagerV1WithLegacyInit();
         LibImplementationUnbricker.unbrick(vm, address(redeemManager));
         redeemManager.initializeRedeemManagerV1(address(river));
 
@@ -1378,7 +1380,7 @@ contract RiverV1Tests is RiverV1TestBase {
     }
 
     function testRequestRedeemAllowedWhenSlashingModeOff() public {
-        RedeemManagerV1 redeemManager = new RedeemManagerV1();
+        RedeemManagerV1WithLegacyInit redeemManager = new RedeemManagerV1WithLegacyInit();
         LibImplementationUnbricker.unbrick(vm, address(redeemManager));
         redeemManager.initializeRedeemManagerV1(address(river));
         river.initRiverV1_1(
@@ -1406,7 +1408,7 @@ contract RiverV1Tests is RiverV1TestBase {
     }
 
     function testClaimRedeemRequestsAllowedWhenSlashingModeOff() public {
-        RedeemManagerV1 redeemManager = new RedeemManagerV1();
+        RedeemManagerV1WithLegacyInit redeemManager = new RedeemManagerV1WithLegacyInit();
         LibImplementationUnbricker.unbrick(vm, address(redeemManager));
         redeemManager.initializeRedeemManagerV1(address(river));
         river.initRiverV1_1(
@@ -1430,7 +1432,7 @@ contract RiverV1Tests is RiverV1TestBase {
     }
 
     function testClaimRedeemRequestsAllowedInSlashingContainmentMode() public {
-        RedeemManagerV1 redeemManager = new RedeemManagerV1();
+        RedeemManagerV1WithLegacyInit redeemManager = new RedeemManagerV1WithLegacyInit();
         LibImplementationUnbricker.unbrick(vm, address(redeemManager));
         redeemManager.initializeRedeemManagerV1(address(river));
         river.initRiverV1_1(
@@ -1533,12 +1535,12 @@ contract RiverV1Tests is RiverV1TestBase {
 }
 
 contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
-    RedeemManagerV1 redeemManager;
+    RedeemManagerV1WithLegacyInit redeemManager;
 
     function setUp() public override {
         super.setUp();
         bytes32 withdrawalCredentials = withdraw.getCredentials();
-        redeemManager = new RedeemManagerV1();
+        redeemManager = new RedeemManagerV1WithLegacyInit();
         LibImplementationUnbricker.unbrick(vm, address(redeemManager));
         redeemManager.initializeRedeemManagerV1(address(river));
         vm.expectEmit(true, true, true, true);
@@ -2985,7 +2987,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
 // ─────────────────────────────────────────────────────────────────────────────
 
 contract RiverV1CoverageTests is RiverV1TestBase {
-    RedeemManagerV1 internal redeemManager;
+    RedeemManagerV1WithLegacyInit internal redeemManager;
 
     bytes32 constant DEPOSITED_VALIDATOR_COUNT_SLOT =
         bytes32(uint256(keccak256("river.state.depositedValidatorCount")) - 1);
@@ -4733,7 +4735,7 @@ contract RiverV1CoverageTests is RiverV1TestBase {
 
     function _initRiverAndV1_2() internal {
         super.setUp();
-        redeemManager = new RedeemManagerV1();
+        redeemManager = new RedeemManagerV1WithLegacyInit();
         LibImplementationUnbricker.unbrick(vm, address(redeemManager));
         bytes32 wc = withdraw.getCredentials();
         river.initRiverV1(
@@ -4771,7 +4773,7 @@ contract RiverV1CoverageTests is RiverV1TestBase {
 
     function _initRiverMinimalForReporting() internal {
         super.setUp();
-        redeemManager = new RedeemManagerV1();
+        redeemManager = new RedeemManagerV1WithLegacyInit();
         LibImplementationUnbricker.unbrick(vm, address(redeemManager));
         bytes32 wc = withdraw.getCredentials();
         river.initRiverV1(
@@ -5098,12 +5100,12 @@ contract RiverV1PectraTests is RiverV1TestBase {
 }
 
 contract RiverV1ConsolidationMintTests is RiverV1TestBase {
-    RedeemManagerV1 redeemManager;
+    RedeemManagerV1WithLegacyInit redeemManager;
 
     function setUp() public override {
         super.setUp();
         bytes32 withdrawalCredentials = withdraw.getCredentials();
-        redeemManager = new RedeemManagerV1();
+        redeemManager = new RedeemManagerV1WithLegacyInit();
         LibImplementationUnbricker.unbrick(vm, address(redeemManager));
         redeemManager.initializeRedeemManagerV1(address(river));
         vm.expectEmit(true, true, true, true);

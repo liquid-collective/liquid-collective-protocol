@@ -5,11 +5,10 @@ import {ISharesManagerV1} from "./interfaces/components/ISharesManager.1.sol";
 import {Initializable} from "./Initializable.sol";
 import {RiverAddress} from "./state/shared/RiverAddress.sol";
 
+/// @dev The v1.0 initializer is intentionally absent: the deployed proxy has already advanced past
+///      `init(0)`, so it is unreachable. Its body is preserved for test bootstrapping in
+///      contracts/test/utils/LegacyInit.sol.
 contract ProtocolMetricsV1 is Initializable {
-    function initProtocolMetricsV1(address river) external init(0) {
-        RiverAddress.set(river);
-    }
-
     // @dev Returns an 18 decimal fixed point number that is the exchange rate of the token to some other underlying
     //      token. The meaning of this rate depends on the context.
     function getRate() external view returns (uint256) {

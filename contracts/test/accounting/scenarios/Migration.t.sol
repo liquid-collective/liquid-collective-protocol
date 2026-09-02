@@ -8,8 +8,10 @@ import "../../../src/state/operatorsRegistry/Operators.2.sol";
 import "../../../src/state/operatorsRegistry/Operators.3.sol";
 import "../../utils/LibImplementationUnbricker.sol";
 
+import "../../utils/LegacyInit.sol";
+
 /// @dev Subclass of OperatorsRegistryV1 that exposes internal V2 storage writes for migration testing.
-contract MigrationOperatorsRegistry is OperatorsRegistryV1 {
+contract MigrationOperatorsRegistry is OperatorsRegistryV1WithLegacyInit {
     /// @dev Push a V2 operator directly into OperatorsV2 storage.
     function sudoPushV2Operator(
         string calldata _name,

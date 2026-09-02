@@ -74,10 +74,7 @@ interface IWithdrawV1 {
     /// @param pubkey The offending 48-byte BLS pubkey
     error SelfConsolidationNotAllowed(bytes pubkey);
 
-    /// @param _river The address of the River contract
-    function initializeWithdrawV1(address _river) external;
-
-    /// @notice Initialize Pectra EL contract addresses (callable once after initializeWithdrawV1)
+    /// @notice Initialize Pectra EL contract addresses (callable once after the v1.0 initializer)
     /// @param _pectraWithdrawalContractAddress The Pectra EL withdrawal contract address
     /// @param _pectraConsolidationContractAddress The Pectra EL consolidation contract address
     /// @param _operatorsRegistry The OperatorsRegistry address

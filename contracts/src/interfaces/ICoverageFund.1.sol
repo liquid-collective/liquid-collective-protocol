@@ -20,10 +20,6 @@ interface ICoverageFundV1 {
     /// @notice A donation with 0 ETH has been performed
     error EmptyDonation();
 
-    /// @notice Initialize the coverage fund with the required arguments
-    /// @param _riverAddress Address of River
-    function initCoverageFundV1(address _riverAddress) external;
-
     /// @notice Pulls ETH into the River contract
     /// @dev Only callable by the River contract
     /// @param _maxAmount The maximum amount to pull into the system

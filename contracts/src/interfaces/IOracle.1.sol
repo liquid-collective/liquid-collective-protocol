@@ -84,29 +84,6 @@ interface IOracleV1 {
     /// @param newAddress The address already in use
     error AddressAlreadyInUse(address newAddress);
 
-    /// @notice Initializes the oracle
-    /// @param _river Address of the River contract, able to receive oracle input data after quorum is met
-    /// @param _administratorAddress Address able to call administrative methods
-    /// @param _epochsPerFrame CL spec parameter. Number of epochs in a frame.
-    /// @param _slotsPerEpoch CL spec parameter. Number of slots in one epoch.
-    /// @param _secondsPerSlot CL spec parameter. Number of seconds between slots.
-    /// @param _genesisTime CL spec parameter. Timestamp of the genesis slot.
-    /// @param _annualAprUpperBound CL bound parameter. Maximum apr allowed for balance increase. Delta between updates is extrapolated on a year time frame.
-    /// @param _relativeLowerBound CL bound parameter. Maximum relative balance decrease.
-    function initOracleV1(
-        address _river,
-        address _administratorAddress,
-        uint64 _epochsPerFrame,
-        uint64 _slotsPerEpoch,
-        uint64 _secondsPerSlot,
-        uint64 _genesisTime,
-        uint256 _annualAprUpperBound,
-        uint256 _relativeLowerBound
-    ) external;
-
-    /// @notice Initializes the oracle
-    function initOracleV1_1() external;
-
     /// @notice Retrieve River address
     /// @return The address of River
     function getRiver() external view returns (address);

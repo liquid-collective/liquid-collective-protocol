@@ -19,7 +19,9 @@ import "../src/state/operatorsRegistry/CurrentValidatorExitsDemand.sol";
 import "../src/state/operatorsRegistry/TotalValidatorExitsRequested.sol";
 import "../src/state/operatorsRegistry/ValidatorKeys.sol";
 
-contract OperatorsRegistryInitializableV1 is OperatorsRegistryV1 {
+import "./utils/LegacyInit.sol";
+
+contract OperatorsRegistryInitializableV1 is OperatorsRegistryV1WithLegacyInit {
     function sudoSetFunded(uint256 _index, uint256 _funded) external {
         OperatorsV3.Operator storage operator = OperatorsV3.get(_index);
         operator.funded = _funded;
@@ -43,7 +45,7 @@ contract OperatorsRegistryInitializableV1 is OperatorsRegistryV1 {
 }
 
 /// @dev Same as OperatorsRegistryInitializableV1 but does NOT override onlyRiver; use for tests that assert Unauthorized
-contract OperatorsRegistryStrictRiverV1 is OperatorsRegistryV1 {
+contract OperatorsRegistryStrictRiverV1 is OperatorsRegistryV1WithLegacyInit {
     function sudoSetFunded(uint256 _index, uint256 _funded) external {
         OperatorsV3.Operator storage operator = OperatorsV3.get(_index);
         operator.funded = _funded;
@@ -55,7 +57,7 @@ contract OperatorsRegistryStrictRiverV1 is OperatorsRegistryV1 {
 }
 
 /// @dev Extension that exposes internal V1/V2 storage writers
-contract OperatorsRegistryWithMigrationHelpers is OperatorsRegistryV1 {
+contract OperatorsRegistryWithMigrationHelpers is OperatorsRegistryV1WithLegacyInit {
     function sudoPushV2Operator(OperatorsV2.Operator memory op) external {
         OperatorsV2.push(op);
     }
@@ -246,7 +248,7 @@ contract RiverMock {
 abstract contract OperatorsRegistryV1TestBase is Test {
     UserFactory internal uf = new UserFactory();
 
-    OperatorsRegistryV1 internal operatorsRegistry;
+    OperatorsRegistryV1WithLegacyInit internal operatorsRegistry;
     address internal admin;
     address internal river;
     address internal keeper;
@@ -809,7 +811,7 @@ contract OperatorsRegistryV1Tests is OperatorsRegistryV1TestBase, OperatorAlloca
 /// @notice Tests that verify the protocol returns the correct keys for the correct operators
 /// @notice when given explicit allocation instructions
 contract OperatorsRegistryV1AllocationCorrectnessTests is OperatorAllocationTestBase {
-    OperatorsRegistryV1 internal operatorsRegistry;
+    OperatorsRegistryV1WithLegacyInit internal operatorsRegistry;
     address internal admin;
     address internal river;
 
@@ -864,7 +866,7 @@ contract OperatorsRegistryV1AllocationCorrectnessTests is OperatorAllocationTest
 ///         requestedExits across sequential calls, partial fulfillment, stopped validator
 ///         interactions, and combined deposit+exit flows.
 contract OperatorsRegistryV1ExitCorrectnessTests is OperatorAllocationTestBase {
-    OperatorsRegistryV1 internal operatorsRegistry;
+    OperatorsRegistryV1WithLegacyInit internal operatorsRegistry;
     address internal admin;
     address internal river;
     address internal keeper;
@@ -1582,7 +1584,7 @@ contract OperatorsRegistryV1ExitCorrectnessTests is OperatorAllocationTestBase {
 /// @notice Tests that exercise _flattenByteArrays and allocation validation logic
 ///         via the public view function getNextValidatorsToDepositFromActiveOperators.
 contract OperatorsRegistryV1FlattenAndAllocationTests is OperatorAllocationTestBase {
-    OperatorsRegistryV1 internal operatorsRegistry;
+    OperatorsRegistryV1WithLegacyInit internal operatorsRegistry;
     address internal admin;
     address internal river;
 
@@ -2343,7 +2345,7 @@ contract RejectingRefundRecipient {
 contract OperatorsRegistryV1ELExitTests is Test {
     OperatorsRegistryWithMigrationHelpers internal reg;
     MockWithdrawForELExits internal mockWithdraw;
-    WithdrawV1 internal withdrawContract;
+    WithdrawV1WithLegacyInit internal withdrawContract;
     address internal pectraWithdrawal;
     address internal admin;
     address internal keeper;
@@ -2387,7 +2389,7 @@ contract OperatorsRegistryV1ELExitTests is Test {
         mockELWithdrawal.setFee(fee);
         pectraWithdrawal = address(mockELWithdrawal);
 
-        withdrawContract = new WithdrawV1();
+        withdrawContract = new WithdrawV1WithLegacyInit();
         LibImplementationUnbricker.unbrick(vm, address(withdrawContract));
         withdrawContract.initializeWithdrawV1(river);
         withdrawContract.initWithdrawV1_1(

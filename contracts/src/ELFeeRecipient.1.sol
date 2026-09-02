@@ -14,13 +14,10 @@ import "./state/shared/RiverAddress.sol";
 /// @title Execution Layer Fee Recipient (v1)
 /// @author Alluvial Finance Inc.
 /// @notice This contract receives all the execution layer fees from the proposed blocks + bribes
+/// @dev The v1.0 initializer is intentionally absent: every deployed proxy has already advanced past
+///      `init(0)`, so it is unreachable. Its body is preserved for test bootstrapping in
+///      contracts/test/utils/LegacyInit.sol.
 contract ELFeeRecipientV1 is Initializable, IELFeeRecipientV1, IProtocolVersion {
-    /// @inheritdoc IELFeeRecipientV1
-    function initELFeeRecipientV1(address _riverAddress) external init(0) {
-        RiverAddress.set(_riverAddress);
-        emit SetRiver(_riverAddress);
-    }
-
     /// @inheritdoc IELFeeRecipientV1
     function pullELFees(uint256 _maxAmount) external {
         address river = RiverAddress.get();
