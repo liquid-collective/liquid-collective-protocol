@@ -33,23 +33,19 @@ import "../../src/state/redeemManager/RedeemRequestAnchor.sol";
 import "../../src/state/redeemManager/WithdrawalStack.sol";
 
 /// @dev The current names of the state-snapshot cheatcodes, which the pinned forge-std predates.
-/// @dev Forge renamed `snapshot` / `revertTo` to `snapshotState` / `revertToState` and now warns on
-///      every run that uses the old names. lib/forge-std is a submodule pinned at v1.5.0 (March 2023),
-///      whose `Vm.sol` declares only the old pair, so `vm.snapshotState()` does not compile here.
-///      Cheatcodes dispatch by selector against the HEVM address, so declaring the two current
-///      signatures reaches them without touching a dependency every other suite in the repo shares.
-///      The rename was an alias, not a behaviour change: `revertToState` still deletes the snapshot
-///      and everything taken after it, exactly as `revertTo` did.
+///      lib/forge-std is a submodule at v1.5.0, whose `Vm.sol` declares only the old
+///      `snapshot` / `revertTo` pair, so `vm.snapshotState()` does not compile here. Cheatcodes
+///      dispatch by selector against the HEVM address, so declaring the current signatures reaches
+///      them without bumping a dependency every other suite shares.
 /// @dev Delete this and call `vm.snapshotState()` directly once lib/forge-std is updated.
 interface VmStateSnapshots {
     function snapshotState() external returns (uint256 snapshotId);
     function revertToState(uint256 snapshotId) external returns (bool success);
 }
 
-/// @dev Concrete `RiverV1WithLegacyInit` so the fixture can `new` it. Production `RiverV1` no longer
-///      ships `initRiverV1` / `_1` / `_2`, and the fixture bootstraps from genesis. The body is
-///      deliberately EMPTY: this suite drives the RedeemManager entirely through real oracle reports,
-///      so there is no test-only River surface at all.
+/// @dev Concrete `RiverV1WithLegacyInit` so the fixture can `new` it: production `RiverV1` no longer
+///      ships `initRiverV1` / `_1` / `_2`, and the fixture bootstraps from genesis. The body is empty
+///      because this suite drives the RedeemManager entirely through real oracle reports.
 contract RedemptionRiverV1 is RiverV1WithLegacyInit {}
 
 /// @dev Minimal `IDepositDataBuffer`: the keeper submits a batch here and River fetches it back through
@@ -87,46 +83,52 @@ contract RedemptionDepositDataBuffer is IDepositDataBuffer {
 
 /// @title Redemption fulfillment test base, driven by real oracle reports
 /// @notice Shared fixture for the redemption-fulfillment suites under contracts/test/redemption.
-/// @dev The whole protocol is deployed and wired -- River, the Oracle, the OperatorsRegistry, the
-///      Allowlist, Withdraw, the EL fee recipient, both coverage funds, the AttestationVerifier, the
-///      external-consolidation recipient mapping and the deposit contract -- and EVERY input the
-///      RedeemManager receives is produced by a real `oracle.reportConsensusLayerData` call travelling
-///      the real path: quorum, epoch validity, report bounds, `_pullCLFunds`, the fee mint, the
-///      exceeding-eth pull, `reportStoppedEarning` and `_reportWithdrawToRedeemManager`. Redeemers
-///      acquire LsETH with real `river.deposit()` calls and open requests through the RedeemManager's
-///      own allowlisted entry point.
+/// @dev The whole protocol is deployed and wired, and every input the RedeemManager receives is
+///      produced by a real `oracle.reportConsensusLayerData` call travelling the real path: quorum,
+///      epoch validity, report bounds, `_pullCLFunds`, the fee mint, the exceeding-eth pull,
+///      `reportStoppedEarning` and `_reportWithdrawToRedeemManager`. Redeemers acquire LsETH with real
+///      `river.deposit()` calls and open requests through the RedeemManager's allowlisted entry point.
 ///
-/// @dev WHAT THE REPORT PATH LETS A TEST CHOOSE, and what it does not. This is the whole reason the
-///      helpers below look the way they do:
+/// @dev THE AXIS MODEL the suites are written against. All LsETH ever queued forms one ascending
+///      cumulative axis. Redeem requests, withdrawal events and rate marks are three independent
+///      interval stacks over that same axis:
+///        * A request occupies `[height, height + amount)`. Its end position is invariant across its
+///          lifetime -- a claim raises `height` by exactly what it lowers `amount` by.
+///        * Withdrawal events are contiguous: each abuts the next.
+///        * Marks are ascending and disjoint but NOT contiguous. A gap means "no locked rate here",
+///          so that sub-range keeps the request-time rate.
+///      A claim matches one slice of a request against one withdrawal event and pays
+///      `min(pro-rata of the event's ETH, _sliceCap(...))`; the excess is routed to
+///      `BufferedExceedingEth`.
 ///
-///        * The pool rate is `_assetBalance() / totalSupply()`. It is not a variable, so `_reportRate`
-///          solves for the `validatorsBalance` that lands the ratio on the requested figure, after
-///          accounting for every other term the report moves (see `_solveValidatorsBalance`).
+/// @dev WHAT THE REPORT PATH LETS A TEST CHOOSE, and what it does not:
+///        * The pool rate is `_assetBalance() / totalSupply()`, not a variable, so `_reportRate`
+///          solves for the `validatorsBalance` that lands the ratio on the requested figure (see
+///          `_solveValidatorsBalance`).
 ///        * A rate mark is priced at the rate in force BEFORE the report that pushes it
 ///          (LibOracleReporting L209-220), so a mark at rate m needs the pool already sitting at m --
-///          i.e. one report to move the rate and a second to carry the delta. `_reportStoppedEarning`
+///          one report to move the rate and a second to carry the delta. `_reportStoppedEarning`
 ///          therefore never moves the rate.
 ///        * A withdrawal event is priced at the rate in force AFTER the report
-///          (`_reportWithdrawToRedeemManager`, L579-616), on both of its branches. The settlement rate
-///          is never a free parameter; it is always the post-report pool rate.
-///        * At most ONE mark and ONE withdrawal event per report, and at most one report per frame.
-///          A frame here is 225 * 32 * 12 s, i.e. exactly one day, so every helper below warps.
-///        * `_pullRedeemManagerExceedingEth` runs on every report that has headroom to the APR upper
-///          bound, so the exceeding-eth buffer is returned to River by the NEXT report after the claim
-///          that filled it. Assertions on the buffer are therefore always made between a claim and the
-///          following report.
+///          (`_reportWithdrawToRedeemManager`, L579-616), on both branches. The settlement rate is
+///          never a free parameter.
+///        * At most one mark and one withdrawal event per report, and one report per frame. A frame
+///          here is 225 * 32 * 12 s, i.e. one day, so every helper below warps.
+///        * `_pullRedeemManagerExceedingEth` runs on every report with headroom to the APR upper
+///          bound, so the exceeding-eth buffer is a per-report staging area rather than a running
+///          total: the next report returns it to River. Assertions on the buffer therefore sit
+///          between a claim and the following report.
 ///
-/// @dev TWO FIXTURE PARAMETERS DIFFER FROM MAINNET, both to make the states these suites are about
-///      reachable at all rather than to bypass a check:
-///        * `APR_UPPER_BOUND` / `RELATIVE_LOWER_BOUND` are opened up at initialization. Under mainnet
-///          bounds a report may raise the pool by ~0.027% and lower it by 5%, so moving the rate from
-///          1.00 to 1.05 would take ~183 frames and every scenario below would be hundreds of reports
-///          long. The bounds are a rate-of-change guard on the oracle, not part of redemption
-///          fulfilment; they are covered by contracts/test/Oracle.1.t.sol and the accounting suites.
-///        * `GLOBAL_FEE` is 0. A non-zero fee mints shares to the collector partway through the report
-///          (L360-362), which moves `totalSupply` between the bounds check and the withdrawal event and
-///          makes the post-report rate a fixed point rather than a value a test can request. Fee
-///          minting is covered by contracts/test/accounting.
+/// @dev Two fixture parameters differ from mainnet, to make the states these suites are about
+///      reachable rather than to bypass a check:
+///        * `APR_UPPER_BOUND` / `RELATIVE_LOWER_BOUND` are opened up. Under mainnet bounds a report
+///          may raise the pool by ~0.027% and lower it by 5%, so 1.00 -> 1.05 would take ~183 frames.
+///          The bounds are a rate-of-change guard on the oracle, covered by
+///          contracts/test/Oracle.1.t.sol and the accounting suites.
+///        * `GLOBAL_FEE` is 0. A non-zero fee mints shares to the collector partway through the
+///          report (L360-362), moving `totalSupply` between the bounds check and the withdrawal event,
+///          which makes the post-report rate a fixed point rather than a value a test can request.
+///          Fee minting is covered by contracts/test/accounting.
 abstract contract RedemptionReportBase is Test {
     // ─── consensus layer spec ─────────────────────────────────────────────────
     uint64 internal constant EPOCHS_PER_FRAME = 225;
@@ -136,33 +138,27 @@ abstract contract RedemptionReportBase is Test {
     uint128 internal constant MAX_DAILY_NET = 3200 ether;
     uint128 internal constant MAX_DAILY_REL = 2000;
 
-    /// @notice Zero, so no shares are minted to the collector partway through a report. See the note on
-    ///         the contract.
+    /// @notice Zero, so no shares are minted to the collector partway through a report.
     uint256 internal constant GLOBAL_FEE = 0;
 
     /// @notice Report bounds wide enough for a single report to take the pool anywhere in the band the
-    ///         suites use (0.5x to 3x). See the note on the contract for why they are relaxed.
+    ///         suites use (0.5x to 3x).
     uint256 internal constant APR_UPPER_BOUND = 1_000_000_000;
     uint256 internal constant RELATIVE_LOWER_BOUND = 10_000;
 
     /// @notice LsETH held by a non-redeeming holder from `setUp`, so the pool always has a supply and
     ///         a defined rate.
-    /// @dev Also what keeps the round rates the suites ask for exactly representable. `_reportRate` lands
-    ///      the asset balance on `(totalSupply * rate) / 1e18`, and the pool rate River reads back out of
-    ///      that is exactly `rate` only when the division is exact -- see the note on `_reportRate` for
-    ///      the precise condition. A whole-ether ballast plus whole-ether positions satisfies it for any
-    ///      rate with at most 18 decimals, which is what lets the suites assert exact wei against the
-    ///      real share math. Positions are NEVER adjusted to keep it true: the dust-scale suites open the
-    ///      1, 2 and 3 wei positions they are about, and the reports that cannot express a round rate at
-    ///      the resulting supply say so by using `_reportRateLoose` instead.
-    /// @dev The whole ballast is pushed onto the CONSENSUS LAYER during `setUp`, and that is not
-    ///      cosmetic. `_assetBalance()` is the reported CL balance plus River's ETH buffers, and only
-    ///      the CL leg is a report input -- ETH sitting in a buffer cannot be reported away. A pool
-    ///      whose value is all buffer therefore has a hard floor at a rate of 1.0 and could never be
-    ///      slashed, so every scenario below that settles at 0.5, 0.6 or 0.95 needs the ballast on the
-    ///      CL and needs it to outweigh the ETH the redeemers deposited.
-    /// @dev Sized so that `POOL_BALLAST >= sum of every redeemer deposit` in the widest suite, which is
-    ///      what makes a rate of 0.5 reachable: the floor is `deposits / (ballast + deposits)`.
+    /// @dev A whole-ether ballast is also what keeps the round rates the suites ask for exactly
+    ///      representable -- see the exactness condition on `_reportRate`. Positions are never adjusted
+    ///      to preserve that: the dust-scale suites open the 1, 2 and 3 wei positions they are about
+    ///      and use `_reportRateLoose` where the resulting supply cannot express a round rate.
+    /// @dev The whole ballast is pushed onto the CONSENSUS LAYER during `setUp`. `_assetBalance()` is
+    ///      the reported CL balance plus River's ETH buffers, and only the CL leg is a report input --
+    ///      buffer ETH cannot be reported away. A pool whose value is all buffer has a hard floor at a
+    ///      rate of 1.0, so every scenario that settles at 0.5, 0.6 or 0.95 needs the ballast on the CL
+    ///      and needs it to outweigh what the redeemers deposited. Sized so that
+    ///      `POOL_BALLAST >= sum of every redeemer deposit` in the widest suite, since the reachable
+    ///      floor is `deposits / (ballast + deposits)`.
     uint256 internal constant POOL_BALLAST = 32_768 ether;
 
     /// @notice Largest ETH a single initial deposit may carry, per `AttestationVerifierV1`.
@@ -208,8 +204,8 @@ abstract contract RedemptionReportBase is Test {
     address internal ballastHolder;
 
     // ─── report ghosts ────────────────────────────────────────────────────────
-    // The report carries CUMULATIVE consensus-layer figures and River takes deltas, so the fixture has
-    // to remember what it last reported.
+    // The report carries cumulative consensus-layer figures and River takes deltas, so the fixture
+    // has to remember what it last reported.
 
     /// @custom:attribute Cumulative exited balance reported so far
     uint256 internal _cumExitedEth;
@@ -219,10 +215,10 @@ abstract contract RedemptionReportBase is Test {
     uint256 internal _cumStoppedEarningEth;
     /// @custom:attribute Cumulative deposited-and-activated ETH reported so far
     uint256 internal _cumActivatedEth;
-    /// @custom:attribute Validator count reported so far. Non-decreasing, like the report requires.
+    /// @custom:attribute Validator count reported so far. Non-decreasing, as the report requires.
     uint32 internal _reportedValidatorCount;
 
-    /// @dev Kept for the suites that address the redeem queue by raw storage slot.
+    /// @dev For the suites that address the redeem queue by raw storage slot.
     bytes32 internal constant REDEEM_QUEUE_ID_SLOT = bytes32(uint256(keccak256("river.state.redeemQueue")) - 1);
 
     // ─── events (mirrored so the suites can `vm.expectEmit` them) ─────────────
@@ -367,9 +363,9 @@ abstract contract RedemptionReportBase is Test {
         operatorsRegistry.addOperator("OperatorTwo", makeAddr("operatorTwo"));
         vm.stopPrank();
 
-        // EIP-2537 is unavailable under Foundry, so the BLS leg of the attestation is mocked. Everything
-        // else about the deposit below -- the quorum, the EIP-712 digest, the deposit root, the buffer
-        // round-trip, the funded-ETH accounting -- runs for real.
+        // EIP-2537 is unavailable under Foundry, so only the BLS leg of the attestation is mocked. The
+        // quorum, the EIP-712 digest, the deposit root, the buffer round-trip and the funded-ETH
+        // accounting all run for real.
         vm.mockCall(
             address(attestationVerifier),
             abi.encodeWithSelector(attestationVerifier.verifyBLSDeposit.selector),
@@ -394,8 +390,8 @@ abstract contract RedemptionReportBase is Test {
     }
 
     /// @notice Moves the whole ballast onto the consensus layer, so the pool has a CL leg that a report
-    ///         can mark down. See the note on `POOL_BALLAST` for why that matters.
-    /// @dev Three steps, all of them the real path: a report to commit the deposit buffer, an attested
+    ///         can mark down. See `POOL_BALLAST`.
+    /// @dev Three steps, all on the real path: a report to commit the deposit buffer, an attested
     ///      keeper deposit to hand the ETH to the deposit contract, and a report confirming activation.
     function _fundConsensusLayerWithBallast() internal {
         // 1. commit the deposit buffer, which is what `depositToConsensusLayerWithAttestation` spends
@@ -403,7 +399,7 @@ abstract contract RedemptionReportBase is Test {
         assertEq(river.getCommittedBalance(), POOL_BALLAST, "fixture: the ballast must be fully committed");
 
         // 2. one batch of initial deposits, each carrying at most the 2048 ether a single 0x02 validator
-        //    may be funded with. Every pubkey is distinct, which the deposit path enforces.
+        //    may be funded with. Every pubkey is distinct, as the deposit path enforces.
         uint256 validatorCount = POOL_BALLAST / MAX_DEPOSIT_AMOUNT;
         IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](validatorCount);
         for (uint256 i = 0; i < validatorCount; ++i) {
@@ -480,8 +476,8 @@ abstract contract RedemptionReportBase is Test {
 
     /// @notice Warps to the next reportable frame, funds the withdrawal contract with the swept ETH and
     ///         submits one oracle report.
-    /// @dev The single funnel every other helper goes through, so there is exactly one place where a
-    ///      report is built and exactly one place that has to stay in step with the pipeline.
+    /// @dev The single funnel every other helper goes through, so one place has to stay in step with
+    ///      the report pipeline.
     function _report(ReportParams memory p) internal {
         uint256 epoch = river.getExpectedEpochId();
         uint256 finalityTimestamp = uint256(SECONDS_PER_SLOT) * SLOTS_PER_EPOCH * (epoch + EPOCHS_UNTIL_FINAL) + 1;
@@ -529,13 +525,12 @@ abstract contract RedemptionReportBase is Test {
     ///        + `exitedEth`, credited to `BalanceToRedeem` by `_pullCLFunds`
     ///        + the exceeding-eth buffer, credited to `BalanceToDeposit` by `_pullRedeemManagerExceedingEth`
     ///        - `activatedEth`, retired from `InFlightDeposit` once the oracle confirms activation
-    ///      Nothing else moves: the EL fee recipient and both coverage funds are empty in this fixture
-    ///      and the fee mint is disabled. `_skimExcessBalanceToRedeem` and `_commitBalanceToDeposit` only
-    ///      shuffle terms between buffers that both count towards the asset balance.
-    /// @dev The `require` below is the fixture telling a test that the rate it asked for is unreachable
-    ///      rather than silently reporting something else. It fires when the requested rate would value
-    ///      the pool below the ETH River is holding in its own buffers, which no consensus-layer report
-    ///      can express: buffer ETH cannot be slashed. See the note on `POOL_BALLAST`.
+    ///      Nothing else moves: the EL fee recipient and both coverage funds are empty here and the fee
+    ///      mint is disabled. `_skimExcessBalanceToRedeem` and `_commitBalanceToDeposit` only shuffle
+    ///      terms between buffers that both count towards the asset balance.
+    /// @dev The `require` fires when the requested rate would value the pool below the ETH River holds
+    ///      in its own buffers, which no consensus-layer report can express: buffer ETH cannot be
+    ///      slashed. See `POOL_BALLAST`.
     function _solveValidatorsBalance(uint256 targetRate, uint256 exitedEth, uint256 activatedEth)
         internal
         view
@@ -550,19 +545,15 @@ abstract contract RedemptionReportBase is Test {
     }
 
     /// @notice One report whose only effect is to move the pool rate, asserted to land on `rate` exactly.
-    /// @dev EXACT ONLY WHEN THE LIVE SUPPLY CAN EXPRESS THE RATE. The pool rate is `_assetBalance() /
-    ///      totalSupply()`, and the report can only choose the numerator, as the whole integer
-    ///      `(totalSupply * rate) / 1e18`. River reads the rate back out as `1e18 * assetBalance /
-    ///      totalSupply`, so the round trip returns `rate` unchanged precisely when
-    ///      `(totalSupply * rate) % 1e18 == 0`. A whole-ether supply satisfies that for any rate with at
-    ///      most 18 decimals, which is the case in every suite that deals in whole-ether positions.
-    /// @dev It is NOT satisfiable at every supply, and the fixture does not pretend otherwise. Once a
-    ///      dust-scale position has been opened -- 3 wei against the ballast, say -- a rate of 1.4 needs
-    ///      `3 * 1.4e18` to divide by 1e18, which it does not, and NO reported balance lands the pool on
-    ///      1.4 exactly. That is a property of the pool, not of the fixture: real supplies are not round
-    ///      numbers and real rates are not either. The assertion below is what surfaces it, rather than
-    ///      the fixture quietly reporting a different rate than the one it was asked for; the tests that
-    ///      hit it use `_reportRateLoose` and pin the conversions they actually depend on.
+    /// @dev Exact only when the live supply can express the rate. The report chooses the numerator as
+    ///      the whole integer `(totalSupply * rate) / 1e18` and River reads the rate back out as
+    ///      `1e18 * assetBalance / totalSupply`, so the round trip returns `rate` unchanged precisely
+    ///      when `(totalSupply * rate) % 1e18 == 0`. A whole-ether supply satisfies that for any rate
+    ///      with at most 18 decimals.
+    /// @dev Not satisfiable at every supply: with a 3 wei position open, a rate of 1.4 needs
+    ///      `3 * 1.4e18` to divide by 1e18, and no reported balance lands the pool on 1.4 exactly. The
+    ///      assertion surfaces that instead of the fixture quietly reporting a different rate; the
+    ///      tests that hit it use `_reportRateLoose` and pin the conversions they depend on.
     function _reportRate(uint256 rate) internal {
         _report(
             ReportParams({
@@ -582,16 +573,14 @@ abstract contract RedemptionReportBase is Test {
     }
 
     /// @notice One report that moves the pool rate as close to `rate` as the live supply allows.
-    /// @dev The non-asserting form of `_reportRate`, for the two cases where the exactness condition on
-    ///      `_reportRate` is not satisfiable and a wei of shortfall is the honest outcome:
-    ///        * the FUZZED suites, which draw neither whole-ether positions nor two-decimal rates. The
-    ///          properties they assert are inequalities and differentials that do not care, and they read
-    ///          the achieved rate back from River rather than assuming it.
-    ///        * the DUST-SCALE tests, whose 1 and 3 wei positions leave a supply no fractional rate
-    ///          divides. Those tests do not actually depend on the round rate they ask for -- they depend
-    ///          on the conversion it produces, `sharesFromUnderlyingBalance(10) == 7` and the like -- so
-    ///          they ask for the rate loosely and then pin the conversion itself, which is the thing the
-    ///          scenario is built on and is exact either way.
+    /// @dev The non-asserting form of `_reportRate`, for the two cases where its exactness condition is
+    ///      not satisfiable:
+    ///        * the fuzzed suites, which draw neither whole-ether positions nor two-decimal rates. They
+    ///          assert inequalities and differentials, and read the achieved rate back from River.
+    ///        * the dust-scale tests, whose 1 and 3 wei positions leave a supply no fractional rate
+    ///          divides. They depend on the conversion the rate produces --
+    ///          `sharesFromUnderlyingBalance(10) == 7` and the like -- not on the round rate itself, so
+    ///          they ask loosely and pin the conversion, which is exact either way.
     /// @return The pool rate the report actually landed on.
     function _reportRateLoose(uint256 rate) internal returns (uint256) {
         _report(
@@ -608,9 +597,8 @@ abstract contract RedemptionReportBase is Test {
     }
 
     /// @notice One report carrying a stopped-earning delta of `stoppedEarningEth`, at the live rate.
-    /// @dev Deliberately does not move the rate. A mark is priced at the PRE-report rate, so moving the
-    ///      rate in the same report would price the mark at the rate the pool is leaving rather than the
-    ///      one the test asked for.
+    /// @dev Does not move the rate: a mark is priced at the PRE-report rate, so moving the rate in the
+    ///      same report would price the mark at the rate the pool is leaving.
     function _reportStoppedEarning(uint256 stoppedEarningEth) internal {
         _report(
             ReportParams({
@@ -625,8 +613,8 @@ abstract contract RedemptionReportBase is Test {
     }
 
     /// @notice One report that sweeps `exitedEth` of exited principal at a pool rate of `rate`.
-    /// @dev The low-level form. `_reportWithdrawToRedeemManager` decides the resulting event: when the
-    ///      demand outruns the swept ETH the event is `{withdrawnEth: exitedEth, amount:
+    /// @dev `_reportWithdrawToRedeemManager` decides the resulting event: when the demand outruns the
+    ///      swept ETH the event is `{withdrawnEth: exitedEth, amount:
     ///      sharesFromUnderlyingBalance(exitedEth)}`, otherwise it settles the whole demand at the rate.
     /// @return withdrawnEth The ETH the resulting withdrawal event carries, or 0 if none was pushed.
     function _reportWithdrawEth(uint256 exitedEth, uint256 rate) internal returns (uint256 withdrawnEth) {
@@ -667,12 +655,11 @@ abstract contract RedemptionReportBase is Test {
     }
 
     /// @notice Asserts that the RedeemManager emitted nothing since the last `vm.recordLogs()`.
-    /// @dev The report-path replacement for `assertEq(vm.getRecordedLogs().length, 0)`. A report emits a
-    ///      dozen or so logs of its own -- the oracle's variant vote, River's buffer bookkeeping, the
-    ///      operators registry's exited-ETH updates -- so the absence of a mark can no longer be stated
-    ///      as the absence of logs. Scoped to the RedeemManager instead, which is tighter than the
-    ///      original assertion rather than looser: a report that pushes no withdrawal event and pulls no
-    ///      exceeding eth leaves `reportStoppedEarning` as the only thing that could make it speak.
+    /// @dev A report emits a dozen or so logs of its own -- the oracle's variant vote, River's buffer
+    ///      bookkeeping, the operators registry's exited-ETH updates -- so the absence of a mark cannot
+    ///      be stated as the absence of logs. Scoping to the RedeemManager is still tight: a report
+    ///      that pushes no withdrawal event and pulls no exceeding eth leaves `reportStoppedEarning` as
+    ///      the only thing that could make it speak.
     function _assertRedeemManagerSilent(string memory reason) internal {
         Vm.Log[] memory logs = vm.getRecordedLogs();
         for (uint256 i = 0; i < logs.length; ++i) {
@@ -723,15 +710,12 @@ abstract contract RedemptionReportBase is Test {
     // ─── request helpers ──────────────────────────────────────────────────────
 
     /// @dev Opens a redeem request of exactly `amount` LsETH for `user` at the current pool rate.
-    /// @dev The LsETH is minted by a real `river.deposit()` of exactly what the position costs at the
-    ///      live rate, which is the only way LsETH comes into existence on mainnet. Nothing is rounded,
-    ///      padded or topped up: the redeemer deposits the price of `amount`, receives `amount`, and
-    ///      requests `amount`. A dust position therefore leaves `totalSupply` off the whole-ether
-    ///      boundary, exactly as it would in production -- see `_reportRate` for what that costs.
-    /// @dev `_mintShares` hands back `floor(eth / rate)`, so the ETH sent is the exact price of the
-    ///      position and the mint is asserted to be exact -- every size these suites use is a whole
-    ///      number of ether at a rate with at most two decimals, or any size at all at a rate of exactly
-    ///      1.0, and both divide.
+    /// @dev The LsETH is minted by a real `river.deposit()` of what the position costs at the live
+    ///      rate. Nothing is rounded, padded or topped up, so a dust position leaves `totalSupply` off
+    ///      the whole-ether boundary as it would in production -- see `_reportRate` for what that costs.
+    /// @dev `_mintShares` hands back `floor(eth / rate)`, and the mint is asserted exact: every size
+    ///      these suites use is a whole number of ether at a rate with at most two decimals, or any
+    ///      size at a rate of exactly 1.0, and both divide.
     function _openRequest(address user, uint256 amount) internal returns (uint32 id) {
         uint256 cost = applyRate(amount, _poolRate());
         uint256 balanceBefore = river.balanceOf(user);
@@ -748,12 +732,11 @@ abstract contract RedemptionReportBase is Test {
         id = redeemManager.requestRedeem(amount, user);
     }
 
-    /// @dev Opens a redeem request for as much LsETH as `targetAmount` worth of ETH actually buys at the
-    ///      live rate, which is `targetAmount` itself whenever the numbers divide and a wei or two less
-    ///      when they do not.
-    /// @dev The non-asserting form of `_openRequest`, for the fuzzed suites: a deposit can only ever buy
-    ///      `floor(eth / rate)` shares, so an exact position is unreachable at a fuzzed rate. The caller
-    ///      gets the position that was actually opened and asserts against that.
+    /// @dev Opens a redeem request for as much LsETH as `targetAmount` worth of ETH buys at the live
+    ///      rate: `targetAmount` itself when the numbers divide, a wei or two less when they do not.
+    /// @dev The non-asserting form of `_openRequest`, for the fuzzed suites: a deposit buys
+    ///      `floor(eth / rate)` shares, so an exact position is unreachable at a fuzzed rate. The
+    ///      caller gets the position that was actually opened and asserts against that.
     /// @return id The new request's id
     /// @return actualAmount The LsETH the request was opened for
     function _openRequestLoose(address user, uint256 targetAmount) internal returns (uint32 id, uint256 actualAmount) {
@@ -774,12 +757,12 @@ abstract contract RedemptionReportBase is Test {
     }
 
     /// @dev Puts the contract in the state a live deployment is in just before the stopped-earning
-    ///      upgrade. `setUp` only runs initializeRedeemManagerV1, leaving the version at 1, whereas
+    ///      upgrade. `setUp` runs only initializeRedeemManagerV1, leaving the version at 1, whereas
     ///      mainnet is already at 2.
-    /// @dev The version is poked rather than reached by calling initializeRedeemManagerV1_2, because
-    ///      RedeemQueueV1 and RedeemQueueV2 share the storage slot
-    ///      keccak256("river.state.redeemQueue") - 1. Its migration re-interprets that array in place
-    ///      and is only safe because init(1) runs it exactly once, before any V2 request exists.
+    /// @dev Poked rather than reached by calling initializeRedeemManagerV1_2, because RedeemQueueV1
+    ///      and RedeemQueueV2 share the slot keccak256("river.state.redeemQueue") - 1. That migration
+    ///      re-interprets the array in place and is only safe because init(1) runs it exactly once,
+    ///      before any V2 request exists.
     function _pokeVersionTo(uint256 version) internal {
         vm.store(address(redeemManager), bytes32(uint256(keccak256("river.state.version")) - 1), bytes32(version));
     }
@@ -789,7 +772,7 @@ abstract contract RedemptionReportBase is Test {
         redeemManager.initializeRedeemManagerV1_3();
     }
 
-    /// @dev Erases the request-time anchor of `id`, which is how a request that predates the
+    /// @dev Erases the request-time anchor of `id`, which is how a request predating the
     ///      stopped-earning upgrade looks on a live deployment: no anchor, so the legacy pro-rata cap
     ///      applies and rate marks are ignored for it.
     function _stripAnchor(uint32 id) internal {
