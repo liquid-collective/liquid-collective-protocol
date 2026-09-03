@@ -24,17 +24,18 @@ import "./state/withdraw/PectraConsolidationContractAddress.sol";
 /// @notice It is in charge of holding the exited and skimmed funds and allows river to pull these funds.
 /// @notice Furthermore, it enables consolidation of LC validators.
 /// @notice LC validators (0x02) can be EL-exited using partial or full EL withdrawals via the withdraw function.
+/// @dev REMOVED INITIALIZERS. Every deployed proxy is at `Version == 1`, so the `init(N)` guard on
+///      this can never pass again; it was deleted to reclaim bytecode. Recorded here so the version
+///      counter's history stays readable, and so nobody reuses this slot:
+///        init(0)  initializeWithdrawV1(address)         -- _river, called _setRiver
+///      `init(1)` is still live below as `initWithdrawV1_1`.
+///      Body preserved verbatim in contracts/test/utils/LegacyInit.sol (WithdrawV1WithLegacyInit).
 contract WithdrawV1 is IWithdrawV1, Initializable, ReentrancyGuard, IProtocolVersion {
     modifier onlyRiver() {
         if (msg.sender != RiverAddress.get()) {
             revert LibErrors.Unauthorized(msg.sender);
         }
         _;
-    }
-
-    /// @inheritdoc IWithdrawV1
-    function initializeWithdrawV1(address _river) external init(0) {
-        _setRiver(_river);
     }
 
     /// @inheritdoc IWithdrawV1
@@ -221,6 +222,8 @@ contract WithdrawV1 is IWithdrawV1, Initializable, ReentrancyGuard, IProtocolVer
     }
 
     /// @notice Internal utility to set the river address
+    /// @dev Retained for the legacy-init test harness; the production v1.0 initializer that called it
+    ///      has been removed, so this is unreachable onchain and stripped from the deployed bytecode.
     /// @param _river The new river address
     function _setRiver(address _river) internal {
         RiverAddress.set(_river);

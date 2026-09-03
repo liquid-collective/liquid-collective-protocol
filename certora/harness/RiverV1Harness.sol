@@ -2,8 +2,11 @@
 pragma solidity 0.8.34;
 
 import "contracts/src/River.1.sol";
+// Verified against the legacy-init subclass so the specs can keep naming `initRiverV1_1`,
+// which production RiverV1 no longer ships because every deployed proxy has run it.
+import "contracts/test/utils/RiverV1WithLegacyInit.sol";
 
-contract RiverV1Harness is RiverV1 {
+contract RiverV1Harness is RiverV1WithLegacyInit {
 
     function riverEthBalance() external view returns (uint256) {
         return address(this).balance;

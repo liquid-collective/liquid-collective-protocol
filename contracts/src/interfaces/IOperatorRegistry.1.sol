@@ -7,6 +7,9 @@ import "./IWithdraw.1.sol";
 /// @title Operators Registry Interface (v1)
 /// @author Alluvial Finance Inc.
 /// @notice This interface exposes methods to handle the list of operators
+/// @dev `initOperatorsRegistryV1` (init(0)) and `initOperatorsRegistryV1_1` (init(1)) were
+///      removed; see the REMOVED INITIALIZERS note on OperatorsRegistryV1 in
+///      contracts/src/OperatorsRegistry.1.sol.
 interface IOperatorsRegistryV1 {
     /// @notice Structure representing a validator deposit
     /// @param operatorIndex The index of the operator
@@ -328,14 +331,6 @@ interface IOperatorsRegistryV1 {
     /// @param startIndex The first key index
     /// @param stopIndex The exclusive stop key index
     error InvalidPrePectraRange(uint256 operatorIndex, uint256 startIndex, uint256 stopIndex);
-
-    /// @notice Initializes the operators registry
-    /// @param _admin Admin in charge of managing operators
-    /// @param _river Address of River system
-    function initOperatorsRegistryV1(address _admin, address _river) external;
-
-    /// @notice Initializes the operators registry for V1_1, migrating operators from V1 to V2 storage
-    function initOperatorsRegistryV1_1() external;
 
     /// @notice Migrates operators from V2 to V3 storage, dropping key-management fields
     /// @dev    Migrated operators start with `activeCLETH == 0`, which is only populated by the first

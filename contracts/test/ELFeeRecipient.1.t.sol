@@ -9,6 +9,8 @@ import "./utils/LibImplementationUnbricker.sol";
 
 import "../src/ELFeeRecipient.1.sol";
 
+import "./utils/LegacyInit.sol";
+
 contract RiverDonationMock {
     event BalanceUpdated(uint256 amount);
 
@@ -22,7 +24,7 @@ contract RiverDonationMock {
 }
 
 abstract contract ELFeeRecipientV1TestBase is Test {
-    ELFeeRecipientV1 internal feeRecipient;
+    ELFeeRecipientV1WithLegacyInit internal feeRecipient;
 
     RiverDonationMock internal river;
     UserFactory internal uf = new UserFactory();
@@ -34,7 +36,7 @@ abstract contract ELFeeRecipientV1TestBase is Test {
 contract ELFeeRecipientV1InitializationTests is ELFeeRecipientV1TestBase {
     function setUp() public {
         river = new RiverDonationMock();
-        feeRecipient = new ELFeeRecipientV1();
+        feeRecipient = new ELFeeRecipientV1WithLegacyInit();
         LibImplementationUnbricker.unbrick(vm, address(feeRecipient));
     }
 
@@ -48,7 +50,7 @@ contract ELFeeRecipientV1InitializationTests is ELFeeRecipientV1TestBase {
 contract ELFeeRecipientV1Test is ELFeeRecipientV1TestBase {
     function setUp() public {
         river = new RiverDonationMock();
-        feeRecipient = new ELFeeRecipientV1();
+        feeRecipient = new ELFeeRecipientV1WithLegacyInit();
         LibImplementationUnbricker.unbrick(vm, address(feeRecipient));
         vm.expectEmit(true, true, true, true);
         emit SetRiver(address(river));

@@ -10,6 +10,15 @@ import "./interfaces/ITLC.1.sol";
 /// @notice Upon deployment, all minted tokens are send to account provided at construction, in charge of creating the vesting schedules
 /// @notice The contract is based on ERC20Votes by OpenZeppelin. Users need to delegate their voting power to someone or themselves to be able to vote.
 /// @notice The contract contains vesting logics allowing vested users to still be able to delegate their voting power while their tokens are held in an escrow
+/// @dev REMOVED INITIALIZERS. TLC uses OpenZeppelin's `Initializable`, not the protocol's `init(N)`
+///      counter, and the deployed proxy already sits at `_initialized == 2`, so neither of these can
+///      run again; they were deleted to reclaim bytecode. Recorded here so the initialization history
+///      stays readable, and so nobody reuses one of these OZ versions:
+///        initializer      initTLCV1(address)            -- _account, minted INITIAL_SUPPLY to it
+///        reinitializer(2) migrateVestingSchedules()     -- ran migrateVestingSchedulesFromV1ToV2
+///                                                          (VestingSchedulesV1 -> V2)
+///      Bodies preserved verbatim in contracts/test/utils/TLCV1WithLegacyInit.sol, which is why the
+///      token constants below are still declared here.
 contract TLCV1 is ITLCV1, ERC20VestableVotesUpgradeableV1 {
     // Token information
     string internal constant NAME = "Liquid Collective";
@@ -21,18 +30,5 @@ contract TLCV1 is ITLCV1, ERC20VestableVotesUpgradeableV1 {
     /// @notice Disables implementation initialization
     constructor() {
         _disableInitializers();
-    }
-
-    /// @inheritdoc ITLCV1
-    function initTLCV1(address _account) external initializer {
-        LibSanitize._notZeroAddress(_account);
-        __ERC20Permit_init(NAME);
-        __ERC20_init(NAME, SYMBOL);
-        _mint(_account, INITIAL_SUPPLY);
-    }
-
-    /// @inheritdoc ITLCV1
-    function migrateVestingSchedules() external reinitializer(2) {
-        ERC20VestableVotesUpgradeableV1.migrateVestingSchedulesFromV1ToV2();
     }
 }

@@ -20,6 +20,8 @@ import "../src/Allowlist.1.sol";
 import "./mocks/RejectEtherMock.sol";
 import "./mocks/ReentrancyClaimAttackMock.sol";
 
+import "./utils/LegacyInit.sol";
+
 contract RiverMock {
     mapping(address => uint256) internal balances;
     mapping(address => mapping(address => uint256)) internal approvals;
@@ -125,7 +127,7 @@ contract RiverMock {
 }
 
 contract RedeeManagerV1TestBase is Test {
-    AllowlistV1 internal allowlist;
+    AllowlistV1WithLegacyInit internal allowlist;
     RiverMock internal river;
     UserFactory internal uf = new UserFactory();
     address internal allowlistAdmin;
@@ -158,15 +160,15 @@ contract RedeeManagerV1TestBase is Test {
 }
 
 contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
-    RedeemManagerV1 internal redeemManager;
+    RedeemManagerV1WithLegacyInit internal redeemManager;
 
     function setUp() external {
         allowlistAdmin = makeAddr("allowlistAdmin");
         allowlistAllower = makeAddr("allowlistAllower");
         allowlistDenier = makeAddr("allowlistDenier");
-        redeemManager = new RedeemManagerV1();
+        redeemManager = new RedeemManagerV1WithLegacyInit();
         LibImplementationUnbricker.unbrick(vm, address(redeemManager));
-        allowlist = new AllowlistV1();
+        allowlist = new AllowlistV1WithLegacyInit();
         LibImplementationUnbricker.unbrick(vm, address(allowlist));
         allowlist.initAllowlistV1(allowlistAdmin, allowlistAllower);
         allowlist.initAllowlistV1_1(allowlistDenier);
@@ -2189,8 +2191,11 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
     /// @dev Deploys a fresh, independent RiverMock + RedeemManagerV1 pair sharing this test's
     ///      allowlist, so a scenario can be replayed from a clean slate without disturbing the
     ///      contract-level `redeemManager`/`river` used by every other test.
-    function _deployFreshManager() internal returns (RiverMock riverInstance, RedeemManagerV1 managerInstance) {
-        managerInstance = new RedeemManagerV1();
+    function _deployFreshManager()
+        internal
+        returns (RiverMock riverInstance, RedeemManagerV1WithLegacyInit managerInstance)
+    {
+        managerInstance = new RedeemManagerV1WithLegacyInit();
         LibImplementationUnbricker.unbrick(vm, address(managerInstance));
         riverInstance = new RiverMock(address(allowlist));
         managerInstance.initializeRedeemManagerV1(address(riverInstance));
@@ -3614,7 +3619,7 @@ contract InitializeRedeemManagerV1_2Test is RedeeManagerV1TestBase {
         allowlistAdmin = makeAddr("allowlistAdmin");
         allowlistAllower = makeAddr("allowlistAllower");
         allowlistDenier = makeAddr("allowlistDenier");
-        allowlist = new AllowlistV1();
+        allowlist = new AllowlistV1WithLegacyInit();
         LibImplementationUnbricker.unbrick(vm, address(allowlist));
         allowlist.initAllowlistV1(allowlistAdmin, allowlistAllower);
         allowlist.initAllowlistV1_1(allowlistDenier);
@@ -3642,19 +3647,19 @@ contract InitializeRedeemManagerV1_2Test is RedeeManagerV1TestBase {
     }
 
     function testInitializeTwice() public {
-        RedeemManagerV1 redeemQueueImplV2 = new RedeemManagerV1();
+        RedeemManagerV1WithLegacyInit redeemQueueImplV2 = new RedeemManagerV1WithLegacyInit();
         vm.store(redeemManager, IMPLEMENTATION_SLOT, bytes32(uint256(uint160(address(redeemQueueImplV2)))));
-        RedeemManagerV1(redeemManager).initializeRedeemManagerV1_2();
+        RedeemManagerV1WithLegacyInit(redeemManager).initializeRedeemManagerV1_2();
 
         vm.expectRevert(abi.encodeWithSignature("InvalidInitialization(uint256,uint256)", 1, 2));
-        RedeemManagerV1(redeemManager).initializeRedeemManagerV1_2();
+        RedeemManagerV1WithLegacyInit(redeemManager).initializeRedeemManagerV1_2();
     }
 
     function testRedeemQueueMigrationV1_2() public {
         // Call the migration function
-        RedeemManagerV1 redeemQueueImplV2 = new RedeemManagerV1();
+        RedeemManagerV1WithLegacyInit redeemQueueImplV2 = new RedeemManagerV1WithLegacyInit();
         vm.store(redeemManager, IMPLEMENTATION_SLOT, bytes32(uint256(uint160(address(redeemQueueImplV2)))));
-        RedeemManagerV1(redeemManager).initializeRedeemManagerV1_2();
+        RedeemManagerV1WithLegacyInit(redeemManager).initializeRedeemManagerV1_2();
 
         // Check all existing redeemRequests are intact after the migration (from oldQueue)
         for (uint256 i = 0; i < 30; i++) {
@@ -3678,9 +3683,9 @@ contract InitializeRedeemManagerV1_2Test is RedeeManagerV1TestBase {
 
     function testRedeemQueueV1_2PostMigrationWithNewRequests() public {
         // Call the migration function
-        RedeemManagerV1 redeemQueueImplV2 = new RedeemManagerV1();
+        RedeemManagerV1WithLegacyInit redeemQueueImplV2 = new RedeemManagerV1WithLegacyInit();
         vm.store(redeemManager, IMPLEMENTATION_SLOT, bytes32(uint256(uint160(address(redeemQueueImplV2)))));
-        RedeemManagerV1(redeemManager).initializeRedeemManagerV1_2();
+        RedeemManagerV1WithLegacyInit(redeemManager).initializeRedeemManagerV1_2();
 
         // Add new 30 random redeem requests after upgrade / migration. Note: 30 is just a random number
         for (uint256 i = 30; i < 60; i++) {

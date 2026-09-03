@@ -11,7 +11,6 @@ import "./Initializable.sol";
 import "openzeppelin-contracts/contracts/security/ReentrancyGuard.sol";
 
 import "./state/shared/RiverAddress.sol";
-import "./state/redeemManager/RedeemQueue.1.sol";
 import "./state/redeemManager/RedeemQueue.2.sol";
 import "./state/redeemManager/WithdrawalStack.sol";
 import "./state/redeemManager/BufferedExceedingEth.sol";
@@ -23,6 +22,15 @@ import "./state/redeemManager/RateMarkFloor.sol";
 /// @title Redeem Manager (v1)
 /// @author Alluvial Finance Inc.
 /// @notice This contract handles the redeem requests of all users
+/// @dev REMOVED INITIALIZERS. Every deployed proxy is at `Version == 2`, so the `init(N)` guard on
+///      each of these can never pass again; they were deleted to reclaim bytecode. Recorded here so
+///      the version counter's history stays readable, and so nobody reuses one of these slots:
+///        init(0)  initializeRedeemManagerV1(address)    -- _river
+///        init(1)  initializeRedeemManagerV1_2()         -- ran _redeemQueueMigrationV1_2
+///                                                          (RedeemQueueV1 -> RedeemQueueV2)
+///      `init(2)` is still live below as `initializeRedeemManagerV1_3`.
+///      Bodies preserved verbatim in contracts/test/utils/LegacyInit.sol
+///      (RedeemManagerV1WithLegacyInit), which is also where `_redeemQueueMigrationV1_2` lives now.
 contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IProtocolVersion {
     /// @notice Value returned when resolving a redeem request that is unsatisfied
     int64 internal constant RESOLVE_UNSATISFIED = -1;
@@ -64,16 +72,6 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
     }
 
     /// @inheritdoc IRedeemManagerV1
-    function initializeRedeemManagerV1(address _river) external init(0) {
-        RiverAddress.set(_river);
-        emit SetRiver(_river);
-    }
-
-    function initializeRedeemManagerV1_2() external init(1) {
-        _redeemQueueMigrationV1_2();
-    }
-
-    /// @inheritdoc IRedeemManagerV1
     function initializeRedeemManagerV1_3() external init(2) {
         // Pin the launch cutover for stopped-earning accrual at the end of the existing queue, so the
         // requests already pending at upgrade time neither accrue (they have no anchor) nor consume the
@@ -87,23 +85,6 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
         }
         RateMarkFloor.set(floor);
         emit SetRateMarkFloor(floor);
-    }
-
-    function _redeemQueueMigrationV1_2() internal {
-        RedeemQueueV1.RedeemRequest[] memory oldQueue = RedeemQueueV1.get();
-        uint256 oldQueueLen = oldQueue.length;
-        RedeemQueueV2.RedeemRequest[] storage newQueue = RedeemQueueV2.get();
-
-        // Migrate from v1 to v2
-        for (uint256 i = 0; i < oldQueueLen; ++i) {
-            newQueue[i] = RedeemQueueV2.RedeemRequest({
-                amount: oldQueue[i].amount,
-                maxRedeemableEth: oldQueue[i].maxRedeemableEth,
-                recipient: oldQueue[i].recipient,
-                height: oldQueue[i].height,
-                initiator: oldQueue[i].recipient
-            });
-        }
     }
 
     /// @inheritdoc IRedeemManagerV1

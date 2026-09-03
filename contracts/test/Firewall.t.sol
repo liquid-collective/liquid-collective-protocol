@@ -20,17 +20,19 @@ import "../src/Oracle.1.sol";
 import "../src/OperatorsRegistry.1.sol";
 import "../src/ELFeeRecipient.1.sol";
 
+import "./utils/LegacyInit.sol";
+
 /// @dev Concrete `RiverV1WithLegacyInit` so tests can `new` it. Production
 ///      `RiverV1` no longer ships `initRiverV1` / `_1` / `_2`.
 contract FirewallTestRiverV1 is RiverV1WithLegacyInit {}
 
 contract FirewallTests is BytesGenerator, OperatorAllocationTestBase {
-    AllowlistV1 internal allowlist;
+    AllowlistV1WithLegacyInit internal allowlist;
 
-    ELFeeRecipientV1 internal elFeeRecipient;
+    ELFeeRecipientV1WithLegacyInit internal elFeeRecipient;
 
     IDepositContract internal deposit;
-    WithdrawV1 internal withdraw;
+    WithdrawV1WithLegacyInit internal withdraw;
 
     address internal riverGovernor = address(0xEA674fdDe714fd979de3EdF0F56AA9716B898ec8);
     address internal executor = address(0xa22c003A45554Ce90E7F97a3f613F16905440468);
@@ -40,21 +42,21 @@ contract FirewallTests is BytesGenerator, OperatorAllocationTestBase {
     address internal collector = address(0xC88F7666330b4b511358b7742dC2a3234710e7B1);
 
     FirewallTestRiverV1 internal river;
-    OracleV1 internal oracle;
+    OracleV1WithLegacyInit internal oracle;
     Firewall internal oracleFirewall;
-    OracleV1 internal firewalledOracle;
+    OracleV1WithLegacyInit internal firewalledOracle;
     IRiverV1 internal oracleInput;
 
-    AllowlistV1 internal firewalledAllowlist;
+    AllowlistV1WithLegacyInit internal firewalledAllowlist;
     Firewall internal allowlistFirewall;
 
     FirewallTestRiverV1 internal firewalledRiver;
     Firewall internal riverFirewall;
 
-    OperatorsRegistryV1 internal firewalledOperatorsRegistry;
+    OperatorsRegistryV1WithLegacyInit internal firewalledOperatorsRegistry;
     Firewall internal operatorsRegistryFirewall;
 
-    OperatorsRegistryV1 internal operatorsRegistry;
+    OperatorsRegistryV1WithLegacyInit internal operatorsRegistry;
     uint64 internal constant EPOCHS_PER_FRAME = 225;
     uint64 internal constant SLOTS_PER_EPOCH = 32;
     uint64 internal constant SECONDS_PER_SLOT = 12;
@@ -71,17 +73,17 @@ contract FirewallTests is BytesGenerator, OperatorAllocationTestBase {
 
     function setUp() public {
         deposit = new DepositContractMock();
-        elFeeRecipient = new ELFeeRecipientV1();
+        elFeeRecipient = new ELFeeRecipientV1WithLegacyInit();
         LibImplementationUnbricker.unbrick(vm, address(elFeeRecipient));
-        withdraw = new WithdrawV1();
+        withdraw = new WithdrawV1WithLegacyInit();
         LibImplementationUnbricker.unbrick(vm, address(withdraw));
         river = new FirewallTestRiverV1();
         LibImplementationUnbricker.unbrick(vm, address(river));
-        allowlist = new AllowlistV1();
+        allowlist = new AllowlistV1WithLegacyInit();
         LibImplementationUnbricker.unbrick(vm, address(allowlist));
-        operatorsRegistry = new OperatorsRegistryV1();
+        operatorsRegistry = new OperatorsRegistryV1WithLegacyInit();
         LibImplementationUnbricker.unbrick(vm, address(operatorsRegistry));
-        oracle = new OracleV1();
+        oracle = new OracleV1WithLegacyInit();
         LibImplementationUnbricker.unbrick(vm, address(oracle));
 
         elFeeRecipient.initELFeeRecipientV1(address(river));
@@ -92,7 +94,7 @@ contract FirewallTests is BytesGenerator, OperatorAllocationTestBase {
         emit SetDestination(address(allowlist));
         allowlistFirewall =
             new Firewall(riverGovernor, executor, address(allowlist), executorCallableAllowlistSelectors);
-        firewalledAllowlist = AllowlistV1(payable(address(allowlistFirewall)));
+        firewalledAllowlist = AllowlistV1WithLegacyInit(payable(address(allowlistFirewall)));
         allowlist.initAllowlistV1(payable(address(allowlistFirewall)), payable(address(allowlistFirewall)));
         allowlist.initAllowlistV1_1(payable(address(allowlistFirewall)));
 
@@ -101,7 +103,7 @@ contract FirewallTests is BytesGenerator, OperatorAllocationTestBase {
         operatorsRegistryFirewall = new Firewall(
             riverGovernor, executor, address(operatorsRegistry), executorCallableOperatorsRegistrySelectors
         );
-        firewalledOperatorsRegistry = OperatorsRegistryV1(payable(address(operatorsRegistryFirewall)));
+        firewalledOperatorsRegistry = OperatorsRegistryV1WithLegacyInit(payable(address(operatorsRegistryFirewall)));
         operatorsRegistry.initOperatorsRegistryV1(address(operatorsRegistryFirewall), address(river));
 
         bytes32 withdrawalCredentials = withdraw.getCredentials();
@@ -130,7 +132,7 @@ contract FirewallTests is BytesGenerator, OperatorAllocationTestBase {
         executorCallableOracleSelectors[1] = oracle.removeMember.selector;
         executorCallableOracleSelectors[2] = oracle.setQuorum.selector;
         oracleFirewall = new Firewall(riverGovernor, executor, address(oracle), executorCallableOracleSelectors);
-        firewalledOracle = OracleV1(address(oracleFirewall));
+        firewalledOracle = OracleV1WithLegacyInit(address(oracleFirewall));
         oracleInput = IRiverV1(payable(address(new RiverMock())));
         oracle.initOracleV1(
             address(oracleInput),

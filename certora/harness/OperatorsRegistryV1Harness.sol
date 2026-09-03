@@ -2,8 +2,12 @@
 pragma solidity 0.8.34;
 
 import "../../contracts/src/OperatorsRegistry.1.sol";
+// Verified against the legacy-init subclass so the specs can keep naming the historical
+// initializers (`initOperatorsRegistryV1`, `initOperatorsRegistryV1_1`), which production
+// OperatorsRegistryV1 no longer ships because every deployed proxy has run them.
+import "../../contracts/test/utils/LegacyInit.sol";
 import "../../contracts/src/state/operatorsRegistry/Operators.2.sol";
-contract OperatorsRegistryV1Harness is OperatorsRegistryV1 {
+contract OperatorsRegistryV1Harness is OperatorsRegistryV1WithLegacyInit {
     
     function getOperatorAddress(uint256 index) external view returns (address) {
         OperatorsV2.Operator memory op = OperatorsV2.get(index);

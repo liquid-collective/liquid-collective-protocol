@@ -16,6 +16,18 @@ import "../state/river/OracleAddress.sol";
 /// @notice data whenever a new report has been deemed valid. The report consists in two
 /// @notice values: the sum of all balances of all deposited validators and the count of
 /// @notice validators that have been activated on the consensus layer.
+/// @dev REMOVED INITIALIZERS. These two carried no `init(N)` number of their own — they were
+///      `internal` helpers, reachable only from `RiverV1.initRiverV1` (`init(0)`) and
+///      `RiverV1.initRiverV1_1` (`init(1)`) respectively. Both callers are gone, so these became
+///      unreachable and were deleted:
+///        internal  initOracleManagerV1(address)
+///                  -- _oracle; set OracleAddress
+///        internal  initOracleManagerV1_1(uint64,uint64,uint64,uint64,uint64,uint256,uint256)
+///                  -- _epochsPerFrame, _slotsPerEpoch, _secondsPerSlot, _genesisTime,
+///                     _epochsToAssumedFinality, _annualAprUpperBound, _relativeLowerBound;
+///                     set CLSpec and ReportBounds
+///      Bodies preserved verbatim in contracts/test/utils/RiverV1WithLegacyInit.sol and, for the
+///      component's own tests, in contracts/test/components/OracleManager.1.t.sol.
 abstract contract OracleManagerV1 is IOracleManagerV1 {
     /// @notice Handler called to retrieve the system administrator address
     /// @dev Must be overridden
@@ -28,48 +40,6 @@ abstract contract OracleManagerV1 is IOracleManagerV1 {
             revert LibErrors.Unauthorized(msg.sender);
         }
         _;
-    }
-
-    /// @notice Set the initial oracle address
-    /// @param _oracle Address of the oracle
-    function initOracleManagerV1(address _oracle) internal {
-        OracleAddress.set(_oracle);
-        emit SetOracle(_oracle);
-    }
-
-    /// @notice Initializes version 1.1 of the oracle manager
-    /// @param _epochsPerFrame The amounts of epochs in a frame
-    /// @param _slotsPerEpoch The slots inside an epoch
-    /// @param _secondsPerSlot The seconds inside a slot
-    /// @param _genesisTime The genesis timestamp
-    /// @param _epochsToAssumedFinality The number of epochs before an epoch is considered final on-chain
-    /// @param _annualAprUpperBound The reporting upper bound
-    /// @param _relativeLowerBound The reporting lower bound
-    function initOracleManagerV1_1(
-        uint64 _epochsPerFrame,
-        uint64 _slotsPerEpoch,
-        uint64 _secondsPerSlot,
-        uint64 _genesisTime,
-        uint64 _epochsToAssumedFinality,
-        uint256 _annualAprUpperBound,
-        uint256 _relativeLowerBound
-    ) internal {
-        CLSpec.set(
-            CLSpec.CLSpecStruct({
-                epochsPerFrame: _epochsPerFrame,
-                slotsPerEpoch: _slotsPerEpoch,
-                secondsPerSlot: _secondsPerSlot,
-                genesisTime: _genesisTime,
-                epochsToAssumedFinality: _epochsToAssumedFinality
-            })
-        );
-        emit SetSpec(_epochsPerFrame, _slotsPerEpoch, _secondsPerSlot, _genesisTime, _epochsToAssumedFinality);
-        ReportBounds.set(
-            ReportBounds.ReportBoundsStruct({
-                annualAprUpperBound: _annualAprUpperBound, relativeLowerBound: _relativeLowerBound
-            })
-        );
-        emit SetBounds(_annualAprUpperBound, _relativeLowerBound);
     }
 
     /// @inheritdoc IOracleManagerV1
