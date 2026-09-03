@@ -926,6 +926,192 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     }
 
     // -----------------------------------------------------------------------
+    // Invalid BLS signature tests.
+    //
+    // Every case below is a batch the root attesters legitimately signed off on — the quorum is
+    // valid and the buffer id matches — so the only thing standing between it and a real
+    // consensus-layer deposit is verifyBLSDeposit. Each must revert the whole transaction.
+    //
+    // The batch is always tampered with *before* _prepareDeposit, because the buffer id commits
+    // to the batch contents: mutating a deposit afterwards would trip BufferIdMismatch first and
+    // the BLS path would never be reached.
+    // -----------------------------------------------------------------------
+
+    /// @dev A signature that is a valid BLS signature, just by the wrong key. Both the signature
+    ///      and its Y coordinate come from key B, so the point is well-formed and on-curve and the
+    ///      pairing check runs to a clean `false` rather than failing the precompile.
+    function testRevert_blsRejectsSignatureFromDifferentKey() public {
+        IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](1);
+        deposits[0] = _makeDeposit(0, 1001);
+
+        IDepositDataBuffer.Deposit memory other = _makeDeposit(0, 1002);
+        deposits[0].signature = other.signature;
+        deposits[0].depositY.signatureY = other.depositY.signatureY;
+
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits);
+
+        vm.prank(keeper);
+        vm.expectRevert(BLS12_381.InvalidSignature.selector);
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+    }
+
+    /// @dev The amount is part of the signed deposit message, so a signature lifted from a 32 ETH
+    ///      deposit must not authorise a 64 ETH one. Guards against an operator inflating a
+    ///      deposit while reusing a previously valid signature.
+    function testRevert_blsRejectsSignatureOverDifferentAmount() public {
+        IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](1);
+        deposits[0] = _makeDepositWithAmount(0, 1003, 32 ether);
+        deposits[0].amount = 64 ether;
+
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits);
+
+        vm.prank(keeper);
+        vm.expectRevert(BLS12_381.InvalidSignature.selector);
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+    }
+
+    /// @dev The withdrawal credentials are part of the signed deposit message. A signature made
+    ///      over attacker-chosen credentials must not verify against River's, which is what stops
+    ///      a deposit from being redirected away from the protocol.
+    function testRevert_blsRejectsSignatureOverDifferentWithdrawalCredentials() public {
+        bytes32 foreignWc = 0x02000000000000000000000000000000000000000000000000000000DEADBEEF;
+        BLSSigner.SignedDeposit memory signed =
+            blsSigner.signDepositFromSeed(1004, 32 ether, foreignWc, _depositDomain());
+
+        IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](1);
+        deposits[0] = IDepositDataBuffer.Deposit({
+            pubkey: signed.pubkey,
+            signature: signed.signature,
+            amount: 32 ether,
+            operatorIdx: 0,
+            depositY: signed.depositY
+        });
+
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits);
+
+        vm.prank(keeper);
+        vm.expectRevert(BLS12_381.InvalidSignature.selector);
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+    }
+
+    /// @dev A signature signed under a different deposit domain (i.e. another chain's genesis fork
+    ///      version) must not replay onto this one.
+    function testRevert_blsRejectsSignatureOverDifferentDepositDomain() public {
+        bytes32 foreignDomain = BLS12_381.computeDepositDomain(bytes4(0x01020304));
+        assertTrue(foreignDomain != _depositDomain());
+
+        BLSSigner.SignedDeposit memory signed =
+            blsSigner.signDepositFromSeed(1005, 32 ether, withdrawalCredentials, foreignDomain);
+
+        IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](1);
+        deposits[0] = IDepositDataBuffer.Deposit({
+            pubkey: signed.pubkey,
+            signature: signed.signature,
+            amount: 32 ether,
+            operatorIdx: 0,
+            depositY: signed.depositY
+        });
+
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits);
+
+        vm.prank(keeper);
+        vm.expectRevert(BLS12_381.InvalidSignature.selector);
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+    }
+
+    /// @dev Mirror of the invalid-compressed-pubkey case for the signature component: clearing the
+    ///      compression flag bits must be caught before any pairing work happens.
+    function testRevert_blsRejectsInvalidCompressedSignature() public {
+        IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](1);
+        deposits[0] = _makeDeposit(0, 1006);
+        deposits[0].signature[0] = bytes1(uint8(0)); // invalid compressed BLS component header
+
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits);
+
+        vm.prank(keeper);
+        vm.expectRevert(
+            abi.encodeWithSelector(BLS12_381.InvalidCompressedComponent.selector, BLS12_381.Component.Signature)
+        );
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+    }
+
+    /// @dev The compressed signature's sign bit must agree with the supplied Y coordinate. Flipping
+    ///      it alone keeps the point on-curve, so this is what stops a caller from passing the
+    ///      negated Y (and thus a different point than the consensus layer would reconstruct).
+    function testRevert_blsRejectsSignatureSignBitMismatch() public {
+        IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](1);
+        deposits[0] = _makeDeposit(0, 1007);
+        deposits[0].signature[0] = bytes1(uint8(deposits[0].signature[0]) ^ 0x20); // flip sign bit
+
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits);
+
+        vm.prank(keeper);
+        vm.expectRevert(
+            abi.encodeWithSelector(BLS12_381.InvalidCompressedComponentSignBit.selector, BLS12_381.Component.Signature)
+        );
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+    }
+
+    /// @dev Corrupting the signature's X body (leaving the flag byte and Y intact) yields a point
+    ///      that is not on the curve, which the pairing precompile rejects outright rather than
+    ///      returning `false`.
+    function testRevert_blsRejectsOffCurveSignature() public {
+        IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](1);
+        deposits[0] = _makeDeposit(0, 1008);
+        deposits[0].signature[47] = bytes1(uint8(deposits[0].signature[47]) ^ 0xFF);
+
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits);
+
+        vm.prank(keeper);
+        vm.expectRevert(BLS12_381.PairingFailed.selector);
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+    }
+
+    /// @dev A single bad signature must reject the entire batch, not just its own entry — no
+    ///      partial application of the valid deposits around it.
+    function testRevert_blsOneBadSignatureRejectsWholeBatch() public {
+        IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](3);
+        deposits[0] = _makeDeposit(0, 1009);
+        deposits[1] = _makeDeposit(0, 1010);
+        deposits[2] = _makeDeposit(1, 1011);
+
+        // Middle entry keeps its own pubkey but carries another key's signature.
+        IDepositDataBuffer.Deposit memory other = _makeDeposit(0, 1012);
+        deposits[1].signature = other.signature;
+        deposits[1].depositY.signatureY = other.depositY.signatureY;
+
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits);
+
+        uint256 depositCountBefore = depositContract.deposit_count();
+
+        vm.prank(keeper);
+        vm.expectRevert(BLS12_381.InvalidSignature.selector);
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+
+        assertEq(depositContract.deposit_count(), depositCountBefore);
+        assertEq(dm.getTotalDepositedETH(), 0);
+        assertFalse(buffer.isDepositDataProcessed(bufferId));
+    }
+
+    /// @dev Control for the cases above: the same batch shape with untampered signatures must go
+    ///      through, so the reverts are attributable to the signature and not to the fixture.
+    function testBlsValidSignaturesAcceptedForSameBatchShape() public {
+        IDepositDataBuffer.Deposit[] memory deposits = new IDepositDataBuffer.Deposit[](3);
+        deposits[0] = _makeDeposit(0, 1009);
+        deposits[1] = _makeDeposit(0, 1010);
+        deposits[2] = _makeDeposit(1, 1011);
+
+        (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits);
+
+        vm.prank(keeper);
+        dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
+
+        assertEq(depositContract.deposit_count(), 3);
+        assertEq(dm.getTotalDepositedETH(), 96 ether);
+        assertTrue(buffer.isDepositDataProcessed(bufferId));
+    }
+
+    // -----------------------------------------------------------------------
     // Top-up tests — BLS verification must be skipped for entries with all-zero depositY.
     // Authorization for top-ups is delegated to the root (the attestation
     // quorum signs over keccak256(abi.encode(deposits)), so the root attesters are
