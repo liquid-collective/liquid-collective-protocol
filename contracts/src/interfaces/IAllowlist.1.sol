@@ -4,6 +4,8 @@ pragma solidity 0.8.34;
 /// @title Allowlist Interface (v1)
 /// @author Alluvial Finance Inc.
 /// @notice This interface exposes methods to handle the list of allowed recipients.
+/// @dev `initAllowlistV1` (init(0)) and `initAllowlistV1_1` (init(1)) were removed; see the
+///      REMOVED INITIALIZERS note on AllowlistV1 in contracts/src/Allowlist.1.sol.
 interface IAllowlistV1 {
     /// @notice The permissions of several accounts have changed
     /// @param accounts List of accounts

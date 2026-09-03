@@ -24,9 +24,12 @@ import "./state/withdraw/PectraConsolidationContractAddress.sol";
 /// @notice It is in charge of holding the exited and skimmed funds and allows river to pull these funds.
 /// @notice Furthermore, it enables consolidation of LC validators.
 /// @notice LC validators (0x02) can be EL-exited using partial or full EL withdrawals via the withdraw function.
-/// @dev The v1.0 initializer is intentionally absent: every deployed proxy has already advanced past
-///      `init(0)`, so it is unreachable. Its body is preserved for test bootstrapping in
-///      contracts/test/utils/LegacyInit.sol.
+/// @dev REMOVED INITIALIZERS. Every deployed proxy is at `Version == 1`, so the `init(N)` guard on
+///      this can never pass again; it was deleted to reclaim bytecode. Recorded here so the version
+///      counter's history stays readable, and so nobody reuses this slot:
+///        init(0)  initializeWithdrawV1(address)         -- _river, called _setRiver
+///      `init(1)` is still live below as `initWithdrawV1_1`.
+///      Body preserved verbatim in contracts/test/utils/LegacyInit.sol (WithdrawV1WithLegacyInit).
 contract WithdrawV1 is IWithdrawV1, Initializable, ReentrancyGuard, IProtocolVersion {
     modifier onlyRiver() {
         if (msg.sender != RiverAddress.get()) {

@@ -18,9 +18,14 @@ import "./state/oracle/ReportsPositions.sol";
 /// @title Oracle (v1)
 /// @author Alluvial Finance Inc.
 /// @notice This contract handles the input from the allowed oracle members. Highly inspired by Lido's implementation.
-/// @dev The v1.0 and v1.1 initializers are intentionally absent: every deployed proxy has already
-///      advanced past those `init` versions, so they are unreachable. Their bodies are preserved for
-///      test bootstrapping in contracts/test/utils/LegacyInit.sol.
+/// @dev REMOVED INITIALIZERS. Every deployed proxy is at `Version == 2`, so the `init(N)` guard on
+///      each of these can never pass again; they were deleted to reclaim bytecode. Recorded here so
+///      the version counter's history stays readable, and so nobody reuses one of these slots:
+///        init(0)  initOracleV1(address,address,uint64,uint64,uint64,uint64,uint256,uint256)
+///                 -- _riverAddress, _administratorAddress, _epochsPerFrame, _slotsPerEpoch,
+///                    _secondsPerSlot, _genesisTime, _annualAprUpperBound, _relativeLowerBound
+///        init(1)  initOracleV1_1()                      -- cleared the pending reports
+///      Bodies preserved verbatim in contracts/test/utils/LegacyInit.sol (OracleV1WithLegacyInit).
 contract OracleV1 is IOracleV1, Initializable, Administrable, IProtocolVersion {
     modifier onlyAdminOrMember(address _oracleMember) {
         if (msg.sender != _getAdmin() && msg.sender != _oracleMember) {

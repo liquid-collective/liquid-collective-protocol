@@ -4,6 +4,8 @@ pragma solidity 0.8.34;
 /// @title Execution Layer Fee Recipient Interface (v1)
 /// @author Alluvial Finance Inc.
 /// @notice This interface exposes methods to receive all the execution layer fees from the proposed blocks + bribes
+/// @dev `initELFeeRecipientV1` (init(0)) was removed; see the REMOVED INITIALIZERS note on
+///      ELFeeRecipientV1 in contracts/src/ELFeeRecipient.1.sol.
 interface IELFeeRecipientV1 {
     /// @notice The storage river address has changed
     /// @param river The new river address

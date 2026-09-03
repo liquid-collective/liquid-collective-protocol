@@ -9,6 +9,9 @@ import "../state/redeemManager/RedeemRequestAnchor.sol";
 /// @title Redeem Manager Interface (v1)
 /// @author Alluvial Finance Inc.
 /// @notice This contract handles the redeem requests of all users
+/// @dev `initializeRedeemManagerV1` (init(0)) and `initializeRedeemManagerV1_2` (init(1)) were
+///      removed; see the REMOVED INITIALIZERS note on RedeemManagerV1 in
+///      contracts/src/RedeemManager.1.sol.
 interface IRedeemManagerV1 {
     /// @notice Emitted when a redeem request is created
     /// @param recipient The recipient of the redeem request

@@ -8,6 +8,8 @@ import "../state/oracle/ReportsVariants.sol";
 /// @author Alluvial Finance Inc.
 /// @notice This interface exposes methods to handle the input from the allowed oracle members.
 /// @notice Highly inspired by Lido's implementation.
+/// @dev `initOracleV1` (init(0)) and `initOracleV1_1` (init(1)) were removed; see the
+///      REMOVED INITIALIZERS note on OracleV1 in contracts/src/Oracle.1.sol.
 interface IOracleV1 {
     /// @notice The storage quorum value has been changed
     /// @param newQuorum The new quorum value
