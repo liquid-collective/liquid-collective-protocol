@@ -22,10 +22,15 @@ import "./state/redeemManager/RateMarkFloor.sol";
 /// @title Redeem Manager (v1)
 /// @author Alluvial Finance Inc.
 /// @notice This contract handles the redeem requests of all users
-/// @dev The v1.0 and v1.2 initializers are intentionally absent: every deployed proxy has already
-///      advanced past those `init` versions, so they are unreachable. Their bodies — including the
-///      RedeemQueueV1 -> V2 migration — are preserved for test bootstrapping in
-///      contracts/test/utils/LegacyInit.sol.
+/// @dev REMOVED INITIALIZERS. Every deployed proxy is at `Version == 2`, so the `init(N)` guard on
+///      each of these can never pass again; they were deleted to reclaim bytecode. Recorded here so
+///      the version counter's history stays readable, and so nobody reuses one of these slots:
+///        init(0)  initializeRedeemManagerV1(address)    -- _river
+///        init(1)  initializeRedeemManagerV1_2()         -- ran _redeemQueueMigrationV1_2
+///                                                          (RedeemQueueV1 -> RedeemQueueV2)
+///      `init(2)` is still live below as `initializeRedeemManagerV1_3`.
+///      Bodies preserved verbatim in contracts/test/utils/LegacyInit.sol
+///      (RedeemManagerV1WithLegacyInit), which is also where `_redeemQueueMigrationV1_2` lives now.
 contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IProtocolVersion {
     /// @notice Value returned when resolving a redeem request that is unsatisfied
     int64 internal constant RESOLVE_UNSATISFIED = -1;

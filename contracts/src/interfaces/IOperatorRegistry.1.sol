@@ -7,6 +7,9 @@ import "./IWithdraw.1.sol";
 /// @title Operators Registry Interface (v1)
 /// @author Alluvial Finance Inc.
 /// @notice This interface exposes methods to handle the list of operators
+/// @dev `initOperatorsRegistryV1` (init(0)) and `initOperatorsRegistryV1_1` (init(1)) were
+///      removed; see the REMOVED INITIALIZERS note on OperatorsRegistryV1 in
+///      contracts/src/OperatorsRegistry.1.sol.
 interface IOperatorsRegistryV1 {
     /// @notice Structure representing a validator deposit
     /// @param operatorIndex The index of the operator

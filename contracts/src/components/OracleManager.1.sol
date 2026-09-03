@@ -16,6 +16,18 @@ import "../state/river/OracleAddress.sol";
 /// @notice data whenever a new report has been deemed valid. The report consists in two
 /// @notice values: the sum of all balances of all deposited validators and the count of
 /// @notice validators that have been activated on the consensus layer.
+/// @dev REMOVED INITIALIZERS. These two carried no `init(N)` number of their own — they were
+///      `internal` helpers, reachable only from `RiverV1.initRiverV1` (`init(0)`) and
+///      `RiverV1.initRiverV1_1` (`init(1)`) respectively. Both callers are gone, so these became
+///      unreachable and were deleted:
+///        internal  initOracleManagerV1(address)
+///                  -- _oracle; set OracleAddress
+///        internal  initOracleManagerV1_1(uint64,uint64,uint64,uint64,uint64,uint256,uint256)
+///                  -- _epochsPerFrame, _slotsPerEpoch, _secondsPerSlot, _genesisTime,
+///                     _epochsToAssumedFinality, _annualAprUpperBound, _relativeLowerBound;
+///                     set CLSpec and ReportBounds
+///      Bodies preserved verbatim in contracts/test/utils/RiverV1WithLegacyInit.sol and, for the
+///      component's own tests, in contracts/test/components/OracleManager.1.t.sol.
 abstract contract OracleManagerV1 is IOracleManagerV1 {
     /// @notice Handler called to retrieve the system administrator address
     /// @dev Must be overridden

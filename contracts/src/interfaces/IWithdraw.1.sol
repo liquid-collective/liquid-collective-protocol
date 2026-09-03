@@ -4,6 +4,8 @@ pragma solidity 0.8.34;
 /// @title Withdraw Interface (V1)
 /// @author Alluvial Finance Inc.
 /// @notice This contract is in charge of holding the exit and skimming funds and allow river to pull these funds
+/// @dev `initializeWithdrawV1` (init(0)) was removed; see the REMOVED INITIALIZERS note on
+///      WithdrawV1 in contracts/src/Withdraw.1.sol.
 interface IWithdrawV1 {
     /// @notice Request to consolidate multiple source pubkeys into a single target pubkey
     /// @param srcPubkeys Source validator pubkeys (48 bytes each)
