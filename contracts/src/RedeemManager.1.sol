@@ -266,8 +266,9 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
 
     /// @inheritdoc IRedeemManagerV1
     function reportStoppedEarning(uint256 _stoppedEarningEth, uint256 _stoppedEarningLsETH) external onlyRiver {
-        // a zero LsETH leg also covers the degenerate pools where River's conversion returns 0 (no asset
-        // balance or no shares), which is what makes the division at the end unconditionally safe
+        // Nothing worth marking: a zero eth leg values the demand at nothing, a zero LsETH leg credits no
+        // demand. The latter is what River passes on a degenerate pool. An early-out only — the division
+        // below is guarded by `lsETHToMark == 0`, not here.
         if (_stoppedEarningEth == 0 || _stoppedEarningLsETH == 0) {
             return;
         }
@@ -307,6 +308,10 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
             lsETHToMark = markable;
             emit StoppedEarningExceededMarkableDemand(reportedLsETH, lsETHToMark);
         }
+        // The only guard on the division below: past here `lsETHToMark >= 1`, so the divisor
+        // `reportedLsETH >= lsETHToMark >= 1`. A zero reported leg cannot slip through — it makes
+        // `lsETHToMark` zero and `0 > markable` never clamps. Also keeps mark heights strictly ascending
+        // for `_findRateMarkAtOrBefore`.
         if (lsETHToMark == 0) {
             return;
         }
