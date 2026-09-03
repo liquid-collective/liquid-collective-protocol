@@ -7,32 +7,30 @@ import "./RedemptionReportBase.sol";
 /// @title Stopped-earning launch cutover tests
 /// @notice Covers `initializeRedeemManagerV1_3` and the boundary it draws between pre-upgrade demand
 ///         and the first post-upgrade cohort.
-/// @dev The cutover is enforced by two independent mechanisms that are easy to conflate:
+/// @dev Two independent mechanisms enforce the cutover, and they are easy to conflate:
 ///
-///      1. A zero `RedeemRequestAnchor` makes a request IGNORE rate marks — it is capped by the
+///      1. A zero `RedeemRequestAnchor` makes a request ignore rate marks — it is capped by the
 ///         legacy pro-rata formula on the decrementing `maxRedeemableEth`.
-///      2. The `RateMarkFloor` stops pre-upgrade demand from CONSUMING marks — marks advance a single
+///      2. The `RateMarkFloor` stops pre-upgrade demand from consuming marks. Marks advance a single
 ///         cursor across the queue, so without it the first reports after the upgrade would spend
 ///         their credit covering requests that cannot use it.
 ///
-///      The suite below pins the seams between them: the floor derivation itself (B4, B11, B12), the
-///      interaction of the floor with the settled height (B5), and the two ways a request can end up
-///      excluded from marking — no anchor at all (B7, B8) or an anchor that the floor sits above
-///      (B12).
+///      This suite pins the seams: the floor derivation itself (B4, B11, B12), its interaction with
+///      the settled height (B5), and the two ways a request ends up excluded from marking — no anchor
+///      (B7, B8) or an anchor the floor sits above (B12).
 contract RedemptionCutoverTests is RedemptionReportBase {
-    /// @dev Storage slot of `word` of queue element `index`. `RedeemQueueV2` is a dynamic array
-    ///      living at a raw keccak slot with a stride of 5 words: amount, maxRedeemableEth,
-    ///      recipient, height, initiator.
+    /// @dev Storage slot of `word` of queue element `index`. `RedeemQueueV2` is a dynamic array at a
+    ///      raw keccak slot with a stride of 5 words: amount, maxRedeemableEth, recipient, height,
+    ///      initiator.
     function _queueSlot(uint256 index, uint256 word) internal pure returns (bytes32) {
         return bytes32(uint256(keccak256(abi.encode(REDEEM_QUEUE_ID_SLOT))) + (index * 5) + word);
     }
 
     /// Scenario: the whole pre-upgrade queue has already been claimed to the last wei, so every
-    /// request carries `amount == 0` and a `height` that has been advanced to its own end position.
-    /// Expected: the floor still lands on the true end of the queue. `height + amount` is invariant
-    /// across a request's lifetime — the claim path raises `height` by exactly the amount it lowers
-    /// `amount` by — so the last element's end position is still the total LsETH ever requested, and
-    /// the first post-upgrade mark starts there.
+    /// request carries `amount == 0` and a `height` advanced to its own end position.
+    /// Expected: the floor still lands on the true end of the queue, because `height + amount` is
+    /// invariant across a request's lifetime, so the last element's end position is still the total
+    /// LsETH ever requested.
     function testInitializeV1_3OnFullyClaimedQueuePinsFloorAtTotalRequested() external {
         address user = _generateAllowlistedUser(0);
         _reportRate(1e18);
@@ -43,7 +41,6 @@ contract RedemptionCutoverTests is RedemptionReportBase {
         _stripAnchor(first);
         _stripAnchor(second);
 
-        // settle and claim all of it, so both queue elements are drained
         _reportWithdraw(50e18, 1e18);
         assertEq(_claim(first), 30e18);
         assertEq(_claim(second), 20e18);
@@ -54,7 +51,7 @@ contract RedemptionCutoverTests is RedemptionReportBase {
         assertEq(redeemManager.getRedeemRequestDetails(second).amount, 0);
         assertEq(redeemManager.getRedeemRequestDetails(second).height, 50e18);
 
-        // 50e18 == 30e18 + 20e18: the drained tail still reports the total LsETH ever requested
+        // the drained tail still reports the total LsETH ever requested
         _pokeVersionTo(2);
         vm.expectEmit(true, true, true, true);
         emit SetRateMarkFloor(50e18);
@@ -78,14 +75,13 @@ contract RedemptionCutoverTests is RedemptionReportBase {
         assertEq(_settleAndClaim(fresh, 10e18, 1.1e18), 11e18);
     }
 
-    /// Scenario: `reportStoppedEarning` runs while the settled height sits ABOVE the floor. The two
-    /// cannot be ordered that way at upgrade time — `RedeemDemand` guarantees cumulative withdrawals
-    /// never exceed cumulative requests, so `settledHeight <= floor` always holds the instant the
-    /// floor is pinned — but once post-upgrade demand extends the queue, withdrawal events settle
-    /// straight past the old queue end.
-    /// Expected: `markStart` is the settled height (40), not the floor (30). Marking below the
-    /// settled height would hand the redeemer pool appreciation earned after their principal
-    /// stopped earning, which the design excludes; the floor only ever raises `markStart`.
+    /// Scenario: `reportStoppedEarning` runs while the settled height sits above the floor. The two
+    /// cannot be ordered that way at upgrade time -- `RedeemDemand` guarantees cumulative withdrawals
+    /// never exceed cumulative requests -- but once post-upgrade demand extends the queue, withdrawal
+    /// events settle straight past the old queue end.
+    /// Expected: `markStart` is the settled height (40), not the floor (30). Marking below the settled
+    /// height would hand the redeemer appreciation earned after their principal stopped earning, which
+    /// the design excludes; the floor only ever raises `markStart`.
     function testMarkStartPrefersSettledHeightOverFloor() external {
         address user = _generateAllowlistedUser(0);
         _reportRate(1e18);
@@ -113,26 +109,26 @@ contract RedemptionCutoverTests is RedemptionReportBase {
         assertEq(mark.amount, 10e18);
         assertEq(mark.markedEth, applyRate(10e18, 1.05e18));
 
-        // the fresh request straddles the mark boundary: [30, 40) is a gap, [40, 50) is marked
-        // first fill, against the 40 LsETH event: 10 LsETH in the gap, capped at the request rate
+        // the fresh request straddles the mark boundary: [30, 40) is a gap, [40, 50) is marked. The
+        // first fill against the 40 LsETH event takes the 10 LsETH gap, capped at the request rate.
         assertEq(_claim(fresh), 10e18);
         assertEq(redeemManager.getRedeemRequestDetails(fresh).height, 40e18);
         // the remaining 10 LsETH sits under the mark and is paid at the locked 1.05 rate
         assertEq(_settleAndClaim(fresh, 10e18, 1.05e18), applyRate(10e18, 1.05e18));
     }
 
-    /// Scenario: a pre-upgrade request is partially claimed BEFORE the upgrade at a settlement rate
-    /// below its request rate, then the residual is claimed AFTER the upgrade against a post-upgrade
+    /// Scenario: a pre-upgrade request is partially claimed before the upgrade at a settlement rate
+    /// below its request rate, then the residual is claimed after the upgrade against a post-upgrade
     /// withdrawal event, with rate marks live above the floor.
     /// Expected: unchanged legacy semantics. The residual is capped pro-rata on the surviving
     /// `maxRedeemableEth`, and the marks are ignored because the anchor is zero.
-    /// @dev Cross-reference `testPartialClaimBelowRequestRateDriftsImpliedCapRate`: the drifted
-    ///      implied cap rate is exactly why `RedeemRequestAnchor` exists. Here 100 LsETH quoted at
-    ///      1.0 is 99% settled at 0.5, leaving a 50.5 ETH budget against 1 LsETH of size — an implied
-    ///      ceiling of 50.5 ETH per LsETH. The legacy formula therefore lets the residual absorb the
-    ///      full 1.2 ETH the post-upgrade event prices it at, where the anchored path would have
-    ///      capped it at the 1.0 ETH request value and buffered the 0.2 ETH difference (see
-    ///      `testRequestBetweenV1_2AndV1_3HasAnchorButCannotBeMarked`, the same shape with an anchor).
+    /// @dev The drifted implied cap rate is why `RedeemRequestAnchor` exists. Here 100 LsETH quoted at
+    ///      1.0 is 99% settled at 0.5, leaving a 50.5 ETH budget against 1 LsETH — an implied ceiling
+    ///      of 50.5 ETH per LsETH — so the legacy formula lets the residual absorb the full 1.2 ETH
+    ///      the post-upgrade event prices it at. The anchored path would cap it at the 1.0 ETH request
+    ///      value and buffer the difference; see
+    ///      `testRequestBetweenV1_2AndV1_3HasAnchorButCannotBeMarked` for the same shape with an
+    ///      anchor, and `testPartialClaimBelowRequestRateDriftsImpliedCapRate` for the drift itself.
     function testLegacyRequestPartiallyClaimedAcrossUpgradeKeepsDriftedCap() external {
         address user = _generateAllowlistedUser(0);
         _reportRate(1e18);
@@ -156,7 +152,7 @@ contract RedemptionCutoverTests is RedemptionReportBase {
         _upgradeToV1_3();
         assertEq(redeemManager.getRateMarkFloor(), 100e18);
 
-        // a post-upgrade cohort, and a mark that covers it and only it
+        // a post-upgrade cohort, and a mark covering it and only it
         _reportRate(1e18);
         uint32 fresh = _openRequest(user, 10e18);
         _reportRate(1.2e18);
@@ -164,30 +160,26 @@ contract RedemptionCutoverTests is RedemptionReportBase {
         RateMarkStack.RateMark memory mark = redeemManager.getRateMarkDetails(0);
         assertEq(mark.height, 100e18);
         assertEq(mark.amount, 10e18);
-        // the legacy residual occupies [99, 100) and so lies strictly below every mark
+        // the legacy residual occupies [99, 100), strictly below every mark
         assertGe(mark.height, residual.height + residual.amount);
 
-        // the residual now settles at 1.2 against a post-upgrade event
-        // legacy cap == 1 LsETH * 50.5 ETH / 1 LsETH == 50.5 ETH, so nothing binds: the full 1.2 ETH is paid
+        // legacy cap == 1 LsETH * 50.5 ETH / 1 LsETH == 50.5 ETH, so nothing binds and the full 1.2
+        // ETH is paid. The anchored path would have capped at 1.0 ETH and buffered 0.2 ETH.
         assertEq(_settleAndClaim(legacy, 1e18, 1.2e18), 1.2e18);
-        // no ETH was diverted: the anchored path would have capped at 1.0 ETH and buffered 0.2 ETH
         assertEq(redeemManager.getBufferedExceedingEth(), 0);
         assertEq(redeemManager.getRedeemRequestDetails(legacy).amount, 0);
-        // and the fresh request is untouched by any of it: it still holds the whole mark
+        // the fresh request is untouched by any of it and still holds the whole mark
         assertEq(_settleAndClaim(fresh, 10e18, 1.2e18), applyRate(10e18, 1.2e18));
     }
 
     /// Scenario: a stopped-earning delta is reported while the only pending demand is pre-upgrade —
     /// the first oracle report after the upgrade, before any new request has arrived.
     /// Expected: `markable == 0`, so `StoppedEarningExceededMarkableDemand(reported, 0)` is emitted
-    /// and `reportStoppedEarning` returns without pushing a mark. The credit is DISCARDED
-    /// PERMANENTLY: there is no carry-forward buffer, so the post-upgrade request that arrives one
-    /// block later is paid at its own request rate and sees nothing of it.
-    /// @dev This is the sharpest edge of the cutover. The ETH is not lost to the protocol — it stays
-    ///      in River and therefore accrues to the remaining LsETH holders, raising the pool rate for
-    ///      everyone who did NOT redeem. It simply never reaches any redeemer. Whether that is the
-    ///      intended distribution is a product question; the mechanism is asserted here so the
-    ///      behaviour cannot change silently.
+    /// and no mark is pushed. There is no carry-forward buffer, so the credit is discarded permanently
+    /// and the post-upgrade request arriving one block later sees nothing of it.
+    /// @dev The ETH is not lost to the protocol: it stays in River and accrues to the LsETH holders
+    ///      who did not redeem, raising the pool rate for them. It simply never reaches any redeemer.
+    ///      Asserted here so that distribution cannot change silently.
     function testStoppedEarningWithOnlyLegacyDemandIsDiscardedPermanently() external {
         address user = _generateAllowlistedUser(0);
         _reportRate(1e18);
@@ -218,15 +210,13 @@ contract RedemptionCutoverTests is RedemptionReportBase {
         // the legacy request is capped at its 1.0 request rate: 30 ETH paid, 3 ETH buffered
         assertEq(_settleAndClaim(legacy, 30e18, 1.1e18), 30e18);
         assertEq(redeemManager.getBufferedExceedingEth(), 3e18);
-        // and the fresh request at its own 1.05 request rate, NOT at any inherited mark rate:
-        // 31.5 ETH paid, 1.5 ETH buffered. Had the discarded credit carried forward, a mark over
-        // [30, 60) would have raised this cap and the payout with it.
+        // and the fresh request at its own 1.05, not at any inherited mark rate. Had the discarded
+        // credit carried forward, a mark over [30, 60) would have raised this cap and the payout.
         assertEq(_settleAndClaim(fresh, 30e18, 1.1e18), 31.5e18);
 
-        // 3 + 1.5 ETH of settlement value was redirected to the exceeding-eth buffer, which River pulls
-        // back on the next report: it ends up with the LsETH holders who stayed, not with either
-        // redeemer. The report that funded the second settlement already collected the first 3 ETH, so
-        // what is staged here is the 1.5 ETH from the claim that followed it.
+        // 3 + 1.5 ETH of settlement value was redirected to the exceeding-eth buffer, ending up with
+        // the holders who stayed rather than with either redeemer. The report that funded the second
+        // settlement already collected the first 3 ETH, so 1.5 ETH is what is staged here.
         assertEq(redeemManager.getBufferedExceedingEth(), 1.5e18);
         _reportRate(1.1e18);
         assertEq(redeemManager.getBufferedExceedingEth(), 0, "River must reclaim the whole confiscated surplus");
@@ -236,21 +226,23 @@ contract RedemptionCutoverTests is RedemptionReportBase {
     /// re-run of the V1_2 migration over an already-V2 queue. `_redeemQueueMigrationV1_2` reads the
     /// array through the 4-word V1 struct and writes it back through the 5-word V2 struct, so from
     /// element 1 onward every field is read from the wrong offset: element 1's `amount` picks up
-    /// element 0's `initiator`, and its `height` picks up element 1's own `recipient`. Both become
+    /// element 0's `initiator` and its `height` picks up its own `recipient`, both becoming
     /// address-shaped integers. This happened on Hoodi (ids 0-85 garbled at block 3027299).
-    /// Expected: the initializer inspects the LAST element and nothing else, so it pins the floor at
-    /// the garbled end position instead of the real one — no sanity check, no revert.
-    /// @dev FINDING (Informational, upgrade safety): `initializeRedeemManagerV1_3` derives the
-    ///      cutover from `redeemRequests[length - 1].height + .amount` alone. A garbled tail
-    ///      therefore mis-pins the floor silently, to an address-shaped nonsense value ~1e48 here.
-    ///      `reportStoppedEarning` computes `totalRequestedHeight` from the very same element, so the
-    ///      two cancel and `markable` is 0 for every genuinely-pending request: stopped-earning
-    ///      accrual is permanently dead for the whole existing queue, with only the
-    ///      `StoppedEarningExceededMarkableDemand` event to show for it. This is a consequence of the
-    ///      pre-existing V1_2 corruption rather than a new defect, but the initializer is the last
-    ///      place it could have been caught. Recommendation: assert the tail's end position against
-    ///      an expected total supplied as a parameter, or against `RedeemDemand` plus the settled
-    ///      height, before pinning.
+    /// Expected: the initializer inspects the last element and nothing else, so it pins the floor at
+    /// the garbled end position -- no sanity check, no revert.
+    ///
+    /// @dev FINDING (Informational, upgrade safety)
+    ///      Claim: `initializeRedeemManagerV1_3` derives the cutover from
+    ///        `redeemRequests[length - 1].height + .amount` alone, so a garbled tail mis-pins the
+    ///        floor silently -- to ~1e48 here.
+    ///      Mechanism: `reportStoppedEarning` computes `totalRequestedHeight` from the same element,
+    ///        so the two cancel and `markable` is 0 for every genuinely-pending request. Stopped-
+    ///        earning accrual is permanently dead for the existing queue, with only the
+    ///        `StoppedEarningExceededMarkableDemand` event to show for it.
+    ///      Reachability: a consequence of the pre-existing V1_2 corruption rather than a new defect,
+    ///        but the initializer is the last place it could have been caught.
+    ///      Recommendation: assert the tail's end position against an expected total passed as a
+    ///        parameter, or against `RedeemDemand` plus the settled height, before pinning.
     function testInitializeV1_3OnCorruptedQueuePinsNonsenseFloor() external {
         address userA = _generateAllowlistedUser(0);
         address userB = _generateAllowlistedUser(1);
@@ -282,16 +274,16 @@ contract RedemptionCutoverTests is RedemptionReportBase {
         assertTrue(expectedFloor != 50e18);
         assertGt(expectedFloor, 1e30);
 
-        // consequence 1: the existing queue can never be marked again. `markStart` is the floor and
-        // `totalRequestedHeight` is the same garbled sum, so `markable` is 0 on every report.
+        // the existing queue can never be marked again: `markStart` is the floor and
+        // `totalRequestedHeight` is the same garbled sum, so `markable` is 0 on every report
         _reportRate(1.05e18);
         vm.expectEmit(true, true, true, true);
         emit StoppedEarningExceededMarkableDemand(10e18, 0);
         _reportStoppedEarning(applyRate(10e18, 1.05e18));
         assertEq(redeemManager.getRateMarkCount(), 0);
 
-        // consequence 2: marking "resumes" only above the garbled tail, because a new request appends
-        // at the corrupt end position
+        // marking resumes only above the garbled tail, because a new request appends at the corrupt
+        // end position
         _reportRate(1e18);
         uint32 fresh = _openRequest(userA, 10e18);
         assertEq(redeemManager.getRedeemRequestDetails(fresh).height, expectedFloor);
@@ -311,18 +303,17 @@ contract RedemptionCutoverTests is RedemptionReportBase {
         assertEq(redeemManager.resolveRedeemRequests(ids)[0], -1);
     }
 
-    /// Scenario: a request opened in the window BETWEEN the V1_2 and V1_3 upgrades — version already
-    /// at 2, `initializeRedeemManagerV1_3` not yet run.
-    /// Expected: it DOES carry an anchor, because the anchor is written by `_requestRedeem` and not
-    /// by the V1_3 initializer, which only pins the floor. But the floor is then pinned at that
-    /// request's own end position, so no mark can ever cover it.
-    /// @dev The asymmetry: this request has an anchor yet behaves like legacy demand. It is not
-    ///      identical to legacy demand though, and the difference is visible on a partial claim. The
-    ///      legacy path caps the residual pro-rata on the DECREMENTING `maxRedeemableEth`, whose
-    ///      implied rate drifts upward after a fill below the request rate (see
-    ///      `testLegacyRequestPartiallyClaimedAcrossUpgradeKeepsDriftedCap`, where the residual
-    ///      absorbs 1.2 ETH). The anchored path recomputes the cap from the immutable request-time
-    ///      pair, so the same residual is held at 1.0 ETH and the surplus is buffered.
+    /// Scenario: a request opened between the V1_2 and V1_3 upgrades — version already at 2,
+    /// `initializeRedeemManagerV1_3` not yet run.
+    /// Expected: it does carry an anchor, since the anchor is written by `_requestRedeem` and not by
+    /// the V1_3 initializer, which only pins the floor. But the floor is then pinned at that request's
+    /// own end position, so no mark can ever cover it.
+    /// @dev So it has an anchor yet behaves like legacy demand — though not identically, and the
+    ///      difference shows on a partial claim. The legacy path caps the residual pro-rata on the
+    ///      decrementing `maxRedeemableEth`, whose implied rate drifts upward after a fill below the
+    ///      request rate (see `testLegacyRequestPartiallyClaimedAcrossUpgradeKeepsDriftedCap`). The
+    ///      anchored path recomputes the cap from the immutable request-time pair, so the same
+    ///      residual is held at 1.0 ETH and the surplus is buffered.
     function testRequestBetweenV1_2AndV1_3HasAnchorButCannotBeMarked() external {
         address user = _generateAllowlistedUser(0);
         _reportRate(1e18);
@@ -331,11 +322,10 @@ contract RedemptionCutoverTests is RedemptionReportBase {
         _pokeVersionTo(2);
         uint32 id = _openRequest(user, 30e18);
 
-        // the anchor is written by _requestRedeem, so this request has one
         assertEq(redeemManager.getRedeemRequestAnchor(id).lsETHAtRequest, 30e18);
         assertEq(redeemManager.getRedeemRequestAnchor(id).ethAtRequest, 30e18);
 
-        // ...and then the floor is pinned on top of it, at its own end position
+        // the floor is then pinned on top of it, at its own end position
         vm.expectEmit(true, true, true, true);
         emit SetRateMarkFloor(30e18);
         redeemManager.initializeRedeemManagerV1_3();
@@ -358,13 +348,12 @@ contract RedemptionCutoverTests is RedemptionReportBase {
         RedeemQueueV2.RedeemRequest memory residual = redeemManager.getRedeemRequestDetails(id);
         assertEq(residual.height, 29e18);
         assertEq(residual.amount, 1e18);
-        // the legacy budget has drifted to an implied 15.5 ETH per LsETH, exactly as it would for a
-        // request with no anchor
+        // the legacy budget has drifted to an implied 15.5 ETH per LsETH, as it would with no anchor
         assertEq(residual.maxRedeemableEth, 15.5e18);
 
-        // the residual settles at 1.2, which prices 1 LsETH at 1.2 ETH. The anchor holds the cap at
-        // the request-time 1.0 ETH regardless of the drifted budget, so 0.2 ETH is buffered — where
-        // the zero-anchor request of the previous test would have kept the whole 1.2 ETH
+        // the residual settles at 1.2, pricing 1 LsETH at 1.2 ETH. The anchor holds the cap at the
+        // request-time 1.0 ETH regardless of the drifted budget, so 0.2 ETH is buffered — where the
+        // zero-anchor request of the previous test would have kept the whole 1.2 ETH.
         _reportRate(1.2e18);
         assertEq(_settleAndClaim(id, 1e18, 1.2e18), 1e18);
         assertEq(redeemManager.getBufferedExceedingEth(), 0.2e18);
