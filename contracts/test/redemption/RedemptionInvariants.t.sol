@@ -19,7 +19,7 @@ interface IRedemptionActions {
     function handler_moveRate(uint256 rate) external;
     function handler_reportStoppedEarning(uint256 stoppedEarningEth) external;
     function handler_reportWithdraw(uint256 lsETH) external;
-    function handler_claim(uint256 idSeed, uint16 depth) external;
+    function handler_claim(uint256 idSeed, uint16 depth) external returns (bool claimed);
 
     function handler_requestCount() external view returns (uint256);
     function handler_redeemDemand() external view returns (uint256);
@@ -184,7 +184,7 @@ abstract contract RedemptionMirror is RedemptionReportBase {
         internal
         returns (RedemptionRiverV1 freshRiver, RedeemManagerV1 freshManager)
     {
-        assertTrue(vm.revertTo(snapshotId), "failed to roll the protocol back to its pristine state");
+        assertTrue(_revertToState(snapshotId), "failed to roll the protocol back to its pristine state");
         return (river, redeemManager);
     }
 
@@ -249,6 +249,11 @@ contract RedemptionInvariantHandler is StdUtils {
     uint256 public calls_reportWithdraw;
     uint256 public calls_claim;
     /// @notice Actions that bounced off a guard without reaching the protocol.
+    /// @dev Includes the claim that found nothing in the queue currently satisfied by a withdrawal
+    ///      event. That case used to be counted as a claim, which made `calls_claim` over-report by
+    ///      however many draws landed on an unsatisfied request. Asserted to be zero over the
+    ///      deterministic sequence in `test_HandlerActionsAreAllReachable`, so the counter has a
+    ///      consumer rather than being written and never read.
     uint256 public calls_skipped;
 
     constructor(IRedemptionActions test_) {
@@ -342,8 +347,11 @@ contract RedemptionInvariantHandler is StdUtils {
     }
 
     /// @notice Fuzzer entry point: claims a request against whichever withdrawal event satisfies it.
-    /// @dev The test contract skips (rather than reverts on) an unsatisfied or fully claimed request,
-    ///      and only bumps this counter when a claim actually executed.
+    /// @dev `handler_claim` reports whether a claim actually executed, and only then is `calls_claim`
+    ///      bumped. It used to be bumped unconditionally: the test contract returns (rather than
+    ///      reverts) when nothing is satisfied, so the counter incremented on a call that never touched
+    ///      the protocol and over-reported by every dead draw. `afterInvariant` now asserts
+    ///      `calls_claim == ghost_claimCount`, which only holds if this counter means what it says.
     /// @param idSeed Seed for the redeem request id, bounded to the live queue.
     /// @param depthSeed Seed for the recursion depth, bounded to [0, 4].
     function claim(uint256 idSeed, uint256 depthSeed) external {
@@ -352,7 +360,10 @@ contract RedemptionInvariantHandler is StdUtils {
             calls_skipped++;
             return;
         }
-        _test.handler_claim(bound(idSeed, 0, count - 1), uint16(bound(depthSeed, 0, MAX_DEPTH)));
+        if (!_test.handler_claim(bound(idSeed, 0, count - 1), uint16(bound(depthSeed, 0, MAX_DEPTH)))) {
+            calls_skipped++;
+            return;
+        }
         calls_claim++;
     }
 }
@@ -462,6 +473,18 @@ contract RedemptionInvariantsTest is RedemptionMirror {
         _upgradeToV1_3();
         assertEq(redeemManager.getRateMarkFloor(), 17 ether, "fixture: floor must sit at the end of the legacy queue");
         ghost_lastFloor = redeemManager.getRateMarkFloor();
+
+        // One withdrawal event over the lower 5 ether of the legacy queue, so a claim is productive
+        // from the fuzzer's FIRST call. Without it a run has to draw an open, then a withdrawal
+        // report, then a claim, in that order, before a single wei is ever paid -- and a run that
+        // misses the ordering satisfies all six invariants with `ghost_claimCount == 0`, every
+        // conservation and cap property holding trivially because nothing was ever claimed. A cold
+        // start was measurably the common case, not a corner: the first run of a 128-run campaign
+        // reliably paid nothing.
+        // Deliberately PARTIAL, 5 of the 17 ether: it leaves `RedeemDemand` non-zero so
+        // `reportWithdraw` still finds work, and it leaves request 0 half-settled so the legacy
+        // pro-rata branch is live from the start.
+        _reportWithdraw(5 ether, 1e18);
 
         handler = new RedemptionInvariantHandler(IRedemptionActions(address(this)));
         targetContract(address(handler));
@@ -574,11 +597,12 @@ contract RedemptionInvariantsTest is RedemptionMirror {
     ///      with it, and `fail_on_revert = false` meant the run still reported green. The call is now
     ///      made through `_tryClaim`, so a revert is recorded in `ghost_claimReverted` and asserted from
     ///      `afterInvariant`, outside the reverting frame.
-    function handler_claim(uint256 idSeed, uint16 depth) external {
-        uint32 id = uint32(idSeed);
-        int64 resolved = _resolveOn(redeemManager, id);
-        if (resolved < 0) return;
-        uint32 startEventId = uint32(uint64(resolved));
+    /// @dev Returns whether a claim executed, so the handler's `calls_claim` counter can mean exactly
+    ///      that. Both early returns below are real outcomes the fuzzer should see as skips: nothing in
+    ///      the queue is currently satisfied, or the claim reverted.
+    function handler_claim(uint256 idSeed, uint16 depth) external returns (bool claimed) {
+        (bool found, uint32 id, uint32 startEventId) = _firstResolvableFrom(idSeed);
+        if (!found) return false;
 
         // Mirror FIRST: the walk depends on the pre-claim request state.
         MirrorClaim memory expected = _mirrorClaim(redeemManager, id, startEventId, depth);
@@ -588,7 +612,7 @@ contract RedemptionInvariantsTest is RedemptionMirror {
         (bool ok, uint256 paid) = _tryClaim(id, startEventId, depth);
         if (!ok) {
             ghost_claimReverted += 1;
-            return;
+            return false;
         }
         uint256 bufferDelta = redeemManager.getBufferedExceedingEth() - bufferBefore;
 
@@ -623,6 +647,30 @@ contract RedemptionInvariantsTest is RedemptionMirror {
         ghost_totalCap += expected.capSum;
         ghost_totalMatched += expected.matched;
         ghost_claimCount += 1;
+        return true;
+    }
+
+    /// @notice The first redeem request at or after `idSeed`, wrapping once, that a withdrawal event
+    ///         currently satisfies, together with the id of that event.
+    /// @dev Under `fail_on_revert = false` a claim that lands on an unsatisfied request is a WASTED
+    ///      call: it returns without touching the protocol, the fuzzer moves on, and the run spends one
+    ///      of its 32 actions proving nothing. Redirecting the dead draws is what makes the claim action
+    ///      reliably do work. The seed still chooses AMONG the satisfied requests, so the interleaving
+    ///      the fuzzer explores is preserved and only the draws that would have done nothing are moved.
+    function _firstResolvableFrom(uint256 idSeed)
+        internal
+        view
+        returns (bool found, uint32 id, uint32 withdrawalEventId)
+    {
+        uint256 count = redeemManager.getRedeemRequestCount();
+        for (uint256 offset = 0; offset < count; ++offset) {
+            uint32 candidate = uint32((idSeed + offset) % count);
+            int64 resolved = _resolveOn(redeemManager, candidate);
+            if (resolved >= 0) {
+                return (true, candidate, uint32(uint64(resolved)));
+            }
+        }
+        return (false, 0, 0);
     }
 
     /// @notice Claims `id` from `withdrawalEventId` at `depth`, reporting whether the call reverted
@@ -791,17 +839,34 @@ contract RedemptionInvariantsTest is RedemptionMirror {
 
     /// @notice Foundry runs this once per completed run. Guards against a run in which the handler
     ///         bounced off every guard and the invariants above passed vacuously.
-    /// @dev The two `min(gross, cap)` branch counters are deliberately NOT asserted here. A single
-    ///      32-call run is not guaranteed to walk the rate far enough in both directions to produce
-    ///      both, so asserting it would be flaky. Both sides are proven reachable deterministically in
-    ///      `test_HandlerActionsAreAllReachable`; here they are only checked for internal consistency
-    ///      against the slice count, which can never be flaky.
+    /// @dev `ghost_claimCount > 0` is deliberately NOT asserted unconditionally, and the reason is
+    ///      arithmetic rather than caution. The fuzzer draws uniformly across five selectors, so a
+    ///      32-call run never calls `claim` with probability (4/5)^32, about 0.08%. Across 128 runs
+    ///      that is roughly a one-in-ten chance per campaign, which is a flaky CI job rather than a
+    ///      guard. Foundry offers no cross-run aggregation to assert it in the right place. Vacuity is
+    ///      therefore attacked by CONSTRUCTION instead: `setUp` seeds a withdrawal event so a claim
+    ///      pays on the first call, and `_firstResolvableFrom` redirects the draws that would have
+    ///      landed on an unsatisfied request. What remains asserted is the part that cannot be flaky,
+    ///      that the claim counter matches the claims that ran.
+    /// @dev The two `min(gross, cap)` branch counters are NOT asserted here either, for the same
+    ///      reason: a single 32-call run is not guaranteed to walk the rate far enough in both
+    ///      directions to produce both, and campaigns in which the cap never once decided a payout do
+    ///      occur. Both sides are proven reachable deterministically in
+    ///      `test_HandlerActionsAreAllReachable`, which establishes that the branch exists and can be
+    ///      hit, NOT that any given stateful run hit it. Read the stateful suite accordingly.
     function afterInvariant() public {
         assertGt(handler.calls_total(), 0, "handler performed no work in this run");
         // a claim that resolved to a real withdrawal event must not revert. Recorded during the run
         // rather than asserted inside it, because an in-frame assertion would be rolled back with the
         // reverting call and never surface under `fail_on_revert = false`.
         assertEq(ghost_claimReverted, 0, "a claim reverted on an event that resolveRedeemRequests returned");
+
+        // The handler's claim counter must agree with the number of claims that actually executed.
+        // This is the assertion that keeps `calls_total()` honest: the counter is the only evidence a
+        // run has that it did any work, and it used to increment on claims that returned without
+        // touching the protocol.
+        assertEq(handler.calls_claim(), ghost_claimCount, "calls_claim disagrees with the number of claims executed");
+
         // if claims happened at all, they must have moved LsETH; a claim that matched nothing would
         // make every conservation check above trivially true
         if (ghost_claimCount > 0) {
@@ -859,6 +924,10 @@ contract RedemptionInvariantsTest is RedemptionMirror {
         // slices is decided by the event's ETH rather than by its cap
         handler.claim(3, 8);
         assertEq(handler.calls_claim(), 3, "claim did not land");
+        // the counter has to mean "a claim executed", not "a claim was attempted". Every action in
+        // this sequence was chosen to do real work, so nothing may have bounced off a guard either.
+        assertEq(handler.calls_claim(), ghost_claimCount, "calls_claim counted a claim that did nothing");
+        assertEq(handler.calls_skipped(), 0, "an action in the deterministic sequence bounced off a guard");
         assertGt(ghost_claimCount, 0, "no claim executed");
         assertGt(ghost_totalPaid, 0, "claims paid no ETH");
         assertGt(ghost_totalMatched, 0, "claims matched no LsETH");
@@ -995,7 +1064,7 @@ contract RedemptionRateMarkFuzzTests is RedemptionMirror {
         s.rateB = bound(_rateB, 0.5e18, 2e18);
         s.rateC = bound(_rateC, 0.5e18, 2e18);
 
-        uint256 pristine = vm.snapshot();
+        uint256 pristine = _snapshotState();
 
         // ── world 1: one call, unbounded depth ──────────────────────────────────
         (RedeemManagerV1 whole, uint32 idWhole) = _buildScenario(s);
@@ -1054,7 +1123,7 @@ contract RedemptionRateMarkFuzzTests is RedemptionMirror {
         uint256 settlementRate = bound(_settlementRate, 0.5e18, 4e18);
 
         address user = fuzzUser;
-        uint256 pristine = vm.snapshot();
+        uint256 pristine = _snapshotState();
 
         // ── world 1: a mark covers the whole request ────────────────────────────
         // each rate move is its own oracle report, landed before the action it prices, so the mark's
@@ -1269,7 +1338,7 @@ contract RedemptionRateMarkFuzzTests is RedemptionMirror {
         uint256 settlementRate = requestRate + (requestRate * bound(_recoveryMargin, 0, 1_000)) / 10_000;
 
         address user = fuzzUser;
-        uint256 pristine = vm.snapshot();
+        uint256 pristine = _snapshotState();
 
         // ── world 1: drawdown, mark at the depressed rate, then recovery ────────
         _reportRateLoose(requestRate);

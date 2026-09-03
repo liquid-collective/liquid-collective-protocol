@@ -32,6 +32,20 @@ import "../../src/state/redeemManager/RedeemQueue.2.sol";
 import "../../src/state/redeemManager/RedeemRequestAnchor.sol";
 import "../../src/state/redeemManager/WithdrawalStack.sol";
 
+/// @dev The current names of the state-snapshot cheatcodes, which the pinned forge-std predates.
+/// @dev Forge renamed `snapshot` / `revertTo` to `snapshotState` / `revertToState` and now warns on
+///      every run that uses the old names. lib/forge-std is a submodule pinned at v1.5.0 (March 2023),
+///      whose `Vm.sol` declares only the old pair, so `vm.snapshotState()` does not compile here.
+///      Cheatcodes dispatch by selector against the HEVM address, so declaring the two current
+///      signatures reaches them without touching a dependency every other suite in the repo shares.
+///      The rename was an alias, not a behaviour change: `revertToState` still deletes the snapshot
+///      and everything taken after it, exactly as `revertTo` did.
+/// @dev Delete this and call `vm.snapshotState()` directly once lib/forge-std is updated.
+interface VmStateSnapshots {
+    function snapshotState() external returns (uint256 snapshotId);
+    function revertToState(uint256 snapshotId) external returns (bool success);
+}
+
 /// @dev Concrete `RiverV1WithLegacyInit` so the fixture can `new` it. Production `RiverV1` no longer
 ///      ships `initRiverV1` / `_1` / `_2`, and the fixture bootstraps from genesis. The body is
 ///      deliberately EMPTY: this suite drives the RedeemManager entirely through real oracle reports,
@@ -814,6 +828,20 @@ abstract contract RedemptionReportBase is Test {
         uint256 balanceBefore = recipient.balance;
         redeemManager.claimRedeemRequests(ids, eventIds, true, depth);
         return recipient.balance - balanceBefore;
+    }
+
+    // ─── state snapshots ──────────────────────────────────────────────────────
+
+    /// @dev Snapshots the whole EVM state, including this test contract's own storage. See
+    ///      `VmStateSnapshots` for why this does not call `vm.snapshotState()` directly.
+    function _snapshotState() internal returns (uint256 snapshotId) {
+        return VmStateSnapshots(address(vm)).snapshotState();
+    }
+
+    /// @dev Rolls the EVM back to `snapshotId`. Anything the caller needs from the state it is leaving
+    ///      must already be in memory: storage does not survive the rollback.
+    function _revertToState(uint256 snapshotId) internal returns (bool success) {
+        return VmStateSnapshots(address(vm)).revertToState(snapshotId);
     }
 
     // ─── axis readers ─────────────────────────────────────────────────────────
