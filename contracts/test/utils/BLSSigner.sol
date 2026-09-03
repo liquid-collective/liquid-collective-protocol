@@ -128,14 +128,16 @@ contract BLSSigner {
         bytes memory out = _msm(
             BLS12_G2MSM,
             abi.encodePacked(
-                msgG2.x_c0_a,
-                msgG2.x_c0_b,
-                msgG2.x_c1_a,
-                msgG2.x_c1_b,
-                msgG2.y_c0_a,
-                msgG2.y_c0_b,
-                msgG2.y_c1_a,
-                msgG2.y_c1_b,
+                abi.encodePacked(
+                    msgG2.x_c0_a,
+                    msgG2.x_c0_b,
+                    msgG2.x_c1_a,
+                    msgG2.x_c1_b,
+                    msgG2.y_c0_a,
+                    msgG2.y_c0_b,
+                    msgG2.y_c1_a,
+                    msgG2.y_c1_b
+                ),
                 bytes32(sk % R)
             ),
             0x100
