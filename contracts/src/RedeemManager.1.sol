@@ -69,6 +69,7 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
         emit SetRiver(_river);
     }
 
+    /// @inheritdoc IRedeemManagerV1
     function initializeRedeemManagerV1_2() external init(1) {
         _redeemQueueMigrationV1_2();
     }
@@ -291,8 +292,8 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
         if (settledHeight > markStart) {
             markStart = settledHeight;
         }
-        // never mark below the launch cutover: pre-upgrade requests cannot use a mark, so letting the
-        // cursor cover them would silently burn credit owed to the first post-upgrade cohort
+        // Never mark below the launch cutover. Pre-upgrade requests cannot use a mark, so letting the
+        // cursor cover them would burn credit owed to the first post-upgrade cohort.
         uint256 floor = RateMarkFloor.get();
         if (floor > markStart) {
             markStart = floor;

@@ -257,6 +257,7 @@ interface IRedeemManagerV1 {
 
     /// @notice Retrieve the lowest LsETH position that a rate mark may cover
     /// @dev The launch cutover. Demand below this position is always paid under the original rules.
+    /// @return The rate mark floor
     function getRateMarkFloor() external view returns (uint256);
 
     /// @notice Retrieve the global count of rate marks
