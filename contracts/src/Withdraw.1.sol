@@ -277,6 +277,12 @@ contract WithdrawV1 is IWithdrawV1, Initializable, ReentrancyGuard, IProtocolVer
     }
 
     /// @notice Internal: refund excess fee to recipient
+    /// @dev A failed send is NOT fatal: the function emits `UnsentExcessFee` and keeps the ETH so one
+    ///      unreachable recipient cannot revert a whole batch. The consequence is that the excess is
+    ///      forfeit. It sits in this contract's balance, is later swept by `pullEth` during a report,
+    ///      and is booked as consensus-layer funds rather than as a refund, meaning the global fee is
+    ///      applied to it. There is no reclaim path. Note the asymmetry with
+    ///      `OperatorsRegistry.requestETHExits`, which reverts with `UnsentRefund` on the same failure.
     function _refundExcessFee(uint256 _totalValueReceived, uint256 _totalFeePaid, address _excessFeeRecipient)
         internal
     {
