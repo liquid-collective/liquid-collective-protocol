@@ -62,7 +62,7 @@ library LibOracleReporting {
         uint256 totalDepositedActivatedETHIncrease;
         uint256 lastConsolidationBuffer;
         uint256 totalExternalConsolidationETHIncrease;
-        uint256 totalExitViaConsolidationETHIncrease;
+        uint256 totalExitViaInternalConsolidationETHIncrease;
         uint256 timeElapsedSinceLastReport;
         uint256 availableAmountToUpperBound;
         IOracleManagerV1.ConsensusLayerDataReportingTrace trace;
@@ -159,20 +159,20 @@ library LibOracleReporting {
                 }
             }
 
-            if (_report.totalExitViaConsolidationETH < lastStoredReport.totalExitViaConsolidationETH) {
+            if (_report.totalExitViaInternalConsolidationETH < lastStoredReport.totalExitViaInternalConsolidationETH) {
                 revert IOracleManagerV1.InvalidTotalExitViaConsolidationsAmountReportedDecrease(
-                    lastStoredReport.totalExitViaConsolidationETH, _report.totalExitViaConsolidationETH
+                    lastStoredReport.totalExitViaInternalConsolidationETH, _report.totalExitViaInternalConsolidationETH
                 );
             }
 
-            if (_report.totalExitViaConsolidationETH > lastStoredReport.totalExitViaConsolidationETH) {
-                vars.totalExitViaConsolidationETHIncrease =
-                    _report.totalExitViaConsolidationETH - lastStoredReport.totalExitViaConsolidationETH;
+            if (_report.totalExitViaInternalConsolidationETH > lastStoredReport.totalExitViaInternalConsolidationETH) {
+                vars.totalExitViaInternalConsolidationETHIncrease =
+                    _report.totalExitViaInternalConsolidationETH - lastStoredReport.totalExitViaInternalConsolidationETH;
 
                 // we ensure that the total exit via consolidation amount reported is not larger than the increase in the amount of exited ETH
-                if (vars.totalExitViaConsolidationETHIncrease > vars.exitedAmountIncrease) {
+                if (vars.totalExitViaInternalConsolidationETHIncrease > vars.exitedAmountIncrease) {
                     revert IOracleManagerV1.ExitViaConsolidationETHIncreaseExceedsExitedETHIncrease(
-                        vars.totalExitViaConsolidationETHIncrease, vars.exitedAmountIncrease
+                        vars.totalExitViaInternalConsolidationETHIncrease, vars.exitedAmountIncrease
                     );
                 }
             }
@@ -220,7 +220,7 @@ library LibOracleReporting {
             storedReport.slashingContainmentMode = _report.slashingContainmentMode;
             storedReport.totalDepositedActivatedETH = _report.totalDepositedActivatedETH;
             storedReport.totalExternalConsolidationETH = _report.totalExternalConsolidationETH;
-            storedReport.totalExitViaConsolidationETH = _report.totalExitViaConsolidationETH;
+            storedReport.totalExitViaInternalConsolidationETH = _report.totalExitViaInternalConsolidationETH;
             LastConsensusLayerReport.set(storedReport);
         }
 
@@ -303,9 +303,9 @@ library LibOracleReporting {
         }
 
         // reduce the exit consolidation buffer by the ETH that actually arrived via consolidation this report
-        if (vars.totalExitViaConsolidationETHIncrease > 0) {
+        if (vars.totalExitViaInternalConsolidationETHIncrease > 0) {
             IOperatorsRegistryV1(OperatorsRegistryAddress.get())
-                .reportExitViaConsolidation(vars.totalExitViaConsolidationETHIncrease);
+                .reportExitViaConsolidation(vars.totalExitViaInternalConsolidationETHIncrease);
         }
 
         uint256 consolidationBuffer = ConsolidationBuffer.get();
