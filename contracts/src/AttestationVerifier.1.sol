@@ -15,6 +15,7 @@ import "./interfaces/IWithdraw.1.sol";
 
 import "./libraries/BLS12_381.sol";
 import "./libraries/LibErrors.sol";
+import "./libraries/LibDepositVerification.sol";
 
 import "./state/attestationVerifier/ConsolidationCommitteeAttestationQuorum.sol";
 import "./state/attestationVerifier/ConsolidationCommitteeAttesters.sol";
@@ -93,22 +94,6 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
     /// @dev Expected lengths for fixed BLS-related fields in a DepositObject.
     uint256 internal constant DEPOSIT_PUBKEY_LENGTH = 48;
     uint256 internal constant DEPOSIT_SIGNATURE_LENGTH = 96;
-
-    /// @notice Minimum amount for an initial validator deposit. A brand-new validator requires the
-    ///         full 32 ETH to activate on the consensus layer; a smaller initial deposit would never
-    ///         activate yet would still be counted in InFlightDeposit / TotalDepositedETH, permanently
-    ///         inflating River's `_assetBalance()` (issue #441/#309). Top-ups are intentionally exempt —
-    ///         they credit already-activated validators and may be below this amount.
-    uint256 internal constant MIN_INITIAL_DEPOSIT_AMOUNT = 32 ether;
-
-    /// @notice Minimum top-up amount accepted by the consensus-layer deposit path.
-    uint256 internal constant MIN_TOP_UP_AMOUNT = 1 ether;
-
-    /// @notice Maximum deposit amount — the Pectra 0x02 maximum effective balance.
-    uint256 internal constant MAX_DEPOSIT_AMOUNT = 2048 ether;
-
-    /// @notice Maximum stateless top-up: a funded validator should already have at least 32 ETH.
-    uint256 internal constant MAX_TOP_UP_AMOUNT = MAX_DEPOSIT_AMOUNT - MIN_INITIAL_DEPOSIT_AMOUNT;
 
     /// @dev Expected length for BLS pubkeys in a ConsolidationObject (source or target).
     uint256 internal constant CONSOLIDATION_PUBKEY_LENGTH = 48;
@@ -448,7 +433,9 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
         }
 
         // 1. Verify attestation quorum
-        _verifyAttestationQuorum(depositDataBufferId, depositRootHash, signatures, depositContract);
+        LibDepositVerification._verifyAttestationQuorum(
+            depositDataBufferId, depositRootHash, signatures, depositContract, RootAttestationQuorum.get()
+        );
 
         // 2. Get deposit batch (and its stored nonce) from buffer
         uint256 nonce;
@@ -467,71 +454,46 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
         //    case is implicitly forbidden: an initial deposit reverts PubkeyAlreadyFunded if
         //    the pubkey is in the lookup, and a top-up reverts TopUpPubkeyNotFunded if it
         //    isn't — so no pubkey can pass both branches in one batch.
-        bytes32[] memory pubkeyHashes = new bytes32[](depositCount);
-        for (uint256 i = 0; i < depositCount; i++) {
-            IDepositDataBuffer.Deposit memory d = batch.deposits[i];
-            if (d.pubkey.length != DEPOSIT_PUBKEY_LENGTH) {
-                revert InvalidPubkeyLength(i, d.pubkey.length);
-            }
-            if (d.signature.length != DEPOSIT_SIGNATURE_LENGTH) {
-                revert InvalidSignatureLength(i, d.signature.length);
-            }
-            // Initial deposits must be >= 32 ETH so the validator actually activates on the CL.
-            // A sub-32-ETH initial deposit would never activate yet would still inflate
-            // InFlightDeposit / _assetBalance() (issue #441/#309). The upper bound and gwei-alignment
-            // mirror `_depositValidator`; the 32-ETH floor is stricter here because this loop only
-            // covers initial deposits (top-ups are validated separately below and stay >= 1 ETH).
-            if (d.amount < MIN_INITIAL_DEPOSIT_AMOUNT || d.amount > MAX_DEPOSIT_AMOUNT || d.amount % 1 gwei != 0) {
-                revert InvalidDepositAmount(i, d.amount);
-            }
-            totalAmount += d.amount;
-
-            bytes32 pkHash = keccak256(d.pubkey);
-            pubkeyHashes[i] = pkHash;
-
-            if (PectraValidatorPubkeyLookup.isPubkeyFunded(d.pubkey)) {
-                revert PubkeyAlreadyFunded(d.pubkey);
-            }
-            // A migrated pre-Pectra (0x01) key must be promoted via self-consolidation, not
-            // reintroduced as a fresh initial deposit. Gating here keeps the pre-Pectra lookup
-            // authoritative and preserves the migration state machine even if a producer or
-            // attester batch is malformed.
-            if (PrePectraValidatorPubkeyLookup.isPubkeyFunded(d.pubkey)) {
-                revert PrePectraValidatorPubkeyNotConsolidated(d.pubkey);
-            }
-            for (uint256 j = 0; j < i; j++) {
-                if (pubkeyHashes[j] == pkHash) {
-                    revert PubkeyAlreadyFunded(d.pubkey);
-                }
-            }
-        }
+        IDepositDataBuffer.StandardDeposit[] memory standardizedDeposits =
+            _standardizeDeposits(batch.deposits, withdrawalCredentials, depositCount);
+        totalAmount += LibDepositVerification._verifyInitialDeposits(standardizedDeposits, depositCount);
 
         // 5. Validate top-ups: field length on pubkey, amount bounds, pubkey-must-be-funded.
         //    Per-batch duplicate top-up pubkeys are allowed.
-        for (uint256 i = 0; i < topUpCount; i++) {
-            IDepositDataBuffer.TopUp memory t = batch.topUps[i];
-            if (t.pubkey.length != DEPOSIT_PUBKEY_LENGTH) {
-                revert InvalidTopUpPubkeyLength(i, t.pubkey.length);
-            }
-            if (t.amount < MIN_TOP_UP_AMOUNT || t.amount > MAX_TOP_UP_AMOUNT || t.amount % 1 gwei != 0) {
-                revert InvalidTopUpAmount(i, t.amount);
-            }
-            totalAmount += t.amount;
-
-            // Explicitly reject migrated pre-Pectra keys with a distinct error. Such a key is not
-            // in the Pectra lookup so it would otherwise revert as TopUpPubkeyNotFunded; the
-            // dedicated error tells producers the key must be self-consolidated first.
-            if (PrePectraValidatorPubkeyLookup.isPubkeyFunded(t.pubkey)) {
-                revert PrePectraValidatorPubkeyNotConsolidated(t.pubkey);
-            }
-            if (!PectraValidatorPubkeyLookup.isPubkeyFunded(t.pubkey)) {
-                revert TopUpPubkeyNotFunded(t.pubkey);
-            }
-        }
+        totalAmount += LibDepositVerification._verifyTopUps(_standardizeTopUps(batch.topUps, topUpCount), topUpCount);
         if (totalAmount > committedBalance) revert NotEnoughFunds();
 
         // 6. Verify BLS signatures against canonical River WC (initials only).
-        _verifyBLSSignatures(batch.deposits, withdrawalCredentials);
+        LibDepositVerification._verifyBLSSignatures(standardizedDeposits, withdrawalCredentials);
+    }
+
+    function _standardizeDeposits(
+        IDepositDataBuffer.Deposit[] memory deposits,
+        bytes32 withdrawalCredentials,
+        uint256 depositCount
+    ) internal pure returns (IDepositDataBuffer.StandardDeposit[] memory standardizedDeposits) {
+        standardizedDeposits = new IDepositDataBuffer.StandardDeposit[](depositCount);
+        for (uint256 i; i < depositCount; ++i) {
+            standardizedDeposits[i] = IDepositDataBuffer.StandardDeposit({
+                pubkey: deposits[i].pubkey,
+                signature: deposits[i].signature,
+                amount: deposits[i].amount,
+                withdrawalCredentials: withdrawalCredentials,
+                depositY: deposits[i].depositY
+            });
+        }
+    }
+
+    function _standardizeTopUps(IDepositDataBuffer.TopUp[] memory topUps, uint256 topUpCount)
+        internal
+        pure
+        returns (IDepositDataBuffer.StandardTopUp[] memory standardizedTopUps)
+    {
+        standardizedTopUps = new IDepositDataBuffer.StandardTopUp[](topUpCount);
+        for (uint256 i; i < topUpCount; ++i) {
+            standardizedTopUps[i] =
+                IDepositDataBuffer.StandardTopUp({pubkey: topUps[i].pubkey, amount: topUps[i].amount});
+        }
     }
 
     // -----------------------------------------------------------------------
@@ -752,57 +714,6 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
     // Internal — attestation quorum + BLS verification
     // -----------------------------------------------------------------------
 
-    /// @notice Verify the attestation quorum.
-    /// @param depositDataBufferId The deposit data buffer ID.
-    /// @param depositRootHash The deposit root hash.
-    /// @param signatures The signatures.
-    /// @param depositContract The official ETH deposit contract supplied by River.
-    function _verifyAttestationQuorum(
-        bytes32 depositDataBufferId,
-        bytes32 depositRootHash,
-        bytes[] calldata signatures,
-        address depositContract
-    ) internal view {
-        uint256 sigLen = signatures.length;
-        if (sigLen > MAX_SIGNATURES) revert TooManySignatures(sigLen, MAX_SIGNATURES);
-
-        uint256 quorum = RootAttestationQuorum.get();
-        if (quorum == 0) revert ZeroQuorum();
-        if (sigLen < quorum) revert InsufficientAttestations(sigLen, quorum);
-
-        // Whilst this could be checked earlier in the flow, this way the function is self-contained and performs all the checks required to ensure the attestations are valid in one place.
-        bytes32 onChainRoot = IDepositContract(depositContract).get_deposit_root();
-        if (onChainRoot != depositRootHash) revert DepositRootMismatch(depositRootHash, onChainRoot);
-
-        bytes32 domainSep = DomainSeparator.get();
-        if (domainSep == bytes32(0)) revert ZeroDomainSeparator();
-        bytes32 structHash = keccak256(abi.encode(ATTEST_TYPEHASH, depositDataBufferId, depositRootHash));
-        bytes32 digest = ECDSA.toTypedDataHash(domainSep, structHash);
-
-        uint256 validCount = 0;
-        address[] memory seen = new address[](sigLen);
-
-        for (uint256 i = 0; i < sigLen; i++) {
-            address signer = _recover(digest, signatures[i]);
-            if (signer == address(0)) continue;
-            if (!RootAttesters.isRootAttester(signer)) continue;
-
-            bool duplicate = false;
-            for (uint256 j = 0; j < validCount; j++) {
-                if (seen[j] == signer) {
-                    duplicate = true;
-                    break;
-                }
-            }
-            if (duplicate) continue;
-
-            seen[validCount] = signer;
-            validCount++;
-        }
-
-        if (validCount < quorum) revert InsufficientAttestations(validCount, quorum);
-    }
-
     /// @notice Verify the consolidation-attestation quorum over the supplied signatures.
     /// @dev    Pure signature-recovery loop. The caller has already constructed the EIP-712
     ///         digest from the request fields and looked up the consolidation domain separator;
@@ -822,7 +733,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
         address[] memory seen = new address[](sigLen);
 
         for (uint256 i = 0; i < sigLen; i++) {
-            address signer = _recover(digest, signatures[i]);
+            address signer = LibDepositVerification._recover(digest, signatures[i]);
             if (signer == address(0)) continue;
             if (!ConsolidationCommitteeAttesters.isConsolidationCommitteeAttester(signer)) continue;
 
@@ -869,38 +780,6 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
         return keccak256(abi.encodePacked(arr));
     }
 
-    /// @notice Verify the BLS signatures of all initial deposits against the canonical River
-    ///         withdrawal credentials. Top-ups are handled by the caller and never reach this
-    ///         function — they're cleared upstream in `fetchAndValidateDeposits()` via the membership check
-    ///         on `PectraValidatorPubkeyLookup`.
-    /// @param deposits The initial deposits.
-    /// @param withdrawalCredentials The canonical River withdrawal credentials.
-    function _verifyBLSSignatures(IDepositDataBuffer.Deposit[] memory deposits, bytes32 withdrawalCredentials)
-        internal
-        view
-    {
-        for (uint256 i = 0; i < deposits.length; i++) {
-            (bool ok, bytes memory revertData) = address(this)
-                .staticcall(
-                    abi.encodeCall(
-                        this.verifyBLSDeposit,
-                        (
-                            deposits[i].pubkey,
-                            deposits[i].signature,
-                            deposits[i].amount,
-                            deposits[i].depositY,
-                            withdrawalCredentials
-                        )
-                    )
-                );
-            if (!ok) {
-                assembly {
-                    revert(add(revertData, 32), mload(revertData))
-                }
-            }
-        }
-    }
-
     /// @notice Verify a single BLS deposit message against the cached deposit domain.
     /// @dev External only as a self-staticcall trampoline from fetchAndValidateDeposits: the call
     ///      promotes the deposit's memory bytes into calldata so BLS12_381 can consume them
@@ -923,32 +802,5 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
         bytes32 depositDomain = DepositDomainValue.get();
         if (depositDomain == bytes32(0)) revert ZeroDepositDomain();
         BLS12_381.verifyDepositMessage(pubkey, signature, amount, depositY, withdrawalCredentials, depositDomain);
-    }
-
-    // -----------------------------------------------------------------------
-    // Internal helpers
-    // -----------------------------------------------------------------------
-
-    /// @dev Recover signer from a 65-byte EIP-712 signature, normalizing v.
-    /// @param digest The digest.
-    /// @param sig The signature.
-    /// @return The recovered signer.
-    function _recover(bytes32 digest, bytes calldata sig) internal pure returns (address) {
-        if (sig.length != 65) return address(0);
-
-        uint8 v = uint8(sig[64]);
-        if (v < 27) v += 27;
-        if (v != 27 && v != 28) return address(0);
-
-        bytes32 r;
-        bytes32 s;
-        assembly {
-            r := calldataload(sig.offset)
-            s := calldataload(add(sig.offset, 0x20))
-        }
-
-        (address recovered, ECDSA.RecoverError err) = ECDSA.tryRecover(digest, v, r, s);
-        if (err != ECDSA.RecoverError.NoError) return address(0);
-        return recovered;
     }
 }
