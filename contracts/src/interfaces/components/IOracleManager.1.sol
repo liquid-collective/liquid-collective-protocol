@@ -114,7 +114,7 @@ interface IOracleManagerV1 {
     /// @notice The total exit via consolidation amount reported is larger than the increase in the amount of exited ETH
     /// @param totalExitViaConsolidationsAmountReportedIncrease The increase in the amount of exited ETH
     /// @param exitedETHIncrease The increase in the amount of exited ETH
-    error InvalidTotalExitViaConsolidationsAmountReportedIncrease(
+    error ExitViaConsolidationETHIncreaseExceedsExitedETHIncrease(
         uint256 totalExitViaConsolidationsAmountReportedIncrease, uint256 exitedETHIncrease
     );
 
@@ -172,8 +172,6 @@ interface IOracleManagerV1 {
         // this value cannot decrease over reports and must increase in the same report in which the corresponding
         // consolidated principal first appears in validatorsBalance
         uint256 totalExternalConsolidationETH;
-
-        uint256 totalExitViaConsolidationETH;
         // the cumulative consensus layer balance of validators whose exit_epoch has been reached as of
         // the reported epoch, i.e. the principal that has permanently STOPPED EARNING
         // this is deliberately narrower than validatorsExitingBalance: a validator that has merely
@@ -184,6 +182,8 @@ interface IOracleManagerV1 {
         // post-exit_epoch slashing penalties can still reduce the amount that actually lands
         // this value cannot decrease over reports
         uint256 validatorsStoppedEarningBalance;
+        // the sum of all exit that happened via internal consolidation of validators
+        uint256 totalExitViaInternalConsolidationETH;
         // the count of activated validators
         // even validators that are exited are still accounted
         // this value cannot decrease over reports
@@ -220,7 +220,7 @@ interface IOracleManagerV1 {
         bool slashingContainmentMode;
         uint256 totalDepositedActivatedETH;
         uint256 totalExternalConsolidationETH;
-        uint256 totalExitViaConsolidationETH;
+        uint256 totalExitViaInternalConsolidationETH;
         // APPEND ONLY. This struct is written to a raw keccak slot via LastConsensusLayerReport, so
         // inserting a field anywhere above shifts every subsequent slot on a live deployment.
         uint256 validatorsStoppedEarningBalance;
