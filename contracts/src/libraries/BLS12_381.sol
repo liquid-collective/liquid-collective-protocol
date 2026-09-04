@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Adapted from https://github.com/lidofinance/core/blob/master/contracts/common/lib/BLS.sol (MIT)
 // SSZ.toLittleEndian replaced with LibUint256.toLittleEndian64 (CC0-1.0, liquid-collective/liquid-collective-protocol)
+// verifyDepositMessage visibility changed from internal to external
 
 // solhint-disable-next-line lido/fixed-compiler-version
 pragma solidity 0.8.34;
