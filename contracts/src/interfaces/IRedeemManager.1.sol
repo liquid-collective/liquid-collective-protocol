@@ -3,6 +3,8 @@ pragma solidity 0.8.34;
 
 import "../state/redeemManager/RedeemQueue.2.sol";
 import "../state/redeemManager/WithdrawalStack.sol";
+import "../state/redeemManager/RateMarkStack.sol";
+import "../state/redeemManager/RedeemRequestAnchor.sol";
 
 /// @title Redeem Manager Interface (v1)
 /// @author Alluvial Finance Inc.
@@ -12,7 +14,9 @@ interface IRedeemManagerV1 {
     /// @param recipient The recipient of the redeem request
     /// @param height The height of the redeem request in LsETH
     /// @param amount The amount of the redeem request in LsETH
-    /// @param maxRedeemableEth The maximum amount of eth that can be redeemed from this request
+    /// @param maxRedeemableEth The maximum amount of eth that can be redeemed from this request. LEGACY:
+    ///        authoritative only for requests predating the stopped-earning upgrade. For anchored requests
+    ///        the cap comes from the anchor and the rate marks, so this value does not bound the payout
     /// @param id The id of the new redeem request
     event RequestedRedeem(
         address indexed recipient, uint256 height, uint256 amount, uint256 maxRedeemableEth, uint32 id
@@ -21,7 +25,7 @@ interface IRedeemManagerV1 {
     /// @notice Emitted when a withdrawal event is created
     /// @param height The height of the withdrawal event in LsETH
     /// @param amount The amount of the withdrawal event in LsETH
-    /// @param ethAmount The amount of eth to distrubute to claimers
+    /// @param ethAmount The amount of eth to distribute to claimers
     /// @param id The id of the withdrawal event
     event ReportedWithdrawal(uint256 height, uint256 amount, uint256 ethAmount, uint32 id);
 
@@ -41,7 +45,7 @@ interface IRedeemManagerV1 {
         uint256 ethAmountExceeding
     );
 
-    /// @notice Emitted when a redeem request claim has been processed and matched at least once and funds are sent to the recipient
+    /// @notice Emitted when a redeem request claim matched at least once and funds were sent to the recipient
     /// @param redeemRequestId The id of the redeem request
     /// @param recipient The address receiving the redeem request funds
     /// @param ethAmount The amount of eth retrieved
@@ -60,14 +64,31 @@ interface IRedeemManagerV1 {
     /// @param newRedeemDemand The new redeem demand
     event SetRedeemDemand(uint256 oldRedeemDemand, uint256 newRedeemDemand);
 
+    /// @notice Emitted when a rate mark is created, re-pricing the payout cap of the covered redeem demand
+    /// @dev The re-pricing runs both ways. A `markedEth / amount` ratio below a covered request's
+    ///      request-time rate pushes that request's cap down. See `RedeemManagerV1._sliceCap`.
+    /// @param height The start position of the mark on the cumulative LsETH axis
+    /// @param amount The amount of LsETH marked
+    /// @param markedEth The ETH value of `amount` at the pool rate of this report
+    /// @param id The id of the new rate mark
+    event ReportedStoppedEarning(uint256 height, uint256 amount, uint256 markedEth, uint32 id);
+
+    /// @notice Emitted when reported stopped-earning principal exceeded the markable redeem demand
+    /// @dev Not an error. Most exits do not back a redemption, so the reported principal is usually far
+    ///      larger than the pending demand and the surplus belongs to no redeemer. The event makes that
+    ///      excess observable.
+    /// @param reportedLsETH The LsETH equivalent of the reported stopped-earning principal
+    /// @param markedLsETH The portion that was actually marked
+    event StoppedEarningExceededMarkableDemand(uint256 reportedLsETH, uint256 markedLsETH);
+
     /// @notice Emitted when the River address is set
     /// @param river The new river address
     event SetRiver(address river);
 
-    /// @notice Thrown When a zero value is provided
+    /// @notice Thrown when a zero value is provided
     error InvalidZeroAmount();
 
-    /// @notice Thrown when a transfer error occured with LsETH
+    /// @notice Thrown when a transfer error occurred with LsETH
     error TransferError();
 
     /// @notice Thrown when the provided arrays don't have matching lengths
@@ -77,11 +98,11 @@ interface IRedeemManagerV1 {
     /// @param id The redeem request id
     error RedeemRequestOutOfBounds(uint256 id);
 
-    /// @notice Thrown when the withdrawal request id if out of bounds
+    /// @notice Thrown when the withdrawal event id is out of bounds
     /// @param id The withdrawal event id
     error WithdrawalEventOutOfBounds(uint256 id);
 
-    /// @notice Thrown when	the redeem request id is already claimed
+    /// @notice Thrown when the redeem request id is already claimed
     /// @param id The redeem request id
     error RedeemRequestAlreadyClaimed(uint256 id);
 
@@ -112,9 +133,13 @@ interface IRedeemManagerV1 {
     /// @notice Thrown when an action is blocked because slashing containment mode is active
     error SlashingContainmentModeEnabled();
 
+    /// @notice Initializes the redeem manager
     /// @param _river The address of the River contract
     function initializeRedeemManagerV1(address _river) external;
 
+    /// @notice Migrates the redeem queue to its v2 layout, which records the initiator of every request
+    /// @dev Second initializer of the contract, callable once while the stored version is 1. Copies each
+    ///      v1 request into the v2 queue and seeds `initiator` from `recipient`, as v1 did not track it.
     function initializeRedeemManagerV1_2() external;
 
     /// @notice Retrieve River address
@@ -122,14 +147,22 @@ interface IRedeemManagerV1 {
     function getRiver() external view returns (address);
 
     /// @notice Retrieve the global count of redeem requests
+    /// @return The count of redeem requests
     function getRedeemRequestCount() external view returns (uint256);
 
     /// @notice Retrieve the details of a specific redeem request
+    /// @dev The `maxRedeemableEth` field of the returned struct is legacy-only: it bounds the payout for
+    ///      requests predating the stopped-earning upgrade, and nothing for the rest. A post-upgrade
+    ///      request's cap is derived from `getRedeemRequestAnchor` together with the marks covering its
+    ///      span, readable through `getRateMarkCount` and `getRateMarkDetails`. Do not read
+    ///      `maxRedeemableEth` as remaining claimable ETH; for an anchored request it can be 0 while the
+    ///      request still has a live claim.
     /// @param _redeemRequestId The id of the request
     /// @return The redeem request details
     function getRedeemRequestDetails(uint32 _redeemRequestId) external view returns (RedeemQueueV2.RedeemRequest memory);
 
     /// @notice Retrieve the global count of withdrawal events
+    /// @return The count of withdrawal events
     function getWithdrawalEventCount() external view returns (uint256);
 
     /// @notice Retrieve the details of a specific withdrawal event
@@ -149,11 +182,11 @@ interface IRedeemManagerV1 {
     function getRedeemDemand() external view returns (uint256);
 
     /// @notice Resolves the provided list of redeem request ids
-    /// @dev The result is an array of equal length with ids or error code
+    /// @dev The result is an array of equal length holding ids or error codes
     /// @dev -1 means that the request is not satisfied yet
     /// @dev -2 means that the request is out of bounds
     /// @dev -3 means that the request has already been claimed
-    /// @dev This call was created to be called by an off-chain interface, the output could then be used to perform the claimRewards call in a regular transaction
+    /// @dev Built for an offchain interface to call. Feed its output to `claimRedeemRequests` in a regular transaction
     /// @param _redeemRequestIds The list of redeem requests to resolve
     /// @return withdrawalEventIds The list of withdrawal events matching every redeem request (or error codes)
     function resolveRedeemRequests(uint32[] calldata _redeemRequestIds)
@@ -205,6 +238,36 @@ interface IRedeemManagerV1 {
     /// @notice Reports a withdraw event from River
     /// @param _lsETHWithdrawable The amount of LsETH that can be redeemed due to this new withdraw event
     function reportWithdraw(uint256 _lsETHWithdrawable) external payable;
+
+    /// @notice Reports the principal that stopped earning on the consensus layer in this reporting interval
+    /// @dev Called by River once per report, BEFORE `reportWithdraw`, so that demand settled in the same
+    ///      report is marked before its shares are burned and removed from the redeem demand.
+    /// @dev Must be called unconditionally whenever the delta is non-zero. River persists the cumulative
+    ///      `validatorsStoppedEarningBalance` before this point, so a skipped call loses the delta for good.
+    /// @dev The two arguments are the same amount denominated in ETH and in LsETH, both valued by River
+    ///      from its pre-report snapshot, the pool valuation as it stood before the report was applied.
+    ///      Their ratio is the rate the resulting mark locks. River passes it in rather than letting this
+    ///      contract read it, because by the time this runs River has already rebased and minted the
+    ///      interval's fee, so a live read would return the very rewards the mark excludes.
+    /// @param _stoppedEarningEth The ETH value of the principal that crossed exit_epoch in this interval
+    /// @param _stoppedEarningLsETH The same amount in LsETH, valued at River's pre-report rate
+    function reportStoppedEarning(uint256 _stoppedEarningEth, uint256 _stoppedEarningLsETH) external;
+
+    /// @notice Retrieve the global count of rate marks
+    /// @return The count of rate marks
+    function getRateMarkCount() external view returns (uint256);
+
+    /// @notice Retrieve the details of a specific rate mark
+    /// @param _rateMarkId The id of the rate mark
+    /// @return The rate mark details
+    function getRateMarkDetails(uint32 _rateMarkId) external view returns (RateMarkStack.RateMark memory);
+
+    /// @notice Retrieve the immutable request-time valuation of a redeem request
+    /// @dev A zero `lsETHAtRequest` means the request predates the stopped-earning upgrade and is paid
+    ///      under the original rules.
+    /// @param _redeemRequestId The id of the request
+    /// @return The request-time anchor
+    function getRedeemRequestAnchor(uint32 _redeemRequestId) external view returns (RedeemRequestAnchor.Anchor memory);
 
     /// @notice Pulls exceeding buffer eth
     /// @param _max The maximum amount that should be pulled
