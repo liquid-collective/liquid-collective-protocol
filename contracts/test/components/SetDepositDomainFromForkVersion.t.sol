@@ -9,11 +9,24 @@ import "../../src/libraries/BLS12_381.sol";
 import "../../src/libraries/LibErrors.sol";
 import "../utils/LibImplementationUnbricker.sol";
 
+contract ForkVersionDepositBufferStub {
+    address internal immutable _processor;
+
+    constructor(address processor_) {
+        _processor = processor_;
+    }
+
+    function getProcessor() external view returns (address) {
+        return _processor;
+    }
+}
+
 contract SetDepositDomainFromForkVersionTest is Test {
     AttestationVerifierV1 internal verifier;
 
     address internal admin = makeAddr("admin");
     address internal river = makeAddr("river");
+    address internal buffer;
 
     // Beacon-chain GENESIS_FORK_VERSION constants. Mainnet is the value that ships;
     // hoodi is the supported staking testnet. Both confirmed against the beacon /eth/v1/beacon/genesis
@@ -32,12 +45,11 @@ contract SetDepositDomainFromForkVersionTest is Test {
         rootAttesters[0] = makeAddr("rootAttester");
         address[] memory consolidationAttesters = new address[](1);
         consolidationAttesters[0] = makeAddr("consolidationAttester");
+        buffer = address(new ForkVersionDepositBufferStub(river));
 
         // init with bytes4(0) — accepted here because the default Foundry chain (31337) is unknown,
         // so init is permissive; the strict admin setter below is what enforces correctness.
-        verifier.initAttestationVerifierV1(
-            river, makeAddr("buffer"), rootAttesters, 1, bytes4(0), consolidationAttesters, 1
-        );
+        verifier.initAttestationVerifierV1(river, buffer, rootAttesters, 1, bytes4(0), consolidationAttesters, 1);
     }
 
     /// @dev Happy path on mainnet — the value that ships.
@@ -120,7 +132,7 @@ contract SetDepositDomainFromForkVersionTest is Test {
         rootAttesters[0] = makeAddr("rootAttester");
         address[] memory consolidationAttesters = new address[](1);
         consolidationAttesters[0] = makeAddr("consolidationAttester");
-        v.initAttestationVerifierV1(river, makeAddr("buffer"), rootAttesters, 1, forkVersion, consolidationAttesters, 1);
+        v.initAttestationVerifierV1(river, buffer, rootAttesters, 1, forkVersion, consolidationAttesters, 1);
     }
 
     /// @dev init reverts at deploy on a known chain when the fork version is wrong.

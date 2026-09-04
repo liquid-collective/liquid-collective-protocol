@@ -46,14 +46,6 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         _;
     }
 
-    modifier onlyRiverAdmin() {
-        if (msg.sender != _getRiverAdmin()) revert LibErrors.Unauthorized(msg.sender);
-        _;
-    }
-
-    /// @notice Handler called to retrieve the internal River admin address
-    function _getRiverAdmin() internal view virtual returns (address);
-
     /// @notice Handler called to increment the funded ETH for the operators
     /// @param _deltas The per-operator funding deltas (sorted by operatorIndex)
     function _incrementFundedETH(IOperatorsRegistryV1.OperatorFundingDelta[] memory _deltas) internal virtual;
@@ -163,8 +155,9 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
             depositDataBufferId, depositRootHash, signatures, depositContract, withdrawalCredentials, committedBalance
         );
 
-        // 5. Mark the batch ID processed BEFORE any external interactions.
-        verifier.markDepositDataBufferIdProcessed(depositDataBufferId);
+        // 5. Mark the batch ID processed on the buffer BEFORE any external interactions. The buffer
+        //    is the authoritative replay gate; `fetchAndValidateDeposits` reads this flag at step 0.
+        IDepositDataBuffer(verifier.getDepositDataBuffer()).markDepositDataProcessed(depositDataBufferId);
 
         // 6. Update operator funded validator accounting
         _updateFundedETHFromBuffer(batch.deposits, batch.topUps);
