@@ -217,6 +217,27 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @inheritdoc IOperatorsRegistryV1
+    function getReleasedETHPerOperator() external view returns (uint256[] memory) {
+        uint256[] memory releasedETH = OperatorsV3.getReleasedETH();
+        uint256 listLength = releasedETH.length;
+        if (listLength > 0) {
+            assembly ("memory-safe") {
+                // no need to use free memory pointer as we reuse the same memory range
+
+                // erase previous word storing length
+                mstore(releasedETH, 0)
+
+                // move memory pointer up by a word
+                releasedETH := add(releasedETH, 0x20)
+
+                // store updated length at new memory pointer location
+                mstore(releasedETH, sub(listLength, 1))
+            }
+        }
+        return releasedETH;
+    }
+
+    /// @inheritdoc IOperatorsRegistryV1
     function listActiveOperators() external view returns (OperatorsV3.Operator[] memory) {
         return OperatorsV3.getAllActive();
     }
@@ -381,6 +402,14 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             revert IConsensusLayerDepositManagerV1.OnlyKeeper();
         }
 
+        // No new exits may be dispatched to the consensus layer during a slashing event. Demand growth
+        // (`demandETHExits`) and deposit commits are already gated on containment upstream; this closes the
+        // remaining gap, where demand accumulated before containment could still be dispatched. Releasing
+        // stuck reservations stays available during containment — that restores state, it does not dispatch.
+        if (IRiverV1(payable(RiverAddress.get())).getSlashingContainmentMode()) {
+            revert IConsensusLayerDepositManagerV1.SlashingContainmentModeEnabled();
+        }
+
         uint256 currentETHExitsDemand = CurrentETHExitsDemand.get();
         if (currentETHExitsDemand == 0) {
             revert NoExitRequestsToPerform();
@@ -389,7 +418,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         if (
             _allocations.length == 0 && _elAllocations.length == 0
                 && (_exitViaConsolidationAllocation.consolidationRequests.length == 0
-                || _exitViaConsolidationAllocation.ethPerOperator.length == 0)
+                    || _exitViaConsolidationAllocation.ethPerOperator.length == 0)
         ) {
             revert InvalidEmptyArray();
         }
@@ -428,7 +457,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             uint256 old = ExitConsolidationBuffer.get();
             ExitConsolidationBuffer.set(old + consolidationReserved);
             emit SetExitConsolidationBuffer(old, old + consolidationReserved);
-        } 
+        }
 
         // Check that the exits requested do not exceed the current ETH exits demand
         if (requestedETHAmount > currentETHExitsDemand) {
@@ -603,6 +632,89 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             revert ExitsRequestedExceedAvailableActiveCLAmount(_operatorIndex, _amount, available);
         }
         _operator.requestedExits += _amount;
+    }
+
+    /// @inheritdoc IOperatorsRegistryV1
+    function releaseExitRequests(ExitReleaseAllocation[] calldata _allocations, uint256 _viaConsolidationETH)
+        external
+        onlyAdmin
+    {
+        if (_allocations.length == 0) {
+            revert InvalidEmptyArray();
+        }
+        _releaseExitRequests(_allocations, _viaConsolidationETH);
+    }
+
+    /// @notice Internal utility releasing stuck exit reservations back into the dispatchable exit demand.
+    /// @dev Shared entry point for every release path. The admin break-glass
+    ///      (`releaseExitRequests`) is the only caller today; a future oracle-reported release path
+    ///      converts its cumulative report into clamped per-operator deltas and calls straight into here,
+    ///      so the accumulator and the counter bookkeeping stay in one place. See the
+    ///      `IOperatorsRegistryV1.releaseExitRequests` NatSpec for the full rationale — in particular why
+    ///      the release is sum-invariant, why clamping (rather than reverting) is load-bearing for that
+    ///      future path's idempotency, and why no rate limit is applied.
+    /// @param _allocations Per-operator {operatorIndex, ethAmount}, strictly increasing by operatorIndex
+    /// @param _viaConsolidationETH The subset of the release that had been reserved via consolidation
+    /// @return totalReleased The total ETH(wei) actually released, after per-operator clamping
+    function _releaseExitRequests(ExitReleaseAllocation[] calldata _allocations, uint256 _viaConsolidationETH)
+        private
+        returns (uint256 totalReleased)
+    {
+        uint256 operatorCount = OperatorsV3.getCount();
+
+        for (uint256 i = 0; i < _allocations.length; ++i) {
+            uint256 operatorIndex = _allocations[i].operatorIndex;
+
+            if (operatorIndex >= operatorCount) {
+                revert InvalidOperatorIndex(operatorIndex, operatorCount);
+            }
+            if (i > 0 && operatorIndex <= _allocations[i - 1].operatorIndex) {
+                revert UnorderedOperatorList();
+            }
+
+            // No `active` check on purpose: an inactive operator's stuck reservation is exactly the case
+            // that needs unwinding.
+            OperatorsV3.Operator storage operator = OperatorsV3.get(operatorIndex);
+
+            // Clamp to what is actually outstanding. `requestedExits >= exitedETH` is an invariant kept by
+            // `_setExitedETH` (which raises `requestedExits` to meet any larger reported exited amount),
+            // so this subtraction cannot underflow.
+            uint256 outstanding = operator.requestedExits - OperatorsV3.getExitedETH(operatorIndex);
+            uint256 released = LibUint256.min(_allocations[i].ethAmount, outstanding);
+
+            operator.requestedExits -= released;
+            OperatorsV3.addReleasedETH(operatorIndex, released);
+            totalReleased += released;
+
+            emit ReleasedETHExits(operatorIndex, released, operator.requestedExits);
+        }
+
+        // The consolidation portion is by definition a subset of what was released.
+        if (_viaConsolidationETH > totalReleased) {
+            revert ReleasedConsolidationExceedsRelease(_viaConsolidationETH, totalReleased);
+        }
+
+        // `TotalETHExitsRequested == Σ operator.requestedExits` is an exact invariant — both counters only
+        // ever move together — so a plain checked subtraction is correct here: an underflow means state is
+        // already corrupt and reverting is the right outcome.
+        uint256 totalETHExitsRequested = TotalETHExitsRequested.get();
+        _setTotalETHExitsRequested(totalETHExitsRequested, totalETHExitsRequested - totalReleased);
+
+        // The released amount goes straight back into demand, keeping the sum the redeem formula reads
+        // (`TotalETHExitsRequested + CurrentETHExitsDemand`) unchanged.
+        uint256 currentETHExitsDemand = CurrentETHExitsDemand.get();
+        _setCurrentETHExitsDemand(currentETHExitsDemand, currentETHExitsDemand + totalReleased);
+
+        if (_viaConsolidationETH > 0) {
+            // Saturating, mirroring `reportExitViaConsolidation`. This buffer has no on-chain consumers
+            // today, so this keeps the telemetry honest rather than feeding any accounting.
+            uint256 oldBuffer = ExitConsolidationBuffer.get();
+            uint256 newBuffer = oldBuffer < _viaConsolidationETH ? 0 : oldBuffer - _viaConsolidationETH;
+            ExitConsolidationBuffer.set(newBuffer);
+            emit SetExitConsolidationBuffer(oldBuffer, newBuffer);
+        }
+
+        emit ReleasedExitRequests(totalReleased, _viaConsolidationETH);
     }
 
     function _getOperatorAvailableExitETH(OperatorsV3.Operator storage _operator, uint256 _operatorIndex)
