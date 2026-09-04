@@ -390,12 +390,7 @@ contract RiverV1 is
 
     /// @notice Overridden handler to pass the system admin inside components
     /// @return The address of the admin
-    function _getRiverAdmin()
-        internal
-        view
-        override(OracleManagerV1, ConsensusLayerDepositManagerV1)
-        returns (address)
-    {
+    function _getRiverAdmin() internal view override(OracleManagerV1) returns (address) {
         return Administrable._getAdmin();
     }
 

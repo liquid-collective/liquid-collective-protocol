@@ -118,8 +118,7 @@ contract WithdrawV1 is IWithdrawV1, Initializable, ReentrancyGuard, IProtocolVer
         // River-initiated consolidations (external minting / Pectra migration) carry their own replay
         // protection through the attestation flow. Self-consolidation stays allowed here: it is the
         // on-chain 0x01 -> 0x02 credential upgrade.
-        uint256 totalFeeRequired = _consolidate(requests, maxFeePerConsolidation, false);
-        _refundExcessFee(msg.value, totalFeeRequired, excessFeeRecipient);
+        _consolidate(requests, maxFeePerConsolidation, excessFeeRecipient, false);
     }
 
     /// @inheritdoc IWithdrawV1
@@ -136,18 +135,18 @@ contract WithdrawV1 is IWithdrawV1, Initializable, ReentrancyGuard, IProtocolVer
         // anyway, and every source still has to be a known funded validator (see `_processConsolidationRequest`).
         // Self-consolidation is rejected: it is a credential upgrade, not an exit, so it would never
         // release the exited ETH this flow reserves against.
-        uint256 totalFeeRequired = _consolidate(requests, maxFeePerConsolidation, true);
-        _refundExcessFee(msg.value, totalFeeRequired, excessFeeRecipient);
+        _consolidate(requests, maxFeePerConsolidation, excessFeeRecipient, true);
     }
 
     /// @notice Internal: shared consolidation logic. Validates fees, dispatches every request to the
-    /// EL consolidation contract and returns the total fee consumed. Refunds are handled by the caller.
+    /// EL consolidation contract and refunds the excess value to `excessFeeRecipient`.
     /// @param rejectSelfConsolidation When true, any request whose source equals its target reverts
     function _consolidate(
         IWithdrawV1.ConsolidationRequest[] calldata requests,
         uint256 maxFeePerConsolidation,
+        address excessFeeRecipient,
         bool rejectSelfConsolidation
-    ) internal returns (uint256 totalConsolidationFeePaid) {
+    ) internal {
         if (requests.length == 0) {
             revert InvalidEmptyArray();
         }
@@ -161,7 +160,7 @@ contract WithdrawV1 is IWithdrawV1, Initializable, ReentrancyGuard, IProtocolVer
             }
             totalNumOfConsolidationOperations += requests[i].srcPubkeys.length;
         }
-        totalConsolidationFeePaid = fee * totalNumOfConsolidationOperations;
+        uint256 totalConsolidationFeePaid = fee * totalNumOfConsolidationOperations;
         _validateSufficientValueForFee(msg.value, totalConsolidationFeePaid);
 
         IAttestationVerifierV1 attestationVerifier = IAttestationVerifierV1(AttestationVerifierAddress.get());
@@ -171,6 +170,8 @@ contract WithdrawV1 is IWithdrawV1, Initializable, ReentrancyGuard, IProtocolVer
                 requests[i], consolidationContract, attestationVerifier, fee, rejectSelfConsolidation
             );
         }
+
+        _refundExcessFee(msg.value, totalConsolidationFeePaid, excessFeeRecipient);
     }
 
     /// @notice Internal: validate and dispatch a single consolidation request to the EL contract
@@ -186,17 +187,21 @@ contract WithdrawV1 is IWithdrawV1, Initializable, ReentrancyGuard, IProtocolVer
         bytes calldata targetPubkey = request.targetPubkey;
         _validatePubkeyLength(targetPubkey);
 
-        bool isTargetFunded = attestationVerifier.isPubkeyFunded(targetPubkey);
+        bytes32 targetPubkeyHash = keccak256(targetPubkey);
         bool isSelfConsolidation =
-            request.srcPubkeys.length == 1 && keccak256(request.srcPubkeys[0]) == keccak256(targetPubkey);
+            request.srcPubkeys.length == 1 && keccak256(request.srcPubkeys[0]) == targetPubkeyHash;
 
         // A consolidation target must be post-Pectra funded (0x02), or be the self-consolidation
         // of a known pre-Pectra (0x01) key — i.e. the on-chain 0x01 -> 0x02 upgrade.
-        bool check = isTargetFunded
+        bool check = attestationVerifier.isPubkeyFunded(targetPubkey)
             || (isSelfConsolidation && _isKnownPrePectraValidatorPubkey(attestationVerifier, targetPubkey));
 
         if (!check) {
             revert TargetPubkeyNotFunded(targetPubkey);
+        }
+
+        if (rejectSelfConsolidation && isSelfConsolidation) {
+            revert SelfConsolidationNotAllowed(targetPubkey);
         }
 
         for (uint256 j = 0; j < request.srcPubkeys.length; j++) {
@@ -204,7 +209,7 @@ contract WithdrawV1 is IWithdrawV1, Initializable, ReentrancyGuard, IProtocolVer
             _validatePubkeyLength(srcPubkey);
             // Checked per source rather than via `isSelfConsolidation` so that a self-pair hidden in a
             // multi-source request is caught too.
-            if (rejectSelfConsolidation && keccak256(srcPubkey) == keccak256(targetPubkey)) {
+            if (rejectSelfConsolidation && keccak256(srcPubkey) == targetPubkeyHash) {
                 revert SelfConsolidationNotAllowed(srcPubkey);
             }
             if (!_isKnownValidatorPubkey(attestationVerifier, srcPubkey)) {
