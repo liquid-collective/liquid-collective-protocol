@@ -59,6 +59,13 @@ interface IAttestationVerifierPectraMigrationV1 {
     ///         post-Pectra paths (e.g. top-ups, normal consolidations). The lookup mutations
     ///         atomically revert with the rest of the transaction if the downstream
     ///         consolidation call fails.
+    /// @dev    That atomicity covers only the EL predeploy call, which merely QUEUES the request.
+    ///         Beacon-chain eligibility is evaluated later and an ineligible request is discarded
+    ///         with no on-chain signal, so the promotion can outlive a consolidation that never
+    ///         executed. The key is then recorded as post-Pectra while still holding 0x01
+    ///         credentials, which makes it top-up eligible via `fetchAndValidateDeposits`.
+    ///         Reconciliation is manual: the keeper calls `removeExitedValidatorPubkeys` and then
+    ///         `migratePrePectraValidatorPubkeys` to move it back.
     /// @param pubkeys The 48-byte BLS pubkeys to consolidate
     /// @return requests The consolidation requests
     function validateSelfConsolidation(bytes[] calldata pubkeys)
