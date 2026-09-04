@@ -60,11 +60,7 @@ contract AccountingMockDepositDataBuffer is IDepositDataBuffer {
         ++lastQueuedIdx;
     }
 
-    function getDepositData(bytes32 depositDataBufferId)
-        external
-        view
-        returns (DepositObject memory, uint256 nonce)
-    {
+    function getDepositData(bytes32 depositDataBufferId) external view returns (DepositObject memory, uint256 nonce) {
         if (!_exists[depositDataBufferId]) revert DepositDataBufferIdNotFound(depositDataBufferId);
         return (_batches[depositDataBufferId], _nonce[depositDataBufferId]);
     }
@@ -293,7 +289,9 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
             address(externalConsolidationRecipientMapping),
             consolidator
         );
-        // Mock BLS verification: EIP-2537 precompiles are unavailable in Foundry.
+        // Mock BLS verification: this harness uses synthetic validator keys, which have no valid
+        // BLS deposit signature to check. Foundry does support the EIP-2537 precompiles, so tests
+        // that need the real pairing check can sign with test/utils/BLSSigner.sol instead.
         vm.mockCall(
             address(attestationVerifier),
             abi.encodeWithSelector(attestationVerifier.verifyBLSDeposit.selector),

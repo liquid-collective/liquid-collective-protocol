@@ -10,9 +10,12 @@
     "compile": "hardhat compile",
     "hh": "hardhat",
     "uml": "sol2uml ./contracts/src -o ./docs/components.svg",
-    "link_contracts": "cd node_modules && rm -rf openzeppelin-contracts && ln -s ../lib/openzeppelin-contracts && rm -rf openzeppelin-contracts-upgradeable && ln -s ../lib/openzeppelin-contracts-upgradeable"
+    "link_contracts": "cd node_modules && rm -rf openzeppelin-contracts && ln -s ../lib/openzeppelin-contracts && rm -rf openzeppelin-contracts-upgradeable && ln -s ../lib/openzeppelin-contracts-upgradeable",
+    "bls:vectors": "node scripts/bls-gen-vectors.js",
+    "bls:crosscheck": "node scripts/bls-crosscheck.js"
   },
   "dependencies": {
+    "@noble/curves": "1.4.2",
     "@nomicfoundation/hardhat-verify": "^2.1.3",
     "@nomiclabs/hardhat-ethers": "^2.0.4",
     "@nomiclabs/hardhat-waffle": "^2.0.1",
