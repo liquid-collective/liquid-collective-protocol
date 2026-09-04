@@ -410,12 +410,19 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
     ///      rate below it, meaning the principal stopped earning during a drawdown, pushes the cap under
     ///      `_anchor.ethAtRequest`. A redeemer marked during a drawdown forfeits any later pool recovery
     ///      on the marked span, coverage-fund payouts included, and that surplus stays with the holders
-    ///      who did not redeem. Per sub-range the payout is `min(settlement rate, marked rate)`, so the
-    ///      downside passes through and the upside stops at the mark.
+    ///      who did not redeem.
+    ///      The cap is a SUM of per-sub-range values, and the caller compares that one total against
+    ///      the event's pro-rata ETH. The payout is therefore `min(sum of settlement, sum of cap)`, not
+    ///      `min(settlement, cap)` taken sub-range by sub-range. Where the settlement rate falls
+    ///      between a mark's locked rate and the request rate, a gap sub-range's headroom offsets the
+    ///      marked sub-range's shortfall, so part of the post-mark recovery on a marked span IS paid
+    ///      out. The forfeit is on the aggregate, not on each span independently.
     /// @dev Iterations are bounded by the number of marks the slice spans, at most one per oracle report
     ///      the request has been pending across. A claimant pays for their own request's span and cannot
-    ///      be charged for anyone else's. Pass `_depth` to `claimRedeemRequests` to split a very old
-    ///      request.
+    ///      be charged for anyone else's. There is no way to split the walk: `_depth` bounds the
+    ///      recursion across withdrawal events, not this loop, and `matchingAmount` is fixed by
+    ///      on-chain state. A request settled by a single large withdrawal event walks its whole span
+    ///      in one call. The only mitigation is claiming regularly.
     /// @param _anchor The immutable request-time valuation of the request
     /// @param _sliceStart The start position of the slice on the cumulative LsETH axis
     /// @param _sliceAmount The amount of LsETH in the slice
