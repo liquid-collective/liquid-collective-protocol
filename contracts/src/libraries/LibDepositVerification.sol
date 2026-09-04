@@ -263,25 +263,18 @@ library LibDepositVerification {
         internal
         view
     {
+        if (deposits.length == 0) return;
+        bytes32 depositDomain = DepositDomainValue.get();
+        if (depositDomain == bytes32(0)) revert ZeroDepositDomain();
         for (uint256 i = 0; i < deposits.length; i++) {
-            (bool ok, bytes memory revertData) = address(this)
-                .staticcall(
-                    abi.encodeCall(
-                        AttestationVerifierV1.verifyBLSDeposit,
-                        (
-                            deposits[i].pubkey,
-                            deposits[i].signature,
-                            deposits[i].amount,
-                            deposits[i].depositY,
-                            deposits[i].withdrawalCredentials
-                        )
-                    )
-                );
-            if (!ok) {
-                assembly {
-                    revert(add(revertData, 32), mload(revertData))
-                }
-            }
+            BLS12_381.verifyDepositMessage(
+                deposits[i].pubkey,
+                deposits[i].signature,
+                deposits[i].amount,
+                deposits[i].depositY,
+                deposits[i].withdrawalCredentials,
+                depositDomain
+            );
         }
     }
 

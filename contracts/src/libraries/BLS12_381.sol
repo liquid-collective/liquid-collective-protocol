@@ -375,7 +375,7 @@ library BLS12_381 {
         DepositY calldata depositY,
         bytes32 withdrawalCredentials,
         bytes32 depositDomain
-    ) internal view {
+    ) external view {
         // validate compression flags in pubkey and signature to ensure that they correspond to provided Y coordinates
         // this ensures that this verification is equivalent to one by CL:
         // - we receive Y components and throw away compression flags in X

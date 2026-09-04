@@ -7,6 +7,7 @@ import "forge-std/Test.sol";
 import "./OperatorAllocationTestBase.sol";
 import "./utils/UserFactory.sol";
 import "./utils/BytesGenerator.sol";
+import "./utils/BLSSigner.sol";
 import "./utils/LibImplementationUnbricker.sol";
 import "./utils/RiverV1WithLegacyInit.sol";
 import "./mocks/DepositContractMock.sol";
@@ -235,12 +236,35 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
         });
     }
 
-    /// @dev Non-zero placeholder DepositY for initial deposits. BLS is mocked in these tests,
-    ///      so the value only needs to differ from the zero sentinel used for top-ups.
-    function _nonZeroDepositY(uint256 seed) internal pure returns (BLS12_381.DepositY memory) {
-        return BLS12_381.DepositY({
-            pubkeyY: BLS12_381.Fp({a: bytes32(uint256(seed) + 1), b: bytes32(0)}),
-            signatureY: BLS12_381.Fp2({c0_a: bytes32(0), c0_b: bytes32(0), c1_a: bytes32(0), c1_b: bytes32(0)})
+    /// @dev Real BLS keypairs/signatures for the deposit fixtures. `BLS12_381.verifyDepositMessage`
+    ///      is an external library function reached by delegatecall, so it can no longer be mocked
+    ///      out at the `AttestationVerifier.verifyBLSDeposit` boundary — every initial deposit these
+    ///      tests build must carry a signature the pairing check actually accepts.
+    BLSSigner internal blsSigner;
+
+    /// @dev Lazily deployed so the many `setUp()` overrides in this file don't each need to.
+    function _blsSigner() internal returns (BLSSigner) {
+        if (address(blsSigner) == address(0)) {
+            blsSigner = new BLSSigner();
+        }
+        return blsSigner;
+    }
+
+    /// @dev An initial `Deposit` carrying a real BLS signature over River's canonical withdrawal
+    ///      credentials and the verifier's deposit domain. `amount` is part of the signed deposit
+    ///      message, so it must be passed in rather than patched onto the returned struct.
+    function _signedDeposit(uint256 seed, uint256 operatorIdx, uint256 amount)
+        internal
+        returns (IDepositDataBuffer.Deposit memory)
+    {
+        BLSSigner.SignedDeposit memory signed = _blsSigner()
+            .signDepositFromSeed(seed, amount, river.getWithdrawalCredentials(), attestationVerifier.DEPOSIT_DOMAIN());
+        return IDepositDataBuffer.Deposit({
+            pubkey: signed.pubkey,
+            signature: signed.signature,
+            amount: amount,
+            operatorIdx: operatorIdx,
+            depositY: signed.depositY
         });
     }
 
@@ -434,13 +458,7 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
         for (uint256 i = 0; i < opIndices.length; i++) {
             for (uint256 j = 0; j < counts[i]; j++) {
                 uint256 seed = seedBase + idx;
-                batch.deposits[idx] = IDepositDataBuffer.Deposit({
-                    pubkey: _fakePubkey(seed),
-                    signature: _fakeSignature(seed),
-                    amount: 32 ether,
-                    operatorIdx: opIndices[i],
-                    depositY: _nonZeroDepositY(seed)
-                });
+                batch.deposits[idx] = _signedDeposit(seed, opIndices[i], 32 ether);
                 idx++;
             }
         }
@@ -480,13 +498,7 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
         IDepositDataBuffer.DepositObject memory batch;
         batch.deposits = new IDepositDataBuffer.Deposit[](1);
         uint256 seed = _pubkeySeedCursor;
-        batch.deposits[0] = IDepositDataBuffer.Deposit({
-            pubkey: _fakePubkey(seed),
-            signature: _fakeSignature(seed),
-            amount: 32 ether,
-            operatorIdx: opIndex,
-            depositY: _nonZeroDepositY(seed)
-        });
+        batch.deposits[0] = _signedDeposit(seed, opIndex, 32 ether);
         _pubkeySeedCursor = seed + 1;
 
         bufferId = keccak256(abi.encode(batch, depositBuffer.lastQueuedIdx()));
@@ -583,15 +595,6 @@ contract RiverV1Tests is RiverV1TestBase {
             address(river),
             bytes32(uint256(keccak256("river.state.attestationVerifierAddress")) - 1),
             bytes32(uint256(uint160(address(attestationVerifier))))
-        );
-
-        // Mock BLS verification: these fixtures use synthetic validator keys, which have no valid
-        // BLS deposit signature to check. Foundry does support the EIP-2537 precompiles, so tests
-        // that need the real pairing check can sign with test/utils/BLSSigner.sol instead.
-        vm.mockCall(
-            address(attestationVerifier),
-            abi.encodeWithSelector(attestationVerifier.verifyBLSDeposit.selector),
-            bytes("")
         );
 
         // Pre-initialize the exited ETH array so _setExitedETH can safely access per-operator slots.
@@ -1658,15 +1661,6 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
             address(river),
             bytes32(uint256(keccak256("river.state.attestationVerifierAddress")) - 1),
             bytes32(uint256(uint160(address(attestationVerifier))))
-        );
-
-        // Mock BLS verification: these fixtures use synthetic validator keys, which have no valid
-        // BLS deposit signature to check. Foundry does support the EIP-2537 precompiles, so tests
-        // that need the real pairing check can sign with test/utils/BLSSigner.sol instead.
-        vm.mockCall(
-            address(attestationVerifier),
-            abi.encodeWithSelector(attestationVerifier.verifyBLSDeposit.selector),
-            bytes("")
         );
     }
 

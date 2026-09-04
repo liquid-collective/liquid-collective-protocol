@@ -4,6 +4,7 @@ pragma solidity 0.8.34;
 import "forge-std/Test.sol";
 
 import "../utils/BytesGenerator.sol";
+import "../utils/BLSSigner.sol";
 import "../utils/LibImplementationUnbricker.sol";
 import "../mocks/DepositContractMock.sol";
 
@@ -144,6 +145,12 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
     AccountingMockDepositDataBuffer internal depositBuffer;
     AttestationVerifierV1 internal attestationVerifier;
     ExternalConsolidationRecipientMappingV1 internal externalConsolidationRecipientMapping;
+
+    /// @dev Real BLS keypairs/signatures for the deposit fixtures. `BLS12_381.verifyDepositMessage`
+    ///      is an external library function reached by delegatecall, so it can no longer be mocked
+    ///      out at the `AttestationVerifier.verifyBLSDeposit` boundary — every initial deposit this
+    ///      harness builds must carry a signature the pairing check actually accepts.
+    BLSSigner internal blsSigner;
 
     /// @dev Monotonic counter mixed into pubkey/signature generation in `_makeDepositObjects`.
     ///      Without it, two batches built in the same block with the same `(i, opIdx)` produce
@@ -289,14 +296,7 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
             address(externalConsolidationRecipientMapping),
             consolidator
         );
-        // Mock BLS verification: this harness uses synthetic validator keys, which have no valid
-        // BLS deposit signature to check. Foundry does support the EIP-2537 precompiles, so tests
-        // that need the real pairing check can sign with test/utils/BLSSigner.sol instead.
-        vm.mockCall(
-            address(attestationVerifier),
-            abi.encodeWithSelector(attestationVerifier.verifyBLSDeposit.selector),
-            bytes("")
-        );
+        blsSigner = new BLSSigner();
 
         withdraw.initializeWithdrawV1(address(river));
         elFeeRecipient.initELFeeRecipientV1(address(river));
@@ -368,15 +368,6 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
         });
     }
 
-    /// @dev Non-zero placeholder DepositY for initial deposits. BLS is mocked in this harness,
-    ///      so the value only needs to differ from the zero sentinel used for top-ups.
-    function _nonZeroDepositY(uint256 seed) internal pure returns (BLS12_381.DepositY memory) {
-        return BLS12_381.DepositY({
-            pubkeyY: BLS12_381.Fp({a: bytes32(uint256(seed) + 1), b: bytes32(0)}),
-            signatureY: BLS12_381.Fp2({c0_a: bytes32(0), c0_b: bytes32(0), c1_a: bytes32(0), c1_b: bytes32(0)})
-        });
-    }
-
     /// @dev Sign an EIP-712 attestation digest with the given private key.
     function _signAttestation(uint256 pk, bytes32 bufferId, bytes32 rootHash) internal view returns (bytes memory) {
         bytes32 domainSep =
@@ -388,7 +379,8 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
     }
 
     /// @dev Build deposit objects from a set of (operatorIndex, amount) tuples.
-    ///      Each deposit uses a deterministic pubkey/signature seeded by position and a
+    ///      Each deposit carries a real BLS signature over River's canonical withdrawal credentials
+    ///      and the verifier's deposit domain, keyed off the deposit's position and a
     ///      monotonically-incrementing batch nonce so successive `sim_deposit` calls in the
     ///      same block don't collide on pubkeys (which would trip the on-chain
     ///      `PubkeyAlreadyFunded` guard).
@@ -398,19 +390,19 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
     {
         require(opIndices.length == amounts.length, "length mismatch");
         uint256 nonce = ++_depositBatchNonce;
+        bytes32 wc = river.getWithdrawalCredentials();
+        bytes32 depositDomain = attestationVerifier.DEPOSIT_DOMAIN();
         batch.deposits = new IDepositDataBuffer.Deposit[](opIndices.length);
         // batch.topUps left as default empty array.
         for (uint256 i = 0; i < opIndices.length; i++) {
+            BLSSigner.SignedDeposit memory signed =
+                blsSigner.signDepositFromSeed(nonce * 1000 + i, amounts[i], wc, depositDomain);
             batch.deposits[i] = IDepositDataBuffer.Deposit({
-                pubkey: abi.encodePacked(sha256(abi.encode("pubkey", i, opIndices[i], nonce)), bytes16(0)),
-                signature: abi.encodePacked(
-                    sha256(abi.encode("sig-a", i, opIndices[i], nonce)),
-                    sha256(abi.encode("sig-b", i, opIndices[i], nonce)),
-                    bytes32(0)
-                ),
+                pubkey: signed.pubkey,
+                signature: signed.signature,
                 amount: amounts[i],
                 operatorIdx: opIndices[i],
-                depositY: _nonZeroDepositY(nonce * 1000 + i)
+                depositY: signed.depositY
             });
         }
     }
