@@ -11,6 +11,7 @@ contract TlcMigrationTest is Test {
     TlcMigration migrationsContract;
     TLCV1 tlc;
     string rpc = "https://mainnet.infura.io/v3/285952fdf94740b6b5b2c551accab0c9";
+    bool internal _skipForkTests = false;
 
     uint32[] newLockDuration = [
         140140800,
@@ -121,15 +122,25 @@ contract TlcMigrationTest is Test {
     bool[] isGlobalUnlockedScheduleIgnoredOld;
 
     function setUp() public {
-        rpc = vm.rpcUrl("mainnet");
-        vm.createFork(rpc);
+        try vm.envString("MAINNET_FORK_RPC_URL") returns (string memory rpcUrl) {
+            rpc = rpcUrl;
+            vm.createFork(rpc);
+        } catch {
+            _skipForkTests = true;
+        }
+    }
+
+    modifier shouldSkipForkTests() {
+        if (!_skipForkTests) {
+            _;
+        }
     }
 
     function testCreate() public {
         migrationsContract = new TlcMigration();
     }
 
-    function testGas() public {
+    function testGas() public shouldSkipForkTests {
         vm.createSelectFork(rpc, 23541980);
         migrationsContract = new TlcMigration();
         proxy tlcProxy = proxy(0xb5Fe6946836D687848B5aBd42dAbF531d5819632);
@@ -137,7 +148,7 @@ contract TlcMigrationTest is Test {
         tlcProxy.upgradeToAndCall(address(migrationsContract), abi.encodeWithSignature("migrate()"));
     }
 
-    function testMigrate() public {
+    function testMigrate() public shouldSkipForkTests {
         // Significantly faster when cached locally, run a local fork for best perf (anvil recommended)
         vm.createSelectFork(rpc, 23541980);
 
