@@ -30,7 +30,7 @@ jobs:
           - { file: CoverageFund.1.sol, name: CoverageFundV1 }
           - { file: TLC.1.sol, name: TLCV1 }
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           submodules: recursive
 
