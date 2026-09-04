@@ -117,6 +117,12 @@ contract OperatorsRegistryWithMigrationHelpers is OperatorsRegistryV1 {
     function sudoGetRawReleasedETH() external view returns (uint256[] memory) {
         return OperatorsV3.getReleasedETH();
     }
+
+    /// Test helper: exposes the single-index `OperatorsV3.getReleasedETH(index)` overload used
+    /// internally by the reportExitedETH clamp.
+    function sudoGetReleasedETH(uint256 index) external view returns (uint256) {
+        return OperatorsV3.getReleasedETH(index);
+    }
 }
 
 contract OperatorsRegistryV1PrePectraBridgeTests is Test {
@@ -3234,6 +3240,38 @@ contract OperatorsRegistryV1ELExitTests is Test {
         reg.requestETHExits(_noCL, _noEL, _makeConsolidationAlloc(_ops1(0), _amts1(20 ether)), 0, 0);
     }
 
+    /// @notice A consolidation reservation exactly equal to remaining demand fills it to zero without
+    ///         tripping the ExitsGreaterThanExitDemand / ExitsRequestedExceedExitDemand `>` guards.
+    function testConsolidationExitExactlyFillsDemandToZero() public {
+        _setupConsolidationOperators(1, 100 ether, 50 ether);
+
+        vm.prank(keeper);
+        reg.requestETHExits(_noCL, _noEL, _makeConsolidationAlloc(_ops1(0), _amts1(50 ether)), 0, 0);
+
+        assertEq(reg.getCurrentETHExitsDemand(), 0, "demand fully satisfied via consolidation");
+        assertEq(reg.getExitConsolidationBuffer(), 50 ether, "buffer holds full reservation");
+        assertEq(reg.getTotalETHExitsRequested(), 50 ether, "total = exact demand");
+        assertEq(reg.getOperator(0).requestedExits, 50 ether, "op0 reserved");
+        assertEq(mockWithdraw.consolidateForExitCallCount(), 1, "dispatched once");
+    }
+
+    /// @notice CL exits plus a consolidation reservation summing exactly to demand drive it to zero;
+    ///         exercises the post-CL recompute of remainingETHExitsDemand at the equality boundary.
+    function testMixedCLAndConsolidationExactlyFillsDemandToZero() public {
+        _setupConsolidationOperators(1, 100 ether, 50 ether);
+
+        IOperatorsRegistryV1.ExitETHAllocation[] memory cl = new IOperatorsRegistryV1.ExitETHAllocation[](1);
+        cl[0] = IOperatorsRegistryV1.ExitETHAllocation({operatorIndex: 0, ethAmount: 30 ether});
+
+        vm.prank(keeper);
+        reg.requestETHExits(cl, _noEL, _makeConsolidationAlloc(_ops1(0), _amts1(20 ether)), 0, 0);
+
+        assertEq(reg.getCurrentETHExitsDemand(), 0, "CL+consolidation exactly satisfy demand");
+        assertEq(reg.getExitConsolidationBuffer(), 20 ether, "buffer only counts the consolidation leg");
+        assertEq(reg.getTotalETHExitsRequested(), 50 ether, "total = 30 CL + 20 consolidation");
+        assertEq(reg.getOperator(0).requestedExits, 50 ether, "both legs reserve against same operator");
+    }
+
     /// @notice The summed consolidation reservation cannot exceed the remaining exit demand.
     function testConsolidationExitRevertsExceedsDemand() public {
         _setupConsolidationOperators(1, 100 ether, 10 ether);
@@ -3548,7 +3586,7 @@ contract OperatorsRegistryV1ExitReleaseTests is Test {
         assertEq(reg.getExitConsolidationBuffer(), 30 ether, "buffer holds the reservation");
 
         vm.expectEmit(true, true, true, true, address(reg));
-        emit IOperatorsRegistryV1.ExitConsolidationBufferSet(30 ether, 10 ether);
+        emit IOperatorsRegistryV1.SetExitConsolidationBuffer(30 ether, 10 ether);
         _release(0, 20 ether, 20 ether);
 
         assertEq(reg.getExitConsolidationBuffer(), 10 ether, "buffer reduced by the consolidation subset");
@@ -3643,6 +3681,35 @@ contract OperatorsRegistryV1ExitReleaseTests is Test {
         assertEq(raw[1], 0, "op0 never released");
         assertEq(raw[2], 0, "op1 never released");
         assertEq(raw[3], 8 ether, "op2 released");
+    }
+
+    /// @notice The single-index overload mirrors the per-operator view: it reads the same accumulated
+    ///         amount that the raw array (shifted by the leading sum cell) holds.
+    function testGetReleasedETHByIndex() public {
+        _setupOperators(2, 100 ether, 100 ether);
+        _requestELExit(0, EIGHT_ETH_IN_GWEI);
+        _requestELExit(1, EIGHT_ETH_IN_GWEI);
+
+        _release(0, 3 ether);
+        _release(0, 2 ether);
+        _release(1, 8 ether);
+
+        assertEq(reg.sudoGetReleasedETH(0), 5 ether, "op0 accumulated across two releases");
+        assertEq(reg.sudoGetReleasedETH(1), 8 ether, "op1 released once");
+    }
+
+    /// @notice Indexes the accumulator array has not grown to yet — including on an untouched
+    ///         registry where the array is still empty — read as 0 rather than reverting.
+    function testGetReleasedETHByIndexReturnsZeroBeforeGrowth() public {
+        _setupOperators(3, 100 ether, 100 ether);
+        assertEq(reg.sudoGetReleasedETH(0), 0, "untouched registry reads 0");
+
+        _requestELExit(2, EIGHT_ETH_IN_GWEI);
+        _release(2, 8 ether);
+
+        assertEq(reg.sudoGetReleasedETH(0), 0, "op0 never released");
+        assertEq(reg.sudoGetReleasedETH(1), 0, "op1 never released");
+        assertEq(reg.sudoGetReleasedETH(2), 8 ether, "op2 released");
     }
 
     // ── 6. Access control and input validation ───────────────────────────────

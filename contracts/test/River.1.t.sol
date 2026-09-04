@@ -34,11 +34,20 @@ import "../src/RedeemManager.1.sol";
 
 contract MockDepositDataBuffer is IDepositDataBuffer {
     mapping(bytes32 => DepositObject) internal _batches;
+    mapping(bytes32 => uint256) internal _nonce;
     mapping(bytes32 => bool) internal _exists;
+    mapping(bytes32 => bool) internal _processed;
+    address internal _processor;
+    uint256 public lastQueuedIdx;
+
+    constructor(address processor) {
+        _processor = processor;
+    }
 
     function submitDepositData(bytes32 depositDataBufferId, DepositObject calldata batch) external {
         if (_exists[depositDataBufferId]) revert DepositDataBufferIdAlreadyExists(depositDataBufferId);
         _exists[depositDataBufferId] = true;
+        _nonce[depositDataBufferId] = lastQueuedIdx;
         DepositObject storage stored = _batches[depositDataBufferId];
         for (uint256 i = 0; i < batch.deposits.length; i++) {
             stored.deposits.push(batch.deposits[i]);
@@ -46,20 +55,49 @@ contract MockDepositDataBuffer is IDepositDataBuffer {
         for (uint256 i = 0; i < batch.topUps.length; i++) {
             stored.topUps.push(batch.topUps[i]);
         }
-        emit DepositDataSubmitted(depositDataBufferId, batch.deposits.length, batch.topUps.length);
+        emit DepositDataSubmitted(depositDataBufferId, lastQueuedIdx, batch.deposits.length, batch.topUps.length);
+        ++lastQueuedIdx;
     }
 
-    function getDepositData(bytes32 depositDataBufferId) external view returns (DepositObject memory) {
+    function getDepositData(bytes32 depositDataBufferId) external view returns (DepositObject memory, uint256 nonce) {
         if (!_exists[depositDataBufferId]) revert DepositDataBufferIdNotFound(depositDataBufferId);
-        return _batches[depositDataBufferId];
+        return (_batches[depositDataBufferId], _nonce[depositDataBufferId]);
     }
 
-    function getWriter() external pure returns (address) {
+    function markDepositDataProcessed(bytes32 depositDataBufferId) external {
+        if (msg.sender != _processor) revert OnlyProcessor();
+        if (!_exists[depositDataBufferId]) revert DepositDataBufferIdNotFound(depositDataBufferId);
+        if (_processed[depositDataBufferId]) revert DepositDataAlreadyProcessed(depositDataBufferId);
+        _processed[depositDataBufferId] = true;
+        emit DepositDataProcessed(depositDataBufferId);
+    }
+
+    function isDepositDataProcessed(bytes32 depositDataBufferId) external view returns (bool) {
+        return _processed[depositDataBufferId];
+    }
+
+    function setProducer(address) external {}
+
+    function setProcessor(address) external {}
+
+    function getProducer() external pure returns (address) {
         return address(0);
     }
+
+    function proposeAdmin(address) external {}
+
+    function acceptAdmin() external {}
 
     function getAdmin() external pure returns (address) {
         return address(0);
+    }
+
+    function getPendingAdmin() external pure returns (address) {
+        return address(0);
+    }
+
+    function getProcessor() external view returns (address) {
+        return _processor;
     }
 }
 
@@ -144,7 +182,7 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
         keccak256("Attest(bytes32 depositDataBufferId,bytes32 depositRootHash)");
     bytes32 internal constant CONSOLIDATION_NAME_HASH = keccak256("ConsolidationValidation");
     bytes32 internal constant ATTEST_CONSOLIDATION_TYPEHASH = keccak256(
-        "AttestConsolidation(address withdrawalAddress,bytes[] sourcePubkeys,bytes[] targetPubkeys,uint256 totalAmount)"
+        "AttestConsolidation(address withdrawalAddress,bytes[] sourcePubkeys,bytes[] targetPubkeys,uint256 totalAmount,uint256[] exitEpoch)"
     );
 
     address internal admin;
@@ -251,7 +289,7 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
         LibImplementationUnbricker.unbrick(vm, address(river));
         operatorsRegistry = new OperatorsRegistryWithOverridesV1();
         LibImplementationUnbricker.unbrick(vm, address(operatorsRegistry));
-        depositBuffer = new MockDepositDataBuffer();
+        depositBuffer = new MockDepositDataBuffer(address(river));
 
         allowlist.initAllowlistV1(admin, allower);
         allowlist.initAllowlistV1_1(denier);
@@ -294,6 +332,15 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
         return keccak256(abi.encodePacked(hashes));
     }
 
+    function _hashUintArray(uint256[] memory arr) internal pure returns (bytes32) {
+        return keccak256(abi.encodePacked(arr));
+    }
+
+    /// @dev Canonical per-pair exit-epoch array: one zero entry per consolidation pair.
+    function _defaultEpochs(uint256 count) internal pure returns (uint256[] memory arr) {
+        arr = new uint256[](count);
+    }
+
     function _consolidationDigest(
         address withdrawalAddress,
         bytes[] memory sources,
@@ -309,7 +356,8 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
                 withdrawalAddress,
                 _hashBytesArray(sources),
                 _hashBytesArray(targets),
-                totalAmount
+                totalAmount,
+                _hashUintArray(_defaultEpochs(sources.length))
             )
         );
         return keccak256(abi.encodePacked("\x19\x01", domainSep, structHash));
@@ -340,6 +388,7 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
             sourcePubkeys: sources,
             targetPubkeys: targets,
             totalAmount: totalAmount,
+            exitEpoch: _defaultEpochs(sources.length),
             signatures: sigs
         });
     }
@@ -397,7 +446,7 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
         }
         _pubkeySeedCursor = seedBase + total;
 
-        bytes32 bufferId = keccak256(abi.encode(batch));
+        bytes32 bufferId = keccak256(abi.encode(batch, depositBuffer.lastQueuedIdx()));
         depositBuffer.submitDepositData(bufferId, batch);
 
         bytes32 rootHash = deposit.get_deposit_root();
@@ -440,7 +489,7 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
         });
         _pubkeySeedCursor = seed + 1;
 
-        bufferId = keccak256(abi.encode(batch));
+        bufferId = keccak256(abi.encode(batch, depositBuffer.lastQueuedIdx()));
         depositBuffer.submitDepositData(bufferId, batch);
         rootHash = deposit.get_deposit_root();
 
@@ -3059,10 +3108,11 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         _rootAttesters_[1] = makeAddr("rootAttester2");
         address[] memory _consolidationCommitteeAttesters_ = new address[](1);
         _consolidationCommitteeAttesters_[0] = makeAddr("consolidationCommitteeAttesterStub");
+        MockDepositDataBuffer mockBuffer = new MockDepositDataBuffer(_river);
         v = new AttestationVerifierV1();
         LibImplementationUnbricker.unbrick(vm, address(v));
         v.initAttestationVerifierV1(
-            _river, makeAddr("depositBuffer"), _rootAttesters_, 1, bytes4(0), _consolidationCommitteeAttesters_, 1
+            _river, address(mockBuffer), _rootAttesters_, 1, bytes4(0), _consolidationCommitteeAttesters_, 1
         );
     }
 
@@ -4220,6 +4270,7 @@ contract RiverV1ConsolidationMintTests is RiverV1TestBase {
             sourcePubkeys: sources,
             targetPubkeys: targets,
             totalAmount: totalAmount,
+            exitEpoch: _defaultEpochs(sources.length),
             signatures: sigs
         });
     }
@@ -4235,7 +4286,8 @@ contract RiverV1ConsolidationMintTests is RiverV1TestBase {
                 consolidation.withdrawalAddress,
                 _hashBytesArray(consolidation.sourcePubkeys),
                 _hashBytesArray(consolidation.targetPubkeys),
-                consolidation.totalAmount
+                consolidation.totalAmount,
+                _hashUintArray(consolidation.exitEpoch)
             )
         );
     }
