@@ -18,6 +18,7 @@ import "./state/redeemManager/BufferedExceedingEth.sol";
 import "./state/redeemManager/RedeemDemand.sol";
 import "./state/redeemManager/RateMarkStack.sol";
 import "./state/redeemManager/RedeemRequestAnchor.sol";
+import "./state/redeemManager/RateMarkFloor.sol";
 
 /// @title Redeem Manager (v1)
 /// @author Alluvial Finance Inc.
@@ -68,8 +69,25 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
         emit SetRiver(_river);
     }
 
+    /// @inheritdoc IRedeemManagerV1
     function initializeRedeemManagerV1_2() external init(1) {
         _redeemQueueMigrationV1_2();
+    }
+
+    /// @inheritdoc IRedeemManagerV1
+    function initializeRedeemManagerV1_3() external init(2) {
+        // Pin the launch cutover for stopped-earning accrual at the end of the existing queue, so the
+        // requests already pending at upgrade time neither accrue (they have no anchor) nor consume the
+        // marks that the first post-upgrade cohort is owed.
+        RedeemQueueV2.RedeemRequest[] storage redeemRequests = RedeemQueueV2.get();
+        uint256 requestCount = redeemRequests.length;
+        uint256 floor = 0;
+        if (requestCount > 0) {
+            RedeemQueueV2.RedeemRequest storage lastRequest = redeemRequests[requestCount - 1];
+            floor = lastRequest.height + lastRequest.amount;
+        }
+        RateMarkFloor.set(floor);
+        emit SetRateMarkFloor(floor);
     }
 
     function _redeemQueueMigrationV1_2() internal {
@@ -119,6 +137,11 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
         returns (WithdrawalStack.WithdrawalEvent memory)
     {
         return WithdrawalStack.get()[_withdrawalEventId];
+    }
+
+    /// @inheritdoc IRedeemManagerV1
+    function getRateMarkFloor() external view returns (uint256) {
+        return RateMarkFloor.get();
     }
 
     /// @inheritdoc IRedeemManagerV1
@@ -268,6 +291,12 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
         uint256 settledHeight = _settledHeight();
         if (settledHeight > markStart) {
             markStart = settledHeight;
+        }
+        // Never mark below the launch cutover. Pre-upgrade requests cannot use a mark, so letting the
+        // cursor cover them would burn credit owed to the first post-upgrade cohort.
+        uint256 floor = RateMarkFloor.get();
+        if (floor > markStart) {
+            markStart = floor;
         }
 
         uint256 reportedLsETH = _stoppedEarningLsETH;

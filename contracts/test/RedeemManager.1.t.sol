@@ -138,6 +138,7 @@ contract RedeeManagerV1TestBase is Test {
     event ReportedWithdrawal(uint256 height, uint256 size, uint256 ethAmount, uint32 id);
     event ReportedStoppedEarning(uint256 height, uint256 amount, uint256 markedEth, uint32 id);
     event StoppedEarningExceededMarkableDemand(uint256 reportedLsETH, uint256 markedLsETH);
+    event SetRateMarkFloor(uint256 floor);
     event SatisfiedRedeemRequest(
         uint32 indexed redeemRequestId,
         uint32 indexed withdrawalEventId,
@@ -1695,6 +1696,23 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         return redeemManager.requestRedeem(amount, user);
     }
 
+    /// @dev Puts the contract in the state a live deployment is in just before the stopped-earning
+    ///      upgrade, then applies it. setUp only runs initializeRedeemManagerV1, leaving the version at
+    ///      1, whereas mainnet is already at 2.
+    /// @dev The version is poked rather than reached by calling initializeRedeemManagerV1_2, because
+    ///      RedeemQueueV1 and RedeemQueueV2 share the storage slot
+    ///      keccak256("river.state.redeemQueue") - 1. Its migration re-interprets that array in place and
+    ///      is only safe because init(1) runs it exactly once, before any V2 request exists. Running it
+    ///      over a populated V2 queue silently corrupts every element.
+    function _pokeVersionTo(uint256 version) internal {
+        vm.store(address(redeemManager), bytes32(uint256(keccak256("river.state.version")) - 1), bytes32(version));
+    }
+
+    function _upgradeToV1_3() internal {
+        _pokeVersionTo(2);
+        redeemManager.initializeRedeemManagerV1_3();
+    }
+
     /// @dev Settles `lsETH` of demand at the current pool rate and claims request `id` in full.
     function _settleAndClaim(uint32 id, uint256 lsETH, uint256 settlementRate) internal returns (uint256 received) {
         uint256 withdrawnEth = applyRate(lsETH, settlementRate);
@@ -1977,6 +1995,907 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
 
         uint256 received = _settleAndClaim(id, 30e18, 1.05e18);
         assertEq(received, applyRate(30e18, 1e18));
+    }
+
+    /// The launch cutover. initializeRedeemManagerV1_3 pins the mark floor at the end of the queue as
+    /// it stands at upgrade time, so demand that was already pending is excluded from accrual.
+    function testInitializeV1_3PinsFloorAtCurrentQueueEnd() external {
+        address user = _generateAllowlistedUser(0);
+        river.sudoSetRate(1e18);
+        _openRequest(user, 30e18);
+        _openRequest(user, 20e18);
+
+        assertEq(redeemManager.getRateMarkFloor(), 0);
+        _pokeVersionTo(2);
+        vm.expectEmit(true, true, true, true);
+        emit SetRateMarkFloor(50e18);
+        redeemManager.initializeRedeemManagerV1_3();
+        assertEq(redeemManager.getRateMarkFloor(), 50e18);
+    }
+
+    function testInitializeV1_3OnEmptyQueuePinsZero() external {
+        _upgradeToV1_3();
+        assertEq(redeemManager.getRateMarkFloor(), 0);
+    }
+
+    function testInitializeV1_3Twice() external {
+        _upgradeToV1_3();
+        vm.expectRevert(abi.encodeWithSignature("InvalidInitialization(uint256,uint256)", 2, 3));
+        redeemManager.initializeRedeemManagerV1_3();
+    }
+
+    /// Without the floor, marks would start at the head of the queue and be consumed by pre-upgrade
+    /// requests, which have no anchor and so cannot use them — silently short-changing the first
+    /// post-upgrade cohort by exactly that amount. This is the regression the floor exists to prevent:
+    /// the post-upgrade request must receive the full mark.
+    function testFloorStopsLegacyDemandFromConsumingMarks() external {
+        address user = _generateAllowlistedUser(0);
+        river.sudoSetRate(1e18);
+
+        // a pre-upgrade request, still pending at upgrade time
+        uint32 legacy = _openRequest(user, 30e18);
+        bytes32 anchorSlot =
+            keccak256(abi.encode(uint256(legacy), bytes32(uint256(keccak256("river.state.redeemRequestAnchor")) - 1)));
+        vm.store(address(redeemManager), anchorSlot, bytes32(0));
+        vm.store(address(redeemManager), bytes32(uint256(anchorSlot) + 1), bytes32(0));
+
+        _upgradeToV1_3();
+        assertEq(redeemManager.getRateMarkFloor(), 30e18);
+
+        // a post-upgrade request
+        uint32 fresh = _openRequest(user, 30e18);
+
+        // stopped-earning principal worth exactly one request
+        river.sudoSetRate(1.05e18);
+        river.sudoReportStoppedEarning(address(redeemManager), applyRate(30e18, 1.05e18));
+
+        // the mark starts past the legacy request, not at 0
+        assertEq(redeemManager.getRateMarkDetails(0).height, 30e18);
+        assertEq(redeemManager.getRateMarkDetails(0).amount, 30e18);
+
+        // legacy settles first and is unaffected: still capped at its request rate
+        uint256 legacyWithdrawn = applyRate(30e18, 1.05e18);
+        vm.deal(address(this), legacyWithdrawn);
+        river.sudoReportWithdraw{value: legacyWithdrawn}(address(redeemManager), 30e18);
+        uint32[] memory legacyIds = new uint32[](1);
+        legacyIds[0] = legacy;
+        uint32[] memory legacyEvents = new uint32[](1);
+        legacyEvents[0] = 0;
+        uint256 beforeLegacy = user.balance;
+        redeemManager.claimRedeemRequests(legacyIds, legacyEvents);
+        assertEq(user.balance - beforeLegacy, applyRate(30e18, 1e18));
+
+        // and the post-upgrade request gets the whole mark
+        uint256 received = _settleAndClaim(fresh, 30e18, 1.05e18);
+        assertEq(received, applyRate(30e18, 1.05e18));
+    }
+
+    /// The floor must not strand credit when it sits above the settled height: once demand grows past
+    /// the floor, marking resumes normally from the floor.
+    function testMarkingResumesAboveFloor() external {
+        address user = _generateAllowlistedUser(0);
+        river.sudoSetRate(1e18);
+        _openRequest(user, 30e18);
+        _upgradeToV1_3();
+
+        // nothing markable yet: all demand is below the floor
+        river.sudoReportStoppedEarning(address(redeemManager), 100e18);
+        assertEq(redeemManager.getRateMarkCount(), 0);
+
+        uint32 fresh = _openRequest(user, 10e18);
+        river.sudoSetRate(1.02e18);
+        river.sudoReportStoppedEarning(address(redeemManager), applyRate(10e18, 1.02e18));
+
+        assertEq(redeemManager.getRateMarkCount(), 1);
+        assertEq(redeemManager.getRateMarkDetails(0).height, 30e18);
+        assertEq(redeemManager.getRateMarkDetails(0).amount, 10e18);
+        assertEq(redeemManager.getRedeemRequestAnchor(fresh).lsETHAtRequest, 10e18);
+    }
+
+    /// reportStoppedEarning is the one function that mints payout entitlement, yet had no negative
+    /// test: onlyRiver is the sole gate standing between an arbitrary caller and forging a rate
+    /// mark that raises another user's payout cap. Exercised from both a plain EOA and a
+    /// highly-motivated allowlisted redeemer who already has an open request of their own to
+    /// inflate.
+    function testReportStoppedEarningRevertsForNonRiverCaller() external {
+        address stranger = makeAddr("stranger");
+        address redeemer = _generateAllowlistedUser(0);
+        river.sudoSetRate(1e18);
+        _openRequest(redeemer, 30e18);
+
+        vm.prank(stranger);
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", stranger));
+        redeemManager.reportStoppedEarning(30e18, 30e18);
+
+        vm.prank(redeemer);
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", redeemer));
+        redeemManager.reportStoppedEarning(30e18, 30e18);
+
+        assertEq(redeemManager.getRateMarkCount(), 0);
+
+        // River itself can still push a legitimate mark after both attack attempts were rejected
+        river.sudoReportStoppedEarning(address(redeemManager), 30e18);
+        assertEq(redeemManager.getRateMarkCount(), 1);
+    }
+
+    /// @dev Settles `lsETH` of demand at `settlementRate` and claims request `id` using whatever
+    ///      withdrawal event currently resolves for it, without asserting the request is fully
+    ///      resolved afterwards. Companion to _settleAndClaim for tests that need to observe state
+    ///      BETWEEN two partial fills of the same request.
+    function _reportWithdrawAndClaim(uint32 id, uint256 lsETH, uint256 settlementRate)
+        internal
+        returns (uint256 received)
+    {
+        uint256 withdrawnEth = applyRate(lsETH, settlementRate);
+        vm.deal(address(this), withdrawnEth);
+        river.sudoReportWithdraw{value: withdrawnEth}(address(redeemManager), lsETH);
+
+        uint32[] memory ids = new uint32[](1);
+        ids[0] = id;
+        int64[] memory resolved = redeemManager.resolveRedeemRequests(ids);
+        uint32[] memory eventIds = new uint32[](1);
+        eventIds[0] = uint32(uint64(resolved[0]));
+
+        address recipient = redeemManager.getRedeemRequestDetails(id).recipient;
+        uint256 before = recipient.balance;
+        redeemManager.claimRedeemRequests(ids, eventIds);
+        return recipient.balance - before;
+    }
+
+    /// _claimRedeemRequest's maxRedeemableEth decrement is saturating, not checked, because a
+    /// marked payout may legitimately exceed the request-time ETH budget: once the field floors at
+    /// 0, a checked subtraction on a LATER fill of the same request would revert the entire
+    /// claimRedeemRequests call with Panic(0x11). Every existing marked-request test claims in one
+    /// shot, so this post-saturation state -- and the fact that the cap keeps paying the mark rate
+    /// afterwards, recomputed from the anchor and the marks rather than from the exhausted budget
+    /// -- was never observed. The second claim below succeeding at all is the regression guard: a
+    /// reintroduced checked decrement would revert it with Panic(0x11).
+    function testMultiFillOfMarkedRequestSaturatesMaxRedeemableEthWithoutReverting() external {
+        address user = _generateAllowlistedUser(0);
+        river.sudoSetRate(1e18);
+        uint32 id = _openRequest(user, 30e18);
+        assertEq(redeemManager.getRedeemRequestDetails(id).maxRedeemableEth, 30e18);
+
+        // the whole request's backing principal stopped earning at an appreciated rate: the
+        // entitled payout (48) now exceeds the request-time budget (30) recorded on
+        // maxRedeemableEth
+        river.sudoSetRate(1.6e18);
+        river.sudoReportStoppedEarning(address(redeemManager), applyRate(30e18, 1.6e18));
+        assertEq(redeemManager.getRateMarkDetails(0).markedEth, applyRate(30e18, 1.6e18));
+
+        river.sudoSetRate(1.6e18);
+        uint256 received1 = _reportWithdrawAndClaim(id, 20e18, 1.6e18);
+
+        assertEq(received1, applyRate(20e18, 1.6e18));
+        // 20 LsETH at the mark rate is already worth more than the entire 30 ETH budget: the
+        // saturating subtraction floors at 0 instead of reverting
+        assertEq(redeemManager.getRedeemRequestDetails(id).maxRedeemableEth, 0);
+        assertEq(redeemManager.getRedeemRequestDetails(id).amount, 10e18);
+
+        // the remaining 10 LsETH settles at the same mark rate; the decrement is now 0 - 16 ETH,
+        // which would Panic(0x11) under checked arithmetic
+        uint256 received2 = _reportWithdrawAndClaim(id, 10e18, 1.6e18);
+
+        assertEq(received2, applyRate(10e18, 1.6e18));
+        assertEq(received1 + received2, applyRate(30e18, 1.6e18));
+        assertEq(redeemManager.getRedeemRequestDetails(id).amount, 0);
+        assertEq(redeemManager.getBufferedExceedingEth(), 0);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Fuzz / property coverage for the slice-cap math
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /// @dev Deploys a fresh, independent RiverMock + RedeemManagerV1 pair sharing this test's
+    ///      allowlist, so a scenario can be replayed from a clean slate without disturbing the
+    ///      contract-level `redeemManager`/`river` used by every other test.
+    function _deployFreshManager() internal returns (RiverMock riverInstance, RedeemManagerV1 managerInstance) {
+        managerInstance = new RedeemManagerV1();
+        LibImplementationUnbricker.unbrick(vm, address(managerInstance));
+        riverInstance = new RiverMock(address(allowlist));
+        managerInstance.initializeRedeemManagerV1(address(riverInstance));
+    }
+
+    /// Property: the payout for a (possibly partially marked) request can never exceed the
+    /// request's cap -- request-time rate over any unmarked remainder, the mark's locked rate over
+    /// the marked span -- and can never exceed the ETH the matching withdrawal event actually
+    /// supplied. Whichever of the two binds, the shortfall is exactly what lands in the
+    /// exceeding-eth buffer. Fuzzes the request size, the request-time rate, how much of the
+    /// request is marked, the mark's locked rate and the settlement rate independently, so no
+    /// single hand-picked scenario can mask a rounding or ordering bug in _sliceCap.
+    function testFuzz_MarkedRequestPayoutRespectsCapAndConservesEth(
+        uint256 _amount,
+        uint256 _requestRate,
+        uint256 _markedFraction,
+        uint256 _markRate,
+        uint256 _settlementRate
+    ) external {
+        uint256 amount = bound(_amount, 1, 1_000_000 ether);
+        uint256 requestRate = bound(_requestRate, 0.5e18, 2e18);
+        uint256 markedFraction = bound(_markedFraction, 0, 1e18);
+        uint256 markRate = bound(_markRate, 0.5e18, 2e18);
+        uint256 settlementRate = bound(_settlementRate, 0.5e18, 2e18);
+
+        address user = _generateAllowlistedUser(0);
+        river.sudoSetRate(requestRate);
+        uint32 id = _openRequest(user, amount);
+
+        uint256 markedAmount = (amount * markedFraction) / 1e18;
+        // reportStoppedEarning no-ops when EITHER leg of the reported pair is zero (see its own
+        // guard comment): a tiny markedAmount combined with a sub-1.0 markRate can floor the eth
+        // leg to 0 even though markedAmount itself is nonzero, so mirror that exact condition here
+        // rather than assuming markedAmount > 0 alone means a mark landed.
+        uint256 markedEthForReport = applyRate(markedAmount, markRate);
+        bool marked = markedAmount > 0 && markedEthForReport > 0;
+        if (marked) {
+            river.sudoReportStoppedEarningAt(address(redeemManager), markedEthForReport, markedAmount);
+            assertEq(redeemManager.getRateMarkCount(), 1);
+        } else {
+            assertEq(redeemManager.getRateMarkCount(), 0);
+        }
+
+        RedeemRequestAnchor.Anchor memory anchor = redeemManager.getRedeemRequestAnchor(id);
+
+        uint256 expectedCap;
+        if (!marked) {
+            expectedCap = (amount * anchor.ethAtRequest) / anchor.lsETHAtRequest;
+        } else {
+            uint256 markedEth = redeemManager.getRateMarkDetails(0).markedEth;
+            uint256 unmarkedAmount = amount - markedAmount;
+            uint256 gapEth = unmarkedAmount == 0 ? 0 : (unmarkedAmount * anchor.ethAtRequest) / anchor.lsETHAtRequest;
+            expectedCap = markedEth + gapEth;
+        }
+
+        uint256 received = _settleAndClaim(id, amount, settlementRate);
+        uint256 withdrawnEth = applyRate(amount, settlementRate);
+
+        // solvency: never paid more than the withdrawal event actually supplied
+        assertLe(received, withdrawnEth);
+        // cap ceiling: never paid more than the request's cap allows
+        assertLe(received, expectedCap);
+        // exact: the payout is precisely whichever of the two binds
+        assertEq(received, withdrawnEth < expectedCap ? withdrawnEth : expectedCap);
+        // conservation: nothing is created or destroyed, only redirected to the exceeding buffer
+        assertEq(redeemManager.getBufferedExceedingEth(), withdrawnEth - received);
+    }
+
+    /// Property: across a cohort of requests -- some marked, some not -- every wei a withdrawal
+    /// event supplies is accounted for exactly once: either paid to a recipient or redirected to
+    /// the exceeding-eth buffer. testFuzz_MarkedRequestPayoutRespectsCapAndConservesEth only checks
+    /// this in isolation for a single request; this is the multi-request cohort form.
+    function testFuzz_ConservationAcrossMixedMarkedAndUnmarkedCohort(
+        uint256 _amountA,
+        uint256 _amountB,
+        uint256 _requestRateA,
+        uint256 _requestRateB,
+        uint256 _markRate,
+        uint256 _settlementRate
+    ) external {
+        uint256 amountA = bound(_amountA, 1, 500_000 ether);
+        uint256 amountB = bound(_amountB, 1, 500_000 ether);
+        uint256 requestRateA = bound(_requestRateA, 0.5e18, 2e18);
+        uint256 requestRateB = bound(_requestRateB, 0.5e18, 2e18);
+        uint256 markRate = bound(_markRate, 0.5e18, 2e18);
+        uint256 settlementRate = bound(_settlementRate, 0.5e18, 2e18);
+
+        address userA = _generateAllowlistedUser(0);
+        address userB = _generateAllowlistedUser(1);
+
+        river.sudoSetRate(requestRateA);
+        uint32 idA = _openRequest(userA, amountA);
+        river.sudoSetRate(requestRateB);
+        uint32 idB = _openRequest(userB, amountB);
+
+        // only the first request's principal is ever reported as having stopped earning (a no-op
+        // if amountA is too small for the reported pair to clear reportStoppedEarning's own
+        // dual-nonzero guard, which the conservation property must hold under regardless)
+        river.sudoReportStoppedEarningAt(address(redeemManager), applyRate(amountA, markRate), amountA);
+
+        river.sudoSetRate(settlementRate);
+
+        // each request settles against its own dedicated withdrawal event -- a shared event would
+        // additionally introduce a few wei of pro-rata rounding dust that is orthogonal to the
+        // property under test here (see _claimRedeemRequest's ethAmount computation)
+        uint256 receivedA = _settleAndClaim(idA, amountA, settlementRate);
+        uint256 receivedB = _settleAndClaim(idB, amountB, settlementRate);
+
+        uint256 totalWithdrawn = applyRate(amountA, settlementRate) + applyRate(amountB, settlementRate);
+        assertEq(totalWithdrawn, receivedA + receivedB + redeemManager.getBufferedExceedingEth());
+    }
+
+    /// Property: splitting a marked request's settlement into two separate withdrawal events and
+    /// claiming each with its own claimRedeemRequests call never pays MORE, in total, than settling
+    /// and claiming the identical request whole in a single event. Guards the
+    /// `(markedAmount * mark.markedEth) / markAmount` division in _sliceCap's case 3: a rounding
+    /// bug there would show up as the split path leaking extra wei across additional claims.
+    function testFuzz_SplitClaimNeverPaysMoreThanWholeClaim(
+        uint256 _amount,
+        uint256 _requestRate,
+        uint256 _markRate,
+        uint256 _settlementRate,
+        uint256 _splitPoint
+    ) external {
+        uint256 amount = bound(_amount, 2, 1_000_000 ether);
+        uint256 requestRate = bound(_requestRate, 0.5e18, 2e18);
+        uint256 markRate = bound(_markRate, 0.5e18, 2e18);
+        uint256 settlementRate = bound(_settlementRate, 0.5e18, 2e18);
+        uint256 splitPoint = bound(_splitPoint, 1, amount - 1);
+
+        address user = _generateAllowlistedUser(0);
+
+        (RiverMock riverWhole, RedeemManagerV1 rmWhole) = _deployFreshManager();
+        riverWhole.sudoSetRate(requestRate);
+        riverWhole.sudoDeal(user, amount);
+        vm.prank(user);
+        riverWhole.approve(address(rmWhole), amount);
+        vm.prank(user);
+        uint32 idWhole = rmWhole.requestRedeem(amount, user);
+        riverWhole.sudoReportStoppedEarningAt(address(rmWhole), applyRate(amount, markRate), amount);
+        riverWhole.sudoSetRate(settlementRate);
+        uint256 wholeEth = applyRate(amount, settlementRate);
+        vm.deal(address(this), wholeEth);
+        riverWhole.sudoReportWithdraw{value: wholeEth}(address(rmWhole), amount);
+
+        uint32[] memory idsW = new uint32[](1);
+        idsW[0] = idWhole;
+        uint32[] memory eventsW = new uint32[](1);
+        eventsW[0] = 0;
+        uint256 beforeWhole = user.balance;
+        rmWhole.claimRedeemRequests(idsW, eventsW);
+        uint256 receivedWhole = user.balance - beforeWhole;
+
+        (RiverMock riverSplit, RedeemManagerV1 rmSplit) = _deployFreshManager();
+        riverSplit.sudoSetRate(requestRate);
+        riverSplit.sudoDeal(user, amount);
+        vm.prank(user);
+        riverSplit.approve(address(rmSplit), amount);
+        vm.prank(user);
+        uint32 idSplit = rmSplit.requestRedeem(amount, user);
+        riverSplit.sudoReportStoppedEarningAt(address(rmSplit), applyRate(amount, markRate), amount);
+        riverSplit.sudoSetRate(settlementRate);
+
+        // the identical total settlement, delivered as two withdrawal events instead of one, each
+        // claimed with its own top-level claimRedeemRequests call
+        uint256 firstEth = applyRate(splitPoint, settlementRate);
+        vm.deal(address(this), firstEth);
+        riverSplit.sudoReportWithdraw{value: firstEth}(address(rmSplit), splitPoint);
+
+        uint32[] memory idsS = new uint32[](1);
+        idsS[0] = idSplit;
+        int64[] memory resolved1 = rmSplit.resolveRedeemRequests(idsS);
+        uint32[] memory events1 = new uint32[](1);
+        events1[0] = uint32(uint64(resolved1[0]));
+        uint256 beforeSplit = user.balance;
+        rmSplit.claimRedeemRequests(idsS, events1);
+
+        uint256 secondEth = applyRate(amount - splitPoint, settlementRate);
+        vm.deal(address(this), secondEth);
+        riverSplit.sudoReportWithdraw{value: secondEth}(address(rmSplit), amount - splitPoint);
+        int64[] memory resolved2 = rmSplit.resolveRedeemRequests(idsS);
+        uint32[] memory events2 = new uint32[](1);
+        events2[0] = uint32(uint64(resolved2[0]));
+        rmSplit.claimRedeemRequests(idsS, events2);
+
+        uint256 receivedSplit = user.balance - beforeSplit;
+
+        assertLe(receivedSplit, receivedWhole);
+    }
+
+    // -----------------------------------------------------------------------
+    // Gap-analysis HIGH items: _sliceCap walk and the claim path
+    // -----------------------------------------------------------------------
+
+    /// HIGH-5: `_findRateMarkAtOrBefore` only answers "which mark STARTS at or before this
+    /// position" -- it is a plain predecessor search over a non-contiguous stack, so the mark it
+    /// returns can end well below the slice's start. Every existing test starts a slice either
+    /// inside a mark, below every mark, or past the last mark, so the "candidate mark is stale and
+    /// must be discarded" branch (`sliceCursor >= markEnd`) has never fired. Here mark A ends at
+    /// 40e18 and mark B starts at 50e18; the claim's first sub-slice starts at 45e18, so the
+    /// predecessor search hands back stale mark A and case 2 must discard it before the walk can
+    /// reach the real gap-then-B pricing.
+    function testSliceCapDiscardsStaleMarkWhenSliceStartsPastItsEnd() external {
+        address userPre = _generateAllowlistedUser(0);
+        address userTest = _generateAllowlistedUser(1);
+        river.sudoSetRate(1e18);
+
+        // soaks up positions [0, 45e18) so the test request starts exactly at 45e18
+        _openRequest(userPre, 45e18);
+        uint32 idTest = _openRequest(userTest, 20e18);
+
+        // settle [0, 30e18) without marking it
+        vm.deal(address(this), 30e18);
+        river.sudoReportWithdraw{value: 30e18}(address(redeemManager), 30e18);
+
+        // mark A: [30e18, 40e18) at 1.02
+        river.sudoReportStoppedEarningAt(address(redeemManager), applyRate(10e18, 1.02e18), 10e18);
+        assertEq(redeemManager.getRateMarkDetails(0).height, 30e18);
+
+        // settle [30e18, 50e18), skipping [40e18, 50e18) so it becomes a permanent gap
+        vm.deal(address(this), applyRate(20e18, 1.02e18));
+        river.sudoReportWithdraw{value: applyRate(20e18, 1.02e18)}(address(redeemManager), 20e18);
+
+        // mark B: [50e18, 60e18) at 1.05
+        river.sudoReportStoppedEarningAt(address(redeemManager), applyRate(10e18, 1.05e18), 10e18);
+        assertEq(redeemManager.getRateMarkDetails(1).height, 50e18);
+
+        // settle the remainder, [50e18, 65e18), which fully covers mark B plus a trailing gap
+        vm.deal(address(this), applyRate(15e18, 1.05e18));
+        river.sudoReportWithdraw{value: applyRate(15e18, 1.05e18)}(address(redeemManager), 15e18);
+
+        assertEq(redeemManager.getRateMarkCount(), 2);
+
+        uint32[] memory ids = new uint32[](1);
+        ids[0] = idTest;
+        int64[] memory resolved = redeemManager.resolveRedeemRequests(ids);
+        uint32[] memory eventIds = new uint32[](1);
+        eventIds[0] = uint32(uint64(resolved[0]));
+
+        uint256 before = userTest.balance;
+        redeemManager.claimRedeemRequests(ids, eventIds);
+        uint256 received = userTest.balance - before;
+
+        // [45,50) is an unmarked gap (5e18 @ request rate 1.0) then [50,60) is mark B (@ 1.05)
+        // then [60,65) is past every mark (5e18 @ request rate 1.0)
+        uint256 expected = applyRate(5e18, 1e18) + applyRate(10e18, 1.05e18) + applyRate(5e18, 1e18);
+        assertEq(received, expected);
+        assertEq(received, 20.5e18);
+        assertEq(redeemManager.getBufferedExceedingEth(), 0.35e18);
+    }
+
+    /// HIGH-6: the whole reason RateMarkStack is non-contiguous is that a single request can be
+    /// backed by an exit that only covers part of it, with an unmarked stretch in between two
+    /// exits. Existing coverage has either two ADJACENT marks or a gap with nothing after it;
+    /// never mark -> gap -> mark inside the span of one request. Note: because WithdrawalStack is
+    /// strictly contiguous while a RateMarkStack gap can only be created by letting settlement
+    /// outrun the mark cursor (see `reportStoppedEarning`'s use of `_settledHeight()`), the gap's
+    /// end is unavoidably a withdrawal-event boundary too -- so this necessarily settles across
+    /// two withdrawal events rather than one. What matters, and what this asserts, is the single
+    /// user-facing claim: one `claimRedeemRequests` call, auto-recursing across both events, must
+    /// pay exactly the mark-A + gap + mark-B sum, with mark A and mark B priced at deliberately
+    /// different rates so a mis-attribution between them cannot hide.
+    function testMarkGapMarkAlternationWithinSingleClaimSumsExactly() external {
+        address user = _generateAllowlistedUser(0);
+        river.sudoSetRate(1e18);
+        uint32 id = _openRequest(user, 30e18);
+
+        // mark A: [0, 10e18) at 1.02
+        river.sudoReportStoppedEarningAt(address(redeemManager), applyRate(10e18, 1.02e18), 10e18);
+        assertEq(redeemManager.getRateMarkDetails(0).height, 0);
+
+        // settle [0, 20e18): mark A in full, plus a 10e18 gap that is never marked
+        vm.deal(address(this), applyRate(20e18, 1.2e18));
+        river.sudoReportWithdraw{value: applyRate(20e18, 1.2e18)}(address(redeemManager), 20e18);
+
+        // mark B: [20e18, 30e18) at 1.08, a different rate from mark A
+        river.sudoReportStoppedEarningAt(address(redeemManager), applyRate(10e18, 1.08e18), 10e18);
+        assertEq(redeemManager.getRateMarkDetails(1).height, 20e18);
+
+        // settle the rest, [20e18, 30e18), fully covering mark B
+        vm.deal(address(this), applyRate(10e18, 1.2e18));
+        river.sudoReportWithdraw{value: applyRate(10e18, 1.2e18)}(address(redeemManager), 10e18);
+
+        uint32[] memory ids = new uint32[](1);
+        ids[0] = id;
+        int64[] memory resolved = redeemManager.resolveRedeemRequests(ids);
+        uint32[] memory eventIds = new uint32[](1);
+        eventIds[0] = uint32(uint64(resolved[0]));
+
+        uint256 before = user.balance;
+        redeemManager.claimRedeemRequests(ids, eventIds);
+        uint256 received = user.balance - before;
+
+        uint256 markAEth = applyRate(10e18, 1.02e18);
+        uint256 gapEth = applyRate(10e18, 1e18);
+        uint256 markBEth = applyRate(10e18, 1.08e18);
+        assertEq(received, markAEth + gapEth + markBEth);
+        assertEq(received, 31e18);
+
+        uint256 totalWithdrawn = applyRate(20e18, 1.2e18) + applyRate(10e18, 1.2e18);
+        assertEq(redeemManager.getBufferedExceedingEth(), totalWithdrawn - received);
+        assertEq(redeemManager.getBufferedExceedingEth(), 5e18);
+    }
+
+    /// HIGH-7: with at most 2 marks anywhere in the existing suite, `_findRateMarkAtOrBefore`'s
+    /// `while (low < high)` loop iterates at most once, so the `high = mid - 1` branch of the
+    /// round-up predecessor search is plausibly never taken. Builds 6 non-contiguous marks at
+    /// distinct rates (forcing >=3 loop iterations) and drives one request through every
+    /// interesting boundary via a sequence of individually-diagnosable settlements: mark 0 at the
+    /// very head, an adjacent pair (marks 3/4, no gap between them), varying gap widths, and mark 5
+    /// at the tail followed by an unmarked remainder. Each step's expected payout is asserted
+    /// on its own, so a wrong step is attributable to the exact boundary it exercises.
+    function testSliceCapWalksSixNonContiguousMarksAtDistinctRates() external {
+        address user = _generateAllowlistedUser(0);
+        river.sudoSetRate(1e18);
+        uint32 id = _openRequest(user, 100e18);
+
+        // mark 0: [0, 10e18) @ 1.01 -- the very first mark, found without any discard
+        river.sudoReportStoppedEarningAt(address(redeemManager), applyRate(10e18, 1.01e18), 10e18);
+        // settle [0, 15e18): mark 0 in full + a 5e18 gap
+        vm.deal(address(this), applyRate(15e18, 1.2e18));
+        river.sudoReportWithdraw{value: applyRate(15e18, 1.2e18)}(address(redeemManager), 15e18);
+
+        // mark 1: [15e18, 25e18) @ 1.02 -- starts exactly at a mark-height boundary
+        river.sudoReportStoppedEarningAt(address(redeemManager), applyRate(10e18, 1.02e18), 10e18);
+        // settle [15e18, 30e18): mark 1 in full + a 5e18 gap
+        vm.deal(address(this), applyRate(15e18, 1.2e18));
+        river.sudoReportWithdraw{value: applyRate(15e18, 1.2e18)}(address(redeemManager), 15e18);
+
+        // mark 2: [30e18, 40e18) @ 1.03
+        river.sudoReportStoppedEarningAt(address(redeemManager), applyRate(10e18, 1.03e18), 10e18);
+        // settle [30e18, 42e18): mark 2 in full + a narrow 2e18 gap
+        vm.deal(address(this), applyRate(12e18, 1.2e18));
+        river.sudoReportWithdraw{value: applyRate(12e18, 1.2e18)}(address(redeemManager), 12e18);
+
+        // mark 3: [42e18, 50e18) @ 1.04
+        river.sudoReportStoppedEarningAt(address(redeemManager), applyRate(8e18, 1.04e18), 8e18);
+        // mark 4: [50e18, 60e18) @ 1.05, pushed immediately after with no withdrawal in between --
+        // adjacent to mark 3, exercising the zero-gap case among many marks
+        river.sudoReportStoppedEarningAt(address(redeemManager), applyRate(10e18, 1.05e18), 10e18);
+        // settle [42e18, 65e18): marks 3 and 4 in full + a 5e18 gap
+        vm.deal(address(this), applyRate(23e18, 1.2e18));
+        river.sudoReportWithdraw{value: applyRate(23e18, 1.2e18)}(address(redeemManager), 23e18);
+
+        // mark 5: [65e18, 80e18) @ 1.06 -- the last mark, followed by an unmarked tail
+        river.sudoReportStoppedEarningAt(address(redeemManager), applyRate(15e18, 1.06e18), 15e18);
+        // settle [65e18, 100e18): mark 5 in full + a 20e18 unmarked remainder past every mark
+        vm.deal(address(this), applyRate(35e18, 1.2e18));
+        river.sudoReportWithdraw{value: applyRate(35e18, 1.2e18)}(address(redeemManager), 35e18);
+
+        assertEq(redeemManager.getRateMarkCount(), 6);
+        assertEq(redeemManager.getRedeemRequestDetails(id).amount, 100e18);
+
+        // step 1: [0, 15e18) via the first withdrawal event -- mark 0 (case 3) then the gap (case 1)
+        uint256 received1 = _reportWithdrawAndClaimAlreadySettled(id, 0);
+        assertEq(received1, applyRate(10e18, 1.01e18) + applyRate(5e18, 1e18));
+        assertEq(received1, 15.1e18);
+
+        // step 2: [15e18, 30e18) -- landing exactly on mark 1's start (case 3) then its own gap
+        uint256 received2 = _reportWithdrawAndClaimAlreadySettled(id, 1);
+        assertEq(received2, applyRate(10e18, 1.02e18) + applyRate(5e18, 1e18));
+        assertEq(received2, 15.2e18);
+
+        // step 3: [30e18, 42e18) -- mark 2 then a narrow 2e18 gap
+        uint256 received3 = _reportWithdrawAndClaimAlreadySettled(id, 2);
+        assertEq(received3, applyRate(10e18, 1.03e18) + applyRate(2e18, 1e18));
+        assertEq(received3, 12.3e18);
+
+        // step 4: [42e18, 65e18) -- two ADJACENT marks (3 then 4, no gap) then a trailing gap
+        uint256 received4 = _reportWithdrawAndClaimAlreadySettled(id, 3);
+        assertEq(received4, applyRate(8e18, 1.04e18) + applyRate(10e18, 1.05e18) + applyRate(5e18, 1e18));
+        assertEq(received4, 23.82e18);
+
+        // step 5: [65e18, 100e18) -- the last mark, then the `markIndex >= markCount` early return
+        uint256 received5 = _reportWithdrawAndClaimAlreadySettled(id, 4);
+        assertEq(received5, applyRate(15e18, 1.06e18) + applyRate(20e18, 1e18));
+        assertEq(received5, 35.9e18);
+
+        assertEq(redeemManager.getRedeemRequestDetails(id).amount, 0);
+        assertEq(received1 + received2 + received3 + received4 + received5, 102.32e18);
+    }
+
+    /// @dev Resolves and claims request `id` against the withdrawal event at `eventId`, which
+    ///      must already exist (this test pre-reports every withdrawal event up front so the
+    ///      mark heights land exactly where the scenario needs them, then claims step by step).
+    function _reportWithdrawAndClaimAlreadySettled(uint32 id, uint32 eventId) internal returns (uint256 received) {
+        uint32[] memory ids = new uint32[](1);
+        ids[0] = id;
+        uint32[] memory eventIds = new uint32[](1);
+        eventIds[0] = eventId;
+        address recipient = redeemManager.getRedeemRequestDetails(id).recipient;
+        uint256 before = recipient.balance;
+        redeemManager.claimRedeemRequests(ids, eventIds, true, 0);
+        return recipient.balance - before;
+    }
+
+    /// HIGH-7b: sharpens the binary search itself rather than the walk around it. Five marks force
+    /// the round-up midpoint of the very first `while` iteration (`mid = (0 + 4 + 1) / 2 = 2`) to
+    /// land exactly on the middle mark's start, so `rateMarks[mid].height <= _height` is tested at
+    /// an exact equality rather than a strict inequality. A predecessor search that mishandles that
+    /// equality would report a different mark index (self-correcting via `_sliceCap`'s case 2 only
+    /// if it undershoots, never if it overshoots), which this asserts is not the case here.
+    function testFindRateMarkAtOrBeforeResolvesExactEqualityAtBinarySearchMidpoint() external {
+        address user = _generateAllowlistedUser(0);
+        river.sudoSetRate(1e18);
+        uint32 id = _openRequest(user, 100e18);
+
+        // 5 marks, each 10e18 wide with a 10e18 gap after it, at heights 0, 20, 40, 60, 80
+        uint256[5] memory rates = [uint256(1.01e18), 1.02e18, 1.03e18, 1.04e18, 1.05e18];
+        for (uint256 i = 0; i < 5; ++i) {
+            uint256 markStart = i * 20e18;
+            // pushes at exactly `markStart`: settledHeight/cursor already sit there from the
+            // previous iteration's withdrawal, except for i == 0 where both are already 0
+            river.sudoReportStoppedEarningAt(address(redeemManager), applyRate(10e18, rates[i]), 10e18);
+            if (i == 2) {
+                // split this iteration's settlement into a 5e18 slice landing exactly on this
+                // mark's start height, then the remaining 15e18, so a later claim can isolate
+                // the exact-equality boundary without disturbing the heights of later marks
+                vm.deal(address(this), applyRate(5e18, 1.2e18));
+                river.sudoReportWithdraw{value: applyRate(5e18, 1.2e18)}(address(redeemManager), 5e18);
+                vm.deal(address(this), applyRate(15e18, 1.2e18));
+                river.sudoReportWithdraw{value: applyRate(15e18, 1.2e18)}(address(redeemManager), 15e18);
+            } else {
+                vm.deal(address(this), applyRate(20e18, 1.2e18));
+                river.sudoReportWithdraw{value: applyRate(20e18, 1.2e18)}(address(redeemManager), 20e18);
+            }
+            assertEq(redeemManager.getRateMarkDetails(uint32(i)).height, markStart);
+        }
+        assertEq(redeemManager.getRateMarkCount(), 5);
+        assertEq(redeemManager.getWithdrawalEventCount(), 6);
+
+        // claim [0, 40e18) first so the request's height sits exactly on mark 2's start
+        _reportWithdrawAndClaimAlreadySettled(id, 0); // consumes [0,20)
+        _reportWithdrawAndClaimAlreadySettled(id, 1); // consumes [20,40)
+
+        // event 2 is exactly [40e18, 45e18): sliceStart lands precisely on mark 2's start height,
+        // the first midpoint the round-up binary search examines over 5 elements
+        uint256 received = _reportWithdrawAndClaimAlreadySettled(id, 2);
+
+        assertEq(received, applyRate(5e18, 1.03e18));
+        assertEq(received, 5.15e18);
+    }
+
+    /// HIGH-8: every existing mark test aligns a mark's span exactly with one request's span. In
+    /// reality one exit backs whatever happens to be at the front of the queue when it lands, which
+    /// routinely straddles two different recipients' requests. Request A and request B are opened
+    /// at different request-time rates (so their unmarked legs are distinguishable from each other
+    /// and from the mark), and a single mark covers A's tail and B's head. Both must get a blended
+    /// cap from the SAME mark, each over only its own covered portion.
+    function testSingleMarkStraddlesTwoRequestsFromDifferentRecipients() external {
+        address userA = _generateAllowlistedUser(0);
+        address userB = _generateAllowlistedUser(1);
+
+        river.sudoSetRate(1e18);
+        uint32 idA = _openRequest(userA, 20e18); // [0, 20e18) @ request rate 1.0
+
+        river.sudoSetRate(1.1e18);
+        uint32 idB = _openRequest(userB, 20e18); // [20e18, 40e18) @ request rate 1.1
+
+        // settle A's first 15e18 without marking it
+        vm.deal(address(this), 15e18);
+        river.sudoReportWithdraw{value: 15e18}(address(redeemManager), 15e18);
+
+        // mark: [15e18, 30e18) @ 1.05 -- covers A's last 5e18 and B's first 10e18
+        river.sudoReportStoppedEarningAt(address(redeemManager), applyRate(15e18, 1.05e18), 15e18);
+        assertEq(redeemManager.getRateMarkDetails(0).height, 15e18);
+        assertEq(redeemManager.getRateMarkDetails(0).amount, 15e18);
+
+        // settle the remainder, [15e18, 40e18): A's marked tail, all of B, at a generous rate so
+        // the cap binds throughout
+        vm.deal(address(this), applyRate(25e18, 1.2e18));
+        river.sudoReportWithdraw{value: applyRate(25e18, 1.2e18)}(address(redeemManager), 25e18);
+
+        // claim A: 15e18 @ request rate 1.0, then 5e18 @ the mark's 1.05
+        uint32[] memory idsA = new uint32[](1);
+        idsA[0] = idA;
+        int64[] memory resolvedA = redeemManager.resolveRedeemRequests(idsA);
+        uint32[] memory eventIdsA = new uint32[](1);
+        eventIdsA[0] = uint32(uint64(resolvedA[0]));
+        uint256 beforeA = userA.balance;
+        redeemManager.claimRedeemRequests(idsA, eventIdsA);
+        uint256 receivedA = userA.balance - beforeA;
+
+        uint256 expectedA = applyRate(15e18, 1e18) + applyRate(5e18, 1.05e18);
+        assertEq(receivedA, expectedA);
+        assertEq(receivedA, 20.25e18);
+
+        // claim B: 10e18 @ the same mark's 1.05, then 10e18 @ B's own request rate 1.1
+        uint32[] memory idsB = new uint32[](1);
+        idsB[0] = idB;
+        int64[] memory resolvedB = redeemManager.resolveRedeemRequests(idsB);
+        uint32[] memory eventIdsB = new uint32[](1);
+        eventIdsB[0] = uint32(uint64(resolvedB[0]));
+        uint256 beforeB = userB.balance;
+        redeemManager.claimRedeemRequests(idsB, eventIdsB);
+        uint256 receivedB = userB.balance - beforeB;
+
+        uint256 expectedB = applyRate(10e18, 1.05e18) + applyRate(10e18, 1.1e18);
+        assertEq(receivedB, expectedB);
+        assertEq(receivedB, 21.5e18);
+
+        uint256 totalWithdrawn = 15e18 + applyRate(25e18, 1.2e18);
+        assertEq(redeemManager.getBufferedExceedingEth(), totalWithdrawn - receivedA - receivedB);
+        assertEq(redeemManager.getBufferedExceedingEth(), 3.25e18);
+    }
+
+    /// HIGH-9a: case 3's `(markedAmount * mark.markedEth) / markAmount` floors, so a slice smaller
+    /// than `markAmount / mark.markedEth` prices to exactly zero. `testFuzz_SplitClaimNeverPaysMoreThanWholeClaim`
+    /// covers the aggregate rounding property probabilistically but is very unlikely to ever
+    /// generate a genuine 1 wei sub-slice; this pins it deterministically and, just as importantly,
+    /// asserts the claim does not revert on a zero-value payout.
+    function testSliceCapFloorsOneWeiMarkedSliceToZeroWithoutReverting() external {
+        address user = _generateAllowlistedUser(0);
+        river.sudoSetRate(1e18);
+        uint32 id = _openRequest(user, 10e18);
+
+        // the whole request is marked at a locked rate of 0.5, so `markedEth (5e18) < markAmount
+        // (10e18)`: any sub-slice smaller than 2 wei floors to 0 ETH
+        river.sudoReportStoppedEarningAt(address(redeemManager), 5e18, 10e18);
+        assertEq(redeemManager.getRateMarkDetails(0).amount, 10e18);
+        assertEq(redeemManager.getRateMarkDetails(0).markedEth, 5e18);
+
+        // settle exactly 1 wei as the very first withdrawal event
+        vm.deal(address(this), 1 ether);
+        river.sudoReportWithdraw{value: 1 ether}(address(redeemManager), 1);
+
+        uint32[] memory ids = new uint32[](1);
+        ids[0] = id;
+        uint32[] memory eventIds = new uint32[](1);
+        eventIds[0] = 0;
+        uint256 before = user.balance;
+        // must not revert: a zero-value cap still resolves to a zero-value, successful transfer
+        redeemManager.claimRedeemRequests(ids, eventIds);
+        uint256 received = user.balance - before;
+
+        assertEq(received, 0);
+        assertEq(redeemManager.getRedeemRequestDetails(id).amount, 10e18 - 1);
+        assertEq(redeemManager.getBufferedExceedingEth(), 1 ether);
+    }
+
+    /// HIGH-9b: pins the direction of case 3's rounding error. A mark of 7 wei LsETH locked at 22
+    /// wei ETH (a coprime pair) is drawn down in 7 separate 1-wei fills; each fill floors
+    /// `(1 * 22) / 7` to 3, so the sum paid out (21) is strictly less than the mark's true value
+    /// (22) -- the dust is never invented, and it is never paid to the redeemer, only ever withheld
+    /// from them. Every fill's settlement rate is generous enough that the cap (not the withdrawal
+    /// event) binds throughout, isolating the rounding behaviour of case 3 alone.
+    function testSliceCapCoprimeMarkRoundingDustAlwaysFavoursProtocol() external {
+        address user = _generateAllowlistedUser(0);
+        river.sudoSetRate(1e18);
+        uint32 id = _openRequest(user, 7);
+
+        river.sudoReportStoppedEarningAt(address(redeemManager), 22, 7);
+        assertEq(redeemManager.getRateMarkDetails(0).amount, 7);
+        assertEq(redeemManager.getRateMarkDetails(0).markedEth, 22);
+
+        uint256 totalReceived = 0;
+        uint256 totalWithdrawn = 0;
+        for (uint256 i = 0; i < 7; ++i) {
+            vm.deal(address(this), 100);
+            river.sudoReportWithdraw{value: 100}(address(redeemManager), 1);
+            totalWithdrawn += 100;
+
+            uint32[] memory ids = new uint32[](1);
+            ids[0] = id;
+            uint32[] memory eventIds = new uint32[](1);
+            eventIds[0] = uint32(i);
+            uint256 before = user.balance;
+            redeemManager.claimRedeemRequests(ids, eventIds);
+            uint256 received = user.balance - before;
+
+            // every single-wei fill floors to exactly 3, never 4: the direction never flips
+            assertEq(received, 3);
+            totalReceived += received;
+        }
+
+        assertEq(redeemManager.getRedeemRequestDetails(id).amount, 0);
+        assertEq(totalReceived, 21);
+        // the mark was worth 22; integer-division dust of exactly 1 wei was never paid to anyone
+        assertLt(totalReceived, 22);
+        assertEq(22 - totalReceived, 1);
+        assertEq(redeemManager.getBufferedExceedingEth(), totalWithdrawn - totalReceived);
+        assertEq(redeemManager.getBufferedExceedingEth(), 679);
+    }
+
+    /// @dev Builds one 30e18 request on `rmX`/`riverX` spanning two marks with a gap between
+    ///      them, settled across exactly three withdrawal events (mark 0, the gap, mark 1, then an
+    ///      unmarked tail), all at a settlement rate generous enough that the cap binds throughout.
+    ///      Shared by the HIGH-10 depth tests so both the unrestricted and the depth-limited claim
+    ///      path start from an identical, independently-deployed queue.
+    function _buildDepthTestScenario(RiverMock riverX, RedeemManagerV1 rmX, address user) internal returns (uint32 id) {
+        riverX.sudoSetRate(1e18);
+        riverX.sudoDeal(user, 30e18);
+        vm.prank(user);
+        riverX.approve(address(rmX), 30e18);
+        vm.prank(user);
+        id = rmX.requestRedeem(30e18, user);
+
+        // mark 0: [0, 10e18) @ 1.05
+        riverX.sudoReportStoppedEarningAt(address(rmX), applyRate(10e18, 1.05e18), 10e18);
+        vm.deal(address(this), applyRate(15e18, 1.2e18));
+        riverX.sudoReportWithdraw{value: applyRate(15e18, 1.2e18)}(address(rmX), 15e18); // event 0: [0,15)
+
+        // mark 1: [15e18, 25e18) @ 1.1
+        riverX.sudoReportStoppedEarningAt(address(rmX), applyRate(10e18, 1.1e18), 10e18);
+        vm.deal(address(this), applyRate(10e18, 1.2e18));
+        riverX.sudoReportWithdraw{value: applyRate(10e18, 1.2e18)}(address(rmX), 10e18); // event 1: [15,25)
+
+        vm.deal(address(this), applyRate(5e18, 1.2e18));
+        riverX.sudoReportWithdraw{value: applyRate(5e18, 1.2e18)}(address(rmX), 5e18); // event 2: [25,30)
+    }
+
+    /// HIGH-10: `_depth` exists so a request spanning many marks/withdrawal events can be claimed
+    /// in bounded steps instead of one unbounded recursive call. The pre-existing depth tests are
+    /// all on anchorless (legacy) requests. The property that matters is that splitting a MARKED
+    /// request's claim by depth must not change the total paid, nor how it is attributed to each
+    /// mark: `depth = 0` three times in a row (one withdrawal event settled per call) must sum to
+    /// exactly the same total as one unrestricted call over the identical scenario, and the
+    /// request's residual `height`/`amount` must stay consistent in between.
+    function testDepthLimitedClaimOfMarkedRequestSumsToUnrestrictedTotal() external {
+        address user = _generateAllowlistedUser(0);
+
+        // baseline: the same scenario, claimed in one unrestricted call
+        (RiverMock riverBaseline, RedeemManagerV1 rmBaseline) = _deployFreshManager();
+        uint32 idBaseline = _buildDepthTestScenario(riverBaseline, rmBaseline, user);
+
+        uint32[] memory idsBaseline = new uint32[](1);
+        idsBaseline[0] = idBaseline;
+        uint32[] memory eventIdsBaseline = new uint32[](1);
+        eventIdsBaseline[0] = 0;
+        uint256 beforeBaseline = user.balance;
+        rmBaseline.claimRedeemRequests(idsBaseline, eventIdsBaseline);
+        uint256 totalBaseline = user.balance - beforeBaseline;
+
+        uint256 expectedTotal =
+            applyRate(10e18, 1.05e18) + applyRate(5e18, 1e18) + applyRate(10e18, 1.1e18) + applyRate(5e18, 1e18);
+        assertEq(totalBaseline, expectedTotal);
+        assertEq(totalBaseline, 31.5e18);
+        assertEq(rmBaseline.getRedeemRequestDetails(idBaseline).amount, 0);
+
+        // depth-limited: the identical scenario, claimed with depth = 0 three times in a row, so
+        // each call settles against exactly one withdrawal event
+        (RiverMock riverStepped, RedeemManagerV1 rmStepped) = _deployFreshManager();
+        uint32 idStepped = _buildDepthTestScenario(riverStepped, rmStepped, user);
+
+        uint32[] memory idsStepped = new uint32[](1);
+        idsStepped[0] = idStepped;
+
+        // step 1 (depth 0): mark 0 in full, then the 5e18 gap -- ends at height 15e18
+        uint32[] memory events0 = new uint32[](1);
+        events0[0] = 0;
+        uint256 before1 = user.balance;
+        rmStepped.claimRedeemRequests(idsStepped, events0, true, 0);
+        uint256 received1 = user.balance - before1;
+        assertEq(received1, applyRate(10e18, 1.05e18) + applyRate(5e18, 1e18));
+        assertEq(received1, 15.5e18);
+        assertEq(rmStepped.getRedeemRequestDetails(idStepped).height, 15e18);
+        assertEq(rmStepped.getRedeemRequestDetails(idStepped).amount, 15e18);
+
+        // step 2 (depth 0): mark 1 in full -- ends at height 25e18
+        uint32[] memory events1 = new uint32[](1);
+        events1[0] = 1;
+        uint256 before2 = user.balance;
+        rmStepped.claimRedeemRequests(idsStepped, events1, true, 0);
+        uint256 received2 = user.balance - before2;
+        assertEq(received2, applyRate(10e18, 1.1e18));
+        assertEq(received2, 11e18);
+        assertEq(rmStepped.getRedeemRequestDetails(idStepped).height, 25e18);
+        assertEq(rmStepped.getRedeemRequestDetails(idStepped).amount, 5e18);
+
+        // step 3 (depth 0): the unmarked tail -- fully claimed
+        uint32[] memory events2 = new uint32[](1);
+        events2[0] = 2;
+        uint256 before3 = user.balance;
+        rmStepped.claimRedeemRequests(idsStepped, events2, true, 0);
+        uint256 received3 = user.balance - before3;
+        assertEq(received3, applyRate(5e18, 1e18));
+        assertEq(received3, 5e18);
+        assertEq(rmStepped.getRedeemRequestDetails(idStepped).amount, 0);
+
+        uint256 totalStepped = received1 + received2 + received3;
+        assertEq(totalStepped, totalBaseline);
+
+        // depth = 1: a single call settling exactly two events (one recursion), then finished off
+        // unrestricted -- the total must still match
+        (RiverMock riverMid, RedeemManagerV1 rmMid) = _deployFreshManager();
+        uint32 idMid = _buildDepthTestScenario(riverMid, rmMid, user);
+
+        uint32[] memory idsMid = new uint32[](1);
+        idsMid[0] = idMid;
+        uint32[] memory midEvents = new uint32[](1);
+        midEvents[0] = 0;
+        uint256 beforeMid1 = user.balance;
+        rmMid.claimRedeemRequests(idsMid, midEvents, true, 1);
+        uint256 receivedMid1 = user.balance - beforeMid1;
+        assertEq(receivedMid1, received1 + received2);
+        assertEq(rmMid.getRedeemRequestDetails(idMid).height, 25e18);
+        assertEq(rmMid.getRedeemRequestDetails(idMid).amount, 5e18);
+
+        uint32[] memory midEvents2 = new uint32[](1);
+        midEvents2[0] = 2;
+        uint256 beforeMid2 = user.balance;
+        rmMid.claimRedeemRequests(idsMid, midEvents2);
+        uint256 receivedMid2 = user.balance - beforeMid2;
+
+        assertEq(receivedMid1 + receivedMid2, totalBaseline);
     }
 
     function testResolveOutOfBounds() external {
