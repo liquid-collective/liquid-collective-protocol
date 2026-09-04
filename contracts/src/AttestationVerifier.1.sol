@@ -640,6 +640,13 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
     ///        - `totalAmount` gwei alignment, upper bound, or correlation with the number
     ///          of (source, target) pairs.
     ///        - Whether the source validators actually exist on the consensus layer
+    ///        - Anything about `targetPubkeys` beyond byte length. In particular: a zero
+    ///          target is accepted, unlike a zero source which reverts; a target that is
+    ///          not a known funded River validator is accepted; and
+    ///          `sourcePubkeys[i] == targetPubkeys[i]` is accepted even though a self
+    ///          consolidation moves no ETH into the protocol while River still mints
+    ///          `totalAmount` against it. `Withdraw.consolidateForExit` rejects self
+    ///          consolidation; this path does not.
     ///      These are the responsibility of the caller (off-chain pipeline) and the
     ///      consolidation committee that signs the request.
     function validateConsolidation(IAttestationVerifierV1.ConsolidationObject calldata consolidation)
