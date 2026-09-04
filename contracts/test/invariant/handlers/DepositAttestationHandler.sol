@@ -13,7 +13,8 @@ import "../../../src/DepositAttestation.sol";
 contract DepositAttestationHandler is Test {
     DepositAttestation public buffer;
 
-    bytes32 internal constant ATTEST_TYPEHASH = keccak256("Attest(bytes32 depositDataBufferId,bytes32 depositRootHash)");
+    bytes32 internal constant ATTEST_TYPEHASH =
+        keccak256("Attest(bytes32 depositDataBufferId,bytes32 depositRootHash)");
     bytes32 internal constant ATTEST_ERROR_TYPEHASH =
         keccak256("AttestError(bytes32 depositDataBufferId,bytes32 depositRootHash,bytes errorData)");
 

@@ -418,7 +418,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         if (
             _allocations.length == 0 && _elAllocations.length == 0
                 && (_exitViaConsolidationAllocation.consolidationRequests.length == 0
-                || _exitViaConsolidationAllocation.ethPerOperator.length == 0)
+                    || _exitViaConsolidationAllocation.ethPerOperator.length == 0)
         ) {
             revert InvalidEmptyArray();
         }
@@ -457,7 +457,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             uint256 old = ExitConsolidationBuffer.get();
             ExitConsolidationBuffer.set(old + consolidationReserved);
             emit SetExitConsolidationBuffer(old, old + consolidationReserved);
-        } 
+        }
 
         // Check that the exits requested do not exceed the current ETH exits demand
         if (requestedETHAmount > currentETHExitsDemand) {
@@ -711,7 +711,7 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             uint256 oldBuffer = ExitConsolidationBuffer.get();
             uint256 newBuffer = oldBuffer < _viaConsolidationETH ? 0 : oldBuffer - _viaConsolidationETH;
             ExitConsolidationBuffer.set(newBuffer);
-            emit ExitConsolidationBufferSet(oldBuffer, newBuffer);
+            emit SetExitConsolidationBuffer(oldBuffer, newBuffer);
         }
 
         emit ReleasedExitRequests(totalReleased, _viaConsolidationETH);

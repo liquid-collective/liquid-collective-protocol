@@ -3580,7 +3580,7 @@ contract OperatorsRegistryV1ExitReleaseTests is Test {
         assertEq(reg.getExitConsolidationBuffer(), 30 ether, "buffer holds the reservation");
 
         vm.expectEmit(true, true, true, true, address(reg));
-        emit IOperatorsRegistryV1.ExitConsolidationBufferSet(30 ether, 10 ether);
+        emit IOperatorsRegistryV1.SetExitConsolidationBuffer(30 ether, 10 ether);
         _release(0, 20 ether, 20 ether);
 
         assertEq(reg.getExitConsolidationBuffer(), 10 ether, "buffer reduced by the consolidation subset");
