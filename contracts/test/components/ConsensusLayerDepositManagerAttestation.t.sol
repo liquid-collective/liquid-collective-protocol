@@ -893,20 +893,6 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
     }
 
-    // verifyBLSDeposit is only callable via the internal self-staticcall trampoline in
-    // _verifyBLSSignatures. Any external caller must hit the OnlySelfCall guard so future
-    // additions of state or events to this function cannot become world-callable. The
-    // ZeroDepositDomain path is exercised via the proper fetchAndValidateDeposits() flow in
-    // testInitial_blsPathReached_revertsOnZeroDepositDomain below.
-    function testRevert_verifyBLSDeposit_onlySelfCall() public {
-        bytes memory pk = _pubkeyFromSeed(0);
-        bytes memory sig = new bytes(96); // guard fires before any signature content is read
-        BLS12_381.DepositY memory dy = _emptyDepositY();
-
-        vm.expectRevert(IAttestationVerifierV1.OnlySelfCall.selector);
-        verifier.verifyBLSDeposit(pk, sig, 32 ether, dy, withdrawalCredentials);
-    }
-
     /// @dev Once the cheap checks and root-attester quorum pass, initial deposits must enter
     ///      the real BLS verifier. This supplies a 48-byte pubkey with invalid compression
     ///      flags, proving the verifier call is reached and its revert is bubbled back

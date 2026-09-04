@@ -779,28 +779,4 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
     function _hashUintArray(uint256[] calldata arr) internal pure returns (bytes32) {
         return keccak256(abi.encodePacked(arr));
     }
-
-    /// @notice Verify a single BLS deposit message against the cached deposit domain.
-    /// @dev External only as a self-staticcall trampoline from fetchAndValidateDeposits: the call
-    ///      promotes the deposit's memory bytes into calldata so BLS12_381 can consume them
-    ///      without a memory copy. Direct external callers revert with `OnlySelfCall` —
-    ///      the function is restricted to `address(this)` and not part of the contract's
-    ///      public API.
-    /// @param pubkey The BLS public key (48 bytes)
-    /// @param signature The BLS signature (96 bytes)
-    /// @param amount The deposit amount in wei (must be gwei-aligned; verified inside BLS12_381.verifyDepositMessage)
-    /// @param depositY The Y-coordinates required for BLS decompression
-    /// @param withdrawalCredentials The 32-byte withdrawal credentials
-    function verifyBLSDeposit(
-        bytes calldata pubkey,
-        bytes calldata signature,
-        uint256 amount,
-        BLS12_381.DepositY calldata depositY,
-        bytes32 withdrawalCredentials
-    ) external view {
-        if (msg.sender != address(this)) revert OnlySelfCall();
-        bytes32 depositDomain = DepositDomainValue.get();
-        if (depositDomain == bytes32(0)) revert ZeroDepositDomain();
-        BLS12_381.verifyDepositMessage(pubkey, signature, amount, depositY, withdrawalCredentials, depositDomain);
-    }
 }

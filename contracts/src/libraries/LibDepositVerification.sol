@@ -123,9 +123,6 @@ library LibDepositVerification {
     /// @notice An attestation quorum of zero was supplied
     error ZeroQuorum();
 
-    /// @notice An external caller invoked a function reserved for self-staticcall trampolining.
-    error OnlySelfCall();
-
     /// @notice The BLS deposit domain has not been initialized
     error ZeroDepositDomain();
 

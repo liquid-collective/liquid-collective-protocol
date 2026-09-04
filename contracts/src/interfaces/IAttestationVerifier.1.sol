@@ -136,9 +136,6 @@ interface IAttestationVerifierV1 {
     /// @param max The configured maximum
     error TooManySignatures(uint256 count, uint256 max);
 
-    /// @notice An external caller invoked a function reserved for self-staticcall trampolining.
-    error OnlySelfCall();
-
     /// @notice An initial deposit's pubkey field has an unexpected byte length
     /// @param index Index into `batch.deposits`
     /// @param length The observed length
