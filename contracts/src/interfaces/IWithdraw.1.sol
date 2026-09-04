@@ -70,6 +70,10 @@ interface IWithdrawV1 {
     /// @param pubkey The offending 48-byte BLS pubkey
     error SourcePubkeyNotFunded(bytes pubkey);
 
+    /// @notice Thrown when a source pubkey equals the target pubkey in a flow that forbids self-consolidation
+    /// @param pubkey The offending 48-byte BLS pubkey
+    error SelfConsolidationNotAllowed(bytes pubkey);
+
     /// @param _river The address of the River contract
     function initializeWithdrawV1(address _river) external;
 
@@ -114,6 +118,17 @@ interface IWithdrawV1 {
     /// @param maxFeePerConsolidation Maximum fee per consolidation to accept
     /// @param excessFeeRecipient Address to receive any excess msg.value
     function consolidate(
+        ConsolidationRequest[] calldata requests,
+        uint256 maxFeePerConsolidation,
+        address excessFeeRecipient
+    ) external payable;
+
+    /// @notice Request consolidations to fund redemptions. Callable only by the OperatorsRegistry.
+    /// @dev Fee paid via msg.value; excess refunded to excessFeeRecipient (the keeper).
+    /// @param requests Consolidation requests (each: src pubkeys -> target pubkey)
+    /// @param maxFeePerConsolidation Maximum fee per consolidation to accept
+    /// @param excessFeeRecipient Address to receive any excess msg.value
+    function consolidateForExit(
         ConsolidationRequest[] calldata requests,
         uint256 maxFeePerConsolidation,
         address excessFeeRecipient

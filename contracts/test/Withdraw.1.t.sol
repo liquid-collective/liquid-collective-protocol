@@ -496,6 +496,141 @@ contract WithdrawV1PectraTests is WithdrawV1TestBase {
         assertEq(excessFeeRecipient.balance, valueSent - 1 gwei);
     }
 
+    function testConsolidateForExitOnlyCallableByOperatorsRegistry() external {
+        bytes[] memory srcPubkeys = new bytes[](1);
+        srcPubkeys[0] = VALID_PUBKEY_48;
+        IWithdrawV1.ConsolidationRequest[] memory requests = new IWithdrawV1.ConsolidationRequest[](1);
+        requests[0] = IWithdrawV1.ConsolidationRequest({srcPubkeys: srcPubkeys, targetPubkey: VALID_PUBKEY_48});
+        address random = makeAddr("random");
+        vm.deal(random, 10 gwei);
+        vm.prank(random);
+        vm.expectRevert(abi.encodeWithSignature("Unauthorized(address)", random));
+        withdraw.consolidateForExit{value: 1 gwei}(requests, 1 gwei, excessFeeRecipient);
+    }
+
+    /// @dev Neither consolidation path deduplicates source pubkeys on-chain: the same source can be
+    ///      dispatched again, in a later call or twice within one batch.
+    function testConsolidateForExitAllowsRepeatedSource() external {
+        bytes memory source = _consolidationPubkey(101);
+        _seedValidatorPubkey(source);
+
+        bytes[] memory srcPubkeys = new bytes[](1);
+        srcPubkeys[0] = source;
+        IWithdrawV1.ConsolidationRequest[] memory requests = new IWithdrawV1.ConsolidationRequest[](1);
+        requests[0] = IWithdrawV1.ConsolidationRequest({srcPubkeys: srcPubkeys, targetPubkey: VALID_PUBKEY_48});
+
+        uint256 fee = 1 gwei;
+
+        vm.deal(address(operatorsRegistry), fee);
+        vm.prank(address(operatorsRegistry));
+        withdraw.consolidateForExit{value: fee}(requests, fee, excessFeeRecipient);
+        assertEq(address(mockConsolidation).balance, fee);
+
+        vm.deal(address(operatorsRegistry), fee);
+        vm.prank(address(operatorsRegistry));
+        withdraw.consolidateForExit{value: fee}(requests, fee, excessFeeRecipient);
+
+        assertEq(address(mockConsolidation).balance, 2 * fee);
+    }
+
+    /// @dev Same source twice inside a single exit batch: both operations dispatch and both fees are paid.
+    function testConsolidateForExitAllowsDuplicateSourceWithinBatch() external {
+        bytes memory source = _consolidationPubkey(102);
+        _seedValidatorPubkey(source);
+
+        bytes[] memory srcPubkeys = new bytes[](2);
+        srcPubkeys[0] = source;
+        srcPubkeys[1] = source;
+        IWithdrawV1.ConsolidationRequest[] memory requests = new IWithdrawV1.ConsolidationRequest[](1);
+        requests[0] = IWithdrawV1.ConsolidationRequest({srcPubkeys: srcPubkeys, targetPubkey: VALID_PUBKEY_48});
+
+        uint256 value = 2 gwei; // 2 operations * 1 gwei fee
+        vm.deal(address(operatorsRegistry), value);
+        vm.prank(address(operatorsRegistry));
+        withdraw.consolidateForExit{value: value}(requests, 1 gwei, excessFeeRecipient);
+
+        assertEq(address(mockConsolidation).balance, value);
+    }
+
+    /// @dev A self-consolidation is a credential upgrade, not an exit, so it never releases exited ETH.
+    function testConsolidateForExitRejectsSelfConsolidation() external {
+        bytes memory pubkey = _consolidationPubkey(103);
+        _seedValidatorPubkey(pubkey);
+
+        bytes[] memory srcPubkeys = new bytes[](1);
+        srcPubkeys[0] = pubkey;
+        IWithdrawV1.ConsolidationRequest[] memory requests = new IWithdrawV1.ConsolidationRequest[](1);
+        requests[0] = IWithdrawV1.ConsolidationRequest({srcPubkeys: srcPubkeys, targetPubkey: pubkey});
+
+        uint256 fee = 1 gwei;
+        vm.deal(address(operatorsRegistry), fee);
+        vm.prank(address(operatorsRegistry));
+        vm.expectRevert(abi.encodeWithSelector(IWithdrawV1.SelfConsolidationNotAllowed.selector, pubkey));
+        withdraw.consolidateForExit{value: fee}(requests, fee, excessFeeRecipient);
+
+        assertEq(address(mockConsolidation).balance, 0);
+    }
+
+    /// @dev A pre-Pectra self-consolidation is also rejected on the exit path, even though `consolidate`
+    ///      accepts it as the 0x01 -> 0x02 upgrade.
+    function testConsolidateForExitRejectsPrePectraSelfConsolidation() external {
+        bytes memory pubkey = _consolidationPubkey(104);
+        _seedPrePectraPubkey(pubkey);
+
+        bytes[] memory srcPubkeys = new bytes[](1);
+        srcPubkeys[0] = pubkey;
+        IWithdrawV1.ConsolidationRequest[] memory requests = new IWithdrawV1.ConsolidationRequest[](1);
+        requests[0] = IWithdrawV1.ConsolidationRequest({srcPubkeys: srcPubkeys, targetPubkey: pubkey});
+
+        uint256 fee = 1 gwei;
+        vm.deal(address(operatorsRegistry), fee);
+        vm.prank(address(operatorsRegistry));
+        vm.expectRevert(abi.encodeWithSelector(IWithdrawV1.SelfConsolidationNotAllowed.selector, pubkey));
+        withdraw.consolidateForExit{value: fee}(requests, fee, excessFeeRecipient);
+
+        assertEq(address(mockConsolidation).balance, 0);
+    }
+
+    /// @dev The self-pair is rejected even when hidden among other valid sources, and nothing dispatches.
+    function testConsolidateForExitRejectsSelfConsolidationWithinMultiSourceRequest() external {
+        bytes memory target = _consolidationPubkey(105);
+        bytes memory otherSource = _consolidationPubkey(106);
+        _seedValidatorPubkey(target);
+        _seedValidatorPubkey(otherSource);
+
+        bytes[] memory srcPubkeys = new bytes[](2);
+        srcPubkeys[0] = otherSource;
+        srcPubkeys[1] = target;
+        IWithdrawV1.ConsolidationRequest[] memory requests = new IWithdrawV1.ConsolidationRequest[](1);
+        requests[0] = IWithdrawV1.ConsolidationRequest({srcPubkeys: srcPubkeys, targetPubkey: target});
+
+        uint256 value = 2 gwei;
+        vm.deal(address(operatorsRegistry), value);
+        vm.prank(address(operatorsRegistry));
+        vm.expectRevert(abi.encodeWithSelector(IWithdrawV1.SelfConsolidationNotAllowed.selector, target));
+        withdraw.consolidateForExit{value: value}(requests, 1 gwei, excessFeeRecipient);
+    }
+
+    /// @dev The flag is scoped to `consolidateForExit`: River's `consolidate` still allows self-consolidation.
+    function testConsolidateStillAllowsSelfConsolidationForFundedTarget() external {
+        bytes memory pubkey = _consolidationPubkey(107);
+        _seedValidatorPubkey(pubkey);
+
+        bytes[] memory srcPubkeys = new bytes[](1);
+        srcPubkeys[0] = pubkey;
+        IWithdrawV1.ConsolidationRequest[] memory requests = new IWithdrawV1.ConsolidationRequest[](1);
+        requests[0] = IWithdrawV1.ConsolidationRequest({srcPubkeys: srcPubkeys, targetPubkey: pubkey});
+
+        uint256 fee = 1 gwei;
+        vm.deal(address(river), fee);
+
+        vm.expectCall(address(mockConsolidation), fee, bytes.concat(pubkey, pubkey));
+        vm.prank(address(river));
+        withdraw.consolidate{value: fee}(requests, fee, excessFeeRecipient);
+
+        assertEq(address(mockConsolidation).balance, fee);
+    }
+
     function testConsolidateSourceAndTargetInValidatorLookupSucceeds() external {
         bytes[] memory srcPubkeys = new bytes[](1);
         srcPubkeys[0] = VALID_PUBKEY_48;

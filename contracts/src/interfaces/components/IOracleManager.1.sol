@@ -104,11 +104,18 @@ interface IOracleManagerV1 {
         uint256 lastTotalConsolidationsAmountReported, uint256 newTotalConsolidationsAmountReported
     );
 
-    /// @notice The total consolidation amount reported has increased
-    /// @param lastTotalConsolidationsAmountReported The last total consolidation amount reported
-    /// @param newTotalConsolidationsAmountReported The new total consolidation amount reported
-    error InvalidTotalConsolidationsAmountReportedIncrease(
-        uint256 lastTotalConsolidationsAmountReported, uint256 newTotalConsolidationsAmountReported
+    /// @notice The total exit via consolidation amount reported has decreased
+    /// @param lastTotalExitViaConsolidationsAmountReported The last total exit via consolidation amount reported
+    /// @param newTotalExitViaConsolidationsAmountReported The new total exit via consolidation amount reported
+    error InvalidTotalExitViaConsolidationsAmountReportedDecrease(
+        uint256 lastTotalExitViaConsolidationsAmountReported, uint256 newTotalExitViaConsolidationsAmountReported
+    );
+
+    /// @notice The total exit via consolidation amount reported is larger than the increase in the amount of exited ETH
+    /// @param totalExitViaConsolidationsAmountReportedIncrease The increase in the amount of exited ETH
+    /// @param exitedETHIncrease The increase in the amount of exited ETH
+    error ExitViaConsolidationETHIncreaseExceedsExitedETHIncrease(
+        uint256 totalExitViaConsolidationsAmountReportedIncrease, uint256 exitedETHIncrease
     );
 
     /// @notice Trace structure emitted via logs during reporting
@@ -158,6 +165,8 @@ interface IOracleManagerV1 {
         // this value cannot decrease over reports and must increase in the same report in which the corresponding
         // consolidated principal first appears in validatorsBalance
         uint256 totalExternalConsolidationETH;
+        // the sum of all exit that happened via internal consolidation of validators
+        uint256 totalExitViaInternalConsolidationETH;
         // the count of activated validators
         // even validators that are exited are still accounted
         // this value cannot decrease over reports
@@ -194,6 +203,7 @@ interface IOracleManagerV1 {
         bool slashingContainmentMode;
         uint256 totalDepositedActivatedETH;
         uint256 totalExternalConsolidationETH;
+        uint256 totalExitViaInternalConsolidationETH;
     }
 
     /// @notice Get oracle address

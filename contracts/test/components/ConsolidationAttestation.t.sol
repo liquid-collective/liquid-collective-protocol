@@ -442,7 +442,8 @@ contract ConsolidationAttestationTest is Test {
     }
 
     function testInit_revertAlreadyInitialized() public {
-        // setUp already called init — calling it again must revert.
+        // setUp already ran initAttestationVerifierV1 (v0), so the next expected version is 1 —
+        // calling the v0 initializer again must revert.
         address[] memory dep = new address[](1);
         dep[0] = depositAttester;
         address[] memory cc = new address[](1);

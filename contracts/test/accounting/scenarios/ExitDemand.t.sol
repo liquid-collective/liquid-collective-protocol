@@ -53,6 +53,7 @@ contract ExitDemandTest is AccountingInvariants {
     }
 
     function _requestETHExits(uint256[] memory opIdxs, uint256[] memory ethAmounts) internal {
+        IOperatorsRegistryV1.ExitsViaConsolidationAllocation memory _noConsolidation;
         require(opIdxs.length == ethAmounts.length, "exit allocation length mismatch");
 
         IOperatorsRegistryV1.ExitETHAllocation[] memory allocations =
@@ -68,7 +69,7 @@ contract ExitDemandTest is AccountingInvariants {
             new IOperatorsRegistryV1.ELExitETHAllocation[](0);
 
         vm.prank(keeper);
-        operatorsRegistry.requestETHExits(allocations, elAllocations, 0);
+        operatorsRegistry.requestETHExits(allocations, elAllocations, _noConsolidation, 0, 0);
     }
 
     function testPreExitingBalanceReducesExitDemand() public {

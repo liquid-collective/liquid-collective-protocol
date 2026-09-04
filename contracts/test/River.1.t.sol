@@ -1941,7 +1941,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         clr.totalDepositedActivatedETH = rfv.depositCount * 32 ether;
         // Use operatorCount+1 length so the second report (length N+1) doesn't shrink the array.
         clr.exitedETHPerOperator = new uint256[](rfv.operatorCount + 1);
-        // Populate activeCLETH with the deposit distribution so ExitedETHExceedsPriorCLETH passes
+        // Populate activeCLETH with the deposit distribution so every operator has active-CL headroom
         // for any stoppedTotalCount <= depositCount in subsequent scenario reports.
         clr.activeCLETHPerOperator = new uint256[](rfv.operatorCount);
         {
@@ -2813,7 +2813,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
 
         _salt = _depositValidators(depositCount, _salt);
         // Pre-initialize storage so _setExitedETH can access currentExitedETH[1] without panicking,
-        // and set activeCLETH so the ExitedETHExceedsPriorCLETH check passes (deltaExited = 2*32 ether).
+        // and set activeCLETH so the operator has enough active-CL headroom (deltaExited = 2*32 ether).
         operatorsRegistry.sudoSetRawExitedETH(new uint256[](2));
         operatorsRegistry.sudoSetActiveCLETH(0, uint256(depositCount) * 32 ether);
 
