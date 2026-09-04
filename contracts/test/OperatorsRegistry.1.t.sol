@@ -117,6 +117,12 @@ contract OperatorsRegistryWithMigrationHelpers is OperatorsRegistryV1 {
     function sudoGetRawReleasedETH() external view returns (uint256[] memory) {
         return OperatorsV3.getReleasedETH();
     }
+
+    /// Test helper: exposes the single-index `OperatorsV3.getReleasedETH(index)` overload used
+    /// internally by the reportExitedETH clamp.
+    function sudoGetReleasedETH(uint256 index) external view returns (uint256) {
+        return OperatorsV3.getReleasedETH(index);
+    }
 }
 
 contract OperatorsRegistryV1PrePectraBridgeTests is Test {
@@ -3675,6 +3681,35 @@ contract OperatorsRegistryV1ExitReleaseTests is Test {
         assertEq(raw[1], 0, "op0 never released");
         assertEq(raw[2], 0, "op1 never released");
         assertEq(raw[3], 8 ether, "op2 released");
+    }
+
+    /// @notice The single-index overload mirrors the per-operator view: it reads the same accumulated
+    ///         amount that the raw array (shifted by the leading sum cell) holds.
+    function testGetReleasedETHByIndex() public {
+        _setupOperators(2, 100 ether, 100 ether);
+        _requestELExit(0, EIGHT_ETH_IN_GWEI);
+        _requestELExit(1, EIGHT_ETH_IN_GWEI);
+
+        _release(0, 3 ether);
+        _release(0, 2 ether);
+        _release(1, 8 ether);
+
+        assertEq(reg.sudoGetReleasedETH(0), 5 ether, "op0 accumulated across two releases");
+        assertEq(reg.sudoGetReleasedETH(1), 8 ether, "op1 released once");
+    }
+
+    /// @notice Indexes the accumulator array has not grown to yet — including on an untouched
+    ///         registry where the array is still empty — read as 0 rather than reverting.
+    function testGetReleasedETHByIndexReturnsZeroBeforeGrowth() public {
+        _setupOperators(3, 100 ether, 100 ether);
+        assertEq(reg.sudoGetReleasedETH(0), 0, "untouched registry reads 0");
+
+        _requestELExit(2, EIGHT_ETH_IN_GWEI);
+        _release(2, 8 ether);
+
+        assertEq(reg.sudoGetReleasedETH(0), 0, "op0 never released");
+        assertEq(reg.sudoGetReleasedETH(1), 0, "op1 never released");
+        assertEq(reg.sudoGetReleasedETH(2), 8 ether, "op2 released");
     }
 
     // ── 6. Access control and input validation ───────────────────────────────
