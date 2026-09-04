@@ -201,7 +201,10 @@ interface IOperatorsRegistryV1 {
     /// @param exitedETH The cumulative amount of exited ETH(wei) reported for the operator
     event FundedOperatorWithPendingExits(uint256 indexed index, uint256 requestedExits, uint256 exitedETH);
 
-    event ExitConsolidationBufferSet(uint256 indexed oldValue, uint256 indexed newValue);
+    /// @notice The exit consolidation buffer has been set
+    /// @param oldValue The old exit consolidation buffer
+    /// @param newValue The new exit consolidation buffer
+    event SetExitConsolidationBuffer(uint256 indexed oldValue, uint256 indexed newValue);
 
     /// @notice The calling operator is inactive
     /// @param index The operator index
@@ -485,14 +488,14 @@ interface IOperatorsRegistryV1 {
     ///      during containment — state is restored, dispatch is not.
     /// @param _allocations The proposed per-operator exit ETH allocations, sorted by operator index
     /// @param _elAllocations The proposed per-operator per-pubkey EL exit ETH allocations, sorted by operator index
-    /// @param _consolidationAllocations Exits via internal consolidation: per-operator reserved ETH
+    /// @param _exitViaConsolidationAllocation Exits via internal consolidation: per-operator reserved ETH
     ///        (`ethPerOperator`) plus the raw consolidation requests dispatched to Withdraw
     /// @param _maxFeePerWithdrawal The maximum fee for per withdrawal request
     /// @param _maxFeePerConsolidation The maximum fee for per consolidation request
     function requestETHExits(
         ExitETHAllocation[] calldata _allocations,
         ELExitETHAllocation[] calldata _elAllocations,
-        ExitsViaConsolidationAllocation calldata _consolidationAllocations,
+        ExitsViaConsolidationAllocation calldata _exitViaConsolidationAllocation,
         uint256 _maxFeePerWithdrawal,
         uint256 _maxFeePerConsolidation
     ) external payable;
