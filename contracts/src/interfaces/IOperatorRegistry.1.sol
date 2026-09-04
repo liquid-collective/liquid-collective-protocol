@@ -201,7 +201,10 @@ interface IOperatorsRegistryV1 {
     /// @param exitedETH The cumulative amount of exited ETH(wei) reported for the operator
     event FundedOperatorWithPendingExits(uint256 indexed index, uint256 requestedExits, uint256 exitedETH);
 
-    event ExitConsolidationBufferSet(uint256 indexed oldValue, uint256 indexed newValue);
+    /// @notice The exit consolidation buffer has been set
+    /// @param oldValue The old exit consolidation buffer
+    /// @param newValue The new exit consolidation buffer
+    event SetExitConsolidationBuffer(uint256 indexed oldValue, uint256 indexed newValue);
 
     /// @notice The calling operator is inactive
     /// @param index The operator index
