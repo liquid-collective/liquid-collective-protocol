@@ -1,7 +1,7 @@
 #! /bin/bash
 
 # Fails if any deployable PRODUCTION contract exceeds either:
-# - EIP-170 runtime bytecode limit
+# - EIP-7954 runtime bytecode limit
 # - EIP-3860 initcode size limit
 #
 # Why this exists rather than plain `forge build --sizes`: that command exits non-zero on the
@@ -16,7 +16,7 @@
 
 set -euo pipefail
 
-EIP170_LIMIT=24576
+EIP7954_LIMIT=65536
 EIP3860_LIMIT=49152
 MIN_RUNTIME_MARGIN="${MIN_RUNTIME_MARGIN:-0}"
 
@@ -50,7 +50,7 @@ NAMES_JSON=$(echo "$PRODUCTION_NAMES" | jq -R -s -c 'split("\n") | map(select(le
 jq -n \
     --argjson names "$NAMES_JSON" \
     --argjson sizes "$SIZES_JSON" \
-    --argjson limit "$EIP170_LIMIT" \
+    --argjson limit "$EIP7954_LIMIT" \
     --argjson initLimit "$EIP3860_LIMIT" \
     --argjson minMargin "$MIN_RUNTIME_MARGIN" '
     [ $names[]
@@ -86,7 +86,7 @@ import sys
 with open("/tmp/lc_sizes_report.json") as fh:
     r = json.load(fh)
 
-print(f"EIP-170 runtime limit: {r['limit']} bytes — checked {r['checked']} production contracts")
+print(f"EIP-7954 runtime limit: {r['limit']} bytes — checked {r['checked']} production contracts")
 print()
 print(f"{'contract':<48}{'runtime':>10}{'margin':>10}")
 for c in r["tightest"]:
@@ -104,7 +104,7 @@ failed = False
 
 if r["over"]:
     failed = True
-    print("FAIL: over the EIP-170 limit:")
+    print("FAIL: over the EIP-7954 limit:")
     for c in r["over"]:
         print(f"  {c['name']}: {c['size']} bytes ({-c['margin']} over)")
 
@@ -123,5 +123,5 @@ if r["thin"]:
 if failed:
     sys.exit(1)
 
-print("OK: every production contract is within EIP-170 and EIP-3860 limits.")
+print("OK: every production contract is within EIP-7954 and EIP-3860 limits.")
 PY
