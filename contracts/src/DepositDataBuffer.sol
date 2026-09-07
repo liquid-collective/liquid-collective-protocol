@@ -2,6 +2,9 @@
 pragma solidity 0.8.34;
 
 import "./interfaces/IDepositDataBuffer.sol";
+
+import "./components/DepositVerification.sol";
+
 import "./libraries/LibSanitize.sol";
 
 /// @title DepositDataBuffer (v1)
@@ -16,21 +19,7 @@ import "./libraries/LibSanitize.sol";
 ///      reject replays. Withdrawal credentials are intentionally NOT stored — the canonical withdrawal
 ///      credentials are supplied by the processor at deposit time and used for BLS verification and the
 ///      official deposit-contract call, so the buffer producer is never trusted on that field.
-contract DepositDataBuffer is IDepositDataBuffer {
-    /// @notice Minimum amount for an initial validator deposit. Below 32 ETH a brand-new validator
-    ///         never activates on the consensus layer, yet the deposit would still inflate downstream
-    ///         accounting. Mirrors `AttestationVerifier`'s initial-deposit floor.
-    uint256 internal constant MIN_INITIAL_DEPOSIT_AMOUNT = 32 ether;
-
-    /// @notice Minimum amount for a top-up deposit. Mirrors `AttestationVerifier`'s top-up floor.
-    uint256 internal constant MIN_TOP_UP_AMOUNT = 1 ether;
-
-    /// @notice Maximum deposit amount — the Pectra 0x02 maximum effective balance.
-    uint256 internal constant MAX_DEPOSIT_AMOUNT = 2048 ether;
-
-    /// @notice Maximum stateless top-up: a funded validator should already have at least 32 ETH.
-    uint256 internal constant MAX_TOP_UP_AMOUNT = MAX_DEPOSIT_AMOUNT - MIN_INITIAL_DEPOSIT_AMOUNT;
-
+contract DepositDataBuffer is DepositVerification, IDepositDataBuffer {
     /// @notice The processor — the only account allowed to mark deposit data processed.
     /// @dev Set at construction and rotatable by the admin via `setProcessor`. In production this is
     ///      the River deposit-execution contract, but the buffer only relies on it being the account
@@ -98,7 +87,18 @@ contract DepositDataBuffer is IDepositDataBuffer {
     }
 
     /// @inheritdoc IDepositDataBuffer
-    function submitDepositData(bytes32 depositDataBufferId, DepositObject calldata batch) external onlyProducer {
+    function submitDepositData(bytes32 depositDataBufferId, DepositObject memory batch) external onlyProducer {
+        StandardDepositObject memory _batch;
+
+        assembly {
+            _batch := batch
+        }
+        _submitDepositData(depositDataBufferId, _batch);
+
+        _batches[depositDataBufferId] = batch;
+    }
+
+    function _submitDepositData(bytes32 depositDataBufferId, StandardDepositObject memory batch) internal {
         uint256 depositCount = batch.deposits.length;
         uint256 topUpCount = batch.topUps.length;
         if (depositCount == 0 && topUpCount == 0) revert EmptyDepositData();
@@ -106,24 +106,26 @@ contract DepositDataBuffer is IDepositDataBuffer {
         // Amounts must be bounded and gwei-aligned: the beacon-chain deposit contract encodes
         // amounts in gwei, so a non-aligned amount would be silently truncated downstream. Rejecting
         // here keeps the buffer consistent with the `InvalidDepositAmount` error and the verifier.
-        for (uint256 i = 0; i < depositCount; i++) {
-            Deposit calldata d = batch.deposits[i];
-            if (d.pubkey.length != 48) revert InvalidPubkeyLength(i, d.pubkey.length);
-            if (d.signature.length != 96) revert InvalidSignatureLength(i, d.signature.length);
-            // Initial deposits must be gwei-aligned and within [32 ETH, 2048 ETH]: a sub-32-ETH deposit
-            // never activates a validator, and 2048 ETH is the Pectra 0x02 max effective balance. This
-            // mirrors the bound enforced in `AttestationVerifier.fetchAndValidateDeposits`.
-            if (d.amount < MIN_INITIAL_DEPOSIT_AMOUNT || d.amount > MAX_DEPOSIT_AMOUNT || d.amount % 1 gwei != 0) {
-                revert InvalidDepositAmount(i, d.amount);
-            }
-        }
-        for (uint256 i = 0; i < topUpCount; i++) {
-            TopUp calldata t = batch.topUps[i];
-            if (t.pubkey.length != 48) revert InvalidTopUpPubkeyLength(i, t.pubkey.length);
-            if (t.amount < MIN_TOP_UP_AMOUNT || t.amount > MAX_TOP_UP_AMOUNT || t.amount % 1 gwei != 0) {
-                revert InvalidDepositAmount(i, t.amount);
-            }
-        }
+        // for (uint256 i = 0; i < depositCount; i++) {
+        //     StandardDeposit memory d = batch.deposits[i];
+        //     if (d.pubkey.length != 48) revert InvalidPubkeyLength(i, d.pubkey.length);
+        //     if (d.signature.length != 96) revert InvalidSignatureLength(i, d.signature.length);
+        //     // Initial deposits must be gwei-aligned and within [32 ETH, 2048 ETH]: a sub-32-ETH deposit
+        //     // never activates a validator, and 2048 ETH is the Pectra 0x02 max effective balance. This
+        //     // mirrors the bound enforced in `AttestationVerifier.fetchAndValidateDeposits`.
+        //     if (d.amount < MIN_INITIAL_DEPOSIT_AMOUNT || d.amount > MAX_DEPOSIT_AMOUNT || d.amount % 1 gwei != 0) {
+        //         revert InvalidDepositAmount(i, d.amount);
+        //     }
+        // }
+        // for (uint256 i = 0; i < topUpCount; i++) {
+        //     StandardTopUp memory t = batch.topUps[i];
+        //     if (t.pubkey.length != 48) revert InvalidTopUpPubkeyLength(i, t.pubkey.length);
+        //     if (t.amount < MIN_TOP_UP_AMOUNT || t.amount > MAX_TOP_UP_AMOUNT || t.amount % 1 gwei != 0) {
+        //         revert InvalidDepositAmount(i, t.amount);
+        //     }
+        // }
+        _verifyInitialDeposits(batch.deposits, depositCount);
+        _verifyTopUps(batch.topUps, topUpCount);
 
         // The batch nonce (lastQueuedIdx) is folded into the id, so two batches with byte-identical
         // deposit data still get distinct ids and are individually addressable. Because the nonce
@@ -134,7 +136,6 @@ contract DepositDataBuffer is IDepositDataBuffer {
         if (computedId != depositDataBufferId) revert DepositDataBufferIdMismatch(depositDataBufferId, computedId);
         if (_exists[computedId]) revert DepositDataBufferIdAlreadyExists(computedId);
 
-        _batches[computedId] = batch;
         _nonce[computedId] = nonce;
         _exists[computedId] = true;
         ++lastQueuedIdx;

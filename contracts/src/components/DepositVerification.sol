@@ -10,7 +10,7 @@ import "../interfaces/IAttestationVerifier.1.sol";
 /// @title Deposit Verification
 /// @author Alluvial Finance Inc.
 /// @notice Provides the functions for initial deposit and top-up verification
-abstract contract DepositVerification is IAttestationVerifierV1 {
+abstract contract DepositVerification {
     /// @notice Minimum amount for an initial validator deposit. A brand-new validator requires the
     ///         full 32 ETH to activate on the consensus layer; a smaller initial deposit would never
     ///         activate yet would still be counted in InFlightDeposit / TotalDepositedETH, permanently
@@ -54,16 +54,18 @@ abstract contract DepositVerification is IAttestationVerifierV1 {
         function(address) internal view returns (bool) _isRootAttester
     ) internal view {
         uint256 sigLen = signatures.length;
-        if (sigLen > MAX_SIGNATURES) revert TooManySignatures(sigLen, MAX_SIGNATURES);
+        if (sigLen > MAX_SIGNATURES) revert IAttestationVerifierV1.TooManySignatures(sigLen, MAX_SIGNATURES);
 
-        if (quorum == 0) revert ZeroQuorum();
-        if (sigLen < quorum) revert InsufficientAttestations(sigLen, quorum);
+        if (quorum == 0) revert IAttestationVerifierV1.ZeroQuorum();
+        if (sigLen < quorum) revert IAttestationVerifierV1.InsufficientAttestations(sigLen, quorum);
 
         // Whilst this could be checked earlier in the flow, this way the function is self-contained and performs all the checks required to ensure the attestations are valid in one place.
         bytes32 onChainRoot = IDepositContract(depositContract).get_deposit_root();
-        if (onChainRoot != depositRootHash) revert DepositRootMismatch(depositRootHash, onChainRoot);
+        if (onChainRoot != depositRootHash) {
+            revert IAttestationVerifierV1.DepositRootMismatch(depositRootHash, onChainRoot);
+        }
 
-        if (domainSeparator == bytes32(0)) revert ZeroDomainSeparator();
+        if (domainSeparator == bytes32(0)) revert IAttestationVerifierV1.ZeroDomainSeparator();
         bytes32 structHash = keccak256(abi.encode(ATTEST_TYPEHASH, depositDataBufferId, depositRootHash));
         bytes32 digest = ECDSA.toTypedDataHash(domainSeparator, structHash);
 
@@ -88,7 +90,7 @@ abstract contract DepositVerification is IAttestationVerifierV1 {
             validCount++;
         }
 
-        if (validCount < quorum) revert InsufficientAttestations(validCount, quorum);
+        if (validCount < quorum) revert IAttestationVerifierV1.InsufficientAttestations(validCount, quorum);
     }
 
     function _verifyInitialDeposits(IDepositDataBuffer.StandardDeposit[] memory deposits, uint256 depositCount)
@@ -100,10 +102,10 @@ abstract contract DepositVerification is IAttestationVerifierV1 {
         for (uint256 i = 0; i < depositCount; ++i) {
             IDepositDataBuffer.StandardDeposit memory d = deposits[i];
             if (d.pubkey.length != DEPOSIT_PUBKEY_LENGTH) {
-                revert InvalidPubkeyLength(i, d.pubkey.length);
+                revert IAttestationVerifierV1.InvalidPubkeyLength(i, d.pubkey.length);
             }
             if (d.signature.length != DEPOSIT_SIGNATURE_LENGTH) {
-                revert InvalidSignatureLength(i, d.signature.length);
+                revert IAttestationVerifierV1.InvalidSignatureLength(i, d.signature.length);
             }
             // Initial deposits must be >= 32 ETH so the validator actually activates on the CL.
             // A sub-32-ETH initial deposit would never activate yet would still inflate
@@ -111,7 +113,7 @@ abstract contract DepositVerification is IAttestationVerifierV1 {
             // mirror `_depositValidator`; the 32-ETH floor is stricter here because this loop only
             // covers initial deposits (top-ups are validated separately below and stay >= 1 ETH).
             if (d.amount < MIN_INITIAL_DEPOSIT_AMOUNT || d.amount > MAX_DEPOSIT_AMOUNT || d.amount % 1 gwei != 0) {
-                revert InvalidDepositAmount(i, d.amount);
+                revert IAttestationVerifierV1.InvalidDepositAmount(i, d.amount);
             }
             totalAmount += d.amount;
 
@@ -122,7 +124,7 @@ abstract contract DepositVerification is IAttestationVerifierV1 {
 
             for (uint256 j = 0; j < i; j++) {
                 if (pubkeyHashes[j] == pkHash) {
-                    revert PubkeyAlreadyFunded(d.pubkey);
+                    revert IAttestationVerifierV1.PubkeyAlreadyFunded(d.pubkey);
                 }
             }
         }
@@ -138,10 +140,10 @@ abstract contract DepositVerification is IAttestationVerifierV1 {
         for (uint256 i = 0; i < topUpCount; ++i) {
             IDepositDataBuffer.StandardTopUp memory t = topUps[i];
             if (t.pubkey.length != DEPOSIT_PUBKEY_LENGTH) {
-                revert InvalidTopUpPubkeyLength(i, t.pubkey.length);
+                revert IAttestationVerifierV1.InvalidTopUpPubkeyLength(i, t.pubkey.length);
             }
             if (t.amount < MIN_TOP_UP_AMOUNT || t.amount > MAX_TOP_UP_AMOUNT || t.amount % 1 gwei != 0) {
-                revert InvalidTopUpAmount(i, t.amount);
+                revert IAttestationVerifierV1.InvalidTopUpAmount(i, t.amount);
             }
             totalAmount += t.amount;
 
@@ -162,7 +164,7 @@ abstract contract DepositVerification is IAttestationVerifierV1 {
         view
     {
         if (deposits.length == 0) return;
-        if (depositDomain == bytes32(0)) revert ZeroDepositDomain();
+        if (depositDomain == bytes32(0)) revert IAttestationVerifierV1.ZeroDepositDomain();
         for (uint256 i = 0; i < deposits.length; i++) {
             BLS12_381.verifyDepositMessage(
                 deposits[i].pubkey,

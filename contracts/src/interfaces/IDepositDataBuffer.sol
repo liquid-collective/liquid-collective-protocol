@@ -168,6 +168,8 @@ interface IDepositDataBuffer {
     /// @notice Reverts when a deposit or top-up amount is outside its allowed range or not gwei-aligned
     error InvalidDepositAmount(uint256 index, uint256 amount);
 
+    error InvalidTopUpAmount(uint256 index, uint256 amount);
+
     // -----------------------------------------------------------------------
     // Functions
     // -----------------------------------------------------------------------
