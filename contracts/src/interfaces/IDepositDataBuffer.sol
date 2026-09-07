@@ -85,6 +85,11 @@ interface IDepositDataBuffer {
         TopUp[] topUps;
     }
 
+    struct StandardDepositObject {
+        StandardDeposit[] deposits;
+        StandardTopUp[] topUps;
+    }
+
     // -----------------------------------------------------------------------
     // Events
     // -----------------------------------------------------------------------

@@ -51,7 +51,7 @@ abstract contract DepositVerification is IAttestationVerifierV1 {
         address depositContract,
         uint256 quorum,
         bytes32 domainSeparator,
-        function(address account) internal view returns (bool) _isRootAttester
+        function(address) internal view returns (bool) _isRootAttester
     ) internal view {
         uint256 sigLen = signatures.length;
         if (sigLen > MAX_SIGNATURES) revert TooManySignatures(sigLen, MAX_SIGNATURES);
