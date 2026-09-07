@@ -172,7 +172,7 @@ abstract contract RedemptionMirror is RedemptionReportBase {
         internal
         returns (RedemptionRiverV1 freshRiver, RedeemManagerV1 freshManager)
     {
-        assertTrue(_revertToState(snapshotId), "failed to roll the protocol back to its pristine state");
+        assertTrue(vm.revertToState(snapshotId), "failed to roll the protocol back to its pristine state");
         return (river, redeemManager);
     }
 
@@ -896,7 +896,7 @@ contract RedemptionRateMarkFuzzTests is RedemptionMirror {
         s.rateB = bound(_rateB, 0.5e18, 2e18);
         s.rateC = bound(_rateC, 0.5e18, 2e18);
 
-        uint256 pristine = _snapshotState();
+        uint256 pristine = vm.snapshotState();
 
         // ── world 1: one call, unbounded depth ──
         (RedeemManagerV1 whole, uint32 idWhole) = _buildScenario(s);
@@ -952,7 +952,7 @@ contract RedemptionRateMarkFuzzTests is RedemptionMirror {
         uint256 settlementRate = bound(_settlementRate, 0.5e18, 4e18);
 
         address user = fuzzUser;
-        uint256 pristine = _snapshotState();
+        uint256 pristine = vm.snapshotState();
 
         // ── world 1: a mark covers the whole request ──
         _reportRateLoose(requestRate);
@@ -1133,7 +1133,7 @@ contract RedemptionRateMarkFuzzTests is RedemptionMirror {
         uint256 settlementRate = requestRate + (requestRate * bound(_recoveryMargin, 0, 1_000)) / 10_000;
 
         address user = fuzzUser;
-        uint256 pristine = _snapshotState();
+        uint256 pristine = vm.snapshotState();
 
         // ── world 1: drawdown, mark at the depressed rate, then recovery ──
         _reportRateLoose(requestRate);

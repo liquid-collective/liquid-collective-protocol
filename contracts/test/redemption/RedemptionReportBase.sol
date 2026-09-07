@@ -32,15 +32,6 @@ import "../../src/state/redeemManager/RedeemQueue.2.sol";
 import "../../src/state/redeemManager/RedeemRequestAnchor.sol";
 import "../../src/state/redeemManager/WithdrawalStack.sol";
 
-/// @dev The current state-snapshot cheatcodes, which the pinned forge-std predates: lib/forge-std is
-///      at v1.5.0, declaring only `snapshot` / `revertTo`. Cheatcodes dispatch by selector, so
-///      declaring the current signatures reaches them without bumping a shared dependency.
-/// @dev Delete this and call `vm.snapshotState()` directly once lib/forge-std is updated.
-interface VmStateSnapshots {
-    function snapshotState() external returns (uint256 snapshotId);
-    function revertToState(uint256 snapshotId) external returns (bool success);
-}
-
 /// @dev Concrete `RiverV1WithLegacyInit` so the fixture can `new` it: production `RiverV1` no longer
 ///      ships `initRiverV1` / `_1` / `_2`, and the fixture bootstraps from genesis.
 contract RedemptionRiverV1 is RiverV1WithLegacyInit {}
@@ -760,20 +751,6 @@ abstract contract RedemptionReportBase is Test {
         uint256 balanceBefore = recipient.balance;
         redeemManager.claimRedeemRequests(ids, eventIds, true, depth);
         return recipient.balance - balanceBefore;
-    }
-
-    // ─── state snapshots ──────────────────────────────────────────────────────
-
-    /// @dev Snapshots the whole EVM state, including this test contract's own storage. `VmStateSnapshots`
-    ///      says why this does not call `vm.snapshotState()` directly.
-    function _snapshotState() internal returns (uint256 snapshotId) {
-        return VmStateSnapshots(address(vm)).snapshotState();
-    }
-
-    /// @dev Rolls the EVM back to `snapshotId`. Anything the caller needs from the state it is leaving
-    ///      must already be in memory: storage does not survive the rollback.
-    function _revertToState(uint256 snapshotId) internal returns (bool success) {
-        return VmStateSnapshots(address(vm)).revertToState(snapshotId);
     }
 
     // ─── axis readers ─────────────────────────────────────────────────────────

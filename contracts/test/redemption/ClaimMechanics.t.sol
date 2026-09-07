@@ -112,12 +112,12 @@ contract RedemptionClaimMechanicsTests is RedemptionReportBase {
     ///      given -- and marks and events are addressed by absolute position rather than by "the next
     ///      unclaimed one", so the three claims read three disjoint intervals.
     function testClaimOrderAcrossRequestsDoesNotAffectPayouts() external {
-        uint256 snapshotId = _snapshotState();
+        uint256 snapshotId = vm.snapshotState();
 
         (uint256 aInOrder, uint256 bInOrder, uint256 cInOrder, uint256 exceedingInOrder) =
             _runThreeRequestScenario(false);
 
-        assertTrue(_revertToState(snapshotId));
+        assertTrue(vm.revertToState(snapshotId));
 
         (uint256 aReversed, uint256 bReversed, uint256 cReversed, uint256 exceedingReversed) =
             _runThreeRequestScenario(true);
@@ -389,12 +389,12 @@ contract RedemptionClaimMechanicsTests is RedemptionReportBase {
         assertEq(_reportWithdraw(10e18, 1.1e18), 11e18); //    event 2, [20, 30)
 
         // baseline: one uninterrupted call
-        uint256 snapshotId = _snapshotState();
+        uint256 snapshotId = vm.snapshotState();
         uint256 singleCallPayout = _claim(id);
         assertEq(singleCallPayout, 29.5e18); // 10 (capped) + 9.5 (uncapped) + 10 (capped)
         // 31 settled, 29.5 paid: 0.5 confiscated on event 0, none on event 1, 1.0 on event 2
         assertEq(redeemManager.getBufferedExceedingEth(), 1.5e18);
-        assertTrue(_revertToState(snapshotId));
+        assertTrue(vm.revertToState(snapshotId));
 
         // and now in three bites
         RedeemQueueV2.RedeemRequest memory request = redeemManager.getRedeemRequestDetails(id);
