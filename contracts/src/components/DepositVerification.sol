@@ -7,19 +7,10 @@ import "../interfaces/IDepositDataBuffer.sol";
 import "../interfaces/IDepositContract.sol";
 import "../interfaces/IAttestationVerifier.1.sol";
 
-// ToDo: make it state agnostic
-import "../state/attestationVerifier/PectraValidatorPubkeyLookup.sol";
-import "../state/attestationVerifier/PrePectraValidatorPubkeyLookup.sol";
-import "../state/attestationVerifier/RootAttesters.sol";
-import "../state/attestationVerifier/DomainSeparator.sol";
-import "../state/attestationVerifier/DepositDomainValue.sol";
-
-import "../AttestationVerifier.1.sol";
-
-/// @title Lib Deposit Verification
+/// @title Deposit Verification
 /// @author Alluvial Finance Inc.
-/// @notice This library provides functions for deposit verification
-library LibDepositVerification {
+/// @notice Provides the functions for initial deposit and top-up verification
+abstract contract DepositVerification is IAttestationVerifierV1 {
     /// @notice Minimum amount for an initial validator deposit. A brand-new validator requires the
     ///         full 32 ETH to activate on the consensus layer; a smaller initial deposit would never
     ///         activate yet would still be counted in InFlightDeposit / TotalDepositedETH, permanently
@@ -46,98 +37,21 @@ library LibDepositVerification {
     bytes32 internal constant ATTEST_TYPEHASH =
         keccak256("Attest(bytes32 depositDataBufferId,bytes32 depositRootHash)");
 
-    /// @notice An initial deposit's `amount` is outside the protocol-accepted range
-    ///         [MIN_INITIAL_DEPOSIT_AMOUNT (32 ether), 2048 ether] or is not gwei-aligned. Initial
-    ///         deposits require the full 32 ether so the validator actually activates on the consensus
-    ///         layer; a smaller amount would never activate yet would still inflate InFlightDeposit /
-    ///         `_assetBalance()` (see #441). This 32 ether floor is intentionally distinct from the
-    ///         top-up range, which allows down to 1 ether (see `InvalidTopUpAmount`) because top-ups
-    ///         credit already-activated validators. Enforced here in `fetchAndValidateDeposits()` so
-    ///         producer bugs fail before the heavy BLS path runs; downstream `_depositValidator`
-    ///         trusts this check.
-    /// @param index Index into `batch.deposits`
-    /// @param amount The offending amount in wei
-    error InvalidDepositAmount(uint256 index, uint256 amount);
-
-    /// @notice A top-up's pubkey field has an unexpected byte length
-    /// @param index Index into `batch.topUps`
-    /// @param length The observed length
-    error InvalidTopUpPubkeyLength(uint256 index, uint256 length);
-
-    /// @notice A top-up's `amount` is outside the protocol-accepted range
-    ///         [1 ether, 2016 ether] or is not gwei-aligned. Top-ups credit already-activated
-    ///         validators, so the lower bound is 1 ether — intentionally below the 32 ether floor
-    ///         that initial deposits require (see `InvalidDepositAmount`). The 2016 ether upper bound
-    ///         is the stateless headroom from a 32 ether funded validator to the 2048 ether Pectra max
-    ///         effective balance. Enforced here in `fetchAndValidateDeposits()` so producer bugs fail
-    ///         before the heavy BLS path runs; downstream `_depositValidator` trusts this check.
-    /// @param index Index into `batch.topUps`
-    /// @param amount The offending amount in wei
-    error InvalidTopUpAmount(uint256 index, uint256 amount);
-
-    /// @notice An initial deposit's pubkey field has an unexpected byte length
-    /// @param index Index into `batch.deposits`
-    /// @param length The observed length
-    error InvalidPubkeyLength(uint256 index, uint256 length);
-
-    /// @notice A deposit's BLS signature field has an unexpected byte length
-    /// @dev Only raised while iterating `batch.deposits` — top-ups have no signature field.
-    /// @param index Index into `batch.deposits`
-    /// @param length The observed length
-    error InvalidSignatureLength(uint256 index, uint256 length);
-
-    /// @notice A batch referenced a pubkey still in the pre-Pectra lookup as if it were a
-    ///         Pectra validator. Migrated legacy keys must first be promoted via
-    ///         self-consolidation before they can be initial-deposited or topped up.
-    /// @param pubkey The offending 48-byte BLS pubkey
-    error PrePectraValidatorPubkeyNotConsolidated(bytes pubkey);
-
-    /// @notice recordNewlyFundedPubkeys was passed a pubkey already in the initial-deposit set.
-    /// @param pubkey The offending 48-byte BLS pubkey
-    error PubkeyAlreadyFunded(bytes pubkey);
-
-    /// @notice A top-up referenced a pubkey that has never been initial-deposited by River.
-    ///         Without this check, a malicious committee could mark an attacker pubkey as a
-    ///         top-up and bypass BLS verification.
-    /// @param pubkey The offending 48-byte BLS pubkey
-    error TopUpPubkeyNotFunded(bytes pubkey);
-
-    /// @notice The submitted signatures array exceeds MAX_SIGNATURES
-    /// @param count The submitted signature count
-    /// @param max The configured maximum
-    error TooManySignatures(uint256 count, uint256 max);
-
-    /// @notice The number of valid, unique root attester signatures is below the configured quorum
-    /// @param valid The count of valid, unique root attester signatures recovered
-    /// @param quorum The required quorum
-    error InsufficientAttestations(uint256 valid, uint256 quorum);
-
-    /// @notice The co-signed deposit root does not match the deposit contract's current root
-    /// @param expected The deposit root co-signed by root attesters
-    /// @param actual The current root reported by the deposit contract
-    error DepositRootMismatch(bytes32 expected, bytes32 actual);
-
-    /// @notice The EIP-712 domain separator has not been initialized
-    error ZeroDomainSeparator();
-
-    /// @notice An attestation quorum of zero was supplied
-    error ZeroQuorum();
-
-    /// @notice The BLS deposit domain has not been initialized
-    error ZeroDepositDomain();
-
     /// @notice Verify the attestation quorum.
     /// @param depositDataBufferId The deposit data buffer ID.
     /// @param depositRootHash The deposit root hash.
     /// @param signatures The signatures.
     /// @param depositContract The official ETH deposit contract supplied by River.
     /// @param quorum The required attestation quorum.
+    /// @param domainSeparator The EIP-712 domain separator.
     function _verifyAttestationQuorum(
         bytes32 depositDataBufferId,
         bytes32 depositRootHash,
         bytes[] calldata signatures,
         address depositContract,
-        uint256 quorum
+        uint256 quorum,
+        bytes32 domainSeparator,
+        function(address account) internal view returns (bool) _isRootAttester
     ) internal view {
         uint256 sigLen = signatures.length;
         if (sigLen > MAX_SIGNATURES) revert TooManySignatures(sigLen, MAX_SIGNATURES);
@@ -149,10 +63,9 @@ library LibDepositVerification {
         bytes32 onChainRoot = IDepositContract(depositContract).get_deposit_root();
         if (onChainRoot != depositRootHash) revert DepositRootMismatch(depositRootHash, onChainRoot);
 
-        bytes32 domainSep = DomainSeparator.get();
-        if (domainSep == bytes32(0)) revert ZeroDomainSeparator();
+        if (domainSeparator == bytes32(0)) revert ZeroDomainSeparator();
         bytes32 structHash = keccak256(abi.encode(ATTEST_TYPEHASH, depositDataBufferId, depositRootHash));
-        bytes32 digest = ECDSA.toTypedDataHash(domainSep, structHash);
+        bytes32 digest = ECDSA.toTypedDataHash(domainSeparator, structHash);
 
         uint256 validCount = 0;
         address[] memory seen = new address[](sigLen);
@@ -160,7 +73,7 @@ library LibDepositVerification {
         for (uint256 i = 0; i < sigLen; i++) {
             address signer = _recover(digest, signatures[i]);
             if (signer == address(0)) continue;
-            if (!RootAttesters.isRootAttester(signer)) continue;
+            if (!_isRootAttester(signer)) continue;
 
             bool duplicate = false;
             for (uint256 j = 0; j < validCount; j++) {
@@ -202,19 +115,11 @@ library LibDepositVerification {
             }
             totalAmount += d.amount;
 
+            _customInitialDepositVerification(d.pubkey);
+
             bytes32 pkHash = keccak256(d.pubkey);
             pubkeyHashes[i] = pkHash;
 
-            if (PectraValidatorPubkeyLookup.isPubkeyFunded(d.pubkey)) {
-                revert PubkeyAlreadyFunded(d.pubkey);
-            }
-            // A migrated pre-Pectra (0x01) key must be promoted via self-consolidation, not
-            // reintroduced as a fresh initial deposit. Gating here keeps the pre-Pectra lookup
-            // authoritative and preserves the migration state machine even if a producer or
-            // attester batch is malformed.
-            if (PrePectraValidatorPubkeyLookup.isPubkeyFunded(d.pubkey)) {
-                revert PrePectraValidatorPubkeyNotConsolidated(d.pubkey);
-            }
             for (uint256 j = 0; j < i; j++) {
                 if (pubkeyHashes[j] == pkHash) {
                     revert PubkeyAlreadyFunded(d.pubkey);
@@ -222,6 +127,8 @@ library LibDepositVerification {
             }
         }
     }
+
+    function _customInitialDepositVerification(bytes memory _pubkey) internal view virtual {}
 
     function _verifyTopUps(IDepositDataBuffer.StandardTopUp[] memory topUps, uint256 topUpCount)
         internal
@@ -238,30 +145,23 @@ library LibDepositVerification {
             }
             totalAmount += t.amount;
 
-            // Explicitly reject migrated pre-Pectra keys with a distinct error. Such a key is not
-            // in the Pectra lookup so it would otherwise revert as TopUpPubkeyNotFunded; the
-            // dedicated error tells producers the key must be self-consolidated first.
-            if (PrePectraValidatorPubkeyLookup.isPubkeyFunded(t.pubkey)) {
-                revert PrePectraValidatorPubkeyNotConsolidated(t.pubkey);
-            }
-            if (!PectraValidatorPubkeyLookup.isPubkeyFunded(t.pubkey)) {
-                revert TopUpPubkeyNotFunded(t.pubkey);
-            }
+            _customTopUpVerification(t.pubkey);
         }
     }
+
+    function _customTopUpVerification(bytes memory _pubkey) internal view virtual {}
 
     /// @notice Verify the BLS signatures of all initial deposits against the canonical River
     ///         withdrawal credentials. Top-ups are handled by the caller and never reach this
     ///         function — they're cleared upstream in `fetchAndValidateDeposits()` via the membership check
     ///         on `PectraValidatorPubkeyLookup`.
     /// @param deposits The initial deposits.
-    /// @param withdrawalCredentials The canonical River withdrawal credentials.
-    function _verifyBLSSignatures(IDepositDataBuffer.StandardDeposit[] memory deposits, bytes32 withdrawalCredentials)
+    /// @param depositDomain The EIP-712 deposit domain separator.
+    function _verifyBLSSignatures(IDepositDataBuffer.StandardDeposit[] memory deposits, bytes32 depositDomain)
         internal
         view
     {
         if (deposits.length == 0) return;
-        bytes32 depositDomain = DepositDomainValue.get();
         if (depositDomain == bytes32(0)) revert ZeroDepositDomain();
         for (uint256 i = 0; i < deposits.length; i++) {
             BLS12_381.verifyDepositMessage(

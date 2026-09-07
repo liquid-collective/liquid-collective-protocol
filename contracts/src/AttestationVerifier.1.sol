@@ -13,9 +13,10 @@ import "./interfaces/IOperatorRegistry.1.sol";
 import "./interfaces/IRiver.1.sol";
 import "./interfaces/IWithdraw.1.sol";
 
+import "./components/DepositVerification.sol";
+
 import "./libraries/BLS12_381.sol";
 import "./libraries/LibErrors.sol";
-import "./libraries/LibDepositVerification.sol";
 
 import "./state/attestationVerifier/ConsolidationCommitteeAttestationQuorum.sol";
 import "./state/attestationVerifier/ConsolidationCommitteeAttesters.sol";
@@ -53,7 +54,12 @@ import "./state/shared/RiverAddress.sol";
 ///            for replay protection. State-mutating.
 ///
 ///         Extracted from RiverV1 to keep River's deployed bytecode under EIP-170.
-contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttestationVerifierPectraMigrationV1 {
+contract AttestationVerifierV1 is
+    Initializable,
+    IAttestationVerifierV1,
+    IAttestationVerifierPectraMigrationV1,
+    DepositVerification
+{
     // -----------------------------------------------------------------------
     // EIP-712
     // -----------------------------------------------------------------------
@@ -63,8 +69,8 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
     bytes32 internal constant NAME_HASH = keccak256("DepositToConsensusLayerValidation");
     bytes32 internal constant VERSION_HASH = keccak256("1");
 
-    bytes32 internal constant ATTEST_TYPEHASH =
-        keccak256("Attest(bytes32 depositDataBufferId,bytes32 depositRootHash)");
+    // bytes32 internal constant ATTEST_TYPEHASH =
+    //     keccak256("Attest(bytes32 depositDataBufferId,bytes32 depositRootHash)");
 
     /// @notice EIP-712 name used by the consolidation-attestation domain separator.
     /// @dev    Distinct from `NAME_HASH` so attestor signatures cannot be replayed
@@ -82,8 +88,8 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
         "AttestConsolidation(address withdrawalAddress,bytes[] sourcePubkeys,bytes[] targetPubkeys,uint256 totalAmount,uint256[] exitEpoch)"
     );
 
-    /// @notice Maximum number of signatures accepted. Bounds the O(n^2) duplicate-detection loop.
-    uint256 public constant MAX_SIGNATURES = 20;
+    // /// @notice Maximum number of signatures accepted. Bounds the O(n^2) duplicate-detection loop.
+    // uint256 public constant MAX_SIGNATURES = 20;
 
     /// @notice Maximum number of registered root attesters. Defensive cap to bound storage growth.
     uint256 public constant MAX_ROOT_ATTESTERS = 32;
@@ -91,9 +97,9 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
     /// @notice Maximum number of registered consolidation-committee attesters. Defensive cap to bound storage growth.
     uint256 public constant MAX_CONSOLIDATION_COMMITTEE_ATTESTERS = 32;
 
-    /// @dev Expected lengths for fixed BLS-related fields in a DepositObject.
-    uint256 internal constant DEPOSIT_PUBKEY_LENGTH = 48;
-    uint256 internal constant DEPOSIT_SIGNATURE_LENGTH = 96;
+    // /// @dev Expected lengths for fixed BLS-related fields in a DepositObject.
+    // uint256 internal constant DEPOSIT_PUBKEY_LENGTH = 48;
+    // uint256 internal constant DEPOSIT_SIGNATURE_LENGTH = 96;
 
     /// @dev Expected length for BLS pubkeys in a ConsolidationObject (source or target).
     uint256 internal constant CONSOLIDATION_PUBKEY_LENGTH = 48;
@@ -433,8 +439,14 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
         }
 
         // 1. Verify attestation quorum
-        LibDepositVerification._verifyAttestationQuorum(
-            depositDataBufferId, depositRootHash, signatures, depositContract, RootAttestationQuorum.get()
+        _verifyAttestationQuorum(
+            depositDataBufferId,
+            depositRootHash,
+            signatures,
+            depositContract,
+            RootAttestationQuorum.get(),
+            DomainSeparator.get(),
+            RootAttesters.isRootAttester
         );
 
         // 2. Get deposit batch (and its stored nonce) from buffer
@@ -456,15 +468,15 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
         //    isn't — so no pubkey can pass both branches in one batch.
         IDepositDataBuffer.StandardDeposit[] memory standardizedDeposits =
             _standardizeDeposits(batch.deposits, withdrawalCredentials, depositCount);
-        totalAmount += LibDepositVerification._verifyInitialDeposits(standardizedDeposits, depositCount);
+        totalAmount += _verifyInitialDeposits(standardizedDeposits, depositCount);
 
         // 5. Validate top-ups: field length on pubkey, amount bounds, pubkey-must-be-funded.
         //    Per-batch duplicate top-up pubkeys are allowed.
-        totalAmount += LibDepositVerification._verifyTopUps(_standardizeTopUps(batch.topUps, topUpCount), topUpCount);
+        totalAmount += _verifyTopUps(_standardizeTopUps(batch.topUps, topUpCount), topUpCount);
         if (totalAmount > committedBalance) revert NotEnoughFunds();
 
         // 6. Verify BLS signatures against canonical River WC (initials only).
-        LibDepositVerification._verifyBLSSignatures(standardizedDeposits, withdrawalCredentials);
+        _verifyBLSSignatures(standardizedDeposits, DepositDomainValue.get());
     }
 
     function _standardizeDeposits(
@@ -733,7 +745,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
         address[] memory seen = new address[](sigLen);
 
         for (uint256 i = 0; i < sigLen; i++) {
-            address signer = LibDepositVerification._recover(digest, signatures[i]);
+            address signer = _recover(digest, signatures[i]);
             if (signer == address(0)) continue;
             if (!ConsolidationCommitteeAttesters.isConsolidationCommitteeAttester(signer)) continue;
 
@@ -778,5 +790,30 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
     ///      32-byte value, so the array hashes to `keccak256` over their concatenation.
     function _hashUintArray(uint256[] calldata arr) internal pure returns (bytes32) {
         return keccak256(abi.encodePacked(arr));
+    }
+
+    function _customInitialDepositVerification(bytes memory _pubkey) internal view override {
+        if (PectraValidatorPubkeyLookup.isPubkeyFunded(_pubkey)) {
+            revert PubkeyAlreadyFunded(_pubkey);
+        }
+        // A migrated pre-Pectra (0x01) key must be promoted via self-consolidation, not
+        // reintroduced as a fresh initial deposit. Gating here keeps the pre-Pectra lookup
+        // authoritative and preserves the migration state machine even if a producer or
+        // attester batch is malformed.
+        if (PrePectraValidatorPubkeyLookup.isPubkeyFunded(_pubkey)) {
+            revert PrePectraValidatorPubkeyNotConsolidated(_pubkey);
+        }
+    }
+
+    function _customTopUpVerification(bytes memory _pubkey) internal view override {
+        // Explicitly reject migrated pre-Pectra keys with a distinct error. Such a key is not
+        // in the Pectra lookup so it would otherwise revert as TopUpPubkeyNotFunded; the
+        // dedicated error tells producers the key must be self-consolidated first.
+        if (PrePectraValidatorPubkeyLookup.isPubkeyFunded(_pubkey)) {
+            revert PrePectraValidatorPubkeyNotConsolidated(_pubkey);
+        }
+        if (!PectraValidatorPubkeyLookup.isPubkeyFunded(_pubkey)) {
+            revert TopUpPubkeyNotFunded(_pubkey);
+        }
     }
 }
