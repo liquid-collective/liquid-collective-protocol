@@ -72,6 +72,8 @@ interface IDepositDataBuffer {
         ///      is already funded, the stateless upper bound is the 2048 ETH max effective
         ///      balance minus the 32 ETH activation balance.
         uint256 amount;
+        /// @dev TODO
+        bytes32 withdrawalCredentials;
     }
 
     /// @notice A deposit batch — initial deposits and top-ups for a single attested submission.

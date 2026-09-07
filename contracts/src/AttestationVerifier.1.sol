@@ -472,7 +472,7 @@ contract AttestationVerifierV1 is
 
         // 5. Validate top-ups: field length on pubkey, amount bounds, pubkey-must-be-funded.
         //    Per-batch duplicate top-up pubkeys are allowed.
-        totalAmount += _verifyTopUps(_standardizeTopUps(batch.topUps, topUpCount), topUpCount);
+        totalAmount += _verifyTopUps(_standardizeTopUps(batch.topUps), topUpCount);
         if (totalAmount > committedBalance) revert NotEnoughFunds();
 
         // 6. Verify BLS signatures against canonical River WC (initials only).
@@ -496,15 +496,16 @@ contract AttestationVerifierV1 is
         }
     }
 
-    function _standardizeTopUps(IDepositDataBuffer.TopUp[] memory topUps, uint256 topUpCount)
+    function _standardizeTopUps(IDepositDataBuffer.TopUp[] memory topUps)
         internal
         pure
         returns (IDepositDataBuffer.StandardTopUp[] memory standardizedTopUps)
     {
-        standardizedTopUps = new IDepositDataBuffer.StandardTopUp[](topUpCount);
-        for (uint256 i; i < topUpCount; ++i) {
-            standardizedTopUps[i] =
-                IDepositDataBuffer.StandardTopUp({pubkey: topUps[i].pubkey, amount: topUps[i].amount});
+        // IDepositDataBuffer.TopUp has compatibility with IDepositDataBuffer.StandardTopUp in memory layout.
+        // `operatorIdx` and `withdrawalCredentials` overlap, but they are not used in the verification logic.
+        // `standardizedTopUps` are only read, never updated, so original `topUps` can be safely aliased.
+        assembly {
+            standardizedTopUps := topUps
         }
     }
 
