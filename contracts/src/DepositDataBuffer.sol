@@ -27,14 +27,18 @@ contract DepositDataBuffer is DepositDataBufferBase, IDepositDataBuffer {
     constructor(address admin, address producer, address processor) DepositDataBufferBase(admin, producer, processor) {}
 
     /// @inheritdoc IDepositDataBuffer
-    function submitDepositData(bytes32 depositDataBufferId, DepositObject memory batch) external onlyProducer {
+    function submitDepositData(bytes32 depositDataBufferId, DepositObject calldata batch) external onlyProducer {
         StandardDepositObject memory standardizedBatch;
+        // Store batch in memory to copy it into the standardized format.
+        // N.B. `batch` is calldata arg to enable direct conversion to storage at the end.
+        //      Changing it to memory works only with via-ir, which breaks coverage.
+        DepositObject memory batchMemory = batch;
 
         // DepositObject is memory-layout compatible with StandardDepositObject: the overlapping
         // `operatorIdx` / `withdrawalCredentials` fields are not read by the submission validation, and
         // `standardizedBatch` is only ever read, so aliasing `batch` is safe.
         assembly {
-            standardizedBatch := batch
+            standardizedBatch := batchMemory
         }
         _submitDepositData(depositDataBufferId, standardizedBatch);
 
