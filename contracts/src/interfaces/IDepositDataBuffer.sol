@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.34;
 
-import "../libraries/BLS12_381.sol";
+import "../interfaces/components/IDepositDataBufferBase.sol";
 
 /// @title IDepositDataBuffer
 /// @notice Interface for the DepositDataBuffer contract that stores pre-committed validator deposit batches.
@@ -13,7 +13,7 @@ import "../libraries/BLS12_381.sol";
 ///      flag via `markDepositDataProcessed`, and `isDepositDataProcessed` is consulted to reject
 ///      replays. The buffer — not the processor — is the authoritative source for this flag. In this
 ///      deployment the processor is River.
-interface IDepositDataBuffer {
+interface IDepositDataBuffer is IDepositDataBufferBase {
     /// @notice An initial validator deposit. BLS signature is verified by the verifier and
     ///         passed to the official deposit contract; pubkey must NOT already be in
     ///         `PectraValidatorPubkeyLookup`.
@@ -64,82 +64,6 @@ interface IDepositDataBuffer {
     }
 
     // -----------------------------------------------------------------------
-    // Events
-    // -----------------------------------------------------------------------
-
-    /// @notice Emitted when a new deposit batch is submitted to the buffer.
-    /// @param depositDataBufferId  The deterministic batch identifier (keccak256(abi.encode(batch, nonce)))
-    /// @param nonce                The batch nonce folded into the id (the `lastQueuedIdx` at submit time)
-    /// @param depositCount         Number of initial deposits in the batch
-    /// @param topUpCount           Number of top-ups in the batch
-    event DepositDataSubmitted(
-        bytes32 indexed depositDataBufferId, uint256 nonce, uint256 depositCount, uint256 topUpCount
-    );
-
-    /// @notice Emitted when the processor marks a queued batch as processed.
-    /// @param depositDataBufferId  The identifier of the batch that was flagged
-    event DepositDataProcessed(bytes32 indexed depositDataBufferId);
-
-    /// @notice Emitted when the admin rotates the authorized producer.
-    /// @param producer  The new authorized producer address
-    event SetProducer(address indexed producer);
-
-    /// @notice Emitted when the admin rotates the authorized processor.
-    /// @param processor  The new authorized processor address
-    event SetProcessor(address indexed processor);
-
-    /// @notice Emitted when a new pending admin is proposed.
-    /// @param pendingAdmin  The proposed pending admin address
-    event SetPendingAdmin(address indexed pendingAdmin);
-
-    /// @notice Emitted when the admin is changed (a pending admin accepts the transfer).
-    /// @param admin  The new admin address
-    event SetAdmin(address indexed admin);
-
-    // -----------------------------------------------------------------------
-    // Errors
-    // -----------------------------------------------------------------------
-
-    /// @notice Reverts when attempting to submit an empty deposit batch
-    error EmptyDepositData();
-
-    /// @notice Reverts when the computed ID already exists in the buffer
-    error DepositDataBufferIdAlreadyExists(bytes32 depositDataBufferId);
-
-    /// @notice Reverts when a requested batch ID does not exist
-    error DepositDataBufferIdNotFound(bytes32 depositDataBufferId);
-
-    /// @notice Reverts when the supplied ID does not match keccak256(abi.encode(batch, nonce))
-    error DepositDataBufferIdMismatch(bytes32 expected, bytes32 computed);
-
-    /// @notice Reverts when a batch has already been marked processed
-    error DepositDataAlreadyProcessed(bytes32 depositDataBufferId);
-
-    /// @notice Reverts when caller is not the authorized producer
-    error OnlyProducer();
-
-    /// @notice Reverts when caller is not the authorized admin
-    error OnlyAdmin();
-
-    /// @notice Reverts when caller is not the pending admin
-    error OnlyPendingAdmin();
-
-    /// @notice Reverts when caller is not the processor (the only account allowed to mark data processed)
-    error OnlyProcessor();
-
-    /// @notice Reverts when an initial-deposit pubkey is not exactly 48 bytes
-    error InvalidPubkeyLength(uint256 index, uint256 length);
-
-    /// @notice Reverts when an initial-deposit signature is not exactly 96 bytes
-    error InvalidSignatureLength(uint256 index, uint256 length);
-
-    /// @notice Reverts when a top-up pubkey is not exactly 48 bytes
-    error InvalidTopUpPubkeyLength(uint256 index, uint256 length);
-
-    /// @notice Reverts when a deposit or top-up amount is outside its allowed range or not gwei-aligned
-    error InvalidDepositAmount(uint256 index, uint256 amount);
-
-    // -----------------------------------------------------------------------
     // Functions
     // -----------------------------------------------------------------------
 
@@ -159,58 +83,4 @@ interface IDepositDataBuffer {
         external
         view
         returns (DepositObject memory batch, uint256 nonce);
-
-    /// @notice Mark a queued batch as processed.
-    /// @dev Restricted to the processor. Reverts if the batch is unknown or already processed, then
-    ///      emits `DepositDataProcessed`.
-    /// @param depositDataBufferId  The identifier of the batch to mark processed
-    function markDepositDataProcessed(bytes32 depositDataBufferId) external;
-
-    /// @notice Whether a queued batch has been marked processed.
-    /// @param depositDataBufferId  The batch identifier
-    /// @return True if the batch has been marked processed
-    function isDepositDataProcessed(bytes32 depositDataBufferId) external view returns (bool);
-
-    /// @notice Rotate the authorized producer. Restricted to the admin.
-    /// @param newProducer  The new authorized producer address
-    function setProducer(address newProducer) external;
-
-    /// @notice Returns the authorized producer address.
-    /// @return The authorized producer address
-    function getProducer() external view returns (address);
-
-    /// @notice Rotate the authorized processor. Restricted to the admin.
-    /// @dev In this deployment the AttestationVerifier binds the buffer to River as its processor at
-    ///      wiring time (`_assertDepositDataBufferProcessor`); rotating the processor away from that
-    ///      account will make the deposit flow's `markDepositDataProcessed` call revert, so this is an
-    ///      admin-trusted operation.
-    /// @param newProcessor  The new authorized processor address
-    function setProcessor(address newProcessor) external;
-
-    /// @notice Propose a new admin. Restricted to the current admin.
-    /// @dev Two-step transfer: the proposed admin must call `acceptAdmin` to take ownership, proving
-    ///      the new address can transact. This prevents an irrecoverable transfer to a wrong address —
-    ///      the buffer is immutable, so a bricked admin could never be recovered by an upgrade.
-    /// @param newAdmin  The proposed pending admin address
-    function proposeAdmin(address newAdmin) external;
-
-    /// @notice Accept the admin transfer. Restricted to the pending admin.
-    /// @dev Promotes the pending admin to admin and clears the pending admin.
-    function acceptAdmin() external;
-
-    /// @notice Returns the admin address.
-    /// @return The admin address
-    function getAdmin() external view returns (address);
-
-    /// @notice Returns the pending admin address (zero if no transfer is in progress).
-    /// @return The pending admin address
-    function getPendingAdmin() external view returns (address);
-
-    /// @notice The processor address — the only account allowed to mark deposit data processed.
-    /// @return The processor address
-    function getProcessor() external view returns (address);
-
-    /// @notice The index (and batch nonce) that will be assigned to the next submitted batch.
-    /// @return The next batch nonce
-    function lastQueuedIdx() external view returns (uint256);
 }

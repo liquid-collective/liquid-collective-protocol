@@ -10,6 +10,7 @@ import "../../src/interfaces/IAttestationVerifier.1.sol";
 import "../../src/interfaces/IAttestationVerifierPectraMigration.1.sol";
 import "../../src/interfaces/IDepositDataBuffer.sol";
 import "../../src/interfaces/IOperatorRegistry.1.sol";
+import "../../src/interfaces/components/IDepositVerification.sol";
 import "../../src/interfaces/IWithdraw.1.sol";
 import "../../src/libraries/LibErrors.sol";
 import "../../src/libraries/LibFundingDeltas.sol";
@@ -674,7 +675,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         sigs[0] = _signAttestation(rootAttesterPk1, bufferId, rootHash);
 
         vm.prank(keeper);
-        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InsufficientAttestations.selector, 1, 2));
+        vm.expectRevert(abi.encodeWithSelector(IDepositVerification.InsufficientAttestations.selector, 1, 2));
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
     }
 
@@ -694,7 +695,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         bytes32 actualRoot = depositContract.get_deposit_root();
         vm.prank(keeper);
         vm.expectRevert(
-            abi.encodeWithSelector(IAttestationVerifierV1.DepositRootMismatch.selector, staleRoot, actualRoot)
+            abi.encodeWithSelector(IDepositVerification.DepositRootMismatch.selector, staleRoot, actualRoot)
         );
         dm.depositToConsensusLayerWithAttestation(bufferId, staleRoot, sigs);
     }
@@ -746,7 +747,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         sigs[1] = _signAttestation(rootAttesterPk1, bufferId, rootHash);
 
         vm.prank(keeper);
-        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InsufficientAttestations.selector, 1, 2));
+        vm.expectRevert(abi.encodeWithSelector(IDepositVerification.InsufficientAttestations.selector, 1, 2));
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
     }
 
@@ -765,7 +766,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         sigs[1] = _signAttestation(nonRootAttesterPk, bufferId, rootHash);
 
         vm.prank(keeper);
-        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InsufficientAttestations.selector, 1, 2));
+        vm.expectRevert(abi.encodeWithSelector(IDepositVerification.InsufficientAttestations.selector, 1, 2));
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
     }
 
@@ -803,7 +804,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         sigs[1] = vetoSig;
 
         vm.prank(keeper);
-        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InsufficientAttestations.selector, 1, 2));
+        vm.expectRevert(abi.encodeWithSelector(IDepositVerification.InsufficientAttestations.selector, 1, 2));
         dm.depositToConsensusLayerWithAttestation(bufferId, realRoot, sigs);
     }
 
@@ -868,7 +869,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits);
 
         vm.prank(keeper);
-        vm.expectRevert(IAttestationVerifierV1.ZeroDomainSeparator.selector);
+        vm.expectRevert(IDepositVerification.ZeroDomainSeparator.selector);
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
     }
 
@@ -889,22 +890,8 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         sigs[1] = _signAttestation(rootAttesterPk2, bufferId, rootHash);
 
         vm.prank(keeper);
-        vm.expectRevert(IAttestationVerifierV1.ZeroQuorum.selector);
+        vm.expectRevert(IDepositVerification.ZeroQuorum.selector);
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
-    }
-
-    // verifyBLSDeposit is only callable via the internal self-staticcall trampoline in
-    // _verifyBLSSignatures. Any external caller must hit the OnlySelfCall guard so future
-    // additions of state or events to this function cannot become world-callable. The
-    // ZeroDepositDomain path is exercised via the proper fetchAndValidateDeposits() flow in
-    // testInitial_blsPathReached_revertsOnZeroDepositDomain below.
-    function testRevert_verifyBLSDeposit_onlySelfCall() public {
-        bytes memory pk = _pubkeyFromSeed(0);
-        bytes memory sig = new bytes(96); // guard fires before any signature content is read
-        BLS12_381.DepositY memory dy = _emptyDepositY();
-
-        vm.expectRevert(IAttestationVerifierV1.OnlySelfCall.selector);
-        verifier.verifyBLSDeposit(pk, sig, 32 ether, dy, withdrawalCredentials);
     }
 
     /// @dev Once the cheap checks and root-attester quorum pass, initial deposits must enter
@@ -1156,7 +1143,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits);
 
         vm.prank(keeper);
-        vm.expectRevert(IAttestationVerifierV1.ZeroDepositDomain.selector);
+        vm.expectRevert(IDepositVerification.ZeroDepositDomain.selector);
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
     }
 
@@ -1178,7 +1165,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits, topUps);
 
         vm.prank(keeper);
-        vm.expectRevert(IAttestationVerifierV1.ZeroDepositDomain.selector);
+        vm.expectRevert(IDepositVerification.ZeroDepositDomain.selector);
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
     }
 
@@ -1533,7 +1520,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         deposits[0] = _makeDeposit(operatorIdx, seed);
         (bytes32 depositId, bytes32 depositRoot, bytes[] memory depositSigs) = _prepareDeposit(deposits);
         vm.prank(keeper);
-        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.PubkeyAlreadyFunded.selector, deposits[0].pubkey));
+        vm.expectRevert(abi.encodeWithSelector(IDepositVerification.PubkeyAlreadyFunded.selector, deposits[0].pubkey));
         dm.depositToConsensusLayerWithAttestation(depositId, depositRoot, depositSigs);
     }
 
@@ -1835,7 +1822,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         bytes32 bufferId = keccak256("some-id");
         address stranger = address(0xC0FFEE);
         vm.prank(stranger);
-        vm.expectRevert(IDepositDataBuffer.OnlyProcessor.selector);
+        vm.expectRevert(IDepositDataBufferBase.OnlyProcessor.selector);
         buffer.markDepositDataProcessed(bufferId);
     }
 
@@ -1871,7 +1858,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
         uint256 depositCountBefore = depositContract.deposit_count();
         vm.prank(keeper);
-        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.PubkeyAlreadyFunded.selector, deposits[0].pubkey));
+        vm.expectRevert(abi.encodeWithSelector(IDepositVerification.PubkeyAlreadyFunded.selector, deposits[0].pubkey));
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
         assertEq(depositContract.deposit_count(), depositCountBefore, "no deposit should reach the beacon contract");
     }
@@ -1890,7 +1877,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
         uint256 depositCountBefore = depositContract.deposit_count();
         vm.prank(keeper);
-        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.PubkeyAlreadyFunded.selector, deposits[1].pubkey));
+        vm.expectRevert(abi.encodeWithSelector(IDepositVerification.PubkeyAlreadyFunded.selector, deposits[1].pubkey));
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
         assertEq(depositContract.deposit_count(), depositCountBefore, "no deposit should reach the beacon contract");
     }
@@ -2043,7 +2030,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         deposits[0].amount = 0;
         (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits);
         vm.prank(keeper);
-        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InvalidDepositAmount.selector, 0, 0));
+        vm.expectRevert(abi.encodeWithSelector(IDepositVerification.InvalidDepositAmount.selector, 0, 0));
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
 
         // Above maximum (2048 ether + 1 gwei).
@@ -2052,7 +2039,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         (bufferId, rootHash, sigs) = _prepareDeposit(deposits);
         vm.prank(keeper);
         vm.expectRevert(
-            abi.encodeWithSelector(IAttestationVerifierV1.InvalidDepositAmount.selector, 0, 2048 ether + 1 gwei)
+            abi.encodeWithSelector(IDepositVerification.InvalidDepositAmount.selector, 0, 2048 ether + 1 gwei)
         );
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
 
@@ -2061,7 +2048,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         deposits[0].amount = 32 ether + 1;
         (bufferId, rootHash, sigs) = _prepareDeposit(deposits);
         vm.prank(keeper);
-        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InvalidDepositAmount.selector, 0, 32 ether + 1));
+        vm.expectRevert(abi.encodeWithSelector(IDepositVerification.InvalidDepositAmount.selector, 0, 32 ether + 1));
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
     }
 
@@ -2078,7 +2065,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         deposits[0].amount = 1 ether;
         (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits);
         vm.prank(keeper);
-        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InvalidDepositAmount.selector, 0, 1 ether));
+        vm.expectRevert(abi.encodeWithSelector(IDepositVerification.InvalidDepositAmount.selector, 0, 1 ether));
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
 
         // Just below the floor (32 ETH - 1 gwei, gwei-aligned), must revert.
@@ -2087,7 +2074,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         (bufferId, rootHash, sigs) = _prepareDeposit(deposits);
         vm.prank(keeper);
         vm.expectRevert(
-            abi.encodeWithSelector(IAttestationVerifierV1.InvalidDepositAmount.selector, 0, 32 ether - 1 gwei)
+            abi.encodeWithSelector(IDepositVerification.InvalidDepositAmount.selector, 0, 32 ether - 1 gwei)
         );
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
     }
@@ -2115,7 +2102,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         deposits[1].amount = 16 ether; // sub-32 ETH at index 1
         (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits);
         vm.prank(keeper);
-        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InvalidDepositAmount.selector, 1, 16 ether));
+        vm.expectRevert(abi.encodeWithSelector(IDepositVerification.InvalidDepositAmount.selector, 1, 16 ether));
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
     }
 
@@ -2133,7 +2120,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
         (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits, topUps);
         vm.prank(keeper);
-        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InvalidDepositAmount.selector, 0, 16 ether));
+        vm.expectRevert(abi.encodeWithSelector(IDepositVerification.InvalidDepositAmount.selector, 0, 16 ether));
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
     }
 
@@ -2265,7 +2252,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         deposits[0].pubkey = new bytes(47); // off by one
         (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits);
         vm.prank(keeper);
-        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InvalidPubkeyLength.selector, 0, 47));
+        vm.expectRevert(abi.encodeWithSelector(IDepositVerification.InvalidPubkeyLength.selector, 0, 47));
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
     }
 
@@ -2276,7 +2263,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         deposits[0].signature = new bytes(95); // off by one
         (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareDeposit(deposits);
         vm.prank(keeper);
-        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InvalidSignatureLength.selector, 0, 95));
+        vm.expectRevert(abi.encodeWithSelector(IDepositVerification.InvalidSignatureLength.selector, 0, 95));
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
     }
 
@@ -2290,7 +2277,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         sigs[0] = _signAttestation(rootAttesterPk1, bufferId, rootHash);
         sigs[1] = _signAttestation(rootAttesterPk2, bufferId, rootHash);
         vm.prank(keeper);
-        vm.expectRevert(IAttestationVerifierV1.NoDeposits.selector);
+        vm.expectRevert(IDepositVerification.NoDeposits.selector);
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
     }
 
@@ -2346,7 +2333,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
     function testRevert_setRootAttestationQuorum_zero() public {
         vm.prank(admin);
-        vm.expectRevert(IAttestationVerifierV1.ZeroQuorum.selector);
+        vm.expectRevert(IDepositVerification.ZeroQuorum.selector);
         verifier.setRootAttestationQuorum(0);
     }
 
@@ -2446,7 +2433,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         address[] memory consolidationAttesters = new address[](1);
         consolidationAttesters[0] = makeAddr("consolidation-attester");
 
-        vm.expectRevert(IAttestationVerifierV1.ZeroQuorum.selector);
+        vm.expectRevert(IDepositVerification.ZeroQuorum.selector);
         freshVerifier.initAttestationVerifierV1(
             address(dm), address(buffer), rootAttesters, 0, bytes4(0), consolidationAttesters, 1
         );
@@ -2540,7 +2527,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
             tooMany[i] = new bytes(65); // any 65-byte blob; length check fires before recovery
         }
         vm.prank(keeper);
-        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.TooManySignatures.selector, max + 1, max));
+        vm.expectRevert(abi.encodeWithSelector(IDepositVerification.TooManySignatures.selector, max + 1, max));
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, tooMany);
     }
 
@@ -2614,7 +2601,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         sigs[3] = _signAttestation(rootAttesterPk2, bufferId, rootHash);
 
         vm.prank(keeper);
-        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InsufficientAttestations.selector, 2, 3));
+        vm.expectRevert(abi.encodeWithSelector(IDepositVerification.InsufficientAttestations.selector, 2, 3));
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
     }
 
@@ -2640,7 +2627,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         sigs[2] = _signAttestation(rootAttesterPk2, bufferId, rootHash);
 
         vm.prank(keeper);
-        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InsufficientAttestations.selector, 2, 3));
+        vm.expectRevert(abi.encodeWithSelector(IDepositVerification.InsufficientAttestations.selector, 2, 3));
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
     }
 
@@ -2794,7 +2781,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         sigs[1] = _signAttestation(rootAttesterPk2, bufferId, rootHash);
 
         vm.prank(keeper);
-        vm.expectRevert(IAttestationVerifierV1.NoDeposits.selector);
+        vm.expectRevert(IDepositVerification.NoDeposits.selector);
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
     }
 
@@ -2811,7 +2798,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         topUps[0].pubkey = new bytes(47); // off by one
         (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareTopUps(topUps);
         vm.prank(keeper);
-        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InvalidTopUpPubkeyLength.selector, 0, 47));
+        vm.expectRevert(abi.encodeWithSelector(IDepositVerification.InvalidTopUpPubkeyLength.selector, 0, 47));
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
     }
 
@@ -2825,7 +2812,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         topUps[0].amount = 0;
         (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) = _prepareTopUps(topUps);
         vm.prank(keeper);
-        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InvalidTopUpAmount.selector, 0, 0));
+        vm.expectRevert(abi.encodeWithSelector(IDepositVerification.InvalidTopUpAmount.selector, 0, 0));
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
 
         // Not gwei-aligned (32 ether + 1 wei).
@@ -2833,7 +2820,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         topUps[0].amount = 32 ether + 1;
         (bufferId, rootHash, sigs) = _prepareTopUps(topUps);
         vm.prank(keeper);
-        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.InvalidTopUpAmount.selector, 0, 32 ether + 1));
+        vm.expectRevert(abi.encodeWithSelector(IDepositVerification.InvalidTopUpAmount.selector, 0, 32 ether + 1));
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
 
         // Above maximum (2016 ether + 1 gwei).
@@ -2842,7 +2829,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
         (bufferId, rootHash, sigs) = _prepareTopUps(topUps);
         vm.prank(keeper);
         vm.expectRevert(
-            abi.encodeWithSelector(IAttestationVerifierV1.InvalidTopUpAmount.selector, 0, 2016 ether + 1 gwei)
+            abi.encodeWithSelector(IDepositVerification.InvalidTopUpAmount.selector, 0, 2016 ether + 1 gwei)
         );
         dm.depositToConsensusLayerWithAttestation(bufferId, rootHash, sigs);
     }
