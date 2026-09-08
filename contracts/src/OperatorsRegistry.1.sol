@@ -227,27 +227,6 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @inheritdoc IOperatorsRegistryV1
-    function getReleasedETHPerOperator() external view returns (uint256[] memory) {
-        uint256[] memory releasedETH = OperatorsV3.getReleasedETH();
-        uint256 listLength = releasedETH.length;
-        if (listLength > 0) {
-            assembly ("memory-safe") {
-                // no need to use free memory pointer as we reuse the same memory range
-
-                // erase previous word storing length
-                mstore(releasedETH, 0)
-
-                // move memory pointer up by a word
-                releasedETH := add(releasedETH, 0x20)
-
-                // store updated length at new memory pointer location
-                mstore(releasedETH, sub(listLength, 1))
-            }
-        }
-        return releasedETH;
-    }
-
-    /// @inheritdoc IOperatorsRegistryV1
     function listActiveOperators() external view returns (OperatorsV3.Operator[] memory) {
         return OperatorsV3.getAllActive();
     }
