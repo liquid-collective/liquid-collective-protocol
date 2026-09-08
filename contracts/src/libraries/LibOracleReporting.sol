@@ -188,12 +188,7 @@ library LibOracleReporting {
                 );
             }
 
-            // the delta is the principal that stopped earning within this reporting interval. It is
-            // deliberately NOT bounded here against validatorsExitingBalance + validatorsExitedBalance:
-            // post-exit_epoch slashing can make the cumulative stopped-earning total exceed what is
-            // eventually swept, so that comparison is not an invariant, and an over-tight revert on the
-            // report path would block redemption settlement entirely (_reportWithdrawToRedeemManager
-            // runs inside this same call). Consumers clamp the delta instead.
+            // the delta is the principal that stopped earning within this reporting interval.
             vars.stoppedEarningAmountIncrease =
                 _report.validatorsStoppedEarningBalance - lastStoredReport.validatorsStoppedEarningBalance;
 

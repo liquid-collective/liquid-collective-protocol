@@ -258,8 +258,10 @@ library OperatorsV3 {
 
         // slot 0 holds the sum, so operator `operatorIndex` lives at `operatorIndex + 1`
         uint256 requiredLength = operatorIndex + 2;
-        while (releasedETH.length < requiredLength) {
-            releasedETH.push(0);
+        if (releasedETH.length < requiredLength) {
+            assembly {
+                sstore(releasedETH.slot, requiredLength)
+            }
         }
 
         releasedETH[0] += amount;

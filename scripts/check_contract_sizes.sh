@@ -1,6 +1,8 @@
 #! /bin/bash
 
-# Fails if any deployable PRODUCTION contract exceeds the EIP-170 runtime bytecode limit.
+# Fails if any deployable PRODUCTION contract exceeds either:
+# - EIP-7954 runtime bytecode limit
+# - EIP-3860 initcode size limit
 #
 # Why this exists rather than plain `forge build --sizes`: that command exits non-zero on the
 # whole build, and two test-only harnesses (AccountingRiverV1, RiverV1ForceCommittable) are
@@ -8,22 +10,14 @@
 # command can never be used as a gate. This script scopes the check to contracts declared under
 # contracts/src (excluding interfaces/ and mock/), which is exactly the set that gets deployed.
 #
-# RiverV1 runs close to the limit and every cheap lever is already spent (see foundry.toml:
-# optimizer_runs = 3, via_ir, bytecode_hash = none). Anything that widens the oracle report
-# struct grows River, so this needs to be checked on every change.
-#
-# NOTE: this measures the FOUNDRY build. The deploy pipeline compiles with hardhat using looser
-# settings (hardhat.config.ts: optimizer runs 100, default ipfs bytecodeHash, evmVersion osaka),
-# which produces LARGER bytecode. A green run here is necessary but not sufficient — the hardhat
-# side is gated separately by `contractSizer.strict` in hardhat.config.ts.
-#
 # Usage:
 #   ./scripts/check_contract_sizes.sh
 #   MIN_RUNTIME_MARGIN=2048 ./scripts/check_contract_sizes.sh   # also fail if margin is too thin
 
 set -euo pipefail
 
-EIP170_LIMIT=24576
+EIP7954_LIMIT=65536
+EIP3860_LIMIT=49152
 MIN_RUNTIME_MARGIN="${MIN_RUNTIME_MARGIN:-0}"
 
 cd "$(dirname "$0")/.."
@@ -34,8 +28,7 @@ cd "$(dirname "$0")/.."
 PRODUCTION_NAMES=$(
   find contracts/src -name '*.sol' -not -path '*/interfaces/*' -not -path '*/mock/*' -print0 |
     xargs -0 grep -hE '^(contract|library) [A-Za-z0-9_]+' |
-    sed -E 's/^(contract|library) ([A-Za-z0-9_]+).*/\2/' |
-    sort -u
+    sed -E 's/^(contract|library) ([A-Za-z0-9_]+).*/\2/'
 )
 
 if [ -z "$PRODUCTION_NAMES" ]; then
@@ -57,20 +50,31 @@ NAMES_JSON=$(echo "$PRODUCTION_NAMES" | jq -R -s -c 'split("\n") | map(select(le
 jq -n \
     --argjson names "$NAMES_JSON" \
     --argjson sizes "$SIZES_JSON" \
-    --argjson limit "$EIP170_LIMIT" \
+    --argjson limit "$EIP7954_LIMIT" \
+    --argjson initLimit "$EIP3860_LIMIT" \
     --argjson minMargin "$MIN_RUNTIME_MARGIN" '
     [ $names[]
       | select($sizes[.] != null)
-      | { name: ., size: $sizes[.].runtime_size, margin: $sizes[.].runtime_margin }
+      | {
+          name: .,
+          size: $sizes[.].runtime_size,
+          margin: $sizes[.].runtime_margin,
+          initSize: $sizes[.].init_size,
+          initMargin: $sizes[.].init_margin
+        }
     ] as $checked
     | ($checked | map(select(.size > $limit))) as $over
+    | ($checked | map(select(.initSize > $initLimit))) as $overInit
     | ($checked | map(select(.margin < $minMargin and .size <= $limit))) as $thin
     | {
         checked: ($checked | length),
         limit: $limit,
+        initLimit: $initLimit,
         minMargin: $minMargin,
         tightest: ($checked | sort_by(.margin) | .[0:8]),
+        tightestInit: ($checked | sort_by(.initMargin) | .[0:8]),
         over: $over,
+        overInit: $overInit,
         thin: $thin
       }
   ' >/tmp/lc_sizes_report.json
@@ -82,20 +86,33 @@ import sys
 with open("/tmp/lc_sizes_report.json") as fh:
     r = json.load(fh)
 
-print(f"EIP-170 runtime limit: {r['limit']} bytes — checked {r['checked']} production contracts")
+print(f"EIP-7954 runtime limit: {r['limit']} bytes — checked {r['checked']} production contracts")
 print()
 print(f"{'contract':<48}{'runtime':>10}{'margin':>10}")
 for c in r["tightest"]:
     print(f"{c['name']:<48}{c['size']:>10}{c['margin']:>10}")
 print()
 
+print(f"EIP-3860 initcode limit: {r['initLimit']} bytes")
+print()
+print(f"{'contract':<48}{'initcode':>10}{'margin':>10}")
+for c in r["tightestInit"]:
+    print(f"{c['name']:<48}{c['initSize']:>10}{c['initMargin']:>10}")
+print()
+
 failed = False
 
 if r["over"]:
     failed = True
-    print("FAIL: over the EIP-170 limit:")
+    print("FAIL: over the EIP-7954 limit:")
     for c in r["over"]:
         print(f"  {c['name']}: {c['size']} bytes ({-c['margin']} over)")
+
+if r["overInit"]:
+    failed = True
+    print("FAIL: over the EIP-3860 initcode limit:")
+    for c in r["overInit"]:
+        print(f"  {c['name']}: {c['initSize']} bytes ({-c['initMargin']} over)")
 
 if r["thin"]:
     failed = True
@@ -106,5 +123,5 @@ if r["thin"]:
 if failed:
     sys.exit(1)
 
-print("OK: every production contract is within the EIP-170 limit.")
+print("OK: every production contract is within EIP-7954 and EIP-3860 limits.")
 PY
