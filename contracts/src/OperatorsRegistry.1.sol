@@ -197,23 +197,33 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
     /// @inheritdoc IOperatorsRegistryV1
     function getExitedETHPerOperator() external view returns (uint256[] memory) {
-        uint256[] memory exitedETH = OperatorsV3.getExitedETH();
-        uint256 listLength = exitedETH.length;
+        return _dropFirstElement(OperatorsV3.getExitedETH());
+    }
+
+    /// @inheritdoc IOperatorsRegistryV1
+    function getReleasedETHPerOperator() external view returns (uint256[] memory) {
+        return _dropFirstElement(OperatorsV3.getReleasedETH());
+    }
+
+    /// @notice Drops the first element of a memory array in place (shifts the pointer, decrements length)
+    /// @dev Used to strip the leading aggregate/sum slot from OperatorsV3's raw exited/released ETH arrays
+    function _dropFirstElement(uint256[] memory _array) private pure returns (uint256[] memory) {
+        uint256 listLength = _array.length;
         if (listLength > 0) {
             assembly ("memory-safe") {
                 // no need to use free memory pointer as we reuse the same memory range
 
                 // erase previous word storing length
-                mstore(exitedETH, 0)
+                mstore(_array, 0)
 
                 // move memory pointer up by a word
-                exitedETH := add(exitedETH, 0x20)
+                _array := add(_array, 0x20)
 
                 // store updated length at new memory pointer location
-                mstore(exitedETH, sub(listLength, 1))
+                mstore(_array, sub(listLength, 1))
             }
         }
-        return exitedETH;
+        return _array;
     }
 
     /// @inheritdoc IOperatorsRegistryV1
