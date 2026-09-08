@@ -255,11 +255,11 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
     ///      message, so it must be passed in rather than patched onto the returned struct.
     function _signedDeposit(uint256 seed, uint256 operatorIdx, uint256 amount)
         internal
-        returns (IDepositDataBuffer.Deposit memory)
+        returns (IDepositDataBufferBase.Deposit memory)
     {
         BLSSigner.SignedDeposit memory signed = _blsSigner()
             .signDepositFromSeed(seed, amount, river.getWithdrawalCredentials(), attestationVerifier.DEPOSIT_DOMAIN());
-        return IDepositDataBuffer.Deposit({
+        return IDepositDataBufferBase.Deposit({
             pubkey: signed.pubkey,
             signature: signed.signature,
             amount: amount,
@@ -450,8 +450,8 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
 
         // Build deposit objects. Seed pubkeys/signatures off the contract-level cursor so
         // repeated invocations within the same test produce a fresh bufferId.
-        IDepositDataBuffer.DepositObject memory batch;
-        batch.deposits = new IDepositDataBuffer.Deposit[](total);
+        IDepositDataBufferBase.DepositObject memory batch;
+        batch.deposits = new IDepositDataBufferBase.Deposit[](total);
         // batch.topUps is left as a default empty array.
         uint256 idx = 0;
         uint256 seedBase = _pubkeySeedCursor;
@@ -495,8 +495,8 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
         internal
         returns (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs)
     {
-        IDepositDataBuffer.DepositObject memory batch;
-        batch.deposits = new IDepositDataBuffer.Deposit[](1);
+        IDepositDataBufferBase.DepositObject memory batch;
+        batch.deposits = new IDepositDataBufferBase.Deposit[](1);
         uint256 seed = _pubkeySeedCursor;
         batch.deposits[0] = _signedDeposit(seed, opIndex, 32 ether);
         _pubkeySeedCursor = seed + 1;

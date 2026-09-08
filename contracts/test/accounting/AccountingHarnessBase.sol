@@ -386,18 +386,18 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
     ///      `PubkeyAlreadyFunded` guard).
     function _makeDepositObjects(uint256[] memory opIndices, uint256[] memory amounts)
         internal
-        returns (IDepositDataBuffer.DepositObject memory batch)
+        returns (IDepositDataBufferBase.DepositObject memory batch)
     {
         require(opIndices.length == amounts.length, "length mismatch");
         uint256 nonce = ++_depositBatchNonce;
         bytes32 wc = river.getWithdrawalCredentials();
         bytes32 depositDomain = attestationVerifier.DEPOSIT_DOMAIN();
-        batch.deposits = new IDepositDataBuffer.Deposit[](opIndices.length);
+        batch.deposits = new IDepositDataBufferBase.Deposit[](opIndices.length);
         // batch.topUps left as default empty array.
         for (uint256 i = 0; i < opIndices.length; i++) {
             BLSSigner.SignedDeposit memory signed =
                 blsSigner.signDepositFromSeed(nonce * 1000 + i, amounts[i], wc, depositDomain);
-            batch.deposits[i] = IDepositDataBuffer.Deposit({
+            batch.deposits[i] = IDepositDataBufferBase.Deposit({
                 pubkey: signed.pubkey,
                 signature: signed.signature,
                 amount: amounts[i],

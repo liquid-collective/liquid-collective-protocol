@@ -19,7 +19,7 @@ contract DepositDataBufferFuzzTest is Test, DepositDataBufferFixtures {
         buffer = new DepositDataBuffer(makeAddr("admin"), producer, makeAddr("processor"));
     }
 
-    function _submit(IDepositDataBuffer.DepositObject memory batch) internal returns (bytes32 id) {
+    function _submit(IDepositDataBufferBase.DepositObject memory batch) internal returns (bytes32 id) {
         id = keccak256(abi.encode(batch, buffer.lastQueuedIdx()));
         vm.prank(producer);
         buffer.submitDepositData(id, batch);
@@ -33,11 +33,11 @@ contract DepositDataBufferFuzzTest is Test, DepositDataBufferFixtures {
         // Cap seed so `seedBase + i` cannot overflow in the fixture builder.
         seed = bound(seed, 0, type(uint256).max - 20);
         uint256 count = bound(uint256(size), 1, 10);
-        IDepositDataBuffer.DepositObject memory batch = _batch(count, seed);
+        IDepositDataBufferBase.DepositObject memory batch = _batch(count, seed);
 
         bytes32 id = _submit(batch);
 
-        (IDepositDataBuffer.DepositObject memory stored, uint256 nonce) = buffer.getDepositData(id);
+        (IDepositDataBufferBase.DepositObject memory stored, uint256 nonce) = buffer.getDepositData(id);
         assertEq(stored.deposits.length, count);
         assertEq(nonce, 0, "first submission uses batch nonce 0");
         assertEq(buffer.lastQueuedIdx(), 1);
@@ -56,10 +56,10 @@ contract DepositDataBufferFuzzTest is Test, DepositDataBufferFixtures {
             _submit(_batch(1, 1000 + i));
         }
 
-        IDepositDataBuffer.DepositObject memory batch = _batch(count, seed);
+        IDepositDataBufferBase.DepositObject memory batch = _batch(count, seed);
         bytes32 id = _submit(batch);
 
-        (IDepositDataBuffer.DepositObject memory stored, uint256 nonce) = buffer.getDepositData(id);
+        (IDepositDataBufferBase.DepositObject memory stored, uint256 nonce) = buffer.getDepositData(id);
         assertEq(nonce, bumps);
         assertEq(keccak256(abi.encode(stored, nonce)), id, "stored batch+nonce must reproduce the id");
     }
@@ -71,7 +71,7 @@ contract DepositDataBufferFuzzTest is Test, DepositDataBufferFixtures {
     function testFuzz_identicalDataYieldsDistinctIds(uint256 seed) public {
         seed = bound(seed, 0, type(uint256).max - 20);
         uint256 count = bound(seed, 1, 5);
-        IDepositDataBuffer.DepositObject memory batch = _batch(count, seed);
+        IDepositDataBufferBase.DepositObject memory batch = _batch(count, seed);
 
         bytes32 id0 = keccak256(abi.encode(batch, uint256(0)));
         bytes32 id1 = keccak256(abi.encode(batch, uint256(1)));
@@ -93,41 +93,44 @@ contract DepositDataBufferFuzzTest is Test, DepositDataBufferFixtures {
 
     function testFuzz_invalidPubkeyLength(uint8 len) public {
         vm.assume(len != 48);
-        IDepositDataBuffer.DepositObject memory batch = _batch(1, 0);
+        IDepositDataBufferBase.DepositObject memory batch = _batch(1, 0);
         batch.deposits[0].pubkey = new bytes(uint256(len));
 
         vm.prank(producer);
-        vm.expectRevert(abi.encodeWithSelector(IDepositDataBuffer.InvalidPubkeyLength.selector, 0, uint256(len)));
+        vm.expectRevert(abi.encodeWithSelector(IDepositDataBufferBase.InvalidPubkeyLength.selector, 0, uint256(len)));
         buffer.submitDepositData(bytes32(0), batch);
     }
 
     function testFuzz_invalidSignatureLength(uint8 len) public {
         vm.assume(len != 96);
-        IDepositDataBuffer.DepositObject memory batch = _batch(1, 0);
+        IDepositDataBufferBase.DepositObject memory batch = _batch(1, 0);
         batch.deposits[0].signature = new bytes(uint256(len));
 
         vm.prank(producer);
-        vm.expectRevert(abi.encodeWithSelector(IDepositDataBuffer.InvalidSignatureLength.selector, 0, uint256(len)));
+        vm.expectRevert(abi.encodeWithSelector(IDepositDataBufferBase.InvalidSignatureLength.selector, 0, uint256(len)));
         buffer.submitDepositData(bytes32(0), batch);
     }
 
     function testFuzz_invalidTopUpPubkeyLength(uint8 len) public {
         vm.assume(len != 48);
-        IDepositDataBuffer.DepositObject memory batch;
-        batch.topUps = new IDepositDataBuffer.TopUp[](1);
-        batch.topUps[0] = IDepositDataBuffer.TopUp({pubkey: new bytes(uint256(len)), amount: 1 ether, operatorIdx: 0});
+        IDepositDataBufferBase.DepositObject memory batch;
+        batch.topUps = new IDepositDataBufferBase.TopUp[](1);
+        batch.topUps[0] =
+            IDepositDataBufferBase.TopUp({pubkey: new bytes(uint256(len)), amount: 1 ether, operatorIdx: 0});
 
         vm.prank(producer);
-        vm.expectRevert(abi.encodeWithSelector(IDepositDataBuffer.InvalidTopUpPubkeyLength.selector, 0, uint256(len)));
+        vm.expectRevert(
+            abi.encodeWithSelector(IDepositDataBufferBase.InvalidTopUpPubkeyLength.selector, 0, uint256(len))
+        );
         buffer.submitDepositData(bytes32(0), batch);
     }
 
     function testFuzz_zeroDepositAmountReverts(uint256 seed) public {
-        IDepositDataBuffer.DepositObject memory batch = _batch(1, seed);
+        IDepositDataBufferBase.DepositObject memory batch = _batch(1, seed);
         batch.deposits[0].amount = 0;
 
         vm.prank(producer);
-        vm.expectRevert(abi.encodeWithSelector(IDepositDataBuffer.InvalidDepositAmount.selector, 0, 0));
+        vm.expectRevert(abi.encodeWithSelector(IDepositDataBufferBase.InvalidDepositAmount.selector, 0, 0));
         buffer.submitDepositData(bytes32(0), batch);
     }
 }

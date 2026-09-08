@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.34;
 
-import "../../src/interfaces/IDepositDataBuffer.sol";
+import "../../src/interfaces/components/IDepositDataBufferBase.sol";
 import "../../src/libraries/BLS12_381.sol";
 
 /// @title DepositDataBufferFixtures
@@ -18,9 +18,9 @@ abstract contract DepositDataBufferFixtures {
         return abi.encodePacked(sha256(abi.encode("sig", seed)), sha256(abi.encode("sig2", seed)), bytes32(0));
     }
 
-    function _deposit(uint256 seed) internal pure returns (IDepositDataBuffer.Deposit memory) {
+    function _deposit(uint256 seed) internal pure returns (IDepositDataBufferBase.Deposit memory) {
         BLS12_381.DepositY memory depositY;
-        return IDepositDataBuffer.Deposit({
+        return IDepositDataBufferBase.Deposit({
             pubkey: _pubkey(seed),
             signature: _signature(seed),
             amount: 32 ether + (seed % 1 gwei) * 1 gwei,
@@ -29,14 +29,14 @@ abstract contract DepositDataBufferFixtures {
         });
     }
 
-    function _topUp(uint256 seed) internal pure returns (IDepositDataBuffer.TopUp memory) {
-        return IDepositDataBuffer.TopUp({
+    function _topUp(uint256 seed) internal pure returns (IDepositDataBufferBase.TopUp memory) {
+        return IDepositDataBufferBase.TopUp({
             pubkey: _pubkey(seed), amount: 1 ether + (seed % 1 gwei) * 1 gwei, operatorIdx: seed % 5
         });
     }
 
     /// @dev A deposits-only batch of `count` initial deposits seeded from 0.
-    function _batch(uint256 count) internal pure returns (IDepositDataBuffer.DepositObject memory batch) {
+    function _batch(uint256 count) internal pure returns (IDepositDataBufferBase.DepositObject memory batch) {
         return _batch(count, 0);
     }
 
@@ -44,9 +44,9 @@ abstract contract DepositDataBufferFixtures {
     function _batch(uint256 count, uint256 seedBase)
         internal
         pure
-        returns (IDepositDataBuffer.DepositObject memory batch)
+        returns (IDepositDataBufferBase.DepositObject memory batch)
     {
-        batch.deposits = new IDepositDataBuffer.Deposit[](count);
+        batch.deposits = new IDepositDataBufferBase.Deposit[](count);
         for (uint256 i = 0; i < count; i++) {
             batch.deposits[i] = _deposit(seedBase + i);
         }

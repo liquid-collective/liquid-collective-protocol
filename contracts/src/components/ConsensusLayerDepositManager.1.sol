@@ -53,8 +53,8 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     /// @notice Internal helper called to update operator funded ETH from a buffer-based batch.
     /// @dev Aggregates per-operator deltas across both initial deposits and top-ups.
     function _updateFundedETHFromBuffer(
-        IDepositDataBuffer.Deposit[] memory deposits,
-        IDepositDataBuffer.TopUp[] memory topUps
+        IDepositDataBufferBase.Deposit[] memory deposits,
+        IDepositDataBufferBase.TopUp[] memory topUps
     ) internal virtual;
 
     /// @notice Handler to check if slashing containment mode is active
@@ -148,7 +148,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         uint256 committedBalance = CommittedBalance.get();
         address depositContract = DepositContractAddress.get();
         IAttestationVerifierV1 verifier = IAttestationVerifierV1(AttestationVerifierAddress.get());
-        (IDepositDataBuffer.DepositObject memory batch, uint256 totalAmount) = verifier.fetchAndValidateDeposits(
+        (IDepositDataBufferBase.DepositObject memory batch, uint256 totalAmount) = verifier.fetchAndValidateDeposits(
             depositDataBufferId, depositRootHash, signatures, depositContract, withdrawalCredentials, committedBalance
         );
 
@@ -190,14 +190,14 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     ///      compiled without the optimizer (e.g. under `forge coverage`).
     function _executeDeposits(
         bytes32 depositDataBufferId,
-        IDepositDataBuffer.Deposit[] memory deposits,
+        IDepositDataBufferBase.Deposit[] memory deposits,
         bytes32 withdrawalCredentials,
         address depositContract
     ) internal returns (bytes[] memory newlyFundedPubkeys) {
         uint256 depositCount = deposits.length;
         newlyFundedPubkeys = new bytes[](depositCount);
         for (uint256 i = 0; i < depositCount; i++) {
-            IDepositDataBuffer.Deposit memory d = deposits[i];
+            IDepositDataBufferBase.Deposit memory d = deposits[i];
             LibDepositValidation._depositValidator(
                 d.pubkey, d.signature, d.amount, withdrawalCredentials, depositContract
             );
@@ -210,7 +210,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
     /// @dev See `_executeDeposits` for the rationale on extracting this loop.
     function _executeTopUps(
         bytes32 depositDataBufferId,
-        IDepositDataBuffer.TopUp[] memory topUps,
+        IDepositDataBufferBase.TopUp[] memory topUps,
         bytes32 withdrawalCredentials,
         address depositContract
     ) internal {
@@ -218,7 +218,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         if (topUpCount == 0) return;
         bytes memory zeroSig = new bytes(SIGNATURE_LENGTH);
         for (uint256 i = 0; i < topUpCount; i++) {
-            IDepositDataBuffer.TopUp memory t = topUps[i];
+            IDepositDataBufferBase.TopUp memory t = topUps[i];
             LibDepositValidation._depositValidator(t.pubkey, zeroSig, t.amount, withdrawalCredentials, depositContract);
             emit TopUp(depositDataBufferId, t.operatorIdx, t.pubkey, t.amount);
         }

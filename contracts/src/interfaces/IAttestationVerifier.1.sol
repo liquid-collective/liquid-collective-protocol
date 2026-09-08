@@ -357,7 +357,7 @@ interface IAttestationVerifierV1 {
         address depositContract,
         bytes32 withdrawalCredentials,
         uint256 committedBalance
-    ) external view returns (IDepositDataBuffer.DepositObject memory batch, uint256 totalAmount);
+    ) external view returns (IDepositDataBufferBase.DepositObject memory batch, uint256 totalAmount);
 
     // -----------------------------------------------------------------------
     // Initial-deposit recording (called by River after a successful deposit batch)

@@ -430,7 +430,7 @@ contract AttestationVerifierV1 is
         address depositContract,
         bytes32 withdrawalCredentials,
         uint256 committedBalance
-    ) external view returns (IDepositDataBuffer.DepositObject memory batch, uint256 totalAmount) {
+    ) external view returns (IDepositDataBufferBase.DepositObject memory batch, uint256 totalAmount) {
         // 0. Replay protection — reject any batch ID the buffer has already marked processed.
         //    The buffer is the authoritative source for this flag (the processor flips it after execution).
         address depositDataBuffer = DepositDataBufferAddress.get();
@@ -480,13 +480,13 @@ contract AttestationVerifierV1 is
     }
 
     function _standardizeDeposits(
-        IDepositDataBuffer.Deposit[] memory deposits,
+        IDepositDataBufferBase.Deposit[] memory deposits,
         bytes32 withdrawalCredentials,
         uint256 depositCount
     ) internal pure returns (IDepositDataBuffer.StandardDeposit[] memory standardizedDeposits) {
         standardizedDeposits = new IDepositDataBuffer.StandardDeposit[](depositCount);
         for (uint256 i; i < depositCount; ++i) {
-            standardizedDeposits[i] = IDepositDataBuffer.StandardDeposit({
+            standardizedDeposits[i] = IDepositDataBufferBase.StandardDeposit({
                 pubkey: deposits[i].pubkey,
                 signature: deposits[i].signature,
                 amount: deposits[i].amount,
@@ -496,12 +496,12 @@ contract AttestationVerifierV1 is
         }
     }
 
-    function _standardizeTopUps(IDepositDataBuffer.TopUp[] memory topUps)
+    function _standardizeTopUps(IDepositDataBufferBase.TopUp[] memory topUps)
         internal
         pure
         returns (IDepositDataBuffer.StandardTopUp[] memory standardizedTopUps)
     {
-        // IDepositDataBuffer.TopUp has compatibility with IDepositDataBuffer.StandardTopUp in memory layout.
+        // IDepositDataBufferBase.TopUp has compatibility with IDepositDataBuffer.StandardTopUp in memory layout.
         // `operatorIdx` and `withdrawalCredentials` overlap, but they are not used in the verification logic.
         // `standardizedTopUps` are only read, never updated, so original `topUps` can be safely aliased.
         assembly {
