@@ -22,7 +22,7 @@ import "../libraries/LibSanitize.sol";
 ///      reject replays. Withdrawal credentials are intentionally NOT stored — the canonical withdrawal
 ///      credentials are supplied by the processor at deposit time and used for BLS verification and the
 ///      official deposit-contract call, so the buffer producer is never trusted on that field.
-contract DepositDataBufferBase is DepositVerification, IDepositDataBufferBase {
+abstract contract DepositDataBufferBase is DepositVerification, IDepositDataBufferBase {
     /// @notice The processor — the only account allowed to mark deposit data processed.
     /// @dev Set at construction and rotatable by the admin via `setProcessor`. In production this is
     ///      the River deposit-execution contract, but the buffer only relies on it being the account
@@ -86,38 +86,6 @@ contract DepositDataBufferBase is DepositVerification, IDepositDataBufferBase {
         _;
     }
 
-    /// @notice Validate a submitted deposit batch, bind it to the next batch nonce and record its
-    ///         existence, then emit `DepositDataSubmitted`.
-    /// @dev Does NOT store the batch payload — the inheriting contract is responsible for that. Reverts
-    ///      with `EmptyDepositData`, `DepositDataBufferIdMismatch` or `DepositDataBufferIdAlreadyExists`,
-    ///      or with any of the deposit/top-up validation errors.
-    /// @param depositDataBufferId The identifier claimed by the producer; must equal
-    ///                            `keccak256(abi.encode(batch, nonce))`.
-    /// @param batch The standardized deposit batch being submitted.
-    function _submitDepositData(bytes32 depositDataBufferId, StandardDepositObject memory batch) internal {
-        uint256 depositCount = batch.deposits.length;
-        uint256 topUpCount = batch.topUps.length;
-        if (depositCount == 0 && topUpCount == 0) revert EmptyDepositData();
-
-        _verifyInitialDeposits(batch.deposits, depositCount);
-        _verifyTopUps(batch.topUps, topUpCount);
-
-        // The batch nonce (lastQueuedIdx) is folded into the id, so two batches with byte-identical
-        // deposit data still get distinct ids and are individually addressable. Because the nonce
-        // strictly increments, every id is unique; it is stored so the AttestationVerifier can
-        // reconstruct and re-check the binding after fetching the batch.
-        uint256 nonce = lastQueuedIdx;
-        bytes32 computedId = keccak256(abi.encode(batch, nonce));
-        if (computedId != depositDataBufferId) revert DepositDataBufferIdMismatch(depositDataBufferId, computedId);
-        if (_exists[computedId]) revert DepositDataBufferIdAlreadyExists(computedId);
-
-        _nonce[computedId] = nonce;
-        _exists[computedId] = true;
-        ++lastQueuedIdx;
-
-        emit DepositDataSubmitted(computedId, nonce, depositCount, topUpCount);
-    }
-
     /// @inheritdoc IDepositDataBufferBase
     function markDepositDataProcessed(bytes32 depositDataBufferId) external onlyProcessor {
         if (!_exists[depositDataBufferId]) revert DepositDataBufferIdNotFound(depositDataBufferId);
@@ -179,5 +147,41 @@ contract DepositDataBufferBase is DepositVerification, IDepositDataBufferBase {
     /// @inheritdoc IDepositDataBufferBase
     function getProcessor() external view returns (address) {
         return _processor;
+    }
+
+    // -----------------------------------------------------------------------
+    // Internal — batch submission
+    // -----------------------------------------------------------------------
+
+    /// @notice Validate a submitted deposit batch, bind it to the next batch nonce and record its
+    ///         existence, then emit `DepositDataSubmitted`.
+    /// @dev Does NOT store the batch payload — the inheriting contract is responsible for that. Reverts
+    ///      with `EmptyDepositData`, `DepositDataBufferIdMismatch` or `DepositDataBufferIdAlreadyExists`,
+    ///      or with any of the deposit/top-up validation errors.
+    /// @param depositDataBufferId The identifier claimed by the producer; must equal
+    ///                            `keccak256(abi.encode(batch, nonce))`.
+    /// @param batch The standardized deposit batch being submitted.
+    function _submitDepositData(bytes32 depositDataBufferId, StandardDepositObject memory batch) internal {
+        uint256 depositCount = batch.deposits.length;
+        uint256 topUpCount = batch.topUps.length;
+        if (depositCount == 0 && topUpCount == 0) revert EmptyDepositData();
+
+        _verifyInitialDeposits(batch.deposits, depositCount);
+        _verifyTopUps(batch.topUps, topUpCount);
+
+        // The batch nonce (lastQueuedIdx) is folded into the id, so two batches with byte-identical
+        // deposit data still get distinct ids and are individually addressable. Because the nonce
+        // strictly increments, every id is unique; it is stored so the AttestationVerifier can
+        // reconstruct and re-check the binding after fetching the batch.
+        uint256 nonce = lastQueuedIdx;
+        bytes32 computedId = keccak256(abi.encode(batch, nonce));
+        if (computedId != depositDataBufferId) revert DepositDataBufferIdMismatch(depositDataBufferId, computedId);
+        if (_exists[computedId]) revert DepositDataBufferIdAlreadyExists(computedId);
+
+        _nonce[computedId] = nonce;
+        _exists[computedId] = true;
+        ++lastQueuedIdx;
+
+        emit DepositDataSubmitted(computedId, nonce, depositCount, topUpCount);
     }
 }

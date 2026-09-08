@@ -28,12 +28,15 @@ contract DepositDataBuffer is DepositDataBufferBase, IDepositDataBuffer {
 
     /// @inheritdoc IDepositDataBuffer
     function submitDepositData(bytes32 depositDataBufferId, DepositObject memory batch) external onlyProducer {
-        StandardDepositObject memory _batch;
+        StandardDepositObject memory standardizedBatch;
 
+        // DepositObject is memory-layout compatible with StandardDepositObject: the overlapping
+        // `operatorIdx` / `withdrawalCredentials` fields are not read by the submission validation, and
+        // `standardizedBatch` is only ever read, so aliasing `batch` is safe.
         assembly {
-            _batch := batch
+            standardizedBatch := batch
         }
-        _submitDepositData(depositDataBufferId, _batch);
+        _submitDepositData(depositDataBufferId, standardizedBatch);
 
         _batches[depositDataBufferId] = batch;
     }

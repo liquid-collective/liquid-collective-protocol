@@ -22,7 +22,7 @@ library LibDepositValidation {
     /// @param _depositAmount The deposit amount in wei (must be gwei-aligned; bounds are enforced upstream)
     /// @param _withdrawalCredentials The withdrawal credentials provided by River
     /// @param _depositContract The address of the deposit contract
-    function _depositValidator(
+    function depositValidator(
         bytes memory _publicKey,
         bytes memory _signature,
         uint256 _depositAmount,

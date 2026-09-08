@@ -469,53 +469,6 @@ contract AttestationVerifierV1 is
         _verifyBLSSignatures(standardizedDeposits, DepositDomainValue.get());
     }
 
-    /// @notice Convert buffer deposits into the flow-agnostic `StandardDeposit` form consumed by the
-    ///         shared deposit verification logic.
-    /// @dev `operatorIdx` is dropped — it is irrelevant to verification and is consumed by River when
-    ///      the deposits are actually executed — and the canonical withdrawal credentials resolved by
-    ///      the caller are stamped onto every entry, so the buffer producer is never trusted on that
-    ///      field.
-    /// @param deposits The initial deposits as stored in the buffer.
-    /// @param withdrawalCredentials The canonical River withdrawal credentials.
-    /// @param depositCount The number of entries of `deposits` to convert.
-    /// @return standardizedDeposits The converted deposits.
-    function _standardizeDeposits(
-        IDepositDataBuffer.Deposit[] memory deposits,
-        bytes32 withdrawalCredentials,
-        uint256 depositCount
-    ) internal pure returns (IDepositDataBuffer.StandardDeposit[] memory standardizedDeposits) {
-        standardizedDeposits = new IDepositDataBuffer.StandardDeposit[](depositCount);
-        for (uint256 i; i < depositCount; ++i) {
-            standardizedDeposits[i] = IDepositDataBufferBase.StandardDeposit({
-                pubkey: deposits[i].pubkey,
-                signature: deposits[i].signature,
-                amount: deposits[i].amount,
-                withdrawalCredentials: withdrawalCredentials,
-                depositY: deposits[i].depositY
-            });
-        }
-    }
-
-    /// @notice Reinterpret buffer top-ups as the flow-agnostic `StandardTopUp` form consumed by the
-    ///         shared deposit verification logic.
-    /// @dev Aliases the array in place instead of copying, which is sound only because the two structs
-    ///      share a memory layout on the fields verification reads and the result is read-only — see the
-    ///      inline comment.
-    /// @param topUps The top-ups as stored in the buffer.
-    /// @return standardizedTopUps The same array, viewed as `StandardTopUp[]`.
-    function _standardizeTopUps(IDepositDataBuffer.TopUp[] memory topUps)
-        internal
-        pure
-        returns (IDepositDataBuffer.StandardTopUp[] memory standardizedTopUps)
-    {
-        // IDepositDataBuffer.TopUp has compatibility with IDepositDataBuffer.StandardTopUp in memory layout.
-        // `operatorIdx` and `withdrawalCredentials` overlap, but they are not used in the verification logic.
-        // `standardizedTopUps` are only read, never updated, so original `topUps` can be safely aliased.
-        assembly {
-            standardizedTopUps := topUps
-        }
-    }
-
     // -----------------------------------------------------------------------
     // Initial-deposit recording (callback from River after the deposit-execution loop)
     // -----------------------------------------------------------------------
@@ -800,34 +753,81 @@ contract AttestationVerifierV1 is
         return keccak256(abi.encodePacked(arr));
     }
 
+    /// @notice Convert buffer deposits into the flow-agnostic `StandardDeposit` form consumed by the
+    ///         shared deposit verification logic.
+    /// @dev `operatorIdx` is dropped — it is irrelevant to verification and is consumed by River when
+    ///      the deposits are actually executed — and the canonical withdrawal credentials resolved by
+    ///      the caller are stamped onto every entry, so the buffer producer is never trusted on that
+    ///      field.
+    /// @param deposits The initial deposits as stored in the buffer.
+    /// @param withdrawalCredentials The canonical River withdrawal credentials.
+    /// @param depositCount The number of entries of `deposits` to convert.
+    /// @return standardizedDeposits The converted deposits.
+    function _standardizeDeposits(
+        IDepositDataBuffer.Deposit[] memory deposits,
+        bytes32 withdrawalCredentials,
+        uint256 depositCount
+    ) internal pure returns (IDepositDataBuffer.StandardDeposit[] memory standardizedDeposits) {
+        standardizedDeposits = new IDepositDataBuffer.StandardDeposit[](depositCount);
+        for (uint256 i; i < depositCount; ++i) {
+            standardizedDeposits[i] = IDepositDataBufferBase.StandardDeposit({
+                pubkey: deposits[i].pubkey,
+                signature: deposits[i].signature,
+                amount: deposits[i].amount,
+                withdrawalCredentials: withdrawalCredentials,
+                depositY: deposits[i].depositY
+            });
+        }
+    }
+
+    /// @notice Reinterpret buffer top-ups as the flow-agnostic `StandardTopUp` form consumed by the
+    ///         shared deposit verification logic.
+    /// @dev Aliases the array in place instead of copying, which is sound only because the two structs
+    ///      share a memory layout on the fields verification reads and the result is read-only — see the
+    ///      inline comment.
+    /// @param topUps The top-ups as stored in the buffer.
+    /// @return standardizedTopUps The same array, viewed as `StandardTopUp[]`.
+    function _standardizeTopUps(IDepositDataBuffer.TopUp[] memory topUps)
+        internal
+        pure
+        returns (IDepositDataBuffer.StandardTopUp[] memory standardizedTopUps)
+    {
+        // IDepositDataBuffer.TopUp has compatibility with IDepositDataBuffer.StandardTopUp in memory layout.
+        // `operatorIdx` and `withdrawalCredentials` overlap, but they are not used in the verification logic.
+        // `standardizedTopUps` are only read, never updated, so original `topUps` can be safely aliased.
+        assembly {
+            standardizedTopUps := topUps
+        }
+    }
+
     /// @notice Reject an initial-deposit pubkey that is already funded, in either the Pectra or the
     ///         pre-Pectra lookup.
     /// @inheritdoc DepositVerification
-    function _customInitialDepositVerification(bytes memory _pubkey) internal view override {
-        if (PectraValidatorPubkeyLookup.isPubkeyFunded(_pubkey)) {
-            revert PubkeyAlreadyFunded(_pubkey);
+    function _customInitialDepositVerification(bytes memory pubkey) internal view override {
+        if (PectraValidatorPubkeyLookup.isPubkeyFunded(pubkey)) {
+            revert PubkeyAlreadyFunded(pubkey);
         }
         // A migrated pre-Pectra (0x01) key must be promoted via self-consolidation, not
         // reintroduced as a fresh initial deposit. Gating here keeps the pre-Pectra lookup
         // authoritative and preserves the migration state machine even if a producer or
         // attester batch is malformed.
-        if (PrePectraValidatorPubkeyLookup.isPubkeyFunded(_pubkey)) {
-            revert PrePectraValidatorPubkeyNotConsolidated(_pubkey);
+        if (PrePectraValidatorPubkeyLookup.isPubkeyFunded(pubkey)) {
+            revert PrePectraValidatorPubkeyNotConsolidated(pubkey);
         }
     }
 
     /// @notice Require a top-up pubkey to be a funded Pectra validator, rejecting migrated pre-Pectra
     ///         keys with a distinct error.
     /// @inheritdoc DepositVerification
-    function _customTopUpVerification(bytes memory _pubkey) internal view override {
+    function _customTopUpVerification(bytes memory pubkey) internal view override {
         // Explicitly reject migrated pre-Pectra keys with a distinct error. Such a key is not
         // in the Pectra lookup so it would otherwise revert as TopUpPubkeyNotFunded; the
         // dedicated error tells producers the key must be self-consolidated first.
-        if (PrePectraValidatorPubkeyLookup.isPubkeyFunded(_pubkey)) {
-            revert PrePectraValidatorPubkeyNotConsolidated(_pubkey);
+        if (PrePectraValidatorPubkeyLookup.isPubkeyFunded(pubkey)) {
+            revert PrePectraValidatorPubkeyNotConsolidated(pubkey);
         }
-        if (!PectraValidatorPubkeyLookup.isPubkeyFunded(_pubkey)) {
-            revert TopUpPubkeyNotFunded(_pubkey);
+        if (!PectraValidatorPubkeyLookup.isPubkeyFunded(pubkey)) {
+            revert TopUpPubkeyNotFunded(pubkey);
         }
     }
 }

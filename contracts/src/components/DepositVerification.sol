@@ -38,6 +38,26 @@ abstract contract DepositVerification {
     bytes32 internal constant ATTEST_TYPEHASH =
         keccak256("Attest(bytes32 depositDataBufferId,bytes32 depositRootHash)");
 
+    // -----------------------------------------------------------------------
+    // Handlers — implemented by the inheriting contract
+    // -----------------------------------------------------------------------
+
+    /// @notice Handler called to apply flow-specific validation to an initial-deposit pubkey
+    /// @dev No-op by default; inheriting contracts override it to add their own checks (for example
+    ///      the AttestationVerifier's pubkey-lookup membership rules). Must revert to reject.
+    /// @param pubkey The 48-byte BLS public key of the initial deposit being validated
+    function _customInitialDepositVerification(bytes memory pubkey) internal view virtual {}
+
+    /// @notice Handler called to apply flow-specific validation to a top-up pubkey
+    /// @dev No-op by default; inheriting contracts override it to add their own checks (for example
+    ///      requiring the pubkey to already be funded). Must revert to reject.
+    /// @param pubkey The 48-byte BLS public key of the top-up being validated
+    function _customTopUpVerification(bytes memory pubkey) internal view virtual {}
+
+    // -----------------------------------------------------------------------
+    // Internal — attestation quorum + deposit/top-up verification
+    // -----------------------------------------------------------------------
+
     /// @notice Verify the attestation quorum.
     /// @dev The quorum, domain separator and attester-set predicate are supplied by the inheriting
     ///      contract so this component stays stateless and reusable across attestation flows.
@@ -47,7 +67,7 @@ abstract contract DepositVerification {
     /// @param depositContract The official ETH deposit contract supplied by River.
     /// @param quorum The required attestation quorum.
     /// @param domainSeparator The EIP-712 domain separator.
-    /// @param _isRootAttester Predicate telling whether a recovered signer is a registered root attester.
+    /// @param isRootAttester Predicate telling whether a recovered signer is a registered root attester.
     function _verifyAttestationQuorum(
         bytes32 depositDataBufferId,
         bytes32 depositRootHash,
@@ -55,7 +75,7 @@ abstract contract DepositVerification {
         address depositContract,
         uint256 quorum,
         bytes32 domainSeparator,
-        function(address) internal view returns (bool) _isRootAttester
+        function(address) internal view returns (bool) isRootAttester
     ) internal view {
         uint256 sigLen = signatures.length;
         if (sigLen > MAX_SIGNATURES) revert IAttestationVerifierV1.TooManySignatures(sigLen, MAX_SIGNATURES);
@@ -79,7 +99,7 @@ abstract contract DepositVerification {
         for (uint256 i = 0; i < sigLen; i++) {
             address signer = _recover(digest, signatures[i]);
             if (signer == address(0)) continue;
-            if (!_isRootAttester(signer)) continue;
+            if (!isRootAttester(signer)) continue;
 
             bool duplicate = false;
             for (uint256 j = 0; j < validCount; j++) {
@@ -142,12 +162,6 @@ abstract contract DepositVerification {
         }
     }
 
-    /// @notice Hook for flow-specific validation of an initial-deposit pubkey.
-    /// @dev No-op by default; inheriting contracts override it to add their own checks (for example
-    ///      the AttestationVerifier's pubkey-lookup membership rules). Must revert to reject.
-    /// @param _pubkey The 48-byte BLS public key of the initial deposit being validated.
-    function _customInitialDepositVerification(bytes memory _pubkey) internal view virtual {}
-
     /// @notice Validate every top-up in a batch: pubkey length, amount bounds and gwei-alignment.
     /// @dev Flow-specific pubkey checks are delegated to `_customTopUpVerification`, which the
     ///      inheriting contract overrides. Per-batch duplicate top-up pubkeys are allowed, since each
@@ -174,12 +188,6 @@ abstract contract DepositVerification {
             _customTopUpVerification(t.pubkey);
         }
     }
-
-    /// @notice Hook for flow-specific validation of a top-up pubkey.
-    /// @dev No-op by default; inheriting contracts override it to add their own checks (for example
-    ///      requiring the pubkey to already be funded). Must revert to reject.
-    /// @param _pubkey The 48-byte BLS public key of the top-up being validated.
-    function _customTopUpVerification(bytes memory _pubkey) internal view virtual {}
 
     /// @notice Verify the BLS signatures of all initial deposits against the canonical River
     ///         withdrawal credentials. Top-ups are handled by the caller and never reach this

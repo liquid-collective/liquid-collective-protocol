@@ -198,7 +198,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         newlyFundedPubkeys = new bytes[](depositCount);
         for (uint256 i = 0; i < depositCount; i++) {
             IDepositDataBuffer.Deposit memory d = deposits[i];
-            LibDepositValidation._depositValidator(
+            LibDepositValidation.depositValidator(
                 d.pubkey, d.signature, d.amount, withdrawalCredentials, depositContract
             );
             emit PubkeyFunded(depositDataBufferId, d.operatorIdx, d.pubkey, d.amount);
@@ -219,7 +219,7 @@ abstract contract ConsensusLayerDepositManagerV1 is IConsensusLayerDepositManage
         bytes memory zeroSig = new bytes(SIGNATURE_LENGTH);
         for (uint256 i = 0; i < topUpCount; i++) {
             IDepositDataBuffer.TopUp memory t = topUps[i];
-            LibDepositValidation._depositValidator(t.pubkey, zeroSig, t.amount, withdrawalCredentials, depositContract);
+            LibDepositValidation.depositValidator(t.pubkey, zeroSig, t.amount, withdrawalCredentials, depositContract);
             emit TopUp(depositDataBufferId, t.operatorIdx, t.pubkey, t.amount);
         }
     }
