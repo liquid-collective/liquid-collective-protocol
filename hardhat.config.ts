@@ -16,6 +16,11 @@ tdly.setup({ automaticVerifications: false });
 
 dotenv.config();
 
+// solidity-coverage instruments bytecode far past EIP-170, so the contract-sizer's strict mode
+// would make `yarn hh coverage` unrunnable. CI measures coverage with `forge coverage`
+// (.github/workflows/Coverage.yaml), so this only relaxes the local case.
+const isCoverageRun = process.argv.includes("coverage");
+
 const config: HardhatUserConfig = {
   solidity: {
     version: "0.8.34",
@@ -33,6 +38,13 @@ const config: HardhatUserConfig = {
   },
   contractSizer: {
     runOnCompile: true,
+    // Fail the compile if any contract exceeds EIP-170. This is the gate that matters for
+    // deployment: hardhat compiles only paths.sources (./contracts/src) with looser settings
+    // than foundry.toml (runs 100 vs 3, default ipfs bytecodeHash), so it produces LARGER
+    // bytecode than `forge build`. RiverV1 has ~1.6KB of headroom, so a green foundry build is
+    // not sufficient evidence that a change deploys. See scripts/check_contract_sizes.sh for
+    // the foundry-side equivalent.
+    strict: !isCoverageRun,
   },
   networks: {
     mainnet: {
