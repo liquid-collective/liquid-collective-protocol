@@ -166,8 +166,8 @@ library LibOracleReporting {
             }
 
             if (_report.totalExitViaInternalConsolidationETH > lastStoredReport.totalExitViaInternalConsolidationETH) {
-                vars.totalExitViaInternalConsolidationETHIncrease =
-                    _report.totalExitViaInternalConsolidationETH - lastStoredReport.totalExitViaInternalConsolidationETH;
+                vars.totalExitViaInternalConsolidationETHIncrease = _report.totalExitViaInternalConsolidationETH
+                    - lastStoredReport.totalExitViaInternalConsolidationETH;
 
                 // we ensure that the total exit via consolidation amount reported is not larger than the increase in the amount of exited ETH
                 if (vars.totalExitViaInternalConsolidationETHIncrease > vars.exitedAmountIncrease) {

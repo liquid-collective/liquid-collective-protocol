@@ -111,7 +111,7 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
         _allowSharePriceDecrease = allow;
     }
 
-    /// @notice Executes all post-report invariant assertions (I1–I12) in sequence.
+    /// @notice Executes all post-report invariant assertions (I1–I13) in sequence.
     function _assertAllInvariants() internal {
         _assertI1_SharePriceNonDecrease();
         _assertI2_ETHConservation();
@@ -125,6 +125,7 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
         _assertI10_ActivatedETHNonDecreasing();
         _assertI11_ActiveCLETHConsistency();
         _assertI12_ContainmentSuppressesDemand();
+        _assertI13_TotalRequestedEqualsPerOperatorSum();
     }
 
     /// @notice I1: Verifies that the share price has not decreased since the pre-report snapshot.
@@ -304,5 +305,24 @@ abstract contract AccountingInvariants is BeaconChainSimulator {
         if (!_lastReportWasContainment) return;
         uint256 demandAfter = operatorsRegistry.getCurrentETHExitsDemand();
         assertLe(demandAfter, _snapExitDemand, "I12: exit demand increased during slashing containment");
+    }
+
+    /// @notice I13: `TotalETHExitsRequested` equals the sum of every operator's `requestedExits` exactly —
+    ///         a stricter statement than I9. Both counters may only ever move together (they do in
+    ///         `requestETHExits`, in the unsolicited backfill of `_setExitedETH`, and in
+    ///         `releaseExitRequests`), so this equality is what licenses `releaseExitRequests` to decrement
+    ///         the aggregate with a plain checked subtraction: if it could underflow, this invariant has
+    ///         already been broken upstream.
+    function _assertI13_TotalRequestedEqualsPerOperatorSum() internal {
+        uint256 opCount = operatorsRegistry.getOperatorCount();
+        uint256 sum = 0;
+        for (uint256 i = 0; i < opCount; i++) {
+            sum += operatorsRegistry.getOperator(i).requestedExits;
+        }
+        assertEq(
+            operatorsRegistry.getTotalETHExitsRequested(),
+            sum,
+            "I13: TotalETHExitsRequested != sum of per-operator requestedExits"
+        );
     }
 }

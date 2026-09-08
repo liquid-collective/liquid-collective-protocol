@@ -28,6 +28,17 @@ interface IOperatorsRegistryV1 {
         uint256 ethAmount;
     }
 
+    /// @notice Structure representing the release of a stuck exit reservation for an operator
+    /// @dev Same shape as `ExitETHAllocation`, kept separate so the release path can evolve
+    ///      (e.g. an oracle-reported cumulative variant) without perturbing the reserve path.
+    /// @param operatorIndex The index of the operator whose reservation is being released
+    /// @param ethAmount The amount of reserved ETH(wei) to release. Clamped on-chain to the operator's
+    ///                  outstanding reservation (`requestedExits - exitedETH`), so a stale value is safe.
+    struct ExitReleaseAllocation {
+        uint256 operatorIndex;
+        uint256 ethAmount;
+    }
+
     /// @notice Structure representing an EL exit allocation for exits
     /// @param operatorIndex The index of the operator
     /// @param pubkeys The pubkeys through which the EL exits were requested
@@ -116,6 +127,19 @@ interface IOperatorsRegistryV1 {
     event RequestedELETHExits(
         uint256 indexed index, bytes[] pubkeys, uint64[] withdrawalAmounts, uint64[] reservedExitAmounts
     );
+
+    /// @notice A stuck exit reservation has been released for an operator, moving it back into exit demand
+    /// @param index The operator index
+    /// @param releasedAmount The ETH(wei) amount actually released, after clamping to the outstanding
+    ///                       reservation. Carried explicitly so a clamp is visible off-chain.
+    /// @param requestedExits The operator's cumulative requested exits in ETH(wei) after the release
+    event ReleasedETHExits(uint256 indexed index, uint256 releasedAmount, uint256 requestedExits);
+
+    /// @notice A batch of stuck exit reservations has been released
+    /// @param totalReleased The total ETH(wei) released across all operators in the batch
+    /// @param viaConsolidationETH The subset of `totalReleased` that had been reserved via internal
+    ///                            consolidation, removed from the exit consolidation buffer
+    event ReleasedExitRequests(uint256 totalReleased, uint256 viaConsolidationETH);
 
     /// @notice The exit request demand has been updated
     /// @param previousETHExitsDemand The previous exit request demand in ETH(wei)
@@ -290,6 +314,13 @@ interface IOperatorsRegistryV1 {
     /// @param remainingETHExitsDemand The remaining exit demand
     error ExitsGreaterThanExitDemand(uint256 elExitAmount, uint256 remainingETHExitsDemand);
 
+    /// @notice Thrown when the consolidation subset of a release exceeds the total amount released.
+    ///         `viaConsolidation` is by definition a subset of the release, exactly as
+    ///         `totalExitViaConsolidationETH` is a subset of `validatorsExitedBalance`.
+    /// @param viaConsolidation The claimed consolidation-reserved portion of the release
+    /// @param totalReleased The total ETH(wei) actually released
+    error ReleasedConsolidationExceedsRelease(uint256 viaConsolidation, uint256 totalReleased);
+
     /// @notice Thrown when the pre-Pectra range exceeds the funded validator count
     /// @param operatorIndex The operator index
     /// @param stopIndex The exclusive stop key index
@@ -351,6 +382,12 @@ interface IOperatorsRegistryV1 {
     /// @notice Retrieve the raw exited ETH array from storage
     /// @return The exited ETH(wei) array per operator
     function getExitedETHPerOperator() external view returns (uint256[] memory);
+
+    /// @notice Retrieve the cumulative released exit reservations per operator
+    /// @dev Cumulative and monotonically increasing; the array grows lazily, so it can be shorter than
+    ///      the operator count when the trailing operators have never had a reservation released.
+    /// @return The released ETH(wei) array per operator
+    function getReleasedETHPerOperator() external view returns (uint256[] memory);
 
     /// @notice Retrieve the active operator set
     /// @return The list of active operators and their details
@@ -445,6 +482,10 @@ interface IOperatorsRegistryV1 {
     /// @dev Reverts with ExitsRequestedExceedAvailableActiveCLAmount if an allocation's ETH amount exceeds the operator's active CL ETH minus pending exits (requestedExits - exitedETH)
     /// @dev Reverts with ExitsRequestedExceedExitDemand if total exits requested exceed the current demand
     /// @dev Reverts with NoExitRequestsToPerform if there is no pending exit demand
+    /// @dev Reverts with SlashingContainmentModeEnabled while River is in slashing containment mode: no new
+    ///      exits may be dispatched to the consensus layer during a slashing event, including demand that
+    ///      predates the containment. Releasing stuck reservations (`releaseExitRequests`) stays available
+    ///      during containment — state is restored, dispatch is not.
     /// @param _allocations The proposed per-operator exit ETH allocations, sorted by operator index
     /// @param _elAllocations The proposed per-operator per-pubkey EL exit ETH allocations, sorted by operator index
     /// @param _exitViaConsolidationAllocation Exits via internal consolidation: per-operator reserved ETH
@@ -458,6 +499,47 @@ interface IOperatorsRegistryV1 {
         uint256 _maxFeePerWithdrawal,
         uint256 _maxFeePerConsolidation
     ) external payable;
+
+    /// @notice Releases exit reservations that the consensus layer silently dropped, moving them back
+    ///         into the dispatchable exit demand so the keeper can request them again.
+    /// @dev Only callable by the administrator (the governance timelock).
+    /// @dev A release is the exact inverse of a reservation: `operator.requestedExits` and
+    ///      `TotalETHExitsRequested` go down while `CurrentETHExitsDemand` goes up by the same amount.
+    ///      `TotalETHExitsRequested + CurrentETHExitsDemand` — the sum the redeem formula reads through
+    ///      `getExitedAndRequestedETHExits` as `preExitingBalance` — is therefore invariant, so a release
+    ///      can never let the protocol over-request exits. What it restores is dispatchability: the ETH
+    ///      moves from "already sent to a consensus layer that dropped it" back to "the keeper may send it
+    ///      again", along with the operator's per-operator exit headroom.
+    /// @dev Deliberately NOT rate-limited. Every release is bounded per operator by that operator's
+    ///      outstanding reservation (it cannot conjure capacity), it is sum-invariant (it cannot inflate
+    ///      what the redeem formula sees), an over-eager release self-corrects — if the exit lands later,
+    ///      `reportExitedETH` raises `requestedExits` back and re-consumes the demand, at a cost of
+    ///      over-exiting (lost yield) rather than corrupted state — and the governance timelock on the
+    ///      admin is itself the rate limit. A separate per-period cap would only add a way for the
+    ///      break-glass to be too small during a live incident.
+    /// @dev Amounts are clamped to each operator's outstanding reservation rather than reverting, so a
+    ///      slightly stale input is safe and a release can never be applied twice. This is also what will
+    ///      make a future oracle-reported release path idempotent against an admin release issued during
+    ///      the same incident.
+    /// @dev No `active` check: an inactive operator holding a stuck reservation is precisely the case that
+    ///      needs unwinding.
+    /// @dev FORWARD COMPATIBILITY — a future oracle-reported release path (which detects drops from the
+    ///      beacon state off-chain) will add cumulative `releasedExitsETHPerOperator` /
+    ///      `totalReleasedExitViaConsolidationETH` fields to the consensus layer report, convert them to
+    ///      per-operator deltas via `max(0, reported[i] - OperatorsV3.getReleasedETH(i))` — clamping,
+    ///      never reverting when the report is behind the accumulator — and feed the same internal
+    ///      helper. The cumulative accumulator written here (`OperatorsV3.addReleasedETH`, laid out
+    ///      `[sum, op0, op1, ...]` exactly like `exitedETH`) is what makes that a drop-in with no state
+    ///      reshaping and no double application.
+    /// @dev Reverts with InvalidEmptyArray if _allocations is empty
+    /// @dev Reverts with InvalidOperatorIndex if an allocation references an operator outside the range
+    /// @dev Reverts with UnorderedOperatorList if operator indexes are not strictly ascending
+    /// @dev Reverts with ReleasedConsolidationExceedsRelease if _viaConsolidationETH exceeds the total released
+    /// @param _allocations The per-operator amounts to release, sorted by operator index in strictly
+    ///        ascending order with no duplicates
+    /// @param _viaConsolidationETH The subset of the released amount that had been reserved via internal
+    ///        consolidation, decremented from the exit consolidation buffer
+    function releaseExitRequests(ExitReleaseAllocation[] calldata _allocations, uint256 _viaConsolidationETH) external;
 
     /// @notice Increases the exit request demand
     /// @dev This method is only callable by the river contract, and to actually forward the information to the node operators via event emission, the requestETHExits method must be called

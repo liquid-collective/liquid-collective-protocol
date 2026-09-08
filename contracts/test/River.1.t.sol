@@ -59,11 +59,7 @@ contract MockDepositDataBuffer is IDepositDataBuffer {
         ++lastQueuedIdx;
     }
 
-    function getDepositData(bytes32 depositDataBufferId)
-        external
-        view
-        returns (DepositObject memory, uint256 nonce)
-    {
+    function getDepositData(bytes32 depositDataBufferId) external view returns (DepositObject memory, uint256 nonce) {
         if (!_exists[depositDataBufferId]) revert DepositDataBufferIdNotFound(depositDataBufferId);
         return (_batches[depositDataBufferId], _nonce[depositDataBufferId]);
     }

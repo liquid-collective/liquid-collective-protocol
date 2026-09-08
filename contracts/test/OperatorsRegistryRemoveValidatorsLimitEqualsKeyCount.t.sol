@@ -19,4 +19,8 @@ contract RiverMockForLimitTest {
     function getKeeper() external view returns (address) {
         return address(0);
     }
+
+    function getSlashingContainmentMode() external view returns (bool) {
+        return false;
+    }
 }
