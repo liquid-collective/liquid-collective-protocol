@@ -32,8 +32,8 @@ library LibFundingDeltas {
     /// @param operatorCount The current number of registered operators (upper bound exclusive)
     /// @return deltas The aggregated per-operator deltas, sorted by operatorIndex
     function build(
-        IDepositDataBufferBase.Deposit[] memory deposits,
-        IDepositDataBufferBase.TopUp[] memory topUps,
+        IDepositDataBuffer.Deposit[] memory deposits,
+        IDepositDataBuffer.TopUp[] memory topUps,
         uint256 operatorCount
     ) internal pure returns (IOperatorsRegistryV1.OperatorFundingDelta[] memory deltas) {
         if (deposits.length == 0 && topUps.length == 0) {
@@ -59,8 +59,8 @@ library LibFundingDeltas {
     /// @dev Pass 1 helper: split into its own frame to keep `build`'s stack shallow enough for
     ///      coverage builds (viaIR disabled).
     function _bucketCounts(
-        IDepositDataBufferBase.Deposit[] memory deposits,
-        IDepositDataBufferBase.TopUp[] memory topUps,
+        IDepositDataBuffer.Deposit[] memory deposits,
+        IDepositDataBuffer.TopUp[] memory topUps,
         uint256 operatorCount
     )
         private
@@ -123,7 +123,7 @@ library LibFundingDeltas {
 
     /// @dev Pass 3 helper for initial deposits.
     function _fillDeposits(
-        IDepositDataBufferBase.Deposit[] memory deposits,
+        IDepositDataBuffer.Deposit[] memory deposits,
         IOperatorsRegistryV1.OperatorFundingDelta[] memory deltas,
         uint256[] memory deltaIdxByOp,
         uint256 operatorCount
@@ -141,7 +141,7 @@ library LibFundingDeltas {
 
     /// @dev Pass 3 helper for top-ups.
     function _fillTopUps(
-        IDepositDataBufferBase.TopUp[] memory topUps,
+        IDepositDataBuffer.TopUp[] memory topUps,
         IOperatorsRegistryV1.OperatorFundingDelta[] memory deltas,
         uint256[] memory deltaIdxByOp,
         uint256 operatorCount

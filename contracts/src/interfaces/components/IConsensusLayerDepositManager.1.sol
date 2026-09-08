@@ -107,7 +107,7 @@ interface IConsensusLayerDepositManagerV1 {
 
     /// @notice Deposit validators using pre-committed buffer data validated by a root attestation quorum.
     /// @dev Initial deposits and top-ups are carried in separately-typed sub-arrays of
-    ///      `IDepositDataBufferBase.DepositObject` (`deposits[]` and `topUps[]`). Initial deposits
+    ///      `IDepositDataBuffer.DepositObject` (`deposits[]` and `topUps[]`). Initial deposits
     ///      go through BLS verification; top-ups skip BLS and require their pubkey to already
     ///      be in `PectraValidatorPubkeyLookup`.
     /// @param depositDataBufferId  Batch identifier in the DepositDataBuffer

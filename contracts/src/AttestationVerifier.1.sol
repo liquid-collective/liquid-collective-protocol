@@ -430,7 +430,7 @@ contract AttestationVerifierV1 is
         address depositContract,
         bytes32 withdrawalCredentials,
         uint256 committedBalance
-    ) external view returns (IDepositDataBufferBase.DepositObject memory batch, uint256 totalAmount) {
+    ) external view returns (IDepositDataBuffer.DepositObject memory batch, uint256 totalAmount) {
         // 0. Replay protection — reject any batch ID the buffer has already marked processed.
         //    The buffer is the authoritative source for this flag (the processor flips it after execution).
         address depositDataBuffer = DepositDataBufferAddress.get();
@@ -480,7 +480,7 @@ contract AttestationVerifierV1 is
     }
 
     function _standardizeDeposits(
-        IDepositDataBufferBase.Deposit[] memory deposits,
+        IDepositDataBuffer.Deposit[] memory deposits,
         bytes32 withdrawalCredentials,
         uint256 depositCount
     ) internal pure returns (IDepositDataBuffer.StandardDeposit[] memory standardizedDeposits) {
@@ -496,12 +496,12 @@ contract AttestationVerifierV1 is
         }
     }
 
-    function _standardizeTopUps(IDepositDataBufferBase.TopUp[] memory topUps)
+    function _standardizeTopUps(IDepositDataBuffer.TopUp[] memory topUps)
         internal
         pure
         returns (IDepositDataBuffer.StandardTopUp[] memory standardizedTopUps)
     {
-        // IDepositDataBufferBase.TopUp has compatibility with IDepositDataBuffer.StandardTopUp in memory layout.
+        // IDepositDataBuffer.TopUp has compatibility with IDepositDataBuffer.StandardTopUp in memory layout.
         // `operatorIdx` and `withdrawalCredentials` overlap, but they are not used in the verification logic.
         // `standardizedTopUps` are only read, never updated, so original `topUps` can be safely aliased.
         assembly {

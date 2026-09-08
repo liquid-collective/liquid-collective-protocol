@@ -36,12 +36,12 @@ contract DepositDataBufferTest is Test, DepositDataBufferFixtures {
     // -----------------------------------------------------------------------
 
     /// @dev The buffer id folds the batch nonce (the current `lastQueuedIdx`) into the hash.
-    function _id(IDepositDataBufferBase.DepositObject memory batch, uint256 nonce) internal pure returns (bytes32) {
+    function _id(IDepositDataBuffer.DepositObject memory batch, uint256 nonce) internal pure returns (bytes32) {
         return keccak256(abi.encode(batch, nonce));
     }
 
     /// @dev Compute the id for the next submission and submit it as the producer.
-    function _submit(IDepositDataBufferBase.DepositObject memory batch) internal returns (bytes32 id) {
+    function _submit(IDepositDataBuffer.DepositObject memory batch) internal returns (bytes32 id) {
         id = _id(batch, buffer.lastQueuedIdx());
         vm.prank(producer);
         buffer.submitDepositData(id, batch);
@@ -52,7 +52,7 @@ contract DepositDataBufferTest is Test, DepositDataBufferFixtures {
     // -----------------------------------------------------------------------
 
     function test_SubmitSingle() public {
-        IDepositDataBufferBase.DepositObject memory batch = _batch(1);
+        IDepositDataBuffer.DepositObject memory batch = _batch(1);
         bytes32 expectedId = _id(batch, 0);
 
         vm.expectEmit(true, false, false, true);
@@ -65,8 +65,8 @@ contract DepositDataBufferTest is Test, DepositDataBufferFixtures {
     }
 
     function test_SubmitMixedDepositsAndTopUps() public {
-        IDepositDataBufferBase.DepositObject memory batch = _batch(2);
-        batch.topUps = new IDepositDataBufferBase.TopUp[](1);
+        IDepositDataBuffer.DepositObject memory batch = _batch(2);
+        batch.topUps = new IDepositDataBuffer.TopUp[](1);
         batch.topUps[0] = _topUp(50);
 
         bytes32 expectedId = _id(batch, 0);
@@ -86,7 +86,7 @@ contract DepositDataBufferTest is Test, DepositDataBufferFixtures {
     }
 
     function test_RevertWhen_NonProducerSubmits() public {
-        IDepositDataBufferBase.DepositObject memory batch = _batch(1);
+        IDepositDataBuffer.DepositObject memory batch = _batch(1);
         bytes32 id = _id(batch, 0);
 
         vm.prank(makeAddr("stranger"));
@@ -95,7 +95,7 @@ contract DepositDataBufferTest is Test, DepositDataBufferFixtures {
     }
 
     function test_RevertWhen_EmptyBatch() public {
-        IDepositDataBufferBase.DepositObject memory batch;
+        IDepositDataBuffer.DepositObject memory batch;
         bytes32 id = _id(batch, 0);
         vm.prank(producer);
         vm.expectRevert(IDepositDataBufferBase.EmptyDepositData.selector);
@@ -103,7 +103,7 @@ contract DepositDataBufferTest is Test, DepositDataBufferFixtures {
     }
 
     function test_RevertWhen_IdMismatch() public {
-        IDepositDataBufferBase.DepositObject memory batch = _batch(1);
+        IDepositDataBuffer.DepositObject memory batch = _batch(1);
         // An id computed with the wrong nonce must be rejected.
         bytes32 wrongId = _id(batch, 99);
         bytes32 computed = _id(batch, 0);
@@ -119,7 +119,7 @@ contract DepositDataBufferTest is Test, DepositDataBufferFixtures {
     ///      monotonic nonce folded into the id makes every submission unique. Force the `_exists` flag
     ///      via storage to prove the defensive guard still reverts on a (hypothetical) id collision.
     function test_RevertWhen_IdAlreadyExists() public {
-        IDepositDataBufferBase.DepositObject memory batch = _batch(1);
+        IDepositDataBuffer.DepositObject memory batch = _batch(1);
         bytes32 id = _id(batch, 0);
 
         // Storage layout: _processor(0), _admin(1), _pendingAdmin(2), _producer(3), lastQueuedIdx(4),
@@ -134,7 +134,7 @@ contract DepositDataBufferTest is Test, DepositDataBufferFixtures {
     }
 
     function test_RevertWhen_InvalidPubkeyLength() public {
-        IDepositDataBufferBase.DepositObject memory batch = _batch(1);
+        IDepositDataBuffer.DepositObject memory batch = _batch(1);
         batch.deposits[0].pubkey = new bytes(47);
         bytes32 id = _id(batch, 0);
         vm.prank(producer);
@@ -143,7 +143,7 @@ contract DepositDataBufferTest is Test, DepositDataBufferFixtures {
     }
 
     function test_RevertWhen_InvalidSignatureLength() public {
-        IDepositDataBufferBase.DepositObject memory batch = _batch(1);
+        IDepositDataBuffer.DepositObject memory batch = _batch(1);
         batch.deposits[0].signature = new bytes(95);
         bytes32 id = _id(batch, 0);
         vm.prank(producer);
@@ -152,7 +152,7 @@ contract DepositDataBufferTest is Test, DepositDataBufferFixtures {
     }
 
     function test_RevertWhen_ZeroDepositAmount() public {
-        IDepositDataBufferBase.DepositObject memory batch = _batch(1);
+        IDepositDataBuffer.DepositObject memory batch = _batch(1);
         batch.deposits[0].amount = 0;
         bytes32 id = _id(batch, 0);
         vm.prank(producer);
@@ -161,7 +161,7 @@ contract DepositDataBufferTest is Test, DepositDataBufferFixtures {
     }
 
     function test_RevertWhen_DepositAmountNotGweiAligned() public {
-        IDepositDataBufferBase.DepositObject memory batch = _batch(1);
+        IDepositDataBuffer.DepositObject memory batch = _batch(1);
         uint256 misaligned = 32 ether + 1 wei; // non-zero but not a multiple of 1 gwei
         batch.deposits[0].amount = misaligned;
         bytes32 id = _id(batch, 0);
@@ -172,7 +172,7 @@ contract DepositDataBufferTest is Test, DepositDataBufferFixtures {
 
     /// @dev The validation index in `InvalidDepositAmount` must point at the offending entry.
     function test_RevertWhen_SecondDepositAmountNotGweiAligned() public {
-        IDepositDataBufferBase.DepositObject memory batch = _batch(2);
+        IDepositDataBuffer.DepositObject memory batch = _batch(2);
         uint256 misaligned = 32 ether + 3 wei;
         batch.deposits[1].amount = misaligned;
         bytes32 id = _id(batch, 0);
@@ -183,7 +183,7 @@ contract DepositDataBufferTest is Test, DepositDataBufferFixtures {
 
     /// @dev Initial deposits below the 32 ETH activation floor are rejected (gwei-aligned but too low).
     function test_RevertWhen_DepositAmountBelowMin() public {
-        IDepositDataBufferBase.DepositObject memory batch = _batch(1);
+        IDepositDataBuffer.DepositObject memory batch = _batch(1);
         uint256 tooLow = 31 ether; // gwei-aligned, below MIN_INITIAL_DEPOSIT_AMOUNT
         batch.deposits[0].amount = tooLow;
         bytes32 id = _id(batch, 0);
@@ -194,7 +194,7 @@ contract DepositDataBufferTest is Test, DepositDataBufferFixtures {
 
     /// @dev Initial deposits above the 2048 ETH max effective balance are rejected.
     function test_RevertWhen_DepositAmountAboveMax() public {
-        IDepositDataBufferBase.DepositObject memory batch = _batch(1);
+        IDepositDataBuffer.DepositObject memory batch = _batch(1);
         uint256 tooHigh = 2049 ether; // gwei-aligned, above MAX_DEPOSIT_AMOUNT
         batch.deposits[0].amount = tooHigh;
         bytes32 id = _id(batch, 0);
@@ -205,7 +205,7 @@ contract DepositDataBufferTest is Test, DepositDataBufferFixtures {
 
     /// @dev The inclusive [32, 2048] ETH bounds are accepted at both extremes.
     function test_SubmitAcceptsDepositAmountBoundaries() public {
-        IDepositDataBufferBase.DepositObject memory batch = _batch(2);
+        IDepositDataBuffer.DepositObject memory batch = _batch(2);
         batch.deposits[0].amount = 32 ether; // min boundary
         batch.deposits[1].amount = 2048 ether; // max boundary
         bytes32 id = _id(batch, 0);
@@ -215,8 +215,8 @@ contract DepositDataBufferTest is Test, DepositDataBufferFixtures {
     }
 
     function test_RevertWhen_InvalidTopUpPubkeyLength() public {
-        IDepositDataBufferBase.DepositObject memory batch;
-        batch.topUps = new IDepositDataBufferBase.TopUp[](1);
+        IDepositDataBuffer.DepositObject memory batch;
+        batch.topUps = new IDepositDataBuffer.TopUp[](1);
         batch.topUps[0] = _topUp(1);
         batch.topUps[0].pubkey = new bytes(49);
         bytes32 id = _id(batch, 0);
@@ -226,8 +226,8 @@ contract DepositDataBufferTest is Test, DepositDataBufferFixtures {
     }
 
     function test_RevertWhen_ZeroTopUpAmount() public {
-        IDepositDataBufferBase.DepositObject memory batch;
-        batch.topUps = new IDepositDataBufferBase.TopUp[](1);
+        IDepositDataBuffer.DepositObject memory batch;
+        batch.topUps = new IDepositDataBuffer.TopUp[](1);
         batch.topUps[0] = _topUp(1);
         batch.topUps[0].amount = 0;
         bytes32 id = _id(batch, 0);
@@ -237,8 +237,8 @@ contract DepositDataBufferTest is Test, DepositDataBufferFixtures {
     }
 
     function test_RevertWhen_TopUpAmountNotGweiAligned() public {
-        IDepositDataBufferBase.DepositObject memory batch;
-        batch.topUps = new IDepositDataBufferBase.TopUp[](1);
+        IDepositDataBuffer.DepositObject memory batch;
+        batch.topUps = new IDepositDataBuffer.TopUp[](1);
         batch.topUps[0] = _topUp(1);
         uint256 misaligned = 1 ether + 7 wei;
         batch.topUps[0].amount = misaligned;
@@ -250,8 +250,8 @@ contract DepositDataBufferTest is Test, DepositDataBufferFixtures {
 
     /// @dev Top-ups below the verifier's 1 ETH floor are rejected at buffer submission time.
     function test_RevertWhen_TopUpAmountBelowMin() public {
-        IDepositDataBufferBase.DepositObject memory batch;
-        batch.topUps = new IDepositDataBufferBase.TopUp[](1);
+        IDepositDataBuffer.DepositObject memory batch;
+        batch.topUps = new IDepositDataBuffer.TopUp[](1);
         batch.topUps[0] = _topUp(1);
         uint256 tooLow = 1 ether - 1 gwei;
         batch.topUps[0].amount = tooLow;
@@ -263,8 +263,8 @@ contract DepositDataBufferTest is Test, DepositDataBufferFixtures {
 
     /// @dev Top-ups above the Pectra max effective balance are rejected at buffer submission time.
     function test_RevertWhen_TopUpAmountAboveMax() public {
-        IDepositDataBufferBase.DepositObject memory batch;
-        batch.topUps = new IDepositDataBufferBase.TopUp[](1);
+        IDepositDataBuffer.DepositObject memory batch;
+        batch.topUps = new IDepositDataBuffer.TopUp[](1);
         batch.topUps[0] = _topUp(1);
         uint256 tooHigh = 2016 ether + 1 gwei;
         batch.topUps[0].amount = tooHigh;
@@ -276,8 +276,8 @@ contract DepositDataBufferTest is Test, DepositDataBufferFixtures {
 
     /// @dev The inclusive [1, 2016] ETH top-up bounds are accepted at both extremes.
     function test_SubmitAcceptsTopUpAmountBoundaries() public {
-        IDepositDataBufferBase.DepositObject memory batch;
-        batch.topUps = new IDepositDataBufferBase.TopUp[](2);
+        IDepositDataBuffer.DepositObject memory batch;
+        batch.topUps = new IDepositDataBuffer.TopUp[](2);
         batch.topUps[0] = _topUp(10);
         batch.topUps[0].amount = 1 ether;
         batch.topUps[1] = _topUp(11);
@@ -291,8 +291,8 @@ contract DepositDataBufferTest is Test, DepositDataBufferFixtures {
 
     /// @dev A batch of only top-ups (no initial deposits) is valid.
     function test_SubmitTopUpsOnly() public {
-        IDepositDataBufferBase.DepositObject memory batch;
-        batch.topUps = new IDepositDataBufferBase.TopUp[](2);
+        IDepositDataBuffer.DepositObject memory batch;
+        batch.topUps = new IDepositDataBuffer.TopUp[](2);
         batch.topUps[0] = _topUp(10);
         batch.topUps[1] = _topUp(11);
 
@@ -303,7 +303,7 @@ contract DepositDataBufferTest is Test, DepositDataBufferFixtures {
         bytes32 id = _submit(batch);
         assertEq(id, expectedId);
 
-        (IDepositDataBufferBase.DepositObject memory stored, uint256 nonce) = buffer.getDepositData(id);
+        (IDepositDataBuffer.DepositObject memory stored, uint256 nonce) = buffer.getDepositData(id);
         assertEq(nonce, 0);
         assertEq(stored.deposits.length, 0);
         assertEq(stored.topUps.length, 2);
@@ -317,11 +317,11 @@ contract DepositDataBufferTest is Test, DepositDataBufferFixtures {
     // -----------------------------------------------------------------------
 
     function test_GetDepositDataReturnsBatchAndNonce() public {
-        IDepositDataBufferBase.DepositObject memory batch = _batch(2);
+        IDepositDataBuffer.DepositObject memory batch = _batch(2);
         _submit(_batch(1)); // bump the nonce so the retrieved nonce is non-trivial
         bytes32 id = _submit(batch);
 
-        (IDepositDataBufferBase.DepositObject memory stored, uint256 nonce) = buffer.getDepositData(id);
+        (IDepositDataBuffer.DepositObject memory stored, uint256 nonce) = buffer.getDepositData(id);
         assertEq(nonce, 1, "stored nonce must equal lastQueuedIdx at submit time");
         assertEq(stored.deposits.length, 2);
         for (uint256 i = 0; i < 2; i++) {
@@ -354,7 +354,7 @@ contract DepositDataBufferTest is Test, DepositDataBufferFixtures {
         assertEq(buffer.lastQueuedIdx(), 1);
 
         // A submission with a mismatched id reverts and must leave state untouched.
-        IDepositDataBufferBase.DepositObject memory batch = _batch(1);
+        IDepositDataBuffer.DepositObject memory batch = _batch(1);
         bytes32 wrongId = _id(batch, 999);
         vm.prank(producer);
         vm.expectRevert();
@@ -370,7 +370,7 @@ contract DepositDataBufferTest is Test, DepositDataBufferFixtures {
     // -----------------------------------------------------------------------
 
     function test_IdenticalDataSubmitsTwiceWithDistinctIds() public {
-        IDepositDataBufferBase.DepositObject memory batch = _batch(2);
+        IDepositDataBuffer.DepositObject memory batch = _batch(2);
 
         bytes32 id0 = _id(batch, 0);
         bytes32 id1 = _id(batch, 1);
@@ -407,13 +407,13 @@ contract DepositDataBufferTest is Test, DepositDataBufferFixtures {
     }
 
     function test_MarkProcessedLeavesDataUntouched() public {
-        IDepositDataBufferBase.DepositObject memory batch = _batch(2);
+        IDepositDataBuffer.DepositObject memory batch = _batch(2);
         bytes32 id = _submit(batch);
 
         vm.prank(processor);
         buffer.markDepositDataProcessed(id);
 
-        (IDepositDataBufferBase.DepositObject memory stored,) = buffer.getDepositData(id);
+        (IDepositDataBuffer.DepositObject memory stored,) = buffer.getDepositData(id);
         assertEq(stored.deposits.length, 2);
         assertEq(stored.deposits[0].pubkey, batch.deposits[0].pubkey);
     }
@@ -494,7 +494,7 @@ contract DepositDataBufferTest is Test, DepositDataBufferFixtures {
         assertEq(buffer.getProducer(), newProducer);
 
         // Old producer can no longer submit; the new producer can.
-        IDepositDataBufferBase.DepositObject memory batch = _batch(1);
+        IDepositDataBuffer.DepositObject memory batch = _batch(1);
         bytes32 id = _id(batch, 0);
         vm.prank(producer);
         vm.expectRevert(IDepositDataBufferBase.OnlyProducer.selector);

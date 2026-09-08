@@ -406,8 +406,8 @@ contract RiverV1 is
     /// @param deposits Initial deposits from the buffer
     /// @param topUps Top-ups from the buffer
     function _updateFundedETHFromBuffer(
-        IDepositDataBufferBase.Deposit[] memory deposits,
-        IDepositDataBufferBase.TopUp[] memory topUps
+        IDepositDataBuffer.Deposit[] memory deposits,
+        IDepositDataBuffer.TopUp[] memory topUps
     ) internal override {
         if (deposits.length == 0 && topUps.length == 0) return;
         uint256 operatorCount = IOperatorsRegistryV1(OperatorsRegistryAddress.get()).getOperatorCount();

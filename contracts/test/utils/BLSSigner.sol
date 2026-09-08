@@ -34,7 +34,7 @@ contract BLSSigner {
     bytes32 internal constant G1_Y_A = 0x0000000000000000000000000000000008b3f481e3aaa0f1a09e30ed741d8ae4;
     bytes32 internal constant G1_Y_B = 0xfcf5e095d5d00af600db18cb2c04b3edd03cc744a2888ae40caa232946c5e7e1;
 
-    /// @dev A signed deposit, shaped for `IDepositDataBufferBase.Deposit` / `verifyBLSDeposit`.
+    /// @dev A signed deposit, shaped for `IDepositDataBuffer.Deposit` / `verifyBLSDeposit`.
     struct SignedDeposit {
         bytes pubkey; // 48-byte compressed G1
         bytes signature; // 96-byte compressed G2

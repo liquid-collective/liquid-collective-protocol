@@ -45,7 +45,7 @@ contract DepositDataBufferHandler is Test, DepositDataBufferFixtures {
         uint256 count = bound(uint256(batchSize), 1, 5);
         // Bound the seed base so `seedBase + i` in the fixture builder cannot overflow.
         seed = bound(seed, 0, type(uint256).max - 5);
-        IDepositDataBufferBase.DepositObject memory batch = _batch(count, seed);
+        IDepositDataBuffer.DepositObject memory batch = _batch(count, seed);
 
         // The batch nonce (lastQueuedIdx) is folded into the id, so valid data always succeeds.
         bytes32 id = keccak256(abi.encode(batch, buffer.lastQueuedIdx()));
@@ -61,7 +61,7 @@ contract DepositDataBufferHandler is Test, DepositDataBufferFixtures {
         if (ghost_queuedIds.length == 0) return;
         bytes32 existing = ghost_queuedIds[bound(idx, 0, ghost_queuedIds.length - 1)];
 
-        (IDepositDataBufferBase.DepositObject memory batch,) = buffer.getDepositData(existing);
+        (IDepositDataBuffer.DepositObject memory batch,) = buffer.getDepositData(existing);
 
         // Re-submitting byte-identical data succeeds under a fresh, distinct id (nonce folding).
         bytes32 newId = keccak256(abi.encode(batch, buffer.lastQueuedIdx()));

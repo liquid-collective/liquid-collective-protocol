@@ -41,7 +41,7 @@ contract DepositDataBufferInvariantTest is Test {
         uint256 len = handler.ghost_queuedIdsLength();
         for (uint256 i = 0; i < len; i++) {
             bytes32 id = handler.ghost_queuedIdAt(i);
-            (IDepositDataBufferBase.DepositObject memory batch, uint256 nonce) = buffer.getDepositData(id);
+            (IDepositDataBuffer.DepositObject memory batch, uint256 nonce) = buffer.getDepositData(id);
 
             assertGt(batch.deposits.length, 0, "B2: submitted id returned empty data");
             assertEq(batch.deposits.length, handler.ghost_depositCounts(id), "B2: deposit count mismatch");
