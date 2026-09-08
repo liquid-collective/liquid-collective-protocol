@@ -207,7 +207,7 @@ interface IOracleManagerV1 {
         bool slashingContainmentMode;
     }
 
-    /// @notice The format of the oracle report in storage
+    /// @notice The format of the oracle report in storage. ONLY APPEND NEW FIELDS AT THE END.
     /// @notice These fields have the exact same function as the ones in ConsensusLayerReport, but this struct is optimized for storage
     struct StoredConsensusLayerReport {
         uint256 epoch;
@@ -221,8 +221,6 @@ interface IOracleManagerV1 {
         uint256 totalDepositedActivatedETH;
         uint256 totalExternalConsolidationETH;
         uint256 totalExitViaInternalConsolidationETH;
-        // APPEND ONLY. This struct is written to a raw keccak slot via LastConsensusLayerReport, so
-        // inserting a field anywhere above shifts every subsequent slot on a live deployment.
         uint256 validatorsStoppedEarningBalance;
     }
 

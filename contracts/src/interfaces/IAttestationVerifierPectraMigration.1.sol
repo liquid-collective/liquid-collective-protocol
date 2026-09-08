@@ -64,8 +64,7 @@ interface IAttestationVerifierPectraMigrationV1 {
     ///         with no on-chain signal, so the promotion can outlive a consolidation that never
     ///         executed. The key is then recorded as post-Pectra while still holding 0x01
     ///         credentials, which makes it top-up eligible via `fetchAndValidateDeposits`.
-    ///         Reconciliation is manual: the keeper calls `removeExitedValidatorPubkeys` and then
-    ///         `migratePrePectraValidatorPubkeys` to move it back.
+    ///         Reconciliation is manual: the keeper calls `removeExitedValidatorPubkeys`.
     /// @param pubkeys The 48-byte BLS pubkeys to consolidate
     /// @return requests The consolidation requests
     function validateSelfConsolidation(bytes[] calldata pubkeys)
