@@ -408,11 +408,7 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
 
     /// @dev Build a TopUp. BLS verification path skipped; pubkey must already be in
     ///      `PectraValidatorPubkeyLookup`. No signature field — consumer hardcodes 96 zero bytes.
-    function _makeTopUpDeposit(uint256 opIdx, uint256 seed)
-        internal
-        view
-        returns (IDepositDataBuffer.TopUp memory)
-    {
+    function _makeTopUpDeposit(uint256 opIdx, uint256 seed) internal view returns (IDepositDataBuffer.TopUp memory) {
         return IDepositDataBuffer.TopUp({pubkey: _pubkeyFromSeed(seed), amount: 32 ether, operatorIdx: opIdx});
     }
 
@@ -517,10 +513,10 @@ contract ConsensusLayerDepositManagerAttestationTest is Test {
     }
 
     /// @dev Submit a mixed batch (initials + top-ups).
-    function _prepareDeposit(
-        IDepositDataBuffer.Deposit[] memory deposits,
-        IDepositDataBuffer.TopUp[] memory topUps
-    ) internal returns (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs) {
+    function _prepareDeposit(IDepositDataBuffer.Deposit[] memory deposits, IDepositDataBuffer.TopUp[] memory topUps)
+        internal
+        returns (bytes32 bufferId, bytes32 rootHash, bytes[] memory sigs)
+    {
         return _prepareDeposit(_batchOf(deposits, topUps));
     }
 

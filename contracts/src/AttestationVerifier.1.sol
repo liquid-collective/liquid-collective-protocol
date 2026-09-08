@@ -69,9 +69,6 @@ contract AttestationVerifierV1 is
     bytes32 internal constant NAME_HASH = keccak256("DepositToConsensusLayerValidation");
     bytes32 internal constant VERSION_HASH = keccak256("1");
 
-    // bytes32 internal constant ATTEST_TYPEHASH =
-    //     keccak256("Attest(bytes32 depositDataBufferId,bytes32 depositRootHash)");
-
     /// @notice EIP-712 name used by the consolidation-attestation domain separator.
     /// @dev    Distinct from `NAME_HASH` so attestor signatures cannot be replayed
     ///         across the deposit and consolidation flows even if the rest of the
@@ -88,18 +85,11 @@ contract AttestationVerifierV1 is
         "AttestConsolidation(address withdrawalAddress,bytes[] sourcePubkeys,bytes[] targetPubkeys,uint256 totalAmount,uint256[] exitEpoch)"
     );
 
-    // /// @notice Maximum number of signatures accepted. Bounds the O(n^2) duplicate-detection loop.
-    // uint256 public constant MAX_SIGNATURES = 20;
-
     /// @notice Maximum number of registered root attesters. Defensive cap to bound storage growth.
     uint256 public constant MAX_ROOT_ATTESTERS = 32;
 
     /// @notice Maximum number of registered consolidation-committee attesters. Defensive cap to bound storage growth.
     uint256 public constant MAX_CONSOLIDATION_COMMITTEE_ATTESTERS = 32;
-
-    // /// @dev Expected lengths for fixed BLS-related fields in a DepositObject.
-    // uint256 internal constant DEPOSIT_PUBKEY_LENGTH = 48;
-    // uint256 internal constant DEPOSIT_SIGNATURE_LENGTH = 96;
 
     /// @dev Expected length for BLS pubkeys in a ConsolidationObject (source or target).
     uint256 internal constant CONSOLIDATION_PUBKEY_LENGTH = 48;
@@ -479,6 +469,16 @@ contract AttestationVerifierV1 is
         _verifyBLSSignatures(standardizedDeposits, DepositDomainValue.get());
     }
 
+    /// @notice Convert buffer deposits into the flow-agnostic `StandardDeposit` form consumed by the
+    ///         shared deposit verification logic.
+    /// @dev `operatorIdx` is dropped — it is irrelevant to verification and is consumed by River when
+    ///      the deposits are actually executed — and the canonical withdrawal credentials resolved by
+    ///      the caller are stamped onto every entry, so the buffer producer is never trusted on that
+    ///      field.
+    /// @param deposits The initial deposits as stored in the buffer.
+    /// @param withdrawalCredentials The canonical River withdrawal credentials.
+    /// @param depositCount The number of entries of `deposits` to convert.
+    /// @return standardizedDeposits The converted deposits.
     function _standardizeDeposits(
         IDepositDataBuffer.Deposit[] memory deposits,
         bytes32 withdrawalCredentials,
@@ -496,6 +496,13 @@ contract AttestationVerifierV1 is
         }
     }
 
+    /// @notice Reinterpret buffer top-ups as the flow-agnostic `StandardTopUp` form consumed by the
+    ///         shared deposit verification logic.
+    /// @dev Aliases the array in place instead of copying, which is sound only because the two structs
+    ///      share a memory layout on the fields verification reads and the result is read-only — see the
+    ///      inline comment.
+    /// @param topUps The top-ups as stored in the buffer.
+    /// @return standardizedTopUps The same array, viewed as `StandardTopUp[]`.
     function _standardizeTopUps(IDepositDataBuffer.TopUp[] memory topUps)
         internal
         pure
@@ -793,6 +800,9 @@ contract AttestationVerifierV1 is
         return keccak256(abi.encodePacked(arr));
     }
 
+    /// @notice Reject an initial-deposit pubkey that is already funded, in either the Pectra or the
+    ///         pre-Pectra lookup.
+    /// @inheritdoc DepositVerification
     function _customInitialDepositVerification(bytes memory _pubkey) internal view override {
         if (PectraValidatorPubkeyLookup.isPubkeyFunded(_pubkey)) {
             revert PubkeyAlreadyFunded(_pubkey);
@@ -806,6 +816,9 @@ contract AttestationVerifierV1 is
         }
     }
 
+    /// @notice Require a top-up pubkey to be a funded Pectra validator, rejecting migrated pre-Pectra
+    ///         keys with a distinct error.
+    /// @inheritdoc DepositVerification
     function _customTopUpVerification(bytes memory _pubkey) internal view override {
         // Explicitly reject migrated pre-Pectra keys with a distinct error. Such a key is not
         // in the Pectra lookup so it would otherwise revert as TopUpPubkeyNotFunded; the

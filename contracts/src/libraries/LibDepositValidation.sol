@@ -19,6 +19,7 @@ library LibDepositValidation {
     /// @notice Deposits _depositAmount ETH to the official Deposit contract
     /// @param _publicKey The public key of the validator
     /// @param _signature The signature provided by the operator
+    /// @param _depositAmount The deposit amount in wei (must be gwei-aligned; bounds are enforced upstream)
     /// @param _withdrawalCredentials The withdrawal credentials provided by River
     /// @param _depositContract The address of the deposit contract
     function _depositValidator(

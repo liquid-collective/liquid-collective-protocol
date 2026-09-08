@@ -7,13 +7,16 @@ import "./DepositVerification.sol";
 
 import "../libraries/LibSanitize.sol";
 
-/// @title DepositDataBuffer (v1)
+/// @title DepositDataBufferBase (v1)
 /// @author Alluvial Finance Inc.
 /// @notice Non-upgradeable contract that buffers pre-committed validator deposit batches on-chain.
 ///         A trusted producer submits batches; off-chain daemons and the AttestationVerifier read them
 ///         back by id. Each submission is uniquely addressable because the batch nonce (`lastQueuedIdx`
 ///         at submit time) is folded into the id, so byte-identical batches submitted twice never
 ///         collide.
+/// @dev Base contract holding the buffer's roles, batch nonce and per-batch existence/processed state,
+///      plus the shared submission validation. The batch payload itself is stored by the inheriting
+///      contract, which passes its batch to `_submitDepositData` in the standardized form.
 /// @dev The buffer owns the authoritative `processed` flag: only the processor may flip it via
 ///      `markDepositDataProcessed`, and `isDepositDataProcessed` is consulted before each deposit to
 ///      reject replays. Withdrawal credentials are intentionally NOT stored — the canonical withdrawal
@@ -83,6 +86,14 @@ contract DepositDataBufferBase is DepositVerification, IDepositDataBufferBase {
         _;
     }
 
+    /// @notice Validate a submitted deposit batch, bind it to the next batch nonce and record its
+    ///         existence, then emit `DepositDataSubmitted`.
+    /// @dev Does NOT store the batch payload — the inheriting contract is responsible for that. Reverts
+    ///      with `EmptyDepositData`, `DepositDataBufferIdMismatch` or `DepositDataBufferIdAlreadyExists`,
+    ///      or with any of the deposit/top-up validation errors.
+    /// @param depositDataBufferId The identifier claimed by the producer; must equal
+    ///                            `keccak256(abi.encode(batch, nonce))`.
+    /// @param batch The standardized deposit batch being submitted.
     function _submitDepositData(bytes32 depositDataBufferId, StandardDepositObject memory batch) internal {
         uint256 depositCount = batch.deposits.length;
         uint256 topUpCount = batch.topUps.length;

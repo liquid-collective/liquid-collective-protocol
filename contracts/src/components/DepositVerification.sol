@@ -34,16 +34,20 @@ abstract contract DepositVerification {
     /// @notice Maximum number of signatures accepted. Bounds the O(n^2) duplicate-detection loop.
     uint256 public constant MAX_SIGNATURES = 20;
 
+    /// @dev EIP-712 typehash of the deposit attestation struct co-signed by the root attesters.
     bytes32 internal constant ATTEST_TYPEHASH =
         keccak256("Attest(bytes32 depositDataBufferId,bytes32 depositRootHash)");
 
     /// @notice Verify the attestation quorum.
+    /// @dev The quorum, domain separator and attester-set predicate are supplied by the inheriting
+    ///      contract so this component stays stateless and reusable across attestation flows.
     /// @param depositDataBufferId The deposit data buffer ID.
     /// @param depositRootHash The deposit root hash.
     /// @param signatures The signatures.
     /// @param depositContract The official ETH deposit contract supplied by River.
     /// @param quorum The required attestation quorum.
     /// @param domainSeparator The EIP-712 domain separator.
+    /// @param _isRootAttester Predicate telling whether a recovered signer is a registered root attester.
     function _verifyAttestationQuorum(
         bytes32 depositDataBufferId,
         bytes32 depositRootHash,
@@ -93,6 +97,14 @@ abstract contract DepositVerification {
         if (validCount < quorum) revert IAttestationVerifierV1.InsufficientAttestations(validCount, quorum);
     }
 
+    /// @notice Validate every initial deposit in a batch: field lengths, amount bounds and
+    ///         gwei-alignment, and per-batch pubkey uniqueness.
+    /// @dev Flow-specific pubkey checks are delegated to `_customInitialDepositVerification`, which the
+    ///      inheriting contract overrides. Reverts with `InvalidPubkeyLength`, `InvalidSignatureLength`,
+    ///      `InvalidDepositAmount` or `PubkeyAlreadyFunded`.
+    /// @param deposits The initial deposits to validate.
+    /// @param depositCount The number of entries of `deposits` to validate.
+    /// @return totalAmount The sum of the validated deposit amounts, in wei.
     function _verifyInitialDeposits(IDepositDataBuffer.StandardDeposit[] memory deposits, uint256 depositCount)
         internal
         view
@@ -130,8 +142,20 @@ abstract contract DepositVerification {
         }
     }
 
+    /// @notice Hook for flow-specific validation of an initial-deposit pubkey.
+    /// @dev No-op by default; inheriting contracts override it to add their own checks (for example
+    ///      the AttestationVerifier's pubkey-lookup membership rules). Must revert to reject.
+    /// @param _pubkey The 48-byte BLS public key of the initial deposit being validated.
     function _customInitialDepositVerification(bytes memory _pubkey) internal view virtual {}
 
+    /// @notice Validate every top-up in a batch: pubkey length, amount bounds and gwei-alignment.
+    /// @dev Flow-specific pubkey checks are delegated to `_customTopUpVerification`, which the
+    ///      inheriting contract overrides. Per-batch duplicate top-up pubkeys are allowed, since each
+    ///      top-up credits an already-activated validator. Reverts with `InvalidTopUpPubkeyLength` or
+    ///      `InvalidTopUpAmount`.
+    /// @param topUps The top-ups to validate.
+    /// @param topUpCount The number of entries of `topUps` to validate.
+    /// @return totalAmount The sum of the validated top-up amounts, in wei.
     function _verifyTopUps(IDepositDataBuffer.StandardTopUp[] memory topUps, uint256 topUpCount)
         internal
         view
@@ -151,6 +175,10 @@ abstract contract DepositVerification {
         }
     }
 
+    /// @notice Hook for flow-specific validation of a top-up pubkey.
+    /// @dev No-op by default; inheriting contracts override it to add their own checks (for example
+    ///      requiring the pubkey to already be funded). Must revert to reject.
+    /// @param _pubkey The 48-byte BLS public key of the top-up being validated.
     function _customTopUpVerification(bytes memory _pubkey) internal view virtual {}
 
     /// @notice Verify the BLS signatures of all initial deposits against the canonical River

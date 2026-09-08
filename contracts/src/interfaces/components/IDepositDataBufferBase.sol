@@ -4,7 +4,9 @@ pragma solidity 0.8.34;
 import "../../libraries/BLS12_381.sol";
 
 /// @title IDepositDataBufferBase
-/// @notice Interface for the DepositDataBuffer contract that stores pre-committed validator deposit batches.
+/// @notice Interface for the shared base of the DepositDataBuffer contracts that store pre-committed
+///         validator deposit batches: the role management, the replay/processed state and the
+///         flow-agnostic (`Standard*`) deposit types used by the shared verification logic.
 /// @dev `depositDataBufferId` is `keccak256(abi.encode(batch, nonce))`, where `nonce` is the buffer's
 ///      ever-incrementing `lastQueuedIdx` at submission time. Folding the nonce into the id makes every
 ///      submission unique: byte-identical batches submitted more than once receive distinct,
@@ -14,6 +16,12 @@ import "../../libraries/BLS12_381.sol";
 ///      replays. The buffer — not the processor — is the authoritative source for this flag. In this
 ///      deployment the processor is River.
 interface IDepositDataBufferBase {
+    /// @notice An initial validator deposit in the flow-agnostic form consumed by the shared deposit
+    ///         verification logic.
+    /// @dev Unlike `IDepositDataBuffer.Deposit`, the withdrawal credentials are carried per-entry so the
+    ///         verification logic never has to reach for flow-specific state. They are still never
+    ///         supplied by the buffer producer: the caller fills the field with the canonical
+    ///         credentials it resolved itself before handing the entry over for verification.
     struct StandardDeposit {
         /// @dev 48-byte BLS public key of the validator
         bytes pubkey;
@@ -21,12 +29,17 @@ interface IDepositDataBufferBase {
         bytes signature;
         /// @dev Deposit amount in wei (must be a multiple of 1 gwei). Typically 32 ether.
         uint256 amount;
-        /// @dev TODO
+        /// @dev The 32-byte withdrawal credentials the deposit is verified against, resolved by the
+        ///      caller rather than the buffer producer.
         bytes32 withdrawalCredentials;
         /// @dev Y-coordinates for BLS decompression of the pubkey + signature.
         BLS12_381.DepositY depositY;
     }
 
+    /// @notice A top-up to an already-funded validator in the flow-agnostic form consumed by the shared
+    ///         deposit verification logic.
+    /// @dev No `signature` or `depositY` field: the beacon chain ignores BLS signatures on subsequent
+    ///      deposits to an existing validator, so BLS verification is skipped entirely for top-ups.
     struct StandardTopUp {
         /// @dev 48-byte BLS public key of the already-funded validator
         bytes pubkey;
@@ -34,12 +47,17 @@ interface IDepositDataBufferBase {
         ///      is already funded, the stateless upper bound is the 2048 ETH max effective
         ///      balance minus the 32 ETH activation balance.
         uint256 amount;
-        /// @dev TODO
+        /// @dev The 32-byte withdrawal credentials the top-up is credited against, resolved by the
+        ///      caller rather than the buffer producer.
         bytes32 withdrawalCredentials;
     }
 
+    /// @notice A deposit batch — initial deposits and top-ups — in the flow-agnostic form consumed by
+    ///         the shared deposit verification logic.
     struct StandardDepositObject {
+        /// @dev Initial deposits — BLS-verified, must NOT already be funded.
         StandardDeposit[] deposits;
+        /// @dev Top-ups — BLS skipped, pubkey MUST already be funded.
         StandardTopUp[] topUps;
     }
 
@@ -119,6 +137,11 @@ interface IDepositDataBufferBase {
     /// @notice Reverts when a deposit or top-up amount is outside its allowed range or not gwei-aligned
     error InvalidDepositAmount(uint256 index, uint256 amount);
 
+    /// @notice Reverts when a top-up amount is outside its allowed range or not gwei-aligned
+    /// @dev Distinct from `InvalidDepositAmount` because the top-up range starts at 1 ether, below the
+    ///      32 ether floor initial deposits require.
+    /// @param index Index into `batch.topUps`
+    /// @param amount The offending amount in wei
     error InvalidTopUpAmount(uint256 index, uint256 amount);
 
     // -----------------------------------------------------------------------

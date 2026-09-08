@@ -115,8 +115,7 @@ contract DepositDataBufferFuzzTest is Test, DepositDataBufferFixtures {
         vm.assume(len != 48);
         IDepositDataBuffer.DepositObject memory batch;
         batch.topUps = new IDepositDataBuffer.TopUp[](1);
-        batch.topUps[0] =
-            IDepositDataBuffer.TopUp({pubkey: new bytes(uint256(len)), amount: 1 ether, operatorIdx: 0});
+        batch.topUps[0] = IDepositDataBuffer.TopUp({pubkey: new bytes(uint256(len)), amount: 1 ether, operatorIdx: 0});
 
         vm.prank(producer);
         vm.expectRevert(

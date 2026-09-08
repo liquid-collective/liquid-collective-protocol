@@ -3,14 +3,11 @@ pragma solidity 0.8.34;
 
 /// @title Deposit Verification Interface (v1)
 /// @author Alluvial Finance Inc.
-/// @notice External surface of the AttestationVerifier sibling contract that River delegates
-///         to for two independent attestation flows:
-///         1. Deposit flow (`fetchAndValidateDeposits`) — attestation-quorum + BLS deposit-message
-///            verification, plus per-deposit withdrawal-credentials and committed-balance
-///            checks against a batch fetched from the `DepositDataBuffer`. View-only.
-///         2. Consolidation flow (`validateConsolidation`) — attestation-quorum verification
-///            over an EIP-7251 `ConsolidationObject` passed in by the caller (no on-chain
-///            buffer), with replay protection on the EIP-712 structHash. State-mutating.
+/// @notice Error surface of the `DepositVerification` component, which provides the shared
+///         attestation-quorum, initial-deposit and top-up verification used by both the
+///         AttestationVerifier deposit flow and the DepositDataBuffer submission path.
+/// @dev Declares errors only — `DepositVerification` exposes no external functions of its own; every
+///      entry point is internal and reached through the inheriting contract.
 interface IDepositVerification {
     // -----------------------------------------------------------------------
     // Errors
