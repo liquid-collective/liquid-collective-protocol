@@ -21,6 +21,7 @@ import "./state/operatorsRegistry/TotalETHExitsRequested.sol";
 import "./state/operatorsRegistry/CurrentETHExitsDemand.sol";
 import "./state/operatorsRegistry/TotalValidatorExitsRequested.sol";
 import "./state/operatorsRegistry/CurrentValidatorExitsDemand.sol";
+import "./state/operatorsRegistry/ExitConsolidationBuffer.sol";
 import "./state/operatorsRegistry/WithdrawAddress.sol";
 import "./state/shared/RiverAddress.sol";
 
@@ -185,6 +186,10 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         return (_getTotalExitedETH(), TotalETHExitsRequested.get() + CurrentETHExitsDemand.get());
     }
 
+    function getExitConsolidationBuffer() external view returns (uint256) {
+        return ExitConsolidationBuffer.get();
+    }
+
     /// @inheritdoc IOperatorsRegistryV1
     function getOperatorCount() external view returns (uint256) {
         return OperatorsV3.getCount();
@@ -318,6 +323,14 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     }
 
     /// @inheritdoc IOperatorsRegistryV1
+    function reportExitViaConsolidation(uint256 exitedAmount) external onlyRiver {
+        uint256 old = ExitConsolidationBuffer.get();
+        uint256 newAmount = old < exitedAmount ? 0 : old - exitedAmount;
+        ExitConsolidationBuffer.set(newAmount);
+        emit SetExitConsolidationBuffer(old, newAmount);
+    }
+
+    /// @inheritdoc IOperatorsRegistryV1
     function addOperator(string calldata _name, address _operator) external onlyAdmin returns (uint256) {
         OperatorsV3.Operator memory newOperator = OperatorsV3.Operator({
             active: true, operator: _operator, name: _name, funded: 0, requestedExits: 0, activeCLETH: 0
@@ -360,7 +373,9 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
     function requestETHExits(
         ExitETHAllocation[] calldata _allocations,
         ELExitETHAllocation[] calldata _elAllocations,
-        uint256 _maxFeePerWithdrawal
+        ExitsViaConsolidationAllocation calldata _exitViaConsolidationAllocation,
+        uint256 _maxFeePerWithdrawal,
+        uint256 _maxFeePerConsolidation
     ) external payable nonReentrant {
         if (msg.sender != IConsensusLayerDepositManagerV1(RiverAddress.get()).getKeeper()) {
             revert IConsensusLayerDepositManagerV1.OnlyKeeper();
@@ -371,23 +386,59 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
             revert NoExitRequestsToPerform();
         }
 
-        if (_allocations.length == 0 && _elAllocations.length == 0) {
+        if (
+            _allocations.length == 0 && _elAllocations.length == 0
+                && (_exitViaConsolidationAllocation.consolidationRequests.length == 0
+                || _exitViaConsolidationAllocation.ethPerOperator.length == 0)
+        ) {
             revert InvalidEmptyArray();
         }
 
         uint256 requestedETHAmount = _requestCLETHExits(_allocations);
         uint256 remainingETHExitsDemand =
             requestedETHAmount >= currentETHExitsDemand ? 0 : currentETHExitsDemand - requestedETHAmount;
-        (uint256 elRequestedETHAmount, uint256 totalFeePaid) =
+        (uint256 elRequestedETHAmount, uint256 amountSentToWithdrawContract) =
             _requestELETHExits(_elAllocations, _maxFeePerWithdrawal, remainingETHExitsDemand);
         requestedETHAmount += elRequestedETHAmount;
+
+        if (
+            _exitViaConsolidationAllocation.consolidationRequests.length > 0
+                || _exitViaConsolidationAllocation.ethPerOperator.length > 0
+        ) {
+            // Reserve the projected exited ETH per operator (against each operator's active-CL headroom),
+            // exactly like CL exits; emits RequestedETHExitsViaConsolidation per operator.
+            uint256 consolidationReserved =
+                _reserveExitAllocations(_exitViaConsolidationAllocation.ethPerOperator, true);
+
+            remainingETHExitsDemand -= elRequestedETHAmount;
+            if (consolidationReserved > remainingETHExitsDemand) {
+                revert ExitsGreaterThanExitDemand(consolidationReserved, remainingETHExitsDemand);
+            }
+
+            // Forward the value remaining after EL fees; the Withdraw contract refunds any excess to the
+            // keeper directly, so the whole budget is counted as spent here and the outer refund is a no-op.
+            uint256 consolidationValueBudget = msg.value - amountSentToWithdrawContract;
+            IWithdrawV1(WithdrawAddress.get()).consolidateForExit{value: consolidationValueBudget}(
+                _exitViaConsolidationAllocation.consolidationRequests, _maxFeePerConsolidation, msg.sender
+            );
+            amountSentToWithdrawContract = msg.value;
+            requestedETHAmount += consolidationReserved;
+
+            // Update the buffer for ETH to be received via consolidation
+            uint256 old = ExitConsolidationBuffer.get();
+            ExitConsolidationBuffer.set(old + consolidationReserved);
+            emit SetExitConsolidationBuffer(old, old + consolidationReserved);
+        } 
 
         // Check that the exits requested do not exceed the current ETH exits demand
         if (requestedETHAmount > currentETHExitsDemand) {
             revert ExitsRequestedExceedExitDemand(requestedETHAmount, currentETHExitsDemand);
         }
-        if (totalFeePaid < msg.value) {
-            uint256 excess = msg.value - totalFeePaid;
+        // The Excess sent to the Withdraw contract are refunded by Withdraw contract
+        // The only time when there would be excess refunded via the following code is when:
+        // There are exits only via EL & the msg.value was larger than required for EL exits
+        if (amountSentToWithdrawContract < msg.value) {
+            uint256 excess = msg.value - amountSentToWithdrawContract;
             (bool ok,) = msg.sender.call{value: excess}("");
             if (!ok) {
                 revert UnsentRefund(msg.sender, excess);
@@ -399,8 +450,20 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
         _setCurrentETHExitsDemand(currentETHExitsDemand, currentETHExitsDemand - requestedETHAmount);
     }
 
-    /// @notice Reserves full ETH exits per operator via CL and returns the total requested amount.
+    /// @notice Reserves ETH exits per operator via CL and returns the total requested amount.
     function _requestCLETHExits(ExitETHAllocation[] calldata _allocations)
+        private
+        returns (uint256 requestedETHAmount)
+    {
+        return _reserveExitAllocations(_allocations, false);
+    }
+
+    /// @notice Reserves ETH exits per operator from an allocation array against each operator's exit
+    ///         headroom, and returns the total requested amount. Shared by the CL exit path and the
+    ///         internal-consolidation exit path; `_viaConsolidation` only selects which event is emitted.
+    /// @param _allocations Per-operator {operatorIndex, ethAmount}, strictly increasing by operatorIndex
+    /// @param _viaConsolidation When true, emit RequestedETHExitsViaConsolidation; otherwise RequestedETHExits
+    function _reserveExitAllocations(ExitETHAllocation[] calldata _allocations, bool _viaConsolidation)
         private
         returns (uint256 requestedETHAmount)
     {
@@ -422,7 +485,11 @@ contract OperatorsRegistryV1 is IOperatorsRegistryV1, Initializable, Administrab
 
             _reserveOperatorExit(operator, operatorIndex, ethAmount, false);
             requestedETHAmount += ethAmount;
-            emit RequestedETHExits(operatorIndex, operator.requestedExits);
+            if (_viaConsolidation) {
+                emit RequestedETHExitsViaConsolidation(operatorIndex, operator.requestedExits);
+            } else {
+                emit RequestedETHExits(operatorIndex, operator.requestedExits);
+            }
         }
     }
 

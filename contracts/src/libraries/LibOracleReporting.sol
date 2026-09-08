@@ -62,6 +62,7 @@ library LibOracleReporting {
         uint256 totalDepositedActivatedETHIncrease;
         uint256 lastConsolidationBuffer;
         uint256 totalExternalConsolidationETHIncrease;
+        uint256 totalExitViaInternalConsolidationETHIncrease;
         uint256 timeElapsedSinceLastReport;
         uint256 availableAmountToUpperBound;
         IOracleManagerV1.ConsensusLayerDataReportingTrace trace;
@@ -158,6 +159,24 @@ library LibOracleReporting {
                 }
             }
 
+            if (_report.totalExitViaInternalConsolidationETH < lastStoredReport.totalExitViaInternalConsolidationETH) {
+                revert IOracleManagerV1.InvalidTotalExitViaConsolidationsAmountReportedDecrease(
+                    lastStoredReport.totalExitViaInternalConsolidationETH, _report.totalExitViaInternalConsolidationETH
+                );
+            }
+
+            if (_report.totalExitViaInternalConsolidationETH > lastStoredReport.totalExitViaInternalConsolidationETH) {
+                vars.totalExitViaInternalConsolidationETHIncrease =
+                    _report.totalExitViaInternalConsolidationETH - lastStoredReport.totalExitViaInternalConsolidationETH;
+
+                // we ensure that the total exit via consolidation amount reported is not larger than the increase in the amount of exited ETH
+                if (vars.totalExitViaInternalConsolidationETHIncrease > vars.exitedAmountIncrease) {
+                    revert IOracleManagerV1.ExitViaConsolidationETHIncreaseExceedsExitedETHIncrease(
+                        vars.totalExitViaInternalConsolidationETHIncrease, vars.exitedAmountIncrease
+                    );
+                }
+            }
+
             // we compute the new skimmed amount by taking the delta between reports
             vars.skimmedAmountIncrease = _report.validatorsSkimmedBalance - vars.lastReportSkimmedBalance;
 
@@ -201,6 +220,7 @@ library LibOracleReporting {
             storedReport.slashingContainmentMode = _report.slashingContainmentMode;
             storedReport.totalDepositedActivatedETH = _report.totalDepositedActivatedETH;
             storedReport.totalExternalConsolidationETH = _report.totalExternalConsolidationETH;
+            storedReport.totalExitViaInternalConsolidationETH = _report.totalExitViaInternalConsolidationETH;
             LastConsensusLayerReport.set(storedReport);
         }
 
@@ -280,6 +300,12 @@ library LibOracleReporting {
             // we pull the funds from the coverage recipient
             vars.trace.pulledCoverageFunds = _pullCoverageFunds(vars.availableAmountToUpperBound);
             // we do not update the rewards as coverage is not considered rewards
+        }
+
+        // reduce the exit consolidation buffer by the ETH that actually arrived via consolidation this report
+        if (vars.totalExitViaInternalConsolidationETHIncrease > 0) {
+            IOperatorsRegistryV1(OperatorsRegistryAddress.get())
+                .reportExitViaConsolidation(vars.totalExitViaInternalConsolidationETHIncrease);
         }
 
         uint256 consolidationBuffer = ConsolidationBuffer.get();

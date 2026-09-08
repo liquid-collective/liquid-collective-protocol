@@ -44,6 +44,7 @@ contract BLSSigner {
     error G1MsmFailed();
     error G2MsmFailed();
     error OnlySelfCall();
+    error ZeroSecretKey();
 
     /**
      * @notice Trampoline around `BLS12_381.hashToG2`. Only ever reach it via `_hashToG2`.
@@ -124,7 +125,35 @@ contract BLSSigner {
         (bytes memory pubkey, BLS12_381.Fp memory pubkeyY) = derivePubkey(sk);
         bytes32 signingRoot = depositMessageSigningRoot(pubkey, amount, withdrawalCredentials, depositDomain);
 
-        BLS12_381.G2Point memory msgG2 = _hashToG2(signingRoot);
+        (bytes memory signature, BLS12_381.Fp2 memory signatureY) = signRoot(sk, signingRoot);
+
+        signed.pubkey = pubkey;
+        signed.signature = signature;
+        signed.depositY = BLS12_381.DepositY({pubkeyY: pubkeyY, signatureY: signatureY});
+    }
+
+    /**
+     * @notice The raw BLS signing primitive: `sk * hashToG2(message)`.
+     * @param sk Secret key scalar, in [1, r).
+     * @param message The 32-byte message to sign — for deposits, the output of
+     *        `depositMessageSigningRoot`.
+     * @return signature 96-byte compressed G2 signature.
+     * @return signatureY Uncompressed Y coordinate of the signature point.
+     * @dev Signs the message directly rather than building a deposit message around it, which is
+     *      what makes this map 1:1 onto the `sign` handler of `ethereum/bls12-381-tests`
+     *      (`input: {privkey: bytes32, message: bytes32} -> output: signature`). See
+     *      `BLSSignerValidation/` for the vectors and the tests that pin it against those fixtures.
+     */
+    function signRoot(uint256 sk, bytes32 message)
+        public
+        view
+        returns (bytes memory signature, BLS12_381.Fp2 memory signatureY)
+    {
+        // The official suite expects `null` (invalid) for a zero private key: it would sign with
+        // the infinity point, which is not a representable signature here.
+        if (sk % R == 0) revert ZeroSecretKey();
+
+        BLS12_381.G2Point memory msgG2 = _hashToG2(message);
         bytes memory out = _msm(
             BLS12_G2MSM,
             abi.encodePacked(
@@ -151,11 +180,13 @@ contract BLSSigner {
 
         // Compressed G2 X is encoded `c1 || c0`, with the flag bits in the first byte of c1.
         bool signBit = _signBitFp2(y_c0_a, y_c0_b, y_c1_a, y_c1_b);
-        signed.signature = bytes.concat(_compress48(x_c1_a, x_c1_b, signBit), _limb48(x_c0_a, x_c0_b));
-        signed.pubkey = pubkey;
-        signed.depositY = BLS12_381.DepositY({
-            pubkeyY: pubkeyY, signatureY: BLS12_381.Fp2({c0_a: y_c0_a, c0_b: y_c0_b, c1_a: y_c1_a, c1_b: y_c1_b})
-        });
+        signature = bytes.concat(_compress48(x_c1_a, x_c1_b, signBit), _limb48(x_c0_a, x_c0_b));
+        signatureY = BLS12_381.Fp2({c0_a: y_c0_a, c0_b: y_c0_b, c1_a: y_c1_a, c1_b: y_c1_b});
+    }
+
+    /// @notice `BLS12_381.hashToG2` in a fresh call frame, exposed for vector tests.
+    function hashToG2(bytes32 message) public view returns (BLS12_381.G2Point memory) {
+        return _hashToG2(message);
     }
 
     /// @notice Memory-argument twin of `BLS12_381.depositMessageSigningRoot`, which takes calldata.

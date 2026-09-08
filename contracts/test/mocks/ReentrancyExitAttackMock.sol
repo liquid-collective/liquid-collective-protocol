@@ -12,6 +12,7 @@ contract ReentrancyExitAttackMock {
     bool internal _armed;
 
     IOperatorsRegistryV1.ExitETHAllocation[] internal _allocations;
+    IOperatorsRegistryV1.ExitsViaConsolidationAllocation internal _consolidationAllocation;
 
     constructor(address _target) {
         target = IOperatorsRegistryV1(_target);
@@ -29,7 +30,9 @@ contract ReentrancyExitAttackMock {
     /// contract mid-execution, invoking receive() before the function has returned.
     function attack() external payable {
         _armed = true;
-        target.requestETHExits{value: msg.value}(_allocations, new IOperatorsRegistryV1.ELExitETHAllocation[](0), 0);
+        target.requestETHExits{value: msg.value}(
+            _allocations, new IOperatorsRegistryV1.ELExitETHAllocation[](0), _consolidationAllocation, 0, 0
+        );
     }
 
     receive() external payable {
@@ -37,7 +40,9 @@ contract ReentrancyExitAttackMock {
             return;
         }
         _armed = false; // single re-entry attempt; avoids an infinite refund loop
-        try target.requestETHExits(_allocations, new IOperatorsRegistryV1.ELExitETHAllocation[](0), 0) {
+        try target.requestETHExits(
+            _allocations, new IOperatorsRegistryV1.ELExitETHAllocation[](0), _consolidationAllocation, 0, 0
+        ) {
             reentrancySucceeded = true;
         } catch {}
     }

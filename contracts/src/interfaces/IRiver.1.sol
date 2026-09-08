@@ -24,7 +24,7 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     event PulledCoverageFunds(uint256 amount);
 
     /// @notice Funds have been pulled from the Consolidation Coverage Fund
-    /// @param amount The amount pulled
+    /// @param amount The amount pulled from the consolidation coverage fund
     event PulledConsolidationCoverageFunds(uint256 amount);
 
     /// @notice Emitted when funds are pulled from the redeem manager
