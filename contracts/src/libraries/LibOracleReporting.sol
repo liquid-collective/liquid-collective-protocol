@@ -62,7 +62,7 @@ library LibOracleReporting {
         uint256 totalDepositedActivatedETHIncrease;
         uint256 lastConsolidationBuffer;
         uint256 totalExternalConsolidationETHIncrease;
-        uint256 totalExitViaInternalConsolidationETH;
+        uint256 totalExitViaInternalConsolidationETHIncrease;
         uint256 stoppedEarningAmountIncrease;
         uint256 stoppedEarningLsETH;
         uint256 timeElapsedSinceLastReport;
