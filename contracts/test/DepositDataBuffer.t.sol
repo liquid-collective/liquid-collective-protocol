@@ -5,6 +5,7 @@ import "forge-std/Test.sol";
 
 import "../src/DepositDataBuffer.sol";
 import "../src/interfaces/IDepositDataBuffer.sol";
+import "../src/interfaces/components/IDepositVerification.sol";
 import "../src/libraries/LibErrors.sol";
 import "./shared/DepositDataBufferFixtures.sol";
 
@@ -138,7 +139,7 @@ contract DepositDataBufferTest is Test, DepositDataBufferFixtures {
         batch.deposits[0].pubkey = new bytes(47);
         bytes32 id = _id(batch, 0);
         vm.prank(producer);
-        vm.expectRevert(abi.encodeWithSelector(IDepositDataBufferBase.InvalidPubkeyLength.selector, 0, 47));
+        vm.expectRevert(abi.encodeWithSelector(IDepositVerification.InvalidPubkeyLength.selector, 0, 47));
         buffer.submitDepositData(id, batch);
     }
 
@@ -147,7 +148,7 @@ contract DepositDataBufferTest is Test, DepositDataBufferFixtures {
         batch.deposits[0].signature = new bytes(95);
         bytes32 id = _id(batch, 0);
         vm.prank(producer);
-        vm.expectRevert(abi.encodeWithSelector(IDepositDataBufferBase.InvalidSignatureLength.selector, 0, 95));
+        vm.expectRevert(abi.encodeWithSelector(IDepositVerification.InvalidSignatureLength.selector, 0, 95));
         buffer.submitDepositData(id, batch);
     }
 
@@ -156,7 +157,7 @@ contract DepositDataBufferTest is Test, DepositDataBufferFixtures {
         batch.deposits[0].amount = 0;
         bytes32 id = _id(batch, 0);
         vm.prank(producer);
-        vm.expectRevert(abi.encodeWithSelector(IDepositDataBufferBase.InvalidDepositAmount.selector, 0, 0));
+        vm.expectRevert(abi.encodeWithSelector(IDepositVerification.InvalidDepositAmount.selector, 0, 0));
         buffer.submitDepositData(id, batch);
     }
 
@@ -166,7 +167,7 @@ contract DepositDataBufferTest is Test, DepositDataBufferFixtures {
         batch.deposits[0].amount = misaligned;
         bytes32 id = _id(batch, 0);
         vm.prank(producer);
-        vm.expectRevert(abi.encodeWithSelector(IDepositDataBufferBase.InvalidDepositAmount.selector, 0, misaligned));
+        vm.expectRevert(abi.encodeWithSelector(IDepositVerification.InvalidDepositAmount.selector, 0, misaligned));
         buffer.submitDepositData(id, batch);
     }
 
@@ -177,7 +178,7 @@ contract DepositDataBufferTest is Test, DepositDataBufferFixtures {
         batch.deposits[1].amount = misaligned;
         bytes32 id = _id(batch, 0);
         vm.prank(producer);
-        vm.expectRevert(abi.encodeWithSelector(IDepositDataBufferBase.InvalidDepositAmount.selector, 1, misaligned));
+        vm.expectRevert(abi.encodeWithSelector(IDepositVerification.InvalidDepositAmount.selector, 1, misaligned));
         buffer.submitDepositData(id, batch);
     }
 
@@ -188,7 +189,7 @@ contract DepositDataBufferTest is Test, DepositDataBufferFixtures {
         batch.deposits[0].amount = tooLow;
         bytes32 id = _id(batch, 0);
         vm.prank(producer);
-        vm.expectRevert(abi.encodeWithSelector(IDepositDataBufferBase.InvalidDepositAmount.selector, 0, tooLow));
+        vm.expectRevert(abi.encodeWithSelector(IDepositVerification.InvalidDepositAmount.selector, 0, tooLow));
         buffer.submitDepositData(id, batch);
     }
 
@@ -199,7 +200,7 @@ contract DepositDataBufferTest is Test, DepositDataBufferFixtures {
         batch.deposits[0].amount = tooHigh;
         bytes32 id = _id(batch, 0);
         vm.prank(producer);
-        vm.expectRevert(abi.encodeWithSelector(IDepositDataBufferBase.InvalidDepositAmount.selector, 0, tooHigh));
+        vm.expectRevert(abi.encodeWithSelector(IDepositVerification.InvalidDepositAmount.selector, 0, tooHigh));
         buffer.submitDepositData(id, batch);
     }
 
@@ -221,7 +222,7 @@ contract DepositDataBufferTest is Test, DepositDataBufferFixtures {
         batch.topUps[0].pubkey = new bytes(49);
         bytes32 id = _id(batch, 0);
         vm.prank(producer);
-        vm.expectRevert(abi.encodeWithSelector(IDepositDataBufferBase.InvalidTopUpPubkeyLength.selector, 0, 49));
+        vm.expectRevert(abi.encodeWithSelector(IDepositVerification.InvalidTopUpPubkeyLength.selector, 0, 49));
         buffer.submitDepositData(id, batch);
     }
 
@@ -232,7 +233,7 @@ contract DepositDataBufferTest is Test, DepositDataBufferFixtures {
         batch.topUps[0].amount = 0;
         bytes32 id = _id(batch, 0);
         vm.prank(producer);
-        vm.expectRevert(abi.encodeWithSelector(IDepositDataBufferBase.InvalidTopUpAmount.selector, 0, 0));
+        vm.expectRevert(abi.encodeWithSelector(IDepositVerification.InvalidTopUpAmount.selector, 0, 0));
         buffer.submitDepositData(id, batch);
     }
 
@@ -244,7 +245,7 @@ contract DepositDataBufferTest is Test, DepositDataBufferFixtures {
         batch.topUps[0].amount = misaligned;
         bytes32 id = _id(batch, 0);
         vm.prank(producer);
-        vm.expectRevert(abi.encodeWithSelector(IDepositDataBufferBase.InvalidTopUpAmount.selector, 0, misaligned));
+        vm.expectRevert(abi.encodeWithSelector(IDepositVerification.InvalidTopUpAmount.selector, 0, misaligned));
         buffer.submitDepositData(id, batch);
     }
 
@@ -257,7 +258,7 @@ contract DepositDataBufferTest is Test, DepositDataBufferFixtures {
         batch.topUps[0].amount = tooLow;
         bytes32 id = _id(batch, 0);
         vm.prank(producer);
-        vm.expectRevert(abi.encodeWithSelector(IDepositDataBufferBase.InvalidTopUpAmount.selector, 0, tooLow));
+        vm.expectRevert(abi.encodeWithSelector(IDepositVerification.InvalidTopUpAmount.selector, 0, tooLow));
         buffer.submitDepositData(id, batch);
     }
 
@@ -270,7 +271,7 @@ contract DepositDataBufferTest is Test, DepositDataBufferFixtures {
         batch.topUps[0].amount = tooHigh;
         bytes32 id = _id(batch, 0);
         vm.prank(producer);
-        vm.expectRevert(abi.encodeWithSelector(IDepositDataBufferBase.InvalidTopUpAmount.selector, 0, tooHigh));
+        vm.expectRevert(abi.encodeWithSelector(IDepositVerification.InvalidTopUpAmount.selector, 0, tooHigh));
         buffer.submitDepositData(id, batch);
     }
 

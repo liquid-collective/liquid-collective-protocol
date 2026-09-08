@@ -5,6 +5,7 @@ import "forge-std/Test.sol";
 
 import "../../src/DepositDataBuffer.sol";
 import "../../src/interfaces/IDepositDataBuffer.sol";
+import "../../src/interfaces/components/IDepositVerification.sol";
 import "../shared/DepositDataBufferFixtures.sol";
 
 /// @title DepositDataBufferFuzzTest
@@ -97,7 +98,7 @@ contract DepositDataBufferFuzzTest is Test, DepositDataBufferFixtures {
         batch.deposits[0].pubkey = new bytes(uint256(len));
 
         vm.prank(producer);
-        vm.expectRevert(abi.encodeWithSelector(IDepositDataBufferBase.InvalidPubkeyLength.selector, 0, uint256(len)));
+        vm.expectRevert(abi.encodeWithSelector(IDepositVerification.InvalidPubkeyLength.selector, 0, uint256(len)));
         buffer.submitDepositData(bytes32(0), batch);
     }
 
@@ -107,7 +108,7 @@ contract DepositDataBufferFuzzTest is Test, DepositDataBufferFixtures {
         batch.deposits[0].signature = new bytes(uint256(len));
 
         vm.prank(producer);
-        vm.expectRevert(abi.encodeWithSelector(IDepositDataBufferBase.InvalidSignatureLength.selector, 0, uint256(len)));
+        vm.expectRevert(abi.encodeWithSelector(IDepositVerification.InvalidSignatureLength.selector, 0, uint256(len)));
         buffer.submitDepositData(bytes32(0), batch);
     }
 
@@ -118,9 +119,7 @@ contract DepositDataBufferFuzzTest is Test, DepositDataBufferFixtures {
         batch.topUps[0] = IDepositDataBuffer.TopUp({pubkey: new bytes(uint256(len)), amount: 1 ether, operatorIdx: 0});
 
         vm.prank(producer);
-        vm.expectRevert(
-            abi.encodeWithSelector(IDepositDataBufferBase.InvalidTopUpPubkeyLength.selector, 0, uint256(len))
-        );
+        vm.expectRevert(abi.encodeWithSelector(IDepositVerification.InvalidTopUpPubkeyLength.selector, 0, uint256(len)));
         buffer.submitDepositData(bytes32(0), batch);
     }
 
@@ -129,7 +128,7 @@ contract DepositDataBufferFuzzTest is Test, DepositDataBufferFixtures {
         batch.deposits[0].amount = 0;
 
         vm.prank(producer);
-        vm.expectRevert(abi.encodeWithSelector(IDepositDataBufferBase.InvalidDepositAmount.selector, 0, 0));
+        vm.expectRevert(abi.encodeWithSelector(IDepositVerification.InvalidDepositAmount.selector, 0, 0));
         buffer.submitDepositData(bytes32(0), batch);
     }
 }

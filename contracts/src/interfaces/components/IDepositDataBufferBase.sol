@@ -125,25 +125,6 @@ interface IDepositDataBufferBase {
     /// @notice Reverts when caller is not the processor (the only account allowed to mark data processed)
     error OnlyProcessor();
 
-    /// @notice Reverts when an initial-deposit pubkey is not exactly 48 bytes
-    error InvalidPubkeyLength(uint256 index, uint256 length);
-
-    /// @notice Reverts when an initial-deposit signature is not exactly 96 bytes
-    error InvalidSignatureLength(uint256 index, uint256 length);
-
-    /// @notice Reverts when a top-up pubkey is not exactly 48 bytes
-    error InvalidTopUpPubkeyLength(uint256 index, uint256 length);
-
-    /// @notice Reverts when a deposit or top-up amount is outside its allowed range or not gwei-aligned
-    error InvalidDepositAmount(uint256 index, uint256 amount);
-
-    /// @notice Reverts when a top-up amount is outside its allowed range or not gwei-aligned
-    /// @dev Distinct from `InvalidDepositAmount` because the top-up range starts at 1 ether, below the
-    ///      32 ether floor initial deposits require.
-    /// @param index Index into `batch.topUps`
-    /// @param amount The offending amount in wei
-    error InvalidTopUpAmount(uint256 index, uint256 amount);
-
     // -----------------------------------------------------------------------
     // Functions
     // -----------------------------------------------------------------------
