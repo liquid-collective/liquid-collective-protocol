@@ -10,7 +10,7 @@ import "../libraries/LibUint256.sol";
 /// @author Alluvial Finance Inc.
 /// @notice This library validates the deposits before they are processed
 library LibDepositValidation {
-    /// @notice An error occured during the deposit
+    /// @notice An error occurred during the deposit
     error ErrorOnDeposit();
 
     /// @notice Size of a BLS Signature in bytes
