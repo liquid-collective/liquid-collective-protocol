@@ -243,6 +243,13 @@ interface IAttestationVerifierV1 {
     /// @param index The pair index of the offending source pubkey
     error ZeroConsolidationSourcePubkey(uint256 index);
 
+    /// @notice A consolidation pair has the same pubkey as source and target. A self consolidation is the
+    ///         on-chain 0x01 to 0x02 credential upgrade: it moves no ETH into the protocol, so River must not
+    ///         mint against it. The legitimate path is `River.selfConsolidation`, which never reaches here.
+    /// @param index The pair index of the offending self consolidation
+    /// @param pubkey The offending 48-byte BLS pubkey
+    error ConsolidationSourceEqualsTarget(uint256 index, bytes pubkey);
+
     /// @notice The EIP-712 consolidation domain separator has not been initialized
     error ZeroConsolidationDomainSeparator();
 
@@ -397,9 +404,10 @@ interface IAttestationVerifierV1 {
     ///         callable only by River.
     ///
     ///         Trust boundary: this function validates structural shape, single-use source
-    ///         pubkeys, and the attestation quorum. The following are intentionally NOT checked
-    ///         here and are delegated to the caller (off-chain pipeline / consolidation committee)
-    ///         or to the eventual River integration:
+    ///         pubkeys, that no pair consolidates a source into itself, and the attestation
+    ///         quorum. The following are intentionally NOT checked here and are delegated to the
+    ///         caller (off-chain pipeline / consolidation committee) or to the eventual River
+    ///         integration:
     ///           - Target pubkey uniqueness
     ///           - `totalAmount` gwei alignment, upper bound, or correlation with pair count
     ///           - Financial caps (e.g. against committed/in-flight balances)
