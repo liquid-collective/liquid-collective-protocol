@@ -4774,4 +4774,35 @@ contract RiverV1ConsolidationMintTests is RiverV1TestBase {
         assertEq(river.balanceOf(bob), bobSharesBefore);
         assertEq(river.totalSupply(), totalSupplyBefore);
     }
+
+    /// @dev A self consolidation is the 0x01 -> 0x02 credential upgrade: the ETH stays exactly where it was,
+    ///      so nothing new enters the protocol. Minting `totalAmount` against it would credit the
+    ///      consolidation buffer with ETH that never arrives and dilute every existing holder. The verifier
+    ///      rejects the pair, so the buffer and the supply must both be untouched.
+    function testRevert_mintLsETHForConsolidationSelfConsolidationDoesNotMint() public {
+        _allowConsolidation(bob);
+        bytes memory pubkey = _fakePubkey(2500);
+
+        bytes[] memory sources = new bytes[](1);
+        sources[0] = pubkey;
+        bytes[] memory targets = new bytes[](1);
+        targets[0] = pubkey;
+        uint256 totalAmount = 32 ether;
+        IAttestationVerifierV1.ConsolidationObject memory consolidation =
+            _buildConsolidationWithPubkeys(bob, sources, targets, totalAmount);
+
+        uint256 bufferBefore = river.getBalanceToConsolidate();
+        uint256 bobSharesBefore = river.balanceOf(bob);
+        uint256 totalSupplyBefore = river.totalSupply();
+
+        vm.prank(consolidator);
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.ConsolidationSourceEqualsTarget.selector, 0, pubkey)
+        );
+        river.mintLsETHForConsolidation(consolidation);
+
+        assertEq(river.getBalanceToConsolidate(), bufferBefore);
+        assertEq(river.balanceOf(bob), bobSharesBefore);
+        assertEq(river.totalSupply(), totalSupplyBefore);
+    }
 }
