@@ -66,7 +66,7 @@ interface IAttestationVerifierPectraMigrationV1 {
         returns (IWithdrawV1.ConsolidationRequest[] memory);
 
     /// @notice Migrate a chunk of pre-Pectra funded validator pubkeys into the verifier lookup.
-    /// @dev Only callable by River admin. `stopIndex` is exclusive and must be no greater than
+    /// @dev Only callable by this verifier's admin. `stopIndex` is exclusive and must be no greater than
     ///      the operator's legacy funded validator count in OperatorsV2 storage.
     /// @param operatorIndex The operator whose legacy keys should be migrated
     /// @param startIndex The first legacy key index to migrate
@@ -74,7 +74,7 @@ interface IAttestationVerifierPectraMigrationV1 {
     function migratePrePectraValidatorPubkeys(uint256 operatorIndex, uint256 startIndex, uint256 stopIndex) external;
 
     /// @notice Remove a chunk of pre-Pectra funded validator pubkeys from the verifier lookup.
-    /// @dev Only callable by River admin. Reverts if the batch is empty, any pubkey is not 48
+    /// @dev Only callable by this verifier's admin. Reverts if the batch is empty, any pubkey is not 48
     ///      bytes, or any pubkey is not currently in the pre-Pectra lookup.
     /// @param pubkeys The 48-byte BLS pubkeys to remove
     function removePrePectraValidatorPubkeys(bytes[] calldata pubkeys) external;

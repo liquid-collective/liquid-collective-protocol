@@ -569,6 +569,7 @@ contract RiverV1Tests is RiverV1TestBase {
         attestationVerifier = new AttestationVerifierV1();
         LibImplementationUnbricker.unbrick(vm, address(attestationVerifier));
         attestationVerifier.initAttestationVerifierV1(
+            admin,
             address(river),
             address(depositBuffer),
             _initRootAttesters,
@@ -1644,6 +1645,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         attestationVerifier = new AttestationVerifierV1();
         LibImplementationUnbricker.unbrick(vm, address(attestationVerifier));
         attestationVerifier.initAttestationVerifierV1(
+            admin,
             address(river),
             address(depositBuffer),
             _initRootAttesters2,
@@ -3112,7 +3114,7 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         v = new AttestationVerifierV1();
         LibImplementationUnbricker.unbrick(vm, address(v));
         v.initAttestationVerifierV1(
-            _river, address(mockBuffer), _rootAttesters_, 1, bytes4(0), _consolidationCommitteeAttesters_, 1
+            admin, _river, address(mockBuffer), _rootAttesters_, 1, bytes4(0), _consolidationCommitteeAttesters_, 1
         );
     }
 
@@ -3261,6 +3263,7 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         LibImplementationUnbricker.unbrick(vm, address(v));
         vm.expectRevert(abi.encodeWithSignature("InvalidArgument()"));
         v.initAttestationVerifierV1(
+            admin,
             address(river),
             makeAddr("depositBuffer"),
             _rootAttesters_,
@@ -3285,6 +3288,7 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         _consolidationCommitteeAttesters_[0] = makeAddr("consolidationCommitteeAttesterStub");
         vm.expectRevert(abi.encodeWithSignature("InvalidArgument()"));
         v.initAttestationVerifierV1(
+            admin,
             address(river),
             makeAddr("depositBuffer"),
             _rootAttesters_,
@@ -4075,6 +4079,7 @@ contract RiverV1PectraTests is RiverV1TestBase {
         attestationVerifier = new AttestationVerifierV1();
         LibImplementationUnbricker.unbrick(vm, address(attestationVerifier));
         attestationVerifier.initAttestationVerifierV1(
+            admin,
             address(river),
             address(depositBuffer),
             _initRootAttesters,
@@ -4326,6 +4331,7 @@ contract RiverV1ConsolidationMintTests is RiverV1TestBase {
         attestationVerifier = new AttestationVerifierV1();
         LibImplementationUnbricker.unbrick(vm, address(attestationVerifier));
         attestationVerifier.initAttestationVerifierV1(
+            admin,
             address(river),
             address(depositBuffer),
             _initRootAttesters,
