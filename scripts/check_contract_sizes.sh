@@ -5,9 +5,10 @@
 # - EIP-3860 initcode size limit
 #
 # Why this exists rather than plain `forge build --sizes`: that command exits non-zero on the
-# whole build, and two test-only harnesses (AccountingRiverV1, RiverV1ForceCommittable) are
-# already over the limit by design — they bolt extra helpers onto RiverV1. So the unscoped
-# command can never be used as a gate. This script scopes the check to contracts declared under
+# whole build, and three test-only harnesses (AccountingRiverV1, RiverV1ForceCommittable,
+# RedemptionRiverV1) are already over the limit by design — they bolt extra helpers onto RiverV1.
+# So the unscoped command can never be used as a gate. This script scopes the check to contracts
+# declared under
 # contracts/src (excluding interfaces/ and mock/), which is exactly the set that gets deployed.
 #
 # Usage:

@@ -306,6 +306,10 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
             lsETHToMark = markable;
             emit StoppedEarningExceededMarkableDemand(reportedLsETH, lsETHToMark);
         }
+        // The only guard on the division below: past here `lsETHToMark >= 1`, so the divisor
+        // `reportedLsETH >= lsETHToMark >= 1`. A zero reported leg cannot slip through — it makes
+        // `lsETHToMark` zero and `0 > markable` never clamps. Also keeps mark heights strictly ascending
+        // for `_findRateMarkAtOrBefore`.
         if (lsETHToMark == 0) {
             return;
         }
