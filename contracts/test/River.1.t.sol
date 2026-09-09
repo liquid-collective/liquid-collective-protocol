@@ -585,7 +585,9 @@ contract RiverV1Tests is RiverV1TestBase {
             bytes32(uint256(uint160(address(attestationVerifier))))
         );
 
-        // Mock BLS verification on the validator (EIP-2537 precompiles not enabled in Foundry).
+        // Mock BLS verification: these fixtures use synthetic validator keys, which have no valid
+        // BLS deposit signature to check. Foundry does support the EIP-2537 precompiles, so tests
+        // that need the real pairing check can sign with test/utils/BLSSigner.sol instead.
         vm.mockCall(
             address(attestationVerifier),
             abi.encodeWithSelector(attestationVerifier.verifyBLSDeposit.selector),
@@ -1658,7 +1660,9 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
             bytes32(uint256(uint160(address(attestationVerifier))))
         );
 
-        // Mock BLS verification on the validator (EIP-2537 precompiles not enabled in Foundry).
+        // Mock BLS verification: these fixtures use synthetic validator keys, which have no valid
+        // BLS deposit signature to check. Foundry does support the EIP-2537 precompiles, so tests
+        // that need the real pairing check can sign with test/utils/BLSSigner.sol instead.
         vm.mockCall(
             address(attestationVerifier),
             abi.encodeWithSelector(attestationVerifier.verifyBLSDeposit.selector),
