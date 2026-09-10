@@ -27,6 +27,9 @@ const func: DeployFunction = async function ({
     throw new Error("Invalid network for mainnet deployment");
   }
 
+  // Tenderly runs are local mainnet-fork rehearsals. Before running this script
+  // with --network tenderly, seed deployments/tenderly from deployments/mainnet;
+  // those local deployment files must not be committed.
   const { proxyAdministrator } = await getNamedAccounts();
 
   // FORK=true signals a local anvil mainnet fork (set by the Deploy Scripts

@@ -71,6 +71,9 @@ const func: DeployFunction = async function ({
 
   failures = 0;
 
+  // Tenderly runs are local mainnet-fork rehearsals. Before running this script
+  // with --network tenderly, seed deployments/tenderly from deployments/mainnet;
+  // those local deployment files must not be committed.
   // Load proxy deployments (stable mainnet addresses from deployments/mainnet/)
   const riverProxy             = await deployments.get("River");
   const oracleProxy            = await deployments.get("Oracle");
@@ -172,23 +175,15 @@ const func: DeployFunction = async function ({
   const denier = await callView(allowlistProxy.address, ALLOWLIST_ABI, "getDenier", ethers.provider);
   check("Allowlist.getDenier()", denier, EXPECTED_DENIER);
 
-  // Allowlist.getAllower() must be non-zero
+  // Allowlist.getAllower() — known live mainnet value before the v1.3.0 upgrade.
+  const EXPECTED_ALLOWER = "0x1D152D7e2FF710e73dcFe4bcfe276A8474f25c9E";
   const allower = await callView(allowlistProxy.address, ALLOWLIST_ABI, "getAllower", ethers.provider);
-  if (allower === EthersType.constants.AddressZero) {
-    console.log(`  ❌ Allowlist.getAllower(): is zero address`);
-    failures++;
-  } else {
-    console.log(`  ✅ Allowlist.getAllower(): ${allower}`);
-  }
+  check("Allowlist.getAllower()", allower, EXPECTED_ALLOWER);
 
-  // River.getCollector() must be non-zero
+  // River.getCollector() — set from the mainnet collector named account by initRiverV1.
+  const EXPECTED_COLLECTOR = "0xE3208Aa9d1186c1D1C8A5b76E794b2B68E6cb3a5";
   const collector = await callView(riverProxy.address, RIVER_ABI, "getCollector", ethers.provider);
-  if (collector === EthersType.constants.AddressZero) {
-    console.log(`  ❌ River.getCollector(): is zero address`);
-    failures++;
-  } else {
-    console.log(`  ✅ River.getCollector(): ${collector}`);
-  }
+  check("River.getCollector()", collector, EXPECTED_COLLECTOR);
 
   // ============================================================
   // SUMMARY

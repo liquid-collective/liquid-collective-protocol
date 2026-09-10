@@ -4,7 +4,7 @@ import { FactoryOptions } from "hardhat/types";
 
 export const verify = async (name: string, contractAddress: string, args: any, libs?: FactoryOptions) => {
   if (network.name == "localhost" || network.name == "local") return;
-  else if (network.name == "tenderly") tenderlyVerify(name, contractAddress);
+  else if (network.name == "tenderly") await tenderlyVerify(name, contractAddress);
   else {
     await hre
       .run("verify:verify", {
