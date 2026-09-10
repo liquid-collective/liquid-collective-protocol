@@ -84,7 +84,7 @@ contract AttestationVerifierV1 is
     ///      hashed directly into the EIP-712 struct (rather than first being squashed into a
     ///      single `bytes32` id). `bytes[]` fields follow EIP-712 dynamic-array rules:
     ///      each element is replaced by `keccak256(element)`, then the resulting `bytes32`
-    ///      array is concatenated and hashed (`_hashBytesArray`). The `uint256[] exitEpoch`
+    ///      array is concatenated and hashed (`_hashBytesArrayElements`). The `uint256[] exitEpoch`
     ///      field hashes to `keccak256` over the concatenation of its elements (`_hashUintArray`).
     bytes32 internal constant ATTEST_CONSOLIDATION_TYPEHASH = keccak256(
         "AttestConsolidation(address withdrawalAddress,bytes[] sourcePubkeys,bytes[] targetPubkeys,uint256 totalAmount,uint256[] exitEpoch)"
@@ -652,12 +652,16 @@ contract AttestationVerifierV1 is
 
     /// @inheritdoc IAttestationVerifierV1
     /// @dev Trust boundary: this function validates structural shape (array shapes,
-    ///      pubkey byte lengths, and single-use source pubkeys) plus the attestation
-    ///      quorum (ECDSA signature recovery against the consolidation committee). It
-    ///      does NOT check:
+    ///      pubkey byte lengths, single-use source pubkeys, and that no pair consolidates
+    ///      a source into itself) plus the attestation quorum (ECDSA signature recovery
+    ///      against the consolidation committee). It does NOT check:
     ///        - `totalAmount` gwei alignment, upper bound, or correlation with the number
     ///          of (source, target) pairs.
     ///        - Whether the source validators actually exist on the consensus layer
+    ///        - Anything about `targetPubkeys` beyond byte length and the self-pair check.
+    ///          In particular: a zero target is accepted, unlike a zero source which
+    ///          reverts; and a target that is not a known funded River validator is
+    ///          accepted.
     ///      These are the responsibility of the caller (off-chain pipeline) and the
     ///      consolidation committee that signs the request.
     function validateConsolidation(IAttestationVerifierV1.ConsolidationObject calldata consolidation)
@@ -696,12 +700,15 @@ contract AttestationVerifierV1 is
         bytes32 domainSep = ConsolidationDomainSeparator.get();
         if (domainSep == bytes32(0)) revert ZeroConsolidationDomainSeparator();
         bytes32[] memory sourcePubkeyHashes = _hashBytesArrayElements(consolidation.sourcePubkeys);
+        // Kept per-element rather than hashed straight into the digest, so the self-pair check below can
+        // reuse them. The concatenate-and-hash below is the EIP-712 array hash, so the digest is unchanged.
+        bytes32[] memory targetPubkeyHashes = _hashBytesArrayElements(consolidation.targetPubkeys);
         bytes32 structHash = keccak256(
             abi.encode(
                 ATTEST_CONSOLIDATION_TYPEHASH,
                 consolidation.withdrawalAddress,
                 keccak256(abi.encodePacked(sourcePubkeyHashes)),
-                _hashBytesArray(consolidation.targetPubkeys),
+                keccak256(abi.encodePacked(targetPubkeyHashes)),
                 consolidation.totalAmount,
                 _hashUintArray(consolidation.exitEpoch)
             )
@@ -723,6 +730,14 @@ contract AttestationVerifierV1 is
             bytes32 sourcePubkeyHash = sourcePubkeyHashes[i];
             if (sourcePubkeyHash == ZERO_CONSOLIDATION_PUBKEY_HASH) {
                 revert ZeroConsolidationSourcePubkey(i);
+            }
+            // A self consolidation is the 0x01 -> 0x02 credential upgrade. It moves no ETH into the
+            // protocol, so River minting `totalAmount` against it would inflate `_assetBalance()` with ETH
+            // that never arrives. The legitimate upgrade path is `River.selfConsolidation`, which goes
+            // through `validateSelfConsolidation` and never reaches here.
+            if (sourcePubkeyHash == targetPubkeyHashes[i] && _bytesEqual(sourcePubkey, consolidation.targetPubkeys[i]))
+            {
+                revert ConsolidationSourceEqualsTarget(i, sourcePubkey);
             }
             for (uint256 j = 0; j < i; ++j) {
                 if (
@@ -841,12 +856,8 @@ contract AttestationVerifierV1 is
         if (validCount < quorum) revert InsufficientConsolidationAttestations(validCount, quorum);
     }
 
-    /// @dev EIP-712 array hash for a `bytes[]` field. Each element is replaced by its
-    ///      `keccak256`, and the resulting `bytes32[]` is concatenated and hashed.
-    function _hashBytesArray(bytes[] calldata arr) internal pure returns (bytes32) {
-        return keccak256(abi.encodePacked(_hashBytesArrayElements(arr)));
-    }
-
+    /// @dev EIP-712 array hash for a `bytes[]` field, per element. Each element is replaced by its
+    ///      `keccak256`; the caller concatenates and hashes the result to get the array hash.
     function _hashBytesArrayElements(bytes[] calldata arr) internal pure returns (bytes32[] memory hashes) {
         hashes = new bytes32[](arr.length);
         for (uint256 i = 0; i < arr.length; i++) {

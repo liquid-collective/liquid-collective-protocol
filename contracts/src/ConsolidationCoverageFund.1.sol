@@ -19,7 +19,7 @@ import "./state/consolidationCoverage/BalanceForConsolidationCoverage.sol";
 /// @notice This contract receives donations for the consolidation coverage fund and pulls the funds into river
 /// @notice This contract acts as a temporary buffer for funds that should be pulled in case of a loss of money on the consensus layer due to consolidation-related events.
 /// @notice There is no fee taken on these funds, they are entirely distributed to the LsETH holders, and no shares will get minted.
-/// @notice The fund will be called on every report and if the coverage buffer is greater than 0, River will attempt to pull an amount of ETH equal to the coverage buffer.
+/// @notice On every report, River reads its own ConsolidationBuffer, the principal from consolidations minted but not yet confirmed on the consensus layer, and if it is non-zero requests that amount from this fund. That buffer is a River-side quantity, distinct from this fund's own donated balance: the buffer is the request size and the balance is the ceiling.
 /// @notice The value provided to this contract is computed off-chain and provided manually
 /// @notice The entities allowed to donate are selected by the team. It will mainly be entities using the consolidation feature or insurance protocols.
 contract ConsolidationCoverageFundV1 is Initializable, IConsolidationCoverageFundV1, IProtocolVersion {

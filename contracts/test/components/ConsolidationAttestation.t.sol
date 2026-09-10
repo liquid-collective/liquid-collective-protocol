@@ -998,6 +998,126 @@ contract ConsolidationAttestationTest is Test {
         );
     }
 
+    /// @dev A self consolidation moves no ETH into the protocol, so River must never mint against one
+    ///      through this path. The 0x01 -> 0x02 credential upgrade goes through `validateSelfConsolidation`
+    ///      instead. Everything else about the request is valid, so the self pair is the only reason to revert.
+    function testRevert_selfConsolidationSinglePair() public {
+        address user = address(0xCAFE);
+        bytes memory pubkey = _pubkey(840);
+
+        bytes[] memory sources = new bytes[](1);
+        sources[0] = pubkey;
+        bytes[] memory targets = new bytes[](1);
+        targets[0] = pubkey;
+        uint256 totalAmount = 32 ether;
+        bytes32 digest = _consolidationDigest(user, sources, targets, totalAmount);
+        bytes[] memory sigs = new bytes[](2);
+        sigs[0] = _sign(pk1, digest);
+        sigs[1] = _sign(pk2, digest);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.ConsolidationSourceEqualsTarget.selector, 0, pubkey)
+        );
+        _validateConsolidationAsRiver(
+            IAttestationVerifierV1.ConsolidationObject({
+                withdrawalAddress: user,
+                sourcePubkeys: sources,
+                targetPubkeys: targets,
+                totalAmount: totalAmount,
+                exitEpoch: _defaultEpochs(sources.length),
+                signatures: sigs
+            })
+        );
+    }
+
+    /// @dev The check is per pair, not per request, so a self pair hidden behind a legitimate one is still
+    ///      caught. As with the already-consumed-source check, the revert must not burn the good source that
+    ///      precedes it: the closing request proves `sourceGood` is still free.
+    function testRevert_selfConsolidationHiddenInMultiPair() public {
+        address user = address(0xCAFE);
+        bytes memory sourceGood = _pubkey(841);
+        bytes memory selfPubkey = _pubkey(842);
+
+        bytes[] memory sources = new bytes[](2);
+        sources[0] = sourceGood;
+        sources[1] = selfPubkey;
+        bytes[] memory targets = new bytes[](2);
+        targets[0] = _pubkey(941);
+        targets[1] = selfPubkey;
+        uint256 totalAmount = 64 ether;
+        bytes32 digest = _consolidationDigest(user, sources, targets, totalAmount);
+        bytes[] memory sigs = new bytes[](2);
+        sigs[0] = _sign(pk1, digest);
+        sigs[1] = _sign(pk2, digest);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.ConsolidationSourceEqualsTarget.selector, 1, selfPubkey)
+        );
+        _validateConsolidationAsRiver(
+            IAttestationVerifierV1.ConsolidationObject({
+                withdrawalAddress: user,
+                sourcePubkeys: sources,
+                targetPubkeys: targets,
+                totalAmount: totalAmount,
+                exitEpoch: _defaultEpochs(sources.length),
+                signatures: sigs
+            })
+        );
+
+        // `sourceGood` must still be free: a later request consuming it alone succeeds.
+        sources = new bytes[](1);
+        sources[0] = sourceGood;
+        targets = new bytes[](1);
+        targets[0] = _pubkey(942);
+        totalAmount = 32 ether;
+        digest = _consolidationDigest(user, sources, targets, totalAmount);
+        sigs = new bytes[](2);
+        sigs[0] = _sign(pk1, digest);
+        sigs[1] = _sign(pk2, digest);
+        _validateConsolidationAsRiver(
+            IAttestationVerifierV1.ConsolidationObject({
+                withdrawalAddress: user,
+                sourcePubkeys: sources,
+                targetPubkeys: targets,
+                totalAmount: totalAmount,
+                exitEpoch: _defaultEpochs(sources.length),
+                signatures: sigs
+            })
+        );
+    }
+
+    /// @dev The self-pair check sits in the structural per-source loop, ahead of quorum verification. A
+    ///      request that is both a self consolidation and short of quorum must surface the structural error,
+    ///      so a committee cannot be blamed for a request the shape rules already reject.
+    function testRevert_selfConsolidationRevertsBeforeQuorumVerification() public {
+        address user = address(0xCAFE);
+        bytes memory pubkey = _pubkey(843);
+
+        bytes[] memory sources = new bytes[](1);
+        sources[0] = pubkey;
+        bytes[] memory targets = new bytes[](1);
+        targets[0] = pubkey;
+        uint256 totalAmount = 32 ether;
+        bytes32 digest = _consolidationDigest(user, sources, targets, totalAmount);
+        // One signature against a quorum of two: enough to fail step 6 if it were ever reached.
+        bytes[] memory sigs = new bytes[](1);
+        sigs[0] = _sign(pk1, digest);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.ConsolidationSourceEqualsTarget.selector, 0, pubkey)
+        );
+        _validateConsolidationAsRiver(
+            IAttestationVerifierV1.ConsolidationObject({
+                withdrawalAddress: user,
+                sourcePubkeys: sources,
+                targetPubkeys: targets,
+                totalAmount: totalAmount,
+                exitEpoch: _defaultEpochs(sources.length),
+                signatures: sigs
+            })
+        );
+    }
+
     /// @dev Sources are marked processed only AFTER quorum succeeds, and the per-source loop
     ///      reverts on the FIRST already-consumed source. A request whose tainted source sits
     ///      at a non-zero index must revert without consuming the (valid) sibling sources that
