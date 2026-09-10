@@ -1731,6 +1731,173 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         return recipient.balance - before;
     }
 
+    /// @dev Opens a 30 LsETH request at a rate of 1.0, then settles it in two withdrawal events and
+    ///      claims after each: 20 LsETH priced at 0.5, then the remaining 10 LsETH priced at 1.5.
+    ///      With `_clearAnchor` the request is made to look pre-upgrade, taking the legacy budget path.
+    function _lowThenHighFill(uint256 _salt, bool _clearAnchor) internal returns (uint256 received) {
+        address user = _generateAllowlistedUser(_salt);
+        river.sudoSetRate(1e18);
+        uint32 id = _openRequest(user, 30e18);
+        assertEq(redeemManager.getRedeemRequestDetails(id).maxRedeemableEth, applyRate(30e18, 1e18));
+
+        if (_clearAnchor) {
+            bytes32 anchorSlot =
+                keccak256(abi.encode(uint256(id), bytes32(uint256(keccak256("river.state.redeemRequestAnchor")) - 1)));
+            vm.store(address(redeemManager), anchorSlot, bytes32(0));
+            vm.store(address(redeemManager), bytes32(uint256(anchorSlot) + 1), bytes32(0));
+            assertEq(redeemManager.getRedeemRequestAnchor(id).lsETHAtRequest, 0);
+        }
+
+        // no rate mark is ever pushed: the whole span sits in a gap and is capped at the request rate
+        received = _settleAndClaim(id, 20e18, 0.5e18) + _settleAndClaim(id, 10e18, 1.5e18);
+        assertEq(redeemManager.getRateMarkCount(), 0);
+        assertEq(redeemManager.getRedeemRequestDetails(id).amount, 0);
+    }
+
+    /// A request settled by several withdrawal events is capped once per event, so a fill that settles
+    /// BELOW its cap leaves headroom that the next fill must still be able to spend. The cheap fill uses
+    /// 10 of its 20 ETH slice cap; the 10 ETH it did not spend is carried, so the expensive fill is worth
+    /// 15 ETH and is paid all 15 rather than being clipped to its own 10 ETH slice value.
+    /// @dev Pairs with testLegacyCapCarriesUnusedHeadroomAcrossEvents: the anchored path must pay exactly
+    ///      what the pre-upgrade path pays here, because no rate mark is involved. How a settlement is
+    ///      chunked across events is an oracle-reporting artifact and must not change the payout.
+    function testAnchoredCapCarriesUnusedHeadroomAcrossEvents() external {
+        assertEq(_lowThenHighFill(0, false), applyRate(20e18, 0.5e18) + applyRate(10e18, 1.5e18));
+        assertEq(redeemManager.getBufferedExceedingEth(), 0);
+    }
+
+    /// Legacy path, same two fills. `maxRedeemableEth` is one decrementing ETH budget for the whole
+    /// request, so the 10 ETH the cheap fill did not spend is still on it when the expensive fill lands:
+    /// that fill is paid in full at 15 ETH and nothing is confiscated.
+    function testLegacyCapCarriesUnusedHeadroomAcrossEvents() external {
+        assertEq(_lowThenHighFill(0, true), applyRate(20e18, 0.5e18) + applyRate(10e18, 1.5e18));
+        assertEq(redeemManager.getBufferedExceedingEth(), 0);
+    }
+
+    /// The carry is an addend on top of `_sliceCap`, never a budget the mark uplift is drawn from. A fill
+    /// paid above the request rate because its span was marked must therefore leave the request-rate value
+    /// of the UNMARKED remainder fully payable: 15 LsETH at the locked 2.0 plus 15 at the request 1.0.
+    /// @dev This is the case a decrementing-budget fix gets wrong — there the 30 ETH uplift payout drains
+    ///      the 30 ETH budget and the unmarked remainder is paid nothing.
+    function testMarkUpliftDoesNotConsumeCapOfUnmarkedRemainder() external {
+        address user = _generateAllowlistedUser(0);
+        river.sudoSetRate(1e18);
+        uint32 id = _openRequest(user, 30e18);
+
+        // mark only the first 15 LsETH of the request, locking it at a rate of 2.0
+        river.sudoReportStoppedEarningAt(address(redeemManager), applyRate(15e18, 2e18), 15e18);
+        assertEq(redeemManager.getRateMarkDetails(0).amount, 15e18);
+
+        uint256 received = _settleAndClaim(id, 15e18, 2e18) + _settleAndClaim(id, 15e18, 1e18);
+
+        assertEq(received, applyRate(15e18, 2e18) + applyRate(15e18, 1e18));
+        assertEq(redeemManager.getBufferedExceedingEth(), 0);
+    }
+
+    /// Splitting a marked request across two withdrawal events must not cap it at its request-time value.
+    /// The carry only ever adds to a slice's cap, so the locked 1.05 rate survives the split and the total
+    /// still exceeds `Anchor.ethAtRequest` — which is the entire point of a mark.
+    function testMarkedSpanSplitAcrossEventsStillExceedsRequestValue() external {
+        address user = _generateAllowlistedUser(0);
+        river.sudoSetRate(1e18);
+        uint32 id = _openRequest(user, 30e18);
+
+        river.sudoSetRate(1.05e18);
+        river.sudoReportStoppedEarning(address(redeemManager), applyRate(30e18, 1.05e18));
+        assertEq(redeemManager.getRateMarkDetails(0).amount, 30e18);
+
+        uint256 received = _settleAndClaim(id, 15e18, 1.05e18) + _settleAndClaim(id, 15e18, 1.05e18);
+
+        assertEq(received, applyRate(30e18, 1.05e18));
+        assertGt(received, redeemManager.getRedeemRequestAnchor(id).ethAtRequest);
+    }
+
+    /// A fully claimed request can never read its carry again, so the final fill clears the slot instead
+    /// of stranding dust in storage forever.
+    function testCarryIsClearedWhenRequestIsFullyClaimed() external {
+        uint256 received = _lowThenHighFill(0, false);
+        assertEq(received, applyRate(20e18, 0.5e18) + applyRate(10e18, 1.5e18));
+        assertEq(redeemManager.getRedeemRequestCarry(0), 0);
+    }
+
+    /// @dev Reports a withdrawal event for `lsETH` priced at `settlementRate` without claiming against it,
+    ///      so a test can stack several events before a single claim walks them.
+    function _settleOnly(uint256 lsETH, uint256 settlementRate) internal {
+        uint256 withdrawnEth = applyRate(lsETH, settlementRate);
+        vm.deal(address(this), withdrawnEth);
+        river.sudoReportWithdraw{value: withdrawnEth}(address(redeemManager), lsETH);
+    }
+
+    /// The same two fills as testAnchoredCapCarriesUnusedHeadroomAcrossEvents, but both withdrawal events
+    /// are reported before a single `claimRedeemRequests` call, so `_claimRedeemRequest` recurses across
+    /// them rather than being entered twice. The carry rides that recursion in memory, so the payout must
+    /// be identical: whether a redeemer claims eagerly or lazily cannot change what they are owed.
+    function testAnchoredCapCarriesUnusedHeadroomAcrossOneRecursiveClaim() external {
+        address user = _generateAllowlistedUser(0);
+        river.sudoSetRate(1e18);
+        uint32 id = _openRequest(user, 30e18);
+
+        _settleOnly(20e18, 0.5e18);
+        _settleOnly(10e18, 1.5e18);
+        assertEq(redeemManager.getWithdrawalEventCount(), 2);
+
+        uint32[] memory ids = new uint32[](1);
+        ids[0] = id;
+        int64[] memory resolved = redeemManager.resolveRedeemRequests(ids);
+        uint32[] memory eventIds = new uint32[](1);
+        eventIds[0] = uint32(uint64(resolved[0]));
+
+        uint256 before = user.balance;
+        redeemManager.claimRedeemRequests(ids, eventIds);
+        uint256 received = user.balance - before;
+
+        assertEq(received, applyRate(20e18, 0.5e18) + applyRate(10e18, 1.5e18));
+        assertEq(redeemManager.getRedeemRequestDetails(id).amount, 0);
+        assertEq(redeemManager.getBufferedExceedingEth(), 0);
+        assertEq(redeemManager.getRedeemRequestCarry(id), 0);
+    }
+
+    /// The claim loop reuses one `ClaimRedeemRequestParameters` across requests, so a request that leaves
+    /// carry behind must not leak it into the next id in the same batch. Both requests are opened at the
+    /// same rate and settled by one event below that rate, so neither may be paid above its own settlement.
+    function testCarryDoesNotLeakBetweenRequestsInOneBatch() external {
+        address userA = _generateAllowlistedUser(0);
+        address userB = _generateAllowlistedUser(1);
+        river.sudoSetRate(1e18);
+        uint32 idA = _openRequest(userA, 30e18);
+        uint32 idB = _openRequest(userB, 30e18);
+
+        // one event covering both requests, settling everything at half the request rate
+        _settleOnly(60e18, 0.5e18);
+
+        uint32[] memory ids = new uint32[](2);
+        ids[0] = idA;
+        ids[1] = idB;
+        uint32[] memory eventIds = new uint32[](2);
+
+        uint256 beforeA = userA.balance;
+        uint256 beforeB = userB.balance;
+        redeemManager.claimRedeemRequests(ids, eventIds);
+
+        assertEq(userA.balance - beforeA, applyRate(30e18, 0.5e18));
+        assertEq(userB.balance - beforeB, applyRate(30e18, 0.5e18));
+        assertEq(redeemManager.getRedeemRequestCarry(idA), 0);
+        assertEq(redeemManager.getRedeemRequestCarry(idB), 0);
+    }
+
+    /// The carry is visible between fills, not only at the end: after the cheap fill it holds exactly the
+    /// 10 ETH of slice cap that fill did not spend.
+    function testCarryHoldsUnspentCapBetweenFills() external {
+        address user = _generateAllowlistedUser(0);
+        river.sudoSetRate(1e18);
+        uint32 id = _openRequest(user, 30e18);
+        assertEq(redeemManager.getRedeemRequestCarry(id), 0);
+
+        assertEq(_settleAndClaim(id, 20e18, 0.5e18), applyRate(20e18, 0.5e18));
+        // slice cap was 20 ETH at the request rate, 10 ETH was paid
+        assertEq(redeemManager.getRedeemRequestCarry(id), applyRate(20e18, 1e18) - applyRate(20e18, 0.5e18));
+    }
+
     /// FR1/AC2: a fill backed by no stopped-earning principal accrues nothing beyond
     /// rate_at_request, even though the pool rate rose. No mark is pushed, so the whole slice sits
     /// in a gap and is capped at the request rate; the appreciation is confiscated exactly as today.
