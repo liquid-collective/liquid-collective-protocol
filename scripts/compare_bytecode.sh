@@ -17,21 +17,33 @@
 
 set -euo pipefail
 
-# ── 1. Assign your freshly-deployed mainnet / Tenderly fork addresses ─────────
- # Phase 1 — direct-admin proxies
-  MAINNET_WITHDRAW_IMPL="0x0C3C4B761AB0d6fF500bC9a49f5EA2F7b79Af4f6"
-  MAINNET_COVERAGE_FUND_IMPL="0xd4067A7d6b3E0FEC19307e7B89b4FC38867765E3"                                                                                                                                                                                                                
-  MAINNET_EL_FEE_RECIPIENT_IMPL="0xbdA8Cc728b0BC6fE634b9D26667f6Cf4b03f73AA"                                                                                                                                                                                                             
-  # Phase 2 — firewalled proxies                                                                                                                                                                                                                                                         
-  MAINNET_ALLOWLIST_IMPL="0xCC1c4c94f0df9B4930f8aCf6C92F92e2e36F151D"                                                                                                                                                                                                                    
-  MAINNET_OPERATORS_REGISTRY_IMPL="0x0170AEAb7B86805d5e7ff19FcDDF62F19575C37B"                                                                                                                                                                                                           
-  MAINNET_ORACLE_IMPL="0x2a0cD2854d1F20b93487f438012d7045e398880d"                                                                                                                                                                                                                       
-  MAINNET_REDEEM_MANAGER_IMPL="0xA56e13712436189f61aB9fDA1292b26Cf9FEf9F8"                                                                                                                                                                                                               
-  # Phase 3 — River                                                                                                                                                                                                                                                                      
-  MAINNET_RIVER_IMPL="0x0056f9ed62dAa4dc3F972340C92326AcCddd1a9D" 
+# ── 1. Assign your freshly-deployed mainnet / Tenderly fork addresses ─────
+# Phase 1 — direct-admin proxies
+MAINNET_WITHDRAW_IMPL="0x0C3C4B761AB0d6fF500bC9a49f5EA2F7b79Af4f6"
+MAINNET_COVERAGE_FUND_IMPL="0xd4067A7d6b3E0FEC19307e7B89b4FC38867765E3"
+MAINNET_EL_FEE_RECIPIENT_IMPL="0xbdA8Cc728b0BC6fE634b9D26667f6Cf4b03f73AA"
+# Phase 2 — firewalled proxies
+MAINNET_ALLOWLIST_IMPL="0xCC1c4c94f0df9B4930f8aCf6C92F92e2e36F151D"
+MAINNET_OPERATORS_REGISTRY_IMPL="0x0170AEAb7B86805d5e7ff19FcDDF62F19575C37B"
+MAINNET_ORACLE_IMPL="0x2a0cD2854d1F20b93487f438012d7045e398880d"
+MAINNET_REDEEM_MANAGER_IMPL="0xA56e13712436189f61aB9fDA1292b26Cf9FEf9F8"
+# Phase 3 — River
+MAINNET_RIVER_IMPL="0x0056f9ed62dAa4dc3F972340C92326AcCddd1a9D"
 
 # ── 2. Mainnet / Tenderly fork RPC ────────────────────────────────────────────
 RPC_MAINNET="${RPC_MAINNET:-${RPC_URL:-}}"
+
+if [[ -z "$RPC_MAINNET" ]]; then
+  echo "Error: RPC_MAINNET (or RPC_URL) must be set to a mainnet / Tenderly fork RPC endpoint." >&2
+  exit 1
+fi
+
+for tool in cast python3; do
+  if ! command -v "$tool" >/dev/null 2>&1; then
+    echo "Error: required tool '$tool' was not found in PATH." >&2
+    exit 1
+  fi
+done
 
 # ── 3. Reference bytecode — from committed hoodi artifacts (PR #615 / v1.3.0) ─
 #    These are read automatically from deployments/hoodi/ — do not edit.
@@ -67,7 +79,11 @@ compare() {
 
   # Fetch runtime bytecode from the target chain
   local mainnet_bytecode
-  mainnet_bytecode=$(cast code "$mainnet_addr" --rpc-url "$RPC_MAINNET")
+  if ! mainnet_bytecode="$(cast code "$mainnet_addr" --rpc-url "$RPC_MAINNET")"; then
+    echo "❌  FAIL  $name  (unable to fetch runtime bytecode)"
+    FAIL=$((FAIL + 1))
+    return
+  fi
 
   if [[ "$ref_bytecode" == "$mainnet_bytecode" ]]; then
     echo "✅  OK    $name"

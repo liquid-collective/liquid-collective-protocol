@@ -12,10 +12,7 @@ const EIP1967_IMPL_SLOT = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a
 // Used directly when impersonating on a Tenderly mainnet fork.
 const MAINNET_PROXY_ADMINISTRATOR = "0x8EE3fC0Bcd7B57429203751C5bE5fdf1AB8409f3";
 
-async function getProxyImplementation(
-  proxyAddress: string,
-  provider: EthersType.providers.Provider
-): Promise<string> {
+async function getProxyImplementation(proxyAddress: string, provider: EthersType.providers.Provider): Promise<string> {
   const raw = await provider.getStorageAt(proxyAddress, EIP1967_IMPL_SLOT);
   return EthersType.utils.getAddress("0x" + raw.slice(-40));
 }
@@ -54,9 +51,7 @@ const func: DeployFunction = async function ({
       method: "tenderly_setBalance",
       params: [MAINNET_PROXY_ADMINISTRATOR, "0x56BC75E2D63100000"], // 100 ETH
     });
-    const directProvider = new EthersType.providers.JsonRpcProvider(
-      (network.config as any).url
-    );
+    const directProvider = new EthersType.providers.JsonRpcProvider((network.config as any).url);
     signer = directProvider.getSigner(MAINNET_PROXY_ADMINISTRATOR);
   } else if (isFork) {
     // anvil equivalent of the tenderly branch above: impersonate + fund the
@@ -69,9 +64,7 @@ const func: DeployFunction = async function ({
       method: "anvil_setBalance",
       params: [MAINNET_PROXY_ADMINISTRATOR, "0x56BC75E2D63100000"], // 100 ETH
     });
-    const directProvider = new EthersType.providers.JsonRpcProvider(
-      (network.config as any).url
-    );
+    const directProvider = new EthersType.providers.JsonRpcProvider((network.config as any).url);
     signer = directProvider.getSigner(MAINNET_PROXY_ADMINISTRATOR);
   } else {
     signer = await ethers.getSigner(proxyAdministrator);
@@ -123,9 +116,11 @@ const func: DeployFunction = async function ({
     console.log(`  function:       upgradeTo(address)`);
     console.log(`  args[0]:        ${newImplAddress}   (new ${label}V1 impl)`);
     console.log(`  data:           ${upgradeData}`);
-    console.log(`  (current impl on-chain: ${currentImpl}${
-      currentImpl.toLowerCase() === newImplAddress.toLowerCase() ? " — MATCHES new impl, upgrade is a no-op" : ""
-    })`);
+    console.log(
+      `  (current impl on-chain: ${currentImpl}${
+        currentImpl.toLowerCase() === newImplAddress.toLowerCase() ? " — MATCHES new impl, upgrade is a no-op" : ""
+      })`
+    );
 
     if (printOnly) {
       // Real mainnet: the proxyAdministrator is the Governor Safe multisig, not
@@ -154,19 +149,13 @@ const func: DeployFunction = async function ({
   if (printOnly) {
     console.log(
       "\nMainnet detected — print-only mode. No transactions will be broadcast.\n" +
-      "Paste each printed block into the Defender multisig proposal builder."
+        "Paste each printed block into the Defender multisig proposal builder."
     );
   }
 
   console.log("\n=== Phase 1: Simple upgrades — direct-admin proxies ===");
 
-  await doUpgradeTo(
-    withdrawProxy.address,
-    withdrawProxy.address,
-    "proxy",
-    withdrawImpl.address,
-    "Withdraw"
-  );
+  await doUpgradeTo(withdrawProxy.address, withdrawProxy.address, "proxy", withdrawImpl.address, "Withdraw");
 
   await doUpgradeTo(
     coverageFundProxy.address,
@@ -220,13 +209,7 @@ const func: DeployFunction = async function ({
 
   console.log("\n=== Phase 3: River upgrade ===");
 
-  await doUpgradeTo(
-    riverProxy.address,
-    riverProxyFirewall.address,
-    "RiverProxyFirewall",
-    riverImpl.address,
-    "River"
-  );
+  await doUpgradeTo(riverProxy.address, riverProxyFirewall.address, "RiverProxyFirewall", riverImpl.address, "River");
 
   logStepEnd(__filename);
 };
