@@ -3049,6 +3049,7 @@ contract RiverV1CoverageTests is RiverV1TestBase {
 
     event PulledConsolidationCoverageFunds(uint256 amount);
     event SetConsolidationBuffer(uint256 oldAmount, uint256 newAmount);
+    event StoppedEarningExceededMarkableDemand(uint256 reportedLsETH, uint256 markedLsETH);
 
     // ── Layout-safe seeding of river's StoredConsensusLayerReport ──
     // Rather than hard-code a struct field's slot offset (which silently breaks on any reorder or
@@ -3711,6 +3712,107 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         assertEq(mark.amount, (stoppedEarningEth * preSupply) / preUnderlying);
         assertEq(mark.markedEth, stoppedEarningEth);
         assertLt(mark.markedEth, river.underlyingBalanceFromShares(mark.amount));
+    }
+
+    /// LibOracleReporting.setConsensusLayerData calls reportStoppedEarning strictly BEFORE
+    /// _reportWithdrawToRedeemManager: settlement burns the corresponding shares and removes that
+    /// LsETH from the redeem demand, so demand settled in the same report would otherwise never be
+    /// marked and would be paid at its stale request-time rate instead of the rate its principal
+    /// actually stopped earning at. Swapping the two calls leaves every other test in this suite
+    /// green, because none of them ever settle the very slice they mark within the same report.
+    /// This drives one oracle report that both marks and fully settles the same redeem request, and
+    /// asserts the recipient is paid the mark's locked value -- strictly more than the request-time
+    /// anchor -- proving the mark applied before the demand it covered was erased.
+    function testMarkThenSettleSameReportPaysMarkRateForSettledSlice() public {
+        _initRiverMinimalForReporting();
+
+        // alice queues a redemption at the genesis 1:1 rate, before any report has ever landed, so
+        // the request-time anchor is exactly 32 ether for 32 LsETH.
+        uint256 epoch1 = epochsPerFrame;
+        uint256 maxIncrease1 = _seedRedeemDemandAndBound(64 ether, 32 ether, epoch1);
+
+        RedeemRequestAnchor.Anchor memory anchor = redeemManager.getRedeemRequestAnchor(0);
+        assertEq(anchor.lsETHAtRequest, 32e18);
+        assertEq(anchor.ethAtRequest, 32 ether);
+
+        // an ordinary rewards-only report lands first, so the pool genuinely appreciates while the
+        // request sits queued -- the yield the mark must let the redeemer keep.
+        uint256 reward1 = maxIncrease1 / 2;
+        assertGt(reward1, 0);
+        IOracleManagerV1.ConsensusLayerReport memory clr1;
+        clr1.epoch = epoch1;
+        clr1.validatorsBalance = reward1;
+        clr1.totalDepositedActivatedETH = 0;
+        clr1.exitedETHPerOperator = new uint256[](1);
+        clr1.activeCLETHPerOperator = new uint256[](1);
+        vm.prank(address(oracle));
+        river.setConsensusLayerData(clr1);
+
+        // the second report both marks the entire pending request as stopped-earning AND settles it
+        // in the same call -- the exact ordering the fix depends on.
+        uint256 epoch2 = epoch1 + uint256(epochsPerFrame) * 1_000_000;
+        _warpToFinalizedEpoch(epoch2);
+
+        // over-report the stopped-earning delta so it exceeds the markable demand (32 LsETH) and is
+        // clamped to exactly that demand, sidestepping any share/eth round-trip rounding on the
+        // mark's own amount (mirrors testClampedMarkPreservesReportedRate's approach in the
+        // RedeemManager suite).
+        uint256 stoppedEarningEth = 40 ether;
+        uint256 reportedLsETH = river.sharesFromUnderlyingBalance(stoppedEarningEth);
+        assertGt(reportedLsETH, 32e18);
+
+        // over-fund the exit so settlement is never capped by the available buffer: the withdrawal
+        // event's LsETH leg then stays exactly equal to the outstanding demand, because
+        // _reportWithdrawToRedeemManager only ever recomputes it (introducing rounding) when the
+        // buffer falls short of the demand's value, which this deliberately avoids.
+        uint256 exitedEth = 160 ether;
+        vm.deal(address(withdraw), exitedEth);
+
+        IOracleManagerV1.ConsensusLayerReport memory clr2;
+        clr2.epoch = epoch2;
+        clr2.validatorsBalance = reward1; // unchanged: no further staking reward this report
+        clr2.validatorsExitedBalance = exitedEth;
+        clr2.validatorsStoppedEarningBalance = stoppedEarningEth;
+        clr2.totalDepositedActivatedETH = 0;
+        clr2.exitedETHPerOperator = new uint256[](2);
+        clr2.exitedETHPerOperator[0] = exitedEth;
+        clr2.exitedETHPerOperator[1] = exitedEth;
+        clr2.activeCLETHPerOperator = new uint256[](1);
+
+        vm.expectEmit(true, true, true, true);
+        emit StoppedEarningExceededMarkableDemand(reportedLsETH, 32e18);
+        vm.prank(address(oracle));
+        river.setConsensusLayerData(clr2);
+
+        // the mark landed, covers the whole request, and is strictly richer than the request-time
+        // value: the pool appreciation between request and mark was captured, not discarded.
+        assertEq(redeemManager.getRateMarkCount(), 1);
+        RateMarkStack.RateMark memory mark = redeemManager.getRateMarkDetails(0);
+        assertEq(mark.height, 0);
+        assertEq(mark.amount, 32e18);
+        assertGt(mark.markedEth, anchor.ethAtRequest);
+
+        // the same report produced a withdrawal event settling that exact slice. Its own
+        // (self-referential, inflated) rate exceeds the mark's locked rate, so it is the cap --
+        // not the withdrawal event -- that determines the payout.
+        assertEq(redeemManager.getWithdrawalEventCount(), 1);
+        WithdrawalStack.WithdrawalEvent memory we = redeemManager.getWithdrawalEventDetails(0);
+        assertEq(we.height, 0);
+        assertEq(we.amount, 32e18);
+        assertGt(we.withdrawnEth, mark.markedEth);
+
+        uint32[] memory ids = new uint32[](1);
+        uint32[] memory eventIds = new uint32[](1);
+        address alice = makeAddr("alice");
+        uint256 before = alice.balance;
+        redeemManager.claimRedeemRequests(ids, eventIds);
+        uint256 received = alice.balance - before;
+
+        // paid exactly the mark's locked value: strictly more than the request-time anchor, proving
+        // the yield earned between request and mark survived the same-report settlement.
+        assertEq(received, mark.markedEth);
+        assertGt(received, anchor.ethAtRequest);
+        assertEq(redeemManager.getBufferedExceedingEth(), we.withdrawnEth - mark.markedEth);
     }
 
     function testReportConsolidationsUnchangedKeepsBuffer() public {
