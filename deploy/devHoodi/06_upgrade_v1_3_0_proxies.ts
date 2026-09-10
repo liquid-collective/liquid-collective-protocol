@@ -198,14 +198,16 @@ const func: DeployFunction = async function ({
     "Oracle"
   );
 
-  // RedeemManager: initializeRedeemManagerV1_2()
-  const redeemManagerArtifact = await deployments.getArtifact("RedeemManagerV1");
-  const redeemManagerInterface = new ethers.utils.Interface(redeemManagerArtifact.abi);
-  await doUpgradeToAndCall(
+  // RedeemManager: no init call.
+  //
+  // This deployment was created fresh from v1.2.1 sources, which already write the RedeemQueueV2
+  // layout, so the V1 -> V2 migration must never run here. Calling initializeRedeemManagerV1_2 is what
+  // corrupted the staging queue in BS-4878: the contract's Version was still 1, so the migration's
+  // init(1) guard passed and it re-read 5 word records at a 4 word stride.
+  await doUpgradeTo(
     redeemManagerProxy.address,
     redeemManagerProxyFirewall.address, // firewalled
     redeemManagerImpl.address,
-    redeemManagerInterface.encodeFunctionData("initializeRedeemManagerV1_2"),
     "RedeemManager"
   );
 
