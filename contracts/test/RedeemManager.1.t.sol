@@ -2259,6 +2259,76 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         assertEq(redeemManager.getRedeemRequestAnchor(fresh).lsETHAtRequest, 10e18);
     }
 
+    /// The floor clamp at `RedeemManager.1.sol:304` RELOCATES a legacy-driven mark instead of dropping
+    /// it. The branch fires only while the pre-upgrade queue is still draining, i.e. while
+    /// `floor > max(markCursor, settledHeight)`. In that window the reported principal exited to serve
+    /// LEGACY demand, but `markStart = floor` pushes the mark up onto the first post-upgrade span
+    /// anyway — minting drain-era accrual onto the launch cohort and advancing `_rateMarkCursor()`
+    /// past it. When that cohort's own principal later crosses exit_epoch at a higher rate, `markable`
+    /// is already 0, the report is clamped away, and the real credit is dropped.
+    ///
+    /// Net effect: the launch cohort is locked to whatever rate prevailed during the drain, not the
+    /// rate at which its backing actually stopped earning — landing on exactly the cohort the floor
+    /// was added to protect. The longer the drain, the wider the gap.
+    function testFloorRelocatesLegacyAccrualOntoLaunchCohort() external {
+        address user = _generateAllowlistedUser(0);
+        river.sudoSetRate(1e18);
+
+        // a pre-upgrade request, still pending at upgrade time
+        uint32 legacy = _openRequest(user, 10e18);
+        bytes32 anchorSlot =
+            keccak256(abi.encode(uint256(legacy), bytes32(uint256(keccak256("river.state.redeemRequestAnchor")) - 1)));
+        vm.store(address(redeemManager), anchorSlot, bytes32(0));
+        vm.store(address(redeemManager), bytes32(uint256(anchorSlot) + 1), bytes32(0));
+
+        _upgradeToV1_3();
+        assertEq(redeemManager.getRateMarkFloor(), 10e18);
+
+        // the launch cohort: the first post-upgrade request, opened at 1.0
+        uint32 fresh = _openRequest(user, 10e18);
+        assertEq(redeemManager.getRedeemRequestAnchor(fresh).ethAtRequest, applyRate(10e18, 1e18));
+
+        // REPORT 1, drain window. This principal exited to serve the LEGACY request: the rate is still
+        // 1.0 and nothing has settled. floor (10e18) > max(cursor 0, settledHeight 0), so the clamp
+        // relocates the mark onto [10e18, 20e18) — the launch cohort's own span — at the drain-era rate.
+        river.sudoReportStoppedEarning(address(redeemManager), applyRate(10e18, 1e18));
+        assertEq(redeemManager.getRateMarkCount(), 1);
+        assertEq(redeemManager.getRateMarkDetails(0).height, 10e18);
+        assertEq(redeemManager.getRateMarkDetails(0).amount, 10e18);
+        assertEq(redeemManager.getRateMarkDetails(0).markedEth, applyRate(10e18, 1e18));
+
+        // the legacy request settles and is paid at its request rate, which the floor does correctly
+        uint256 legacyWithdrawn = applyRate(10e18, 1e18);
+        vm.deal(address(this), legacyWithdrawn);
+        river.sudoReportWithdraw{value: legacyWithdrawn}(address(redeemManager), 10e18);
+        uint32[] memory legacyIds = new uint32[](1);
+        legacyIds[0] = legacy;
+        uint32[] memory legacyEvents = new uint32[](1);
+        legacyEvents[0] = 0;
+        redeemManager.claimRedeemRequests(legacyIds, legacyEvents);
+
+        // the pool appreciates while the launch cohort waits for its OWN backing to reach exit_epoch
+        river.sudoSetRate(1.5e18);
+
+        // REPORT 2: the launch cohort's actual principal stops earning at 1.5. Its span is already
+        // covered by the relocated mark, so `markable` is 0 and the entire credit is clamped away.
+        vm.expectEmit(true, true, true, true);
+        emit StoppedEarningExceededMarkableDemand(10e18, 0);
+        river.sudoReportStoppedEarning(address(redeemManager), applyRate(10e18, 1.5e18));
+        assertEq(redeemManager.getRateMarkCount(), 1);
+
+        // settle the launch cohort at the rate its principal actually stopped earning at
+        uint256 received = _settleAndClaim(fresh, 10e18, 1.5e18);
+
+        // BUG: paid at the drain-era 1.0 rather than the 1.5 its own principal stopped earning at
+        assertEq(received, applyRate(10e18, 1e18));
+        assertEq(received, 10e18);
+
+        // and the 5 ETH of accrual that was actually theirs is swept into the exceeding-eth buffer
+        assertEq(redeemManager.getBufferedExceedingEth(), applyRate(10e18, 1.5e18) - applyRate(10e18, 1e18));
+        assertEq(redeemManager.getBufferedExceedingEth(), 5e18);
+    }
+
     /// reportStoppedEarning is the one function that mints payout entitlement, yet had no negative
     /// test: onlyRiver is the sole gate standing between an arbitrary caller and forging a rate
     /// mark that raises another user's payout cap. Exercised from both a plain EOA and a
