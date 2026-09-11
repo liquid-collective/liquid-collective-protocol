@@ -2329,6 +2329,63 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         assertEq(redeemManager.getBufferedExceedingEth(), 5e18);
     }
 
+    /// Same floor clamp as above, but triggered by a one-unit gap instead of a fully-drained queue:
+    /// the withdrawal stack has settled to height 9e18 while the floor sits at 10e18, i.e. only the
+    /// LAST unit of legacy demand ([9e18, 10e18)) is still unsettled. `markStart` is computed as
+    /// `max(cursor, settledHeight)` clamped up to `floor`, so it lands on 10e18 instead of 9e18 — the
+    /// clamp fires even though the gap it is skipping is a single unit wide.
+    ///
+    /// That one-unit shift moves the whole reported slice, not just the overlapping unit: a mark's
+    /// size is fixed by the reported LsETH amount, so sliding its start from 9e18 to 10e18 slides its
+    /// end from 13e18 to 14e18 too. The launch cohort's request spans [10e18, 15e18), so it ends up
+    /// with 4e18 marked at the report's locked rate and only 1e18 left at its own request-time rate —
+    /// where, had the mark started at the true unsettled height 9e18, only 3e18 of its principal would
+    /// have overlapped the mark and 2e18 would have kept the request-time rate.
+    function testFloorShiftsMarkPastUnsettledLegacyRemainder() external {
+        address user = _generateAllowlistedUser(0);
+        river.sudoSetRate(1e18);
+
+        // a pre-upgrade request, still pending at upgrade time
+        uint32 legacy = _openRequest(user, 10e18);
+        bytes32 anchorSlot =
+            keccak256(abi.encode(uint256(legacy), bytes32(uint256(keccak256("river.state.redeemRequestAnchor")) - 1)));
+        vm.store(address(redeemManager), anchorSlot, bytes32(0));
+        vm.store(address(redeemManager), bytes32(uint256(anchorSlot) + 1), bytes32(0));
+
+        _upgradeToV1_3();
+        assertEq(redeemManager.getRateMarkFloor(), 10e18);
+
+        // the launch cohort: the first post-upgrade request, opened at 1.0, spans [10e18, 15e18)
+        uint32 fresh = _openRequest(user, 5e18);
+        assertEq(redeemManager.getRedeemRequestAnchor(fresh).ethAtRequest, applyRate(5e18, 1e18));
+
+        // settle all but the last unit of the legacy request: settledHeight is now 9e18, one unit
+        // short of the floor
+        river.sudoReportWithdraw{value: 9e18}(address(redeemManager), 9e18);
+
+        // the pool appreciates before the report, so a shifted mark is visible in the payout
+        river.sudoSetRate(2e18);
+
+        // REPORT: 4e18 LsETH stopped earning, locked at the 2.0 rate. markStart = max(0, 9e18) clamped
+        // up to floor (10e18) instead of the true unsettled height (9e18), so the mark covers
+        // [10e18, 14e18) rather than [9e18, 13e18).
+        river.sudoReportStoppedEarningAt(address(redeemManager), 8e18, 4e18);
+        assertEq(redeemManager.getRateMarkCount(), 1);
+        assertEq(redeemManager.getRateMarkDetails(0).height, 10e18);
+        assertEq(redeemManager.getRateMarkDetails(0).amount, 4e18);
+        assertEq(redeemManager.getRateMarkDetails(0).markedEth, 8e18);
+
+        // settle the remaining legacy unit and the entire launch cohort request in one withdrawal event
+        uint256 received = _settleAndClaim(fresh, 6e18, 2e18);
+
+        // BUG: 4e18 of the request priced at the 2.0 mark rate (8e18) and only 1e18 at the 1.0
+        // request-time rate (1e18), instead of the correct 3e18 marked (6e18) + 2e18 unmarked (2e18)
+        assertEq(received, 9e18);
+
+        // the 1e18 the launch cohort should have kept at its own request-time rate is swept away
+        assertEq(redeemManager.getBufferedExceedingEth(), 1e18);
+    }
+
     /// reportStoppedEarning is the one function that mints payout entitlement, yet had no negative
     /// test: onlyRiver is the sole gate standing between an arbitrary caller and forging a rate
     /// mark that raises another user's payout cap. Exercised from both a plain EOA and a
