@@ -19,6 +19,7 @@ import "./state/redeemManager/RedeemDemand.sol";
 import "./state/redeemManager/RateMarkStack.sol";
 import "./state/redeemManager/RedeemRequestAnchor.sol";
 import "./state/redeemManager/RedeemRequestCarry.sol";
+import "./state/redeemManager/RateMarkStart.sol";
 
 /// @title Redeem Manager (v1)
 /// @author Alluvial Finance Inc.
@@ -276,25 +277,30 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
         // anyway would credit the redeemer with pool appreciation that accrued after their principal
         // stopped earning.
         uint256 markStart = _rateMarkCursor();
+        uint256 newMarkStart = RateMarkStart.get();
         uint256 settledHeight = _settledHeight();
         if (settledHeight > markStart) {
             markStart = settledHeight;
         }
+        if (settledHeight > newMarkStart) {
+            newMarkStart = settledHeight;
+        }
 
         // find affected redeem requests, i.e. requests that overlap with markStart + lsETHToMark
-        (,uint32 affectedRequestIndex) = _findRedeemRequestIdAtHeight(markStart);
+        (,uint32 affectedRequestIndex) = _findRedeemRequestIdAtHeight(newMarkStart);
 
-        uint256 markEnd = markStart + _stoppedEarningLsETH;
+        uint256 markEnd = newMarkStart + _stoppedEarningLsETH;
+        uint256 requestEnd = 0;
         while (affectedRequestIndex < requestCount) {
             RedeemQueueV2.RedeemRequest storage affectedRequest = redeemRequests[affectedRequestIndex];
-            uint256 requestEnd = affectedRequest.height + affectedRequest.amount;
+            requestEnd = affectedRequest.height + affectedRequest.amount;
 
             if (markEnd <= affectedRequest.height) {
                 break;
             }
 
-            uint256 overlapStart = affectedRequest.height > markStart ? affectedRequest.height : markStart; // replace with max
-            uint256 overlapEnd = requestEnd < markEnd ? requestEnd : markEnd; // replace with min
+            uint256 overlapStart = affectedRequest.height > newMarkStart ? affectedRequest.height : newMarkStart; // ToDo: replace with max
+            uint256 overlapEnd = requestEnd < markEnd ? requestEnd : markEnd; // ToDo: replace with min
             uint256 overlapSize = overlapEnd - overlapStart;
 
             RedeemRequestAnchor.Anchor memory anchor = RedeemRequestAnchor.get()[affectedRequestIndex];
@@ -305,10 +311,10 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
 
             ++affectedRequestIndex;
         }
+        
+        
 
-        // update max redeemable amount (use anchor)
-
-
+        RateMarkStart.set(LibUint256.min(markEnd, requestEnd));
         uint256 reportedLsETH = _stoppedEarningLsETH;
         uint256 lsETHToMark = reportedLsETH;
         uint256 markable = totalRequestedHeight > markStart ? totalRequestedHeight - markStart : 0;
@@ -319,6 +325,7 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
         if (lsETHToMark == 0) {
             return;
         }
+        
 
         // The ratio of the two arguments is the rate River held BEFORE it applied this report, and the
         // mark locks that rate, so rewards from the interval in which the principal stopped earning are
