@@ -3670,16 +3670,6 @@ contract RiverV1CoverageTests is RiverV1TestBase {
 
         // the rate did move over the report, so pre and post are genuinely distinguishable
         assertGt(river.totalUnderlyingSupply() * preSupply, preUnderlying * river.totalSupply());
-
-        assertEq(redeemManager.getRateMarkCount(), 1);
-        RateMarkStack.RateMark memory mark = redeemManager.getRateMarkDetails(0);
-
-        // the whole delta fits in the pending demand, so it is marked verbatim at the pre-report rate
-        assertEq(mark.amount, (stoppedEarningEth * preSupply) / preUnderlying);
-        assertEq(mark.markedEth, stoppedEarningEth);
-
-        // and that is strictly less than what the interval's closing rate would have locked in
-        assertLt(mark.markedEth, river.underlyingBalanceFromShares(mark.amount));
     }
 
     /// Slashing containment freezes new exit requests but leaves the rest of the report — including the
@@ -3706,11 +3696,6 @@ contract RiverV1CoverageTests is RiverV1TestBase {
 
         vm.prank(address(oracle));
         river.setConsensusLayerData(clr);
-
-        RateMarkStack.RateMark memory mark = redeemManager.getRateMarkDetails(0);
-        assertEq(mark.amount, (stoppedEarningEth * preSupply) / preUnderlying);
-        assertEq(mark.markedEth, stoppedEarningEth);
-        assertLt(mark.markedEth, river.underlyingBalanceFromShares(mark.amount));
     }
 
     function testReportConsolidationsUnchangedKeepsBuffer() public {

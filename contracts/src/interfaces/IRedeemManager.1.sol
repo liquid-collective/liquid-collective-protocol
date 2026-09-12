@@ -3,7 +3,6 @@ pragma solidity 0.8.34;
 
 import "../state/redeemManager/RedeemQueue.2.sol";
 import "../state/redeemManager/WithdrawalStack.sol";
-import "../state/redeemManager/RateMarkStack.sol";
 import "../state/redeemManager/RedeemRequestAnchor.sol";
 
 /// @title Redeem Manager Interface (v1)
@@ -67,19 +66,8 @@ interface IRedeemManagerV1 {
     /// @notice Emitted when a rate mark is created, re-pricing the payout cap of the covered redeem demand
     /// @dev The re-pricing runs both ways. A `markedEth / amount` ratio below a covered request's
     ///      request-time rate pushes that request's cap down. See `RedeemManagerV1._sliceCap`.
-    /// @param height The start position of the mark on the cumulative LsETH axis
-    /// @param amount The amount of LsETH marked
-    /// @param markedEth The ETH value of `amount` at the pool rate of this report
-    /// @param id The id of the new rate mark
-    event ReportedStoppedEarning(uint256 height, uint256 amount, uint256 markedEth, uint32 id);
-
-    /// @notice Emitted when reported stopped-earning principal exceeded the markable redeem demand
-    /// @dev Not an error. Most exits do not back a redemption, so the reported principal is usually far
-    ///      larger than the pending demand and the surplus belongs to no redeemer. The event makes that
-    ///      excess observable.
-    /// @param reportedLsETH The LsETH equivalent of the reported stopped-earning principal
-    /// @param markedLsETH The portion that was actually marked
-    event StoppedEarningExceededMarkableDemand(uint256 reportedLsETH, uint256 markedLsETH);
+    /// ToDo: any meaningful parameters to include?
+    event ReportedStoppedEarning();
 
     /// @notice Emitted when the River address is set
     /// @param river The new river address
@@ -152,11 +140,7 @@ interface IRedeemManagerV1 {
 
     /// @notice Retrieve the details of a specific redeem request
     /// @dev The `maxRedeemableEth` field of the returned struct is legacy-only: it bounds the payout for
-    ///      requests predating the stopped-earning upgrade, and nothing for the rest. A post-upgrade
-    ///      request's cap is derived from `getRedeemRequestAnchor` together with the marks covering its
-    ///      span, readable through `getRateMarkCount` and `getRateMarkDetails`. Do not read
-    ///      `maxRedeemableEth` as remaining claimable ETH; for an anchored request it can be 0 while the
-    ///      request still has a live claim.
+    ///      requests predating the stopped-earning upgrade, and nothing for the rest.
     /// @param _redeemRequestId The id of the request
     /// @return The redeem request details
     function getRedeemRequestDetails(uint32 _redeemRequestId) external view returns (RedeemQueueV2.RedeemRequest memory);
@@ -262,27 +246,12 @@ interface IRedeemManagerV1 {
     /// @param _stoppedEarningLsETH The same amount in LsETH, valued at River's pre-report rate
     function reportStoppedEarning(uint256 _stoppedEarningEth, uint256 _stoppedEarningLsETH) external;
 
-    /// @notice Retrieve the global count of rate marks
-    /// @return The count of rate marks
-    function getRateMarkCount() external view returns (uint256);
-
-    /// @notice Retrieve the details of a specific rate mark
-    /// @param _rateMarkId The id of the rate mark
-    /// @return The rate mark details
-    function getRateMarkDetails(uint32 _rateMarkId) external view returns (RateMarkStack.RateMark memory);
-
     /// @notice Retrieve the immutable request-time valuation of a redeem request
     /// @dev A zero `lsETHAtRequest` means the request predates the stopped-earning upgrade and is paid
     ///      under the original rules.
     /// @param _redeemRequestId The id of the request
     /// @return The request-time anchor
     function getRedeemRequestAnchor(uint32 _redeemRequestId) external view returns (RedeemRequestAnchor.Anchor memory);
-
-    /// @notice Retrieve the cap a redeem request was credited with by earlier fills but has not been paid
-    /// @dev Always zero for a request predating the stopped-earning upgrade
-    /// @param _redeemRequestId The id of the request
-    /// @return The unspent cap carried to the next fill, in wei
-    function getRedeemRequestCarry(uint32 _redeemRequestId) external view returns (uint256);
 
     /// @notice Pulls exceeding buffer eth
     /// @param _max The maximum amount that should be pulled
