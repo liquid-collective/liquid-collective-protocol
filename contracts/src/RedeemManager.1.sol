@@ -109,6 +109,11 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
     }
 
     /// @inheritdoc IRedeemManagerV1
+    function findRedeemRequestIdAtHeight(uint256 _height) external view returns (bool found, uint32 redeemRequestId) {
+        return _findRedeemRequestIdAtHeight(_height);
+    }
+
+    /// @inheritdoc IRedeemManagerV1
     function getWithdrawalEventCount() external view returns (uint256) {
         return WithdrawalStack.get().length;
     }
@@ -276,6 +281,34 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
             markStart = settledHeight;
         }
 
+        // find affected redeem requests, i.e. requests that overlap with markStart + lsETHToMark
+        (,uint32 affectedRequestIndex) = _findRedeemRequestIdAtHeight(markStart);
+
+        uint256 markEnd = markStart + _stoppedEarningLsETH;
+        while (affectedRequestIndex < requestCount) {
+            RedeemQueueV2.RedeemRequest storage affectedRequest = redeemRequests[affectedRequestIndex];
+            uint256 requestEnd = affectedRequest.height + affectedRequest.amount;
+
+            if (markEnd <= affectedRequest.height) {
+                break;
+            }
+
+            uint256 overlapStart = affectedRequest.height > markStart ? affectedRequest.height : markStart; // replace with max
+            uint256 overlapEnd = requestEnd < markEnd ? requestEnd : markEnd; // replace with min
+            uint256 overlapSize = overlapEnd - overlapStart;
+
+            RedeemRequestAnchor.Anchor memory anchor = RedeemRequestAnchor.get()[affectedRequestIndex];
+            // skip legacy requests
+            if (anchor.lsETHAtRequest != 0) {
+                affectedRequest.maxRedeemableEth = affectedRequest.maxRedeemableEth + overlapSize*_stoppedEarningEth/_stoppedEarningLsETH-overlapSize*anchor.ethAtRequest/anchor.lsETHAtRequest;
+            }
+
+            ++affectedRequestIndex;
+        }
+
+        // update max redeemable amount (use anchor)
+
+
         uint256 reportedLsETH = _stoppedEarningLsETH;
         uint256 lsETHToMark = reportedLsETH;
         uint256 markable = totalRequestedHeight > markStart ? totalRequestedHeight - markStart : 0;
@@ -375,6 +408,51 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
         }
 
         return (true, low);
+    }
+
+    /// @notice Internal utility to find the redeem request whose current range covers a position
+    /// @dev The redeem queue is ascending and gapless when first written: each request's height equals the
+    ///      previous request's height + amount. Claiming preserves this order, since a request's height
+    ///      only ever advances up to its own original end position, which is the next request's original
+    ///      start, so it can never overtake that request's (possibly also advanced) height. Claiming does
+    ///      open gaps though: the claimed sub-range no longer belongs to any id, so this mirrors
+    ///      `_findRateMarkAtOrBefore`'s predecessor search rather than `_performDichotomicResolution`'s
+    ///      contiguous one, then checks containment on the candidate it returns.
+    /// @param _height The position to search for
+    /// @return found True if some redeem request's current range contains `_height`
+    /// @return redeemRequestId The id of that redeem request
+    function _findRedeemRequestIdAtHeight(uint256 _height) internal view returns (bool found, uint32 redeemRequestId) {
+        RedeemQueueV2.RedeemRequest[] storage redeemRequests = RedeemQueueV2.get();
+        uint256 length = redeemRequests.length;
+
+        // Either the queue is empty or `_height` sits below the first request, so nothing can cover it.
+        if (length == 0 || redeemRequests[0].height > _height) {
+            return (false, 0);
+        }
+
+        // Binary search for the rightmost request with `height <= _height`.
+        uint256 low = 0;
+        uint256 high = length - 1;
+        while (low < high) {
+            // Round up so `mid` is always greater than `low`.
+            uint256 mid = (low + high + 1) / 2;
+            if (redeemRequests[mid].height <= _height) {
+                // Valid candidate; try to move right.
+                low = mid;
+            } else {
+                // Too far right; search left side.
+                high = mid - 1;
+            }
+        }
+
+        RedeemQueueV2.RedeemRequest storage candidate = redeemRequests[low];
+        if (_height >= candidate.height + candidate.amount) {
+            // `_height` sits at or past the candidate's end, either in a gap left by a partial claim or
+            // past the end of the queue. No request currently owns this position.
+            return (false, 0);
+        }
+
+        return (true, uint32(low));
     }
 
     /// @notice Internal utility computing the ETH payout cap for a slice of a redeem request
@@ -684,23 +762,24 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
 
             // Each request carries a maximum withdrawable amount. Cap the eth pro rata to the amount
             // matched here.
-            uint256 maxRedeemableEthAmount;
-            if (_params.anchor.lsETHAtRequest == 0) {
-                // The request predates the stopped-earning upgrade. Keep the original semantics and cap
-                // pro rata on the remaining request-time ETH budget. That budget is decremented by the ETH
-                // actually paid rather than by the cap it offered, which is what carries unspent cap
-                // forward on this path.
-                maxRedeemableEthAmount =
-                    (vars.matchingAmount * _params.redeemRequest.maxRedeemableEth) / _params.redeemRequest.amount;
-            } else {
-                // The cap is the request-time value of the matched slice, re-priced to the locked rate over
-                // whatever part of it has stopped earning, upwards or downwards (see `_sliceCap`), plus cap
-                // that earlier fills were credited with and did not spend. The carry is a separate addend,
-                // so it can only raise this cap and never re-prices the slice itself.
-                maxRedeemableEthAmount =
-                    _sliceCap(_params.anchor, _params.redeemRequest.height, vars.matchingAmount) + _params.carry;
-            }
-
+            // uint256 maxRedeemableEthAmount;
+            // if (_params.anchor.lsETHAtRequest == 0) {
+            //     // The request predates the stopped-earning upgrade. Keep the original semantics and cap
+            //     // pro rata on the remaining request-time ETH budget. That budget is decremented by the ETH
+            //     // actually paid rather than by the cap it offered, which is what carries unspent cap
+            //     // forward on this path.
+            //     maxRedeemableEthAmount =
+            //         (vars.matchingAmount * _params.redeemRequest.maxRedeemableEth) / _params.redeemRequest.amount;
+            // } else {
+            //     // The cap is the request-time value of the matched slice, re-priced to the locked rate over
+            //     // whatever part of it has stopped earning, upwards or downwards (see `_sliceCap`), plus cap
+            //     // that earlier fills were credited with and did not spend. The carry is a separate addend,
+            //     // so it can only raise this cap and never re-prices the slice itself.
+            //     maxRedeemableEthAmount =
+            //         _sliceCap(_params.anchor, _params.redeemRequest.height, vars.matchingAmount) + _params.carry;
+            // }
+            uint256 maxRedeemableEthAmount= _params.redeemRequest.maxRedeemableEth;
+            // maxRedeemableEthAmount = _params.redeemRequest.maxRedeemableEth;
             if (maxRedeemableEthAmount < vars.ethAmount) {
                 unchecked {
                     vars.exceedingEthAmount = vars.ethAmount - maxRedeemableEthAmount;
@@ -709,10 +788,10 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
                 vars.ethAmount = maxRedeemableEthAmount;
             }
 
-            unchecked {
-                // Stays in memory for the next recursion level and is written once by `_saveRedeemRequest`.
-                _params.carry = maxRedeemableEthAmount - vars.ethAmount;
-            }
+            // unchecked {
+            //     // Stays in memory for the next recursion level and is written once by `_saveRedeemRequest`.
+            //     _params.carry = maxRedeemableEthAmount - vars.ethAmount;
+            // }
 
             // Height rises and amount falls by the matched amount, so `height + amount` never changes over
             // a request's lifetime. That end position is where the next request starts, and it also means
@@ -729,9 +808,10 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
             // request-time budget, and an unguarded decrement would revert the whole claimRedeemRequests
             // call with Panic(0x11). Post-upgrade this field bounds nothing. The cap comes from the anchor
             // and the rate marks.
-            _params.redeemRequest.maxRedeemableEth = _params.redeemRequest.maxRedeemableEth > vars.ethAmount
-                ? _params.redeemRequest.maxRedeemableEth - vars.ethAmount
-                : 0;
+            // _params.redeemRequest.maxRedeemableEth = _params.redeemRequest.maxRedeemableEth > vars.ethAmount
+            //     ? _params.redeemRequest.maxRedeemableEth - vars.ethAmount
+            //     : 0;
+            _params.redeemRequest.maxRedeemableEth -= vars.ethAmount;
 
             _params.lsETHAmount += vars.matchingAmount;
             _params.ethAmount += vars.ethAmount;

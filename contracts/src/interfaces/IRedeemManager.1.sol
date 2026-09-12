@@ -161,6 +161,15 @@ interface IRedeemManagerV1 {
     /// @return The redeem request details
     function getRedeemRequestDetails(uint32 _redeemRequestId) external view returns (RedeemQueueV2.RedeemRequest memory);
 
+    /// @notice Finds the redeem request whose current range covers a position on the cumulative LsETH axis
+    /// @dev A request's current range is `[height, height + amount)`. Partial claims advance `height` and
+    ///      shrink `amount`, opening a gap before the request that no id currently owns, so a `_height`
+    ///      inside an already-claimed sub-range, or at or past the end of the queue, returns `found = false`.
+    /// @param _height The position to search for
+    /// @return found True if some redeem request's current range contains `_height`
+    /// @return redeemRequestId The id of that redeem request, meaningful only if `found` is true
+    function findRedeemRequestIdAtHeight(uint256 _height) external view returns (bool found, uint32 redeemRequestId);
+
     /// @notice Retrieve the global count of withdrawal events
     /// @return The count of withdrawal events
     function getWithdrawalEventCount() external view returns (uint256);
