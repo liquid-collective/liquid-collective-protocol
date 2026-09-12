@@ -136,7 +136,6 @@ contract RedeeManagerV1TestBase is Test {
 
     event RequestedRedeem(address indexed recipient, uint256 height, uint256 size, uint256 maxRedeemableEth, uint32 id);
     event ReportedWithdrawal(uint256 height, uint256 size, uint256 ethAmount, uint32 id);
-    event ReportedStoppedEarning(uint256 height, uint256 amount, uint256 markedEth, uint32 id);
     event SatisfiedRedeemRequest(
         uint32 indexed redeemRequestId,
         uint32 indexed withdrawalEventId,
@@ -1965,23 +1964,22 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
 
     /// Reported stopped-earning principal is clamped to the markable demand. Most exits do not back
     /// a redemption at all, so the reported figure routinely dwarfs the pending queue; the surplus
-    /// must be dropped, not carried, and must be observable.
+    /// must be dropped, not carried to a later report.
     function testReportStoppedEarningClampsToMarkableDemand() external {
         address user = _generateAllowlistedUser(0);
         river.sudoSetRate(1e18);
-        _openRequest(user, 30e18);
+        uint32 id = _openRequest(user, 30e18);
 
-        // ToDo: test this another way
-        // vm.expectEmit(true, true, true, true);
-        // emit StoppedEarningExceededMarkableDemand(100e18, 30e18);
-        // river.sudoReportStoppedEarning(address(redeemManager), 100e18);
+        // 100 LsETH of principal stopped earning at 1.05, but only 30 LsETH is markable
+        river.sudoReportStoppedEarningAt(address(redeemManager), applyRate(100e18, 1.05e18), 100e18);
+        assertEq(redeemManager.getRedeemRequestDetails(id).maxRedeemableEth, applyRate(30e18, 1.05e18));
 
-        // assertEq(redeemManager.getRateMarkCount(), 1);
-        // assertEq(redeemManager.getRateMarkDetails(0).amount, 30e18);
+        // a second report over the same demand must not apply again: if the 70 LsETH surplus had been
+        // carried instead of dropped, this would double the uplift
+        river.sudoReportStoppedEarningAt(address(redeemManager), applyRate(100e18, 1.05e18), 100e18);
+        assertEq(redeemManager.getRedeemRequestDetails(id).maxRedeemableEth, applyRate(30e18, 1.05e18));
 
-        // // a second report has nothing left to mark and must not push an empty mark
-        // river.sudoReportStoppedEarning(address(redeemManager), 100e18);
-        // assertEq(redeemManager.getRateMarkCount(), 1);
+        assertEq(_settleAndClaim(id, 30e18, 1.05e18), applyRate(30e18, 1.05e18));
     }
 
     /// The locked rate is the (eth, LsETH) pair River passes in, and nothing else. River values the
@@ -2015,19 +2013,15 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
 
         // 100 LsETH of principal stopped earning at a rate of 1.05, but only 30 LsETH is markable
         uint256 reportedEth = applyRate(100e18, 1.05e18);
-        // ToDo: test this another way
-        // vm.expectEmit(true, true, true, true);
-        // emit StoppedEarningExceededMarkableDemand(100e18, 30e18);
-        // river.sudoReportStoppedEarningAt(address(redeemManager), reportedEth, 100e18);
+        river.sudoReportStoppedEarningAt(address(redeemManager), reportedEth, 100e18);
 
-        // RateMarkStack.RateMark memory mark = redeemManager.getRateMarkDetails(0);
-        // assertEq(mark.amount, 30e18);
-        // assertEq(mark.markedEth, applyRate(30e18, 1.05e18));
-        // // the locked rate survives the clamp exactly
-        // assertEq(mark.markedEth * 100e18, reportedEth * 30e18);
+        uint256 maxRedeemableEth = redeemManager.getRedeemRequestDetails(id).maxRedeemableEth;
+        assertEq(maxRedeemableEth, applyRate(30e18, 1.05e18));
+        // the locked rate survives the clamp exactly
+        assertEq(maxRedeemableEth * 100e18, reportedEth * 30e18);
 
-        // river.sudoSetRate(1.05e18);
-        // assertEq(_settleAndClaim(id, 30e18, 1.05e18), applyRate(30e18, 1.05e18));
+        river.sudoSetRate(1.05e18);
+        assertEq(_settleAndClaim(id, 30e18, 1.05e18), applyRate(30e18, 1.05e18));
     }
 
     /// Marks never cover demand that a withdrawal event has already priced. Otherwise a redeemer
