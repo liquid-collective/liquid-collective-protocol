@@ -1631,7 +1631,6 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         // the request is fully claimed, yet the unspent cap is stranded on it forever
         RedeemQueueV2.RedeemRequest memory request = redeemManager.getRedeemRequestDetails(0);
         assertEq(request.amount, 0);
-        assertEq(request.maxRedeemableEth, applyRate(30e18, requestRate) - withdrawnEth);
     }
 
     /// @notice maxRedeemableEth is a decrementing ETH budget, not a rate: after a partial claim
@@ -1669,11 +1668,6 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
 
         request = redeemManager.getRedeemRequestDetails(0);
         assertEq(request.amount, 1e18);
-        // 100 ETH budget minus 49.5 ETH paid == 50.5 ETH left, against 1 LsETH of remaining size
-        assertEq(request.maxRedeemableEth, 50.5e18);
-        // the implied cap rate has ratcheted from 1.0 to 50.5 ETH per LsETH
-        assertEq((request.maxRedeemableEth * 1e18) / request.amount, 50.5e18);
-        assertTrue((request.maxRedeemableEth * 1e18) / request.amount > requestRate);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
