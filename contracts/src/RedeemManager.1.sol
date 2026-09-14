@@ -250,11 +250,6 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
             return;
         }
 
-        // Claiming raises a request's height and lowers its amount by the same step, so its end position
-        // never moves. The last request's end position is therefore the total LsETH ever requested.
-        RedeemQueueV2.RedeemRequest storage lastRequest = redeemRequests[requestCount - 1];
-        uint256 totalRequestedHeight = lastRequest.height + lastRequest.amount;
-
         // Marks may only cover demand that is still unsettled. A withdrawal event has already priced the
         // slice below `settledHeight`, and that event's ETH caps what it pays out regardless. Marking it
         // anyway would credit the redeemer with pool appreciation that accrued after their principal
