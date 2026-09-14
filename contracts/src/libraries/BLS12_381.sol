@@ -372,6 +372,14 @@ library BLS12_381 {
      *      this heavy verification path out of the callers' bytecode (EIP-170). Callers must be linked
      *      against the deployed library, and the `calldata` parameters mean memory arguments are copied
      *      into calldata by the external call rather than passed by reference.
+     * @dev The `external` visibility is also load-bearing for correctness, not just for size: it makes
+     *      every invocation a `DELEGATECALL` into a fresh memory frame, which is what `hashToG2`
+     *      requires. `hashToG2` assumes the 64-byte `Z_pad` of its `expand_message_xmd` input is
+     *      implicitly zero and dirties that same scratch region without bumping the free memory
+     *      pointer, so two calls at the same free pointer produce different curve points. Reverting
+     *      this to `internal` would inline the call into the caller's frame and silently corrupt
+     *      every deposit after the first in a multi-deposit batch. See
+     *      `contracts/test/libraries/BLS12_381_CallFrame.t.sol`.
      */
     function verifyDepositMessage(
         bytes calldata pubkey,

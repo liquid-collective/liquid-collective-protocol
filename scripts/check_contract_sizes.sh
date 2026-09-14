@@ -23,8 +23,8 @@ MIN_RUNTIME_MARGIN="${MIN_RUNTIME_MARGIN:-0}"
 cd "$(dirname "$0")/.."
 
 # Names of every non-abstract contract and every library declared in production sources.
-# Internal-only libraries compile to ~16 byte stubs and pass trivially; LibOracleReporting is
-# the one that is genuinely deployed and worth watching.
+# Internal-only libraries compile to ~16 byte stubs and pass trivially; LibOracleReporting and
+# BLS12_381 are the ones that are genuinely deployed and linked, so they are worth watching.
 PRODUCTION_NAMES=$(
   find contracts/src -name '*.sol' -not -path '*/interfaces/*' -not -path '*/mock/*' -print0 |
     xargs -0 grep -hE '^(contract|library) [A-Za-z0-9_]+' |

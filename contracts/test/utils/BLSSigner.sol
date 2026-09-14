@@ -54,12 +54,15 @@ contract BLSSigner {
      *      free pointer without bumping it — so a second call at the same free pointer hashes its
      *      own leftovers and silently returns a different curve point.
      *
-     *      Production is unaffected because `AttestationVerifierV1.verifyBLSDeposit` is itself
-     *      reached through a self-staticcall trampoline, so every `hashToG2` runs in a fresh frame
-     *      with clean memory. Signing mirrors that rather than forking a "safe" copy of the
-     *      assembly, which could drift from the verifier and make these tests prove the wrong
+     *      Production is unaffected because `BLS12_381.verifyDepositMessage` is an `external`
+     *      library function: every invocation is a `DELEGATECALL` into the linked library, so each
+     *      `hashToG2` runs in a fresh frame with clean memory even when a batch verifies many
+     *      deposits in one transaction. Signing mirrors that rather than forking a "safe" copy of
+     *      the assembly, which could drift from the verifier and make these tests prove the wrong
      *      thing. It also keeps the guarantee local to `_hashToG2`, so it holds for any caller —
      *      including a contract that inherits `BLSSigner` and signs in its own frame.
+     *
+     *      `contracts/test/libraries/BLS12_381_CallFrame.t.sol` pins both halves of this.
      */
     function hashToG2Trampoline(bytes32 message) external view returns (BLS12_381.G2Point memory) {
         if (msg.sender != address(this)) revert OnlySelfCall();
