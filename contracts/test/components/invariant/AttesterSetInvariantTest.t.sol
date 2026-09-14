@@ -7,25 +7,7 @@ import "../../../src/AttestationVerifier.1.sol";
 import "../../utils/LibImplementationUnbricker.sol";
 import "./AttesterSetHandler.sol";
 
-/// @dev Minimal stand-in for River. The verifier's `onlyRiverAdmin` modifier resolves the admin
-///      via `IAdministrable(RiverAddress.get()).getAdmin()`. The runtime cast only needs the
-///      selector to resolve, so we expose `getAdmin()` without implementing the full interface
-///      (which has 4 methods we'd never exercise here). The invariant test never calls
-///      `fetchAndValidateDeposits()`, `recordNewlyFundedPubkeys`, or anything else that would exercise
-///      River-shaped behavior, so this is all the wiring the verifier needs.
-contract AdminStub {
-    address internal immutable _admin;
-
-    constructor(address admin_) {
-        _admin = admin_;
-    }
-
-    function getAdmin() external view returns (address) {
-        return _admin;
-    }
-}
-
-contract AttesterSetDepositBufferStub {
+contract DepositBufferProcessorStub {
     address internal immutable _processor;
 
     constructor(address processor_) {
@@ -56,8 +38,10 @@ contract AttesterSetInvariantTest is Test {
     address internal constant ADMIN = address(0xAD);
 
     function setUp() public {
-        AdminStub riverStub = new AdminStub(ADMIN);
-        AttesterSetDepositBufferStub bufferStub = new AttesterSetDepositBufferStub(address(riverStub));
+        // The verifier owns its admin, so River only needs to be a non-zero address here — the
+        // invariant test never calls `fetchAndValidateDeposits()`, `recordNewlyFundedPubkeys`, or
+        // anything else that would exercise River-shaped behavior.
+        address riverStub = makeAddr("river");
 
         verifier = new AttestationVerifierV1();
         LibImplementationUnbricker.unbrick(vm, address(verifier));
@@ -67,7 +51,8 @@ contract AttesterSetInvariantTest is Test {
         initial[1] = makeAddr("att2");
         initial[2] = makeAddr("att3");
 
-        verifier.initAttestationVerifierV1(address(riverStub), address(bufferStub), initial, 2, bytes4(0), initial, 2);
+        address depositBufferStub = address(new DepositBufferProcessorStub(riverStub));
+        verifier.initAttestationVerifierV1(ADMIN, riverStub, depositBufferStub, initial, 2, bytes4(0), initial, 2);
 
         handler = new AttesterSetHandler(verifier, ADMIN, initial);
         targetContract(address(handler));
