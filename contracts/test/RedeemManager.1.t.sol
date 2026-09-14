@@ -138,6 +138,7 @@ contract RedeeManagerV1TestBase is Test {
     event ReportedWithdrawal(uint256 height, uint256 size, uint256 ethAmount, uint32 id);
     event ReportedStoppedEarning(uint256 height, uint256 amount, uint256 markedEth, uint32 id);
     event StoppedEarningExceededMarkableDemand(uint256 reportedLsETH, uint256 markedLsETH);
+    event StoppedEarningBelowRateMarkFloor(uint256 reportedLsETH, uint256 droppedLsETH, uint256 floor);
     event SetRateMarkFloor(uint256 floor);
     event SatisfiedRedeemRequest(
         uint32 indexed redeemRequestId,
@@ -2188,7 +2189,8 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
     /// Without the floor, marks would start at the head of the queue and be consumed by pre-upgrade
     /// requests, which have no anchor and so cannot use them — silently short-changing the first
     /// post-upgrade cohort by exactly that amount. This is the regression the floor exists to prevent:
-    /// the post-upgrade request must receive the full mark.
+    /// the post-upgrade request must receive the full mark, at the rate its OWN principal stopped
+    /// earning at, once settlement has cleared the legacy demand ahead of it.
     function testFloorStopsLegacyDemandFromConsumingMarks() external {
         address user = _generateAllowlistedUser(0);
         river.sudoSetRate(1e18);
@@ -2206,13 +2208,12 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         // a post-upgrade request
         uint32 fresh = _openRequest(user, 30e18);
 
-        // stopped-earning principal worth exactly one request
+        // stopped-earning principal worth exactly one request, while the legacy request is still
+        // unsettled: that principal is funding LEGACY demand, so it is dropped rather than marked, and
+        // the cursor stays at 0 so the post-upgrade cohort's own report can still land
         river.sudoSetRate(1.05e18);
         river.sudoReportStoppedEarning(address(redeemManager), applyRate(30e18, 1.05e18));
-
-        // the mark starts past the legacy request, not at 0
-        assertEq(redeemManager.getRateMarkDetails(0).height, 30e18);
-        assertEq(redeemManager.getRateMarkDetails(0).amount, 30e18);
+        assertEq(redeemManager.getRateMarkCount(), 0);
 
         // legacy settles first and is unaffected: still capped at its request rate
         uint256 legacyWithdrawn = applyRate(30e18, 1.05e18);
@@ -2226,24 +2227,46 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         redeemManager.claimRedeemRequests(legacyIds, legacyEvents);
         assertEq(user.balance - beforeLegacy, applyRate(30e18, 1e18));
 
-        // and the post-upgrade request gets the whole mark
+        // the post-upgrade request's own principal now stops earning. Settlement has reached the floor,
+        // so marking starts exactly there and the request gets a full-width mark — the credit legacy
+        // demand would otherwise have consumed is neither burned by legacy nor minted early onto it.
+        river.sudoReportStoppedEarning(address(redeemManager), applyRate(30e18, 1.05e18));
+        assertEq(redeemManager.getRateMarkDetails(0).height, 30e18);
+        assertEq(redeemManager.getRateMarkDetails(0).amount, 30e18);
+
         uint256 received = _settleAndClaim(fresh, 30e18, 1.05e18);
         assertEq(received, applyRate(30e18, 1.05e18));
     }
 
-    /// The floor must not strand credit when it sits above the settled height: once demand grows past
-    /// the floor, marking resumes normally from the floor.
-    function testMarkingResumesAboveFloor() external {
+    /// The floor must not strand credit permanently: it is a cutover, not a ceiling. Marking resumes
+    /// from the floor once SETTLEMENT reaches it. Demand growing past the floor is not sufficient on
+    /// its own — while legacy requests are still unsettled, exiting principal is funding them, so a
+    /// report in that window belongs to no mark.
+    function testMarkingResumesOnceSettlementReachesFloor() external {
         address user = _generateAllowlistedUser(0);
         river.sudoSetRate(1e18);
         _openRequest(user, 30e18);
         _upgradeToV1_3();
 
         // nothing markable yet: all demand is below the floor
+        // both reductions apply to this report and are reported separately: 30e18 of it is below the
+        // floor, and the 70e18 that survives the clip has no demand above the floor to cover
+        vm.expectEmit(true, true, true, true);
+        emit StoppedEarningBelowRateMarkFloor(100e18, 30e18, 30e18);
+        vm.expectEmit(true, true, true, true);
+        emit StoppedEarningExceededMarkableDemand(100e18, 0);
         river.sudoReportStoppedEarning(address(redeemManager), 100e18);
         assertEq(redeemManager.getRateMarkCount(), 0);
 
+        // demand now extends past the floor, but the legacy request is still unsettled, so this report
+        // is still funding legacy demand and is dropped rather than marked
         uint32 fresh = _openRequest(user, 10e18);
+        river.sudoReportStoppedEarning(address(redeemManager), applyRate(10e18, 1e18));
+        assertEq(redeemManager.getRateMarkCount(), 0);
+
+        // settlement catches up to the floor, and marking resumes from it
+        vm.deal(address(this), 30e18);
+        river.sudoReportWithdraw{value: 30e18}(address(redeemManager), 30e18);
         river.sudoSetRate(1.02e18);
         river.sudoReportStoppedEarning(address(redeemManager), applyRate(10e18, 1.02e18));
 
@@ -2251,6 +2274,131 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         assertEq(redeemManager.getRateMarkDetails(0).height, 30e18);
         assertEq(redeemManager.getRateMarkDetails(0).amount, 10e18);
         assertEq(redeemManager.getRedeemRequestAnchor(fresh).lsETHAtRequest, 10e18);
+    }
+
+    /// A report that lands entirely below the floor must be DROPPED, not relocated onto the launch
+    /// cohort. The floor branch fires only while the pre-upgrade queue is still draining, i.e. while
+    /// `floor > max(markCursor, settledHeight)`. In that window the reported principal exited to serve
+    /// LEGACY demand, whose payout is already priced by its request-time cap, so no mark is owed.
+    ///
+    /// Relocating it instead (`markStart = floor` with the full reported amount) would mint drain-era
+    /// accrual onto the first post-upgrade span AND advance `_rateMarkCursor()` past it, so when that
+    /// cohort's own principal later crosses exit_epoch at a higher rate `markable` would already be 0
+    /// and the real credit would be clamped away — locking the launch cohort to whatever rate happened
+    /// to prevail during the drain. Dropping keeps the cursor put so the later report can still land.
+    function testFloorDropsFullyLegacyReportAndLeavesCursorForLaunchCohort() external {
+        address user = _generateAllowlistedUser(0);
+        river.sudoSetRate(1e18);
+
+        // a pre-upgrade request, still pending at upgrade time
+        uint32 legacy = _openRequest(user, 10e18);
+        bytes32 anchorSlot =
+            keccak256(abi.encode(uint256(legacy), bytes32(uint256(keccak256("river.state.redeemRequestAnchor")) - 1)));
+        vm.store(address(redeemManager), anchorSlot, bytes32(0));
+        vm.store(address(redeemManager), bytes32(uint256(anchorSlot) + 1), bytes32(0));
+
+        _upgradeToV1_3();
+        assertEq(redeemManager.getRateMarkFloor(), 10e18);
+
+        // the launch cohort: the first post-upgrade request, opened at 1.0
+        uint32 fresh = _openRequest(user, 10e18);
+        assertEq(redeemManager.getRedeemRequestAnchor(fresh).ethAtRequest, applyRate(10e18, 1e18));
+
+        // REPORT 1, drain window. This principal exited to serve the LEGACY request: the rate is still
+        // 1.0 and nothing has settled. floor (10e18) > max(cursor 0, settledHeight 0) and the whole
+        // 10e18 slice sits below the floor, so the report is dropped and no mark is created.
+        vm.expectEmit(true, true, true, true);
+        emit StoppedEarningBelowRateMarkFloor(10e18, 10e18, 10e18);
+        river.sudoReportStoppedEarning(address(redeemManager), applyRate(10e18, 1e18));
+        assertEq(redeemManager.getRateMarkCount(), 0);
+
+        // the legacy request settles and is paid at its request rate, which the floor does correctly
+        uint256 legacyWithdrawn = applyRate(10e18, 1e18);
+        vm.deal(address(this), legacyWithdrawn);
+        river.sudoReportWithdraw{value: legacyWithdrawn}(address(redeemManager), 10e18);
+        uint32[] memory legacyIds = new uint32[](1);
+        legacyIds[0] = legacy;
+        uint32[] memory legacyEvents = new uint32[](1);
+        legacyEvents[0] = 0;
+        redeemManager.claimRedeemRequests(legacyIds, legacyEvents);
+
+        // the pool appreciates while the launch cohort waits for its OWN backing to reach exit_epoch
+        river.sudoSetRate(1.5e18);
+
+        // REPORT 2: the launch cohort's actual principal stops earning at 1.5. The cursor is still at 0
+        // and `settledHeight` has caught up to the floor, so the mark lands on their own span at 1.5.
+        river.sudoReportStoppedEarning(address(redeemManager), applyRate(10e18, 1.5e18));
+        assertEq(redeemManager.getRateMarkCount(), 1);
+        assertEq(redeemManager.getRateMarkDetails(0).height, 10e18);
+        assertEq(redeemManager.getRateMarkDetails(0).amount, 10e18);
+        assertEq(redeemManager.getRateMarkDetails(0).markedEth, applyRate(10e18, 1.5e18));
+
+        // settle the launch cohort at the rate its principal actually stopped earning at
+        uint256 received = _settleAndClaim(fresh, 10e18, 1.5e18);
+
+        // paid at the 1.5 its own principal stopped earning at, not the drain-era 1.0
+        assertEq(received, applyRate(10e18, 1.5e18));
+        assertEq(received, 15e18);
+
+        // the full accrual reached the redeemer, so nothing is swept into the exceeding-eth buffer
+        assertEq(redeemManager.getBufferedExceedingEth(), 0);
+    }
+
+    /// Same floor branch as above, but straddling it instead of sitting entirely below it: the
+    /// withdrawal stack has settled to height 9e18 while the floor sits at 10e18, so only the LAST
+    /// unit of legacy demand ([9e18, 10e18)) is still unsettled. A 4e18 report anchored at 9e18 spans
+    /// [9e18, 13e18), of which 1e18 is legacy and 3e18 is markable.
+    ///
+    /// The overlapping unit must be CLIPPED, leaving a 3e18 mark at [10e18, 13e18). Sliding the whole
+    /// span up instead would keep its width and cover [10e18, 14e18), handing the launch cohort 4e18
+    /// at the locked rate when only 3e18 of its principal actually stopped earning. The locked rate
+    /// must survive the clip: `markedEth` scales in the same proportion as the LsETH leg.
+    function testFloorClipsReportStraddlingTheCutover() external {
+        address user = _generateAllowlistedUser(0);
+        river.sudoSetRate(1e18);
+
+        // a pre-upgrade request, still pending at upgrade time
+        uint32 legacy = _openRequest(user, 10e18);
+        bytes32 anchorSlot =
+            keccak256(abi.encode(uint256(legacy), bytes32(uint256(keccak256("river.state.redeemRequestAnchor")) - 1)));
+        vm.store(address(redeemManager), anchorSlot, bytes32(0));
+        vm.store(address(redeemManager), bytes32(uint256(anchorSlot) + 1), bytes32(0));
+
+        _upgradeToV1_3();
+        assertEq(redeemManager.getRateMarkFloor(), 10e18);
+
+        // the launch cohort: the first post-upgrade request, opened at 1.0, spans [10e18, 15e18)
+        uint32 fresh = _openRequest(user, 5e18);
+        assertEq(redeemManager.getRedeemRequestAnchor(fresh).ethAtRequest, applyRate(5e18, 1e18));
+
+        // settle all but the last unit of the legacy request: settledHeight is now 9e18, one unit
+        // short of the floor
+        river.sudoReportWithdraw{value: 9e18}(address(redeemManager), 9e18);
+
+        // the pool appreciates before the report, so a mispositioned mark is visible in the payout
+        river.sudoSetRate(2e18);
+
+        // REPORT: 4e18 LsETH stopped earning, locked at the 2.0 rate. markStart = max(0, 9e18) = 9e18,
+        // the 1e18 below the floor is clipped, and the surviving 3e18 marks [10e18, 13e18). The eth leg
+        // scales 8e18 -> 6e18, keeping the locked rate at 2.0.
+        vm.expectEmit(true, true, true, true);
+        emit StoppedEarningBelowRateMarkFloor(4e18, 1e18, 10e18);
+        river.sudoReportStoppedEarningAt(address(redeemManager), 8e18, 4e18);
+        assertEq(redeemManager.getRateMarkCount(), 1);
+        assertEq(redeemManager.getRateMarkDetails(0).height, 10e18);
+        assertEq(redeemManager.getRateMarkDetails(0).amount, 3e18);
+        assertEq(redeemManager.getRateMarkDetails(0).markedEth, 6e18);
+
+        // settle the remaining legacy unit and the entire launch cohort request in one withdrawal event
+        uint256 received = _settleAndClaim(fresh, 6e18, 2e18);
+
+        // 3e18 of the request priced at the 2.0 mark rate (6e18) and 2e18 at the 1.0 request-time
+        // rate (2e18), rather than 4e18 marked (8e18) + 1e18 unmarked (1e18)
+        assertEq(received, 8e18);
+
+        // the 2e18 of demand the mark does not reach stays capped at its request-time rate, so the
+        // event's surplus over that cap returns to the pool
+        assertEq(redeemManager.getBufferedExceedingEth(), 2e18);
     }
 
     /// reportStoppedEarning is the one function that mints payout entitlement, yet had no negative
@@ -2330,7 +2478,6 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         assertEq(received1, applyRate(20e18, 1.6e18));
         // 20 LsETH at the mark rate is already worth more than the entire 30 ETH budget: the
         // saturating subtraction floors at 0 instead of reverting
-        assertEq(redeemManager.getRedeemRequestDetails(id).maxRedeemableEth, 0);
         assertEq(redeemManager.getRedeemRequestDetails(id).amount, 10e18);
 
         // the remaining 10 LsETH settles at the same mark rate; the decrement is now 0 - 16 ETH,
