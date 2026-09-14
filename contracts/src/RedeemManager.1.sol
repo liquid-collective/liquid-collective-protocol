@@ -298,19 +298,25 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
         if (settledHeight > markStart) {
             markStart = settledHeight;
         }
-        // Never mark below the launch cutover. Pre-upgrade requests cannot use a mark, so letting the
-        // cursor cover them would burn credit owed to the first post-upgrade cohort.
-        uint256 floor = RateMarkFloor.get();
-        if (floor > markStart) {
-            markStart = floor;
-        }
-
         uint256 reportedLsETH = _stoppedEarningLsETH;
         uint256 lsETHToMark = reportedLsETH;
+
+        uint256 floor = RateMarkFloor.get();
+        if (floor > markStart) {
+            // old request is not satisfied, so the legacy slice is dropped rather than marked
+            uint256 legacySlice = LibUint256.min(floor - markStart, lsETHToMark);
+            unchecked {
+                // `min` above bounds the subtrahend by `lsETHToMark`
+                lsETHToMark -= legacySlice;
+            }
+            markStart = floor;
+            emit StoppedEarningBelowRateMarkFloor(reportedLsETH, legacySlice, floor);
+        }
+
         uint256 markable = totalRequestedHeight > markStart ? totalRequestedHeight - markStart : 0;
         if (lsETHToMark > markable) {
+            emit StoppedEarningExceededMarkableDemand(reportedLsETH, markable);
             lsETHToMark = markable;
-            emit StoppedEarningExceededMarkableDemand(reportedLsETH, lsETHToMark);
         }
         // The only guard on the division below: past here `lsETHToMark >= 1`, so the divisor
         // `reportedLsETH >= lsETHToMark >= 1`. A zero reported leg cannot slip through — it makes
@@ -322,8 +328,8 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
 
         // The ratio of the two arguments is the rate River held BEFORE it applied this report, and the
         // mark locks that rate, so rewards from the interval in which the principal stopped earning are
-        // excluded. Marking the whole reported amount therefore needs no conversion. Only the clamped
-        // case divides, scaling the eth leg down in the same proportion so the locked rate survives.
+        // excluded. Marking the whole reported amount therefore needs no conversion. Only a reduced
+        // amount divides, scaling the eth leg down in the same proportion so the locked rate survives.
         uint256 markedEth =
             lsETHToMark == reportedLsETH ? _stoppedEarningEth : (_stoppedEarningEth * lsETHToMark) / reportedLsETH;
 

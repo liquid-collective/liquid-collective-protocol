@@ -81,6 +81,12 @@ interface IRedeemManagerV1 {
     /// @param markedLsETH The portion that was actually marked
     event StoppedEarningExceededMarkableDemand(uint256 reportedLsETH, uint256 markedLsETH);
 
+    /// @notice Emitted when part of a reported stopped-earning principal fell below the rate mark floor
+    /// @param reportedLsETH The LsETH equivalent of the reported stopped-earning principal
+    /// @param droppedLsETH The portion that fell below the floor and was discarded
+    /// @param floor The launch cutover the drop was measured against
+    event StoppedEarningBelowRateMarkFloor(uint256 reportedLsETH, uint256 droppedLsETH, uint256 floor);
+
     /// @notice Emitted when the rate mark floor is pinned at upgrade time
     /// @param floor The lowest LsETH position a rate mark may cover
     event SetRateMarkFloor(uint256 floor);
