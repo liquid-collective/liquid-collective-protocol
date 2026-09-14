@@ -547,7 +547,7 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
     /// @notice Internal utility to claim a redeem request if possible
     /// @dev Will call itself recursively if the redeem requests overflows its matching withdrawal event
     /// @param _params The parameters of the claim redeem request call
-    function _claimRedeemRequest(ClaimRedeemRequestParameters memory _params) internal {
+    function _claimRedeemRequest(ClaimRedeemRequestParameters memory _params, uint256 remainingLSEth) internal {
         ClaimRedeemRequestInternalVariables memory vars;
         {
             uint256 withdrawalEventEndPosition = _params.withdrawalEvent.height + _params.withdrawalEvent.amount;
@@ -555,19 +555,24 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
             // A request can extend past the end of the provided withdrawal event, so match only the part
             // of it that falls inside the event.
             vars.matchingAmount =
-                LibUint256.min(_params.redeemRequest.amount, withdrawalEventEndPosition - _params.redeemRequest.height);
+                LibUint256.min(remainingLSEth, withdrawalEventEndPosition - _params.redeemRequest.height);
             vars.ethAmount =
                 (vars.matchingAmount * _params.withdrawalEvent.withdrawnEth) / _params.withdrawalEvent.amount;
 
-            uint256 maxRedeemableEthAmount = _params.redeemRequest.maxRedeemableEth;
+            // Option 1: prioritized claiming
+            // uint256 maxRedeemableEthAmount = _params.redeemRequest.maxRedeemableEth;
 
-            if (maxRedeemableEthAmount < vars.ethAmount) {
-                unchecked {
-                    vars.exceedingEthAmount = vars.ethAmount - maxRedeemableEthAmount;
-                }
-                BufferedExceedingEth.set(BufferedExceedingEth.get() + vars.exceedingEthAmount);
-                vars.ethAmount = maxRedeemableEthAmount;
-            }
+            // Option 2: delayed settlement
+            // maxRedeemableEthAmount += (vars.matchingAmount * _params.redeemRequest.maxRedeemableEth) / _params.redeemRequest.amount;
+
+        // skip in option 2 until the end         
+        //    if (maxRedeemableEthAmount < vars.ethAmount) {
+        //         unchecked {
+        //             vars.exceedingEthAmount = vars.ethAmount - maxRedeemableEthAmount;
+        //         }
+        //         BufferedExceedingEth.set(BufferedExceedingEth.get() + vars.exceedingEthAmount);
+        //         vars.ethAmount = maxRedeemableEthAmount;
+        //     }
 
             // Height rises and amount falls by the matched amount, so `height + amount` never changes over
             // a request's lifetime. That end position is where the next request starts, and it also means
@@ -577,12 +582,56 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
                 // cannot underflow. The end position it preserves is bounded by the total LsETH ever
                 // queued, so the increment cannot overflow.
                 _params.redeemRequest.height += vars.matchingAmount;
-                _params.redeemRequest.amount -= vars.matchingAmount;
+                // _params.redeemRequest.amount -= vars.matchingAmount;
+                remainingLSEth -= vars.matchingAmount;
             }
 
-            _params.redeemRequest.maxRedeemableEth -= vars.ethAmount;
-            _params.lsETHAmount += vars.matchingAmount;
-            _params.ethAmount += vars.ethAmount;
+            
+            // skip in opt2
+            // _params.redeemRequest.maxRedeemableEth -= vars.ethAmount;  
+            _params.lsETHAmount += vars.matchingAmount; 
+            _params.ethAmount += vars.ethAmount; 
+
+            // // A single request emits this once per withdrawal event it overlaps.
+            // emit SatisfiedRedeemRequest(
+            //     _params.redeemRequestId,
+            //     _params.withdrawalEventId,
+            //     vars.matchingAmount,
+            //     vars.ethAmount,
+            //     _params.redeemRequest.amount,
+            //     vars.exceedingEthAmount
+            // );
+        }
+
+        // With the request only partly claimed and another withdrawal event left in the stack, continue
+        // into that event. A remaining depth of 0 stops the walk instead.
+        if (
+            remainingLSEth > 0 && _params.withdrawalEventId + 1 < _params.withdrawalEventCount
+                && _params.depth > 0
+        ) {
+            WithdrawalStack.WithdrawalEvent[] storage withdrawalEvents = WithdrawalStack.get();
+
+            ++_params.withdrawalEventId;
+            _params.withdrawalEvent = withdrawalEvents[_params.withdrawalEventId];
+            --_params.depth;
+
+            _claimRedeemRequest(_params, remainingLSEth);
+        } else {
+            vars.matchingAmount = _params.lsETHAmount;
+            uint256 maxRedeemableEthAmount = (vars.matchingAmount * _params.redeemRequest.maxRedeemableEth) / _params.redeemRequest.amount;
+
+            vars.ethAmount = _params.ethAmount;
+            if (maxRedeemableEthAmount < vars.ethAmount) {
+                unchecked {
+                    vars.exceedingEthAmount = vars.ethAmount - maxRedeemableEthAmount;
+                }
+                BufferedExceedingEth.set(BufferedExceedingEth.get() + vars.exceedingEthAmount);
+                vars.ethAmount = maxRedeemableEthAmount;
+            }
+            
+            _params.redeemRequest.maxRedeemableEth -= vars.ethAmount;  
+            // _params.lsETHAmount += vars.matchingAmount;
+            _params.ethAmount = vars.ethAmount;
 
             // A single request emits this once per withdrawal event it overlaps.
             emit SatisfiedRedeemRequest(
@@ -593,22 +642,7 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
                 _params.redeemRequest.amount,
                 vars.exceedingEthAmount
             );
-        }
 
-        // With the request only partly claimed and another withdrawal event left in the stack, continue
-        // into that event. A remaining depth of 0 stops the walk instead.
-        if (
-            _params.redeemRequest.amount > 0 && _params.withdrawalEventId + 1 < _params.withdrawalEventCount
-                && _params.depth > 0
-        ) {
-            WithdrawalStack.WithdrawalEvent[] storage withdrawalEvents = WithdrawalStack.get();
-
-            ++_params.withdrawalEventId;
-            _params.withdrawalEvent = withdrawalEvents[_params.withdrawalEventId];
-            --_params.depth;
-
-            _claimRedeemRequest(_params);
-        } else {
             // Either the request is fully claimed or the stack is exhausted. Persist the request state.
             // The caller reads the claim status off the remaining amount.
             _saveRedeemRequest(_params);
@@ -689,7 +723,7 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
             params.lsETHAmount = 0;
             params.anchor = RedeemRequestAnchor.get()[params.redeemRequestId];
 
-            _claimRedeemRequest(params);
+            _claimRedeemRequest(params, params.redeemRequest.amount);
 
             claimStatuses[idx] = params.redeemRequest.amount == 0 ? CLAIM_FULLY_CLAIMED : CLAIM_PARTIALLY_CLAIMED;
 

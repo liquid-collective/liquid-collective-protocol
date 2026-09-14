@@ -1711,6 +1711,26 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         return recipient.balance - before;
     }
 
+        function _settleAndClaim(uint32 id, uint256 lsETH, uint256 settlementRate, bool claim) internal returns (uint256 received) {
+        uint256 withdrawnEth = applyRate(lsETH, settlementRate);
+        vm.deal(address(this), withdrawnEth);
+        river.sudoReportWithdraw{value: withdrawnEth}(address(redeemManager), lsETH);
+
+        if (claim) {
+            uint32[] memory ids = new uint32[](1);
+            ids[0] = id;
+            int64[] memory resolved = redeemManager.resolveRedeemRequests(ids);
+            uint32[] memory eventIds = new uint32[](1);
+            eventIds[0] = uint32(uint64(resolved[0]));
+
+            address recipient = redeemManager.getRedeemRequestDetails(id).recipient;
+            uint256 before = recipient.balance;
+            redeemManager.claimRedeemRequests(ids, eventIds);
+            return recipient.balance - before;
+        }
+        return 0;
+    }
+
     /// @dev Opens a 30 LsETH request at a rate of 1.0, then settles it in two withdrawal events and
     ///      claims after each: 20 LsETH priced at 0.5, then the remaining 10 LsETH priced at 1.5.
     ///      With `_clearAnchor` the request is made to look pre-upgrade, taking the legacy budget path.
@@ -1767,7 +1787,7 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         // mark only the first 15 LsETH of the request, locking it at a rate of 2.0
         river.sudoReportStoppedEarningAt(address(redeemManager), applyRate(15e18, 2e18), 15e18);
 
-        uint256 received = _settleAndClaim(id, 15e18, 2e18) + _settleAndClaim(id, 15e18, 1e18);
+        uint256 received = _settleAndClaim(id, 15e18, 2e18, false) + _settleAndClaim(id, 15e18, 1e18, true);
 
         assertEq(received, applyRate(15e18, 2e18) + applyRate(15e18, 1e18));
         assertEq(redeemManager.getBufferedExceedingEth(), 0);
