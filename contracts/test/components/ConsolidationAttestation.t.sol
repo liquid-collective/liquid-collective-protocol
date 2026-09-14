@@ -11,24 +11,13 @@ import "../../src/interfaces/components/IDepositVerification.sol";
 import "../../src/libraries/LibErrors.sol";
 import "../utils/LibImplementationUnbricker.sol";
 
-// ---------------------------------------------------------------------------
-// Minimal River admin mock — exposes getAdmin() so AttestationVerifierV1's
-// `onlyRiverAdmin` cross-contract lookup resolves to a known admin EOA.
-// ---------------------------------------------------------------------------
-
-contract MockRiverAdmin {
-    address internal immutable _admin;
-
-    constructor(address admin_) {
-        _admin = admin_;
-    }
-
-    function getAdmin() external view returns (address) {
-        return _admin;
+contract AttestationVerifierBytesEqualHarness is AttestationVerifierV1 {
+    function exposedBytesEqual(bytes calldata a, bytes calldata b) external pure returns (bool) {
+        return _bytesEqual(a, b);
     }
 }
 
-contract ConsolidationDepositBufferStub {
+contract DepositBufferProcessorStub {
     address internal immutable _processor;
 
     constructor(address processor_) {
@@ -37,12 +26,6 @@ contract ConsolidationDepositBufferStub {
 
     function getProcessor() external view returns (address) {
         return _processor;
-    }
-}
-
-contract AttestationVerifierBytesEqualHarness is AttestationVerifierV1 {
-    function exposedBytesEqual(bytes calldata a, bytes calldata b) external pure returns (bool) {
-        return _bytesEqual(a, b);
     }
 }
 
@@ -62,7 +45,9 @@ contract AttestationVerifierBytesEqualHarness is AttestationVerifierV1 {
 
 contract ConsolidationAttestationTest is Test {
     AttestationVerifierV1 internal verifier;
-    MockRiverAdmin internal river;
+    /// @dev The verifier owns its admin, so River only needs to be an address here: it is the
+    ///      EIP-712 `verifyingContract` anchor and the sole authorized `onlyRiver` caller.
+    address internal river;
 
     address internal admin = address(0xAD);
     address internal depositBufferStub;
@@ -96,10 +81,10 @@ contract ConsolidationAttestationTest is Test {
         attester2 = vm.addr(pk2);
         attester3 = vm.addr(pk3);
 
-        river = new MockRiverAdmin(admin);
-        // The consolidation tests do not exercise the deposit validation path. The verifier
-        // init guard only needs a buffer-shaped contract whose processor is River.
-        depositBufferStub = address(new ConsolidationDepositBufferStub(address(river)));
+        river = makeAddr("river");
+        // Init now validates the buffer processor against River, so this must be a real
+        // contract exposing getProcessor() and returning `river`.
+        depositBufferStub = address(new DepositBufferProcessorStub(address(river)));
 
         verifier = new AttestationVerifierV1();
         LibImplementationUnbricker.unbrick(vm, address(verifier));
@@ -110,7 +95,9 @@ contract ConsolidationAttestationTest is Test {
         cCommittee[0] = attester1;
         cCommittee[1] = attester2;
         cCommittee[2] = attester3;
-        verifier.initAttestationVerifierV1(address(river), depositBufferStub, depCommittee, 1, bytes4(0), cCommittee, 2);
+        verifier.initAttestationVerifierV1(
+            admin, address(river), depositBufferStub, depCommittee, 1, bytes4(0), cCommittee, 2
+        );
     }
 
     /// @dev Deploy + unbrick a fresh verifier.
@@ -130,7 +117,7 @@ contract ConsolidationAttestationTest is Test {
         address[] memory dep = new address[](1);
         dep[0] = depositAttester;
         fresh.initAttestationVerifierV1(
-            address(river), depositBufferStub, dep, 1, bytes4(0), consolidationCommittee, consolidationQuorum
+            admin, address(river), depositBufferStub, dep, 1, bytes4(0), consolidationCommittee, consolidationQuorum
         );
     }
 
@@ -450,7 +437,7 @@ contract ConsolidationAttestationTest is Test {
         address[] memory cc = new address[](1);
         cc[0] = attester1;
         vm.expectRevert(abi.encodeWithSignature("InvalidInitialization(uint256,uint256)", 0, 1));
-        verifier.initAttestationVerifierV1(address(river), depositBufferStub, dep, 1, bytes4(0), cc, 1);
+        verifier.initAttestationVerifierV1(admin, address(river), depositBufferStub, dep, 1, bytes4(0), cc, 1);
     }
 
     function testInit_consolidationDomainSeparatorDiffersFromDeposit() public {
@@ -476,7 +463,7 @@ contract ConsolidationAttestationTest is Test {
         cc[0] = attester1;
         // RiverAddress.set calls LibSanitize._notZeroAddress before writing the slot.
         vm.expectRevert(LibErrors.InvalidZeroAddress.selector);
-        fresh.initAttestationVerifierV1(address(0), depositBufferStub, dep, 1, bytes4(0), cc, 1);
+        fresh.initAttestationVerifierV1(admin, address(0), depositBufferStub, dep, 1, bytes4(0), cc, 1);
     }
 
     function testInit_revertZeroAttesterInArray() public {
@@ -1455,7 +1442,7 @@ contract ConsolidationAttestationTest is Test {
         verifier.setConsolidationCommitteeAttester(attester2, false); // would go 2 → 1
     }
 
-    function testSetConsolidationCommitteeAttester_onlyRiverAdmin() public {
+    function testSetConsolidationCommitteeAttester_onlyAdmin() public {
         vm.expectRevert(abi.encodeWithSelector(LibErrors.Unauthorized.selector, address(this)));
         verifier.setConsolidationCommitteeAttester(address(0xABCD), true);
     }
@@ -1495,7 +1482,7 @@ contract ConsolidationAttestationTest is Test {
         verifier.setConsolidationCommitteeAttestationQuorum(21);
     }
 
-    function testSetConsolidationCommitteeAttestationQuorum_onlyRiverAdmin() public {
+    function testSetConsolidationCommitteeAttestationQuorum_onlyAdmin() public {
         vm.expectRevert(abi.encodeWithSelector(LibErrors.Unauthorized.selector, address(this)));
         verifier.setConsolidationCommitteeAttestationQuorum(3);
     }

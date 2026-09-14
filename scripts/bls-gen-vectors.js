@@ -1,6 +1,10 @@
 #!/usr/bin/env node
 //
-// Regenerates contracts/test/utils/BLSSignerValidation/BLSVectors.sol.
+// This script is licensed like the rest of the repo (BUSL-1.1, see LICENSE). It downloads and
+// embeds fixture data from ethereum/bls12-381-tests, which that project licenses CC0-1.0 — that
+// license covers only the embedded fixture data in the generated BLSVectors.sol, not this script.
+//
+// Regenerates contracts/test/utils/BLSSignerValidation/generated/BLSVectors.sol.
 //
 // Two sources, deliberately:
 //   1. The `sign` handler of ethereum/bls12-381-tests (CC0-1.0) — official, authoritative, and
@@ -17,12 +21,21 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 const { execFileSync } = require("node:child_process");
-const { bls12_381 } = require("@noble/curves/bls12-381");
+const { bls12_381 } = require("@noble/curves/bls12-381.js");
 
 const TESTS_VERSION = "v0.1.2";
 const TARBALL = `https://github.com/ethereum/bls12-381-tests/releases/download/${TESTS_VERSION}/bls_tests_json.tar.gz`;
 const DST = "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_POP_";
-const OUT = path.join(__dirname, "..", "contracts", "test", "utils", "BLSSignerValidation", "BLSVectors.sol");
+const OUT = path.join(
+  __dirname,
+  "..",
+  "contracts",
+  "test",
+  "utils",
+  "BLSSignerValidation",
+  "generated",
+  "BLSVectors.sol"
+);
 
 function fetchOfficialSignCases() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "bls-vectors-"));
@@ -98,7 +111,7 @@ function render({ cases, zero }, h2gCases) {
   return `// SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.34;
 
-import {BLS12_381} from "../../../src/libraries/BLS12_381.sol";
+import {BLS12_381} from "../../../../src/libraries/BLS12_381.sol";
 
 /**
  * @title BLSVectors

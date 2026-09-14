@@ -4,6 +4,7 @@ pragma solidity 0.8.34;
 import "forge-std/Test.sol";
 
 import {BLS12_381} from "../../../src/libraries/BLS12_381.sol";
+import {LibBytes} from "../../../src/libraries/LibBytes.sol";
 import {BLSSigner} from "../BLSSigner.sol";
 
 /// @dev Calldata wrapper: `BLS12_381.verifyDepositMessage` reads its inputs from calldata.
@@ -124,6 +125,22 @@ contract BLSSignerTest is Test {
             BLS12_381.DepositY({pubkeyY: a.depositY.pubkeyY, signatureY: b.depositY.signatureY});
         vm.expectRevert(BLS12_381.InvalidSignature.selector);
         wrapper.verify(a.pubkey, b.signature, 32 ether, mixed, WITHDRAWAL_CREDENTIALS, depositDomain);
+    }
+
+    /// @dev `depositMessageSigningRoot` must reject what production rejects, not sign a root for
+    ///      an input that would never reach the pairing check.
+    function testSigningRootRejectsWrongPubkeyLength() public {
+        bytes memory shortPubkey = signer.pubkeyFromSeed(50);
+        shortPubkey = LibBytes.slice(shortPubkey, 0, 47);
+        vm.expectRevert(BLS12_381.InvalidPubkeyLength.selector);
+        signer.depositMessageSigningRoot(shortPubkey, 32 ether, WITHDRAWAL_CREDENTIALS, depositDomain);
+    }
+
+    /// @dev Same as above, for the gwei-alignment check.
+    function testSigningRootRejectsNonGweiAlignedAmount() public {
+        bytes memory pubkey = signer.pubkeyFromSeed(51);
+        vm.expectRevert(BLS12_381.InvalidDepositAmount.selector);
+        signer.depositMessageSigningRoot(pubkey, 32 ether + 1, WITHDRAWAL_CREDENTIALS, depositDomain);
     }
 
     function testRevert_hashToG2TrampolineIsSelfCallOnly() public {

@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
+// Adapted from the `describe('BLS flag edge cases', ...)` block of noble-curves' (MIT License)
+// test/bls12-381.test.ts: https://github.com/paulmillr/noble-curves/blob/main/test/bls12-381.test.ts
 pragma solidity 0.8.34;
 
 import "forge-std/Test.sol";

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.34;
 
-import {BLS12_381} from "../../../src/libraries/BLS12_381.sol";
+import {BLS12_381} from "../../../../src/libraries/BLS12_381.sol";
 
 /**
  * @title BLSVectors

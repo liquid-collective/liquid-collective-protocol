@@ -5,7 +5,7 @@ import "forge-std/Test.sol";
 
 import {BLS12_381} from "../../../src/libraries/BLS12_381.sol";
 import {BLSSigner} from "../BLSSigner.sol";
-import {BLSVectors} from "./BLSVectors.sol";
+import {BLSVectors} from "./generated/BLSVectors.sol";
 
 /// @dev Known-answer tests against the official `BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_POP_`
 ///      fixtures. Without these, `BLSSigner` and `BLS12_381` are only checked against each other:

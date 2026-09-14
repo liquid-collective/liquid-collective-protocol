@@ -190,13 +190,18 @@ contract BLSSigner {
     }
 
     /// @notice Memory-argument twin of `BLS12_381.depositMessageSigningRoot`, which takes calldata.
-    /// @dev Kept byte-for-byte equivalent: any divergence makes the pairing check fail.
+    /// @dev Kept byte-for-byte equivalent, including its input validation: any divergence either
+    ///      makes the pairing check fail or lets tests sign roots for inputs that would revert in
+    ///      production.
     function depositMessageSigningRoot(
         bytes memory pubkey,
         uint256 amount,
         bytes32 withdrawalCredentials,
         bytes32 depositDomain
     ) public pure returns (bytes32) {
+        if (pubkey.length != 48) revert BLS12_381.InvalidPubkeyLength();
+        if (amount % 1 gwei != 0) revert BLS12_381.InvalidDepositAmount();
+
         // `pubkeyRoot`: 48-byte pubkey right-padded to 64 bytes.
         bytes32 pubkeyRoot = sha256(bytes.concat(pubkey, bytes16(0)));
         bytes32 amountLeaf = sha256(bytes.concat(bytes32(LibUint256.toLittleEndian64(amount / 1 gwei)), bytes32(0)));

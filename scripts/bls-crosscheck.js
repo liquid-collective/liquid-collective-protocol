@@ -6,16 +6,20 @@
 // Why this exists: BLSSigner and contracts/src/libraries/BLS12_381.sol are otherwise only
 // checked against each other. The Foundry suite proves they agree, but they would also agree if
 // both diverged from the Ethereum spec in the same way, and every deposit-test signature would
-// then be consistently wrong. BLSSignerValidation/BLSVectors.sol pins them to the official
-// ethereum/bls12-381-tests `sign` fixtures; this script is the wider net, checking freshly derived
-// keys and signatures over arbitrary deposit amounts rather than the nine fixed official cases.
+// then be consistently wrong. BLSSignerValidation/generated/BLSVectors.sol pins them to the
+// official ethereum/bls12-381-tests `sign` fixtures; this script is the wider net, checking
+// freshly derived keys and signatures over arbitrary deposit amounts rather than the nine fixed
+// official cases.
 //
 // Usage: npm run bls:crosscheck
 //
-// Requires `@noble/curves` (a declared dependency) and `forge` on PATH.
+// Requires `@noble/curves` (a declared dev dependency) and `forge` on PATH.
 
 const { execFileSync } = require("node:child_process");
-const { bls12_381 } = require("@noble/curves/bls12-381");
+const { bls12_381 } = require("@noble/curves/bls12-381.js");
+
+// G1 pubkeys, G2 signatures — the Ethereum deposit convention.
+const bls = bls12_381.longSignatures;
 
 // The Ethereum deposit ciphersuite. noble defaults to the `_NUL_` basic scheme, so this must be
 // passed explicitly or every signature comparison fails for the wrong reason.
@@ -23,6 +27,7 @@ const DST = "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_POP_";
 
 const toBytes = (hex) => Uint8Array.from(Buffer.from(hex.replace(/^0x/, ""), "hex"));
 const toHex = (bytes) => "0x" + Buffer.from(bytes).toString("hex");
+const skToBytes = (decimalString) => toBytes(BigInt(decimalString).toString(16).padStart(64, "0"));
 
 const EMITTER = "contracts/test/utils/BLSSignerValidation/BLSCrosscheckVectors.s.sol";
 
@@ -65,13 +70,15 @@ function main() {
 
   let failures = 0;
   for (const v of vectors) {
-    const sk = BigInt(v.sk);
-    const msg = toBytes(v.root);
+    const sk = skToBytes(v.sk);
+    // Hashed once, up front: `bls.verify`'s message argument skips re-hashing only when it is
+    // already a point, and defaults to the wrong (non-Ethereum) DST when given raw bytes.
+    const msgPoint = bls.hash(toBytes(v.root), DST);
 
-    const noblePubkey = toHex(bls12_381.getPublicKey(sk));
-    const nobleSig = toHex(bls12_381.sign(msg, sk, { DST }));
+    const noblePubkey = toHex(bls.getPublicKey(sk).toBytes());
+    const nobleSig = toHex(bls.sign(msgPoint, sk).toBytes());
     // Independent verification of the Solidity-produced signature, not just byte equality.
-    const nobleVerifies = bls12_381.verify(toBytes(v.sig), msg, toBytes(v.pk), { DST });
+    const nobleVerifies = bls.verify(toBytes(v.sig), msgPoint, toBytes(v.pk));
 
     const problems = [];
     if (noblePubkey !== v.pk) problems.push(`pubkey: noble=${noblePubkey} solidity=${v.pk}`);
