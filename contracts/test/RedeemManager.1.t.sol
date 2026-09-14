@@ -1565,6 +1565,97 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         assertEq(redeemManager.getBufferedExceedingEth(), exceedingAmount);
     }
 
+    /// @notice The request-time value is a one-sided CAP, never a floor: when the pool rate falls
+    ///         between request and settlement the redeemer is paid the full, lower settlement rate.
+    /// @dev testClaimMultiRate above only ever settles at rates >= the request rates, so it exercises
+    ///      the cap branch exclusively. This is the complementary branch — the one that decides
+    ///      whether redeemers bear slashing on the same terms as remaining holders — and it had no
+    ///      coverage.
+    function testClaimSettlementRateBelowRequestRateChargesFullLossToRedeemer() external {
+        address user = _generateAllowlistedUser(0);
+
+        uint256 requestRate = 1_200_000_000_000_000_000; // 1.2
+        uint256 settlementRate = 900_000_000_000_000_000; // 0.9 — pool impaired after the request
+
+        river.sudoSetRate(requestRate);
+        river.sudoDeal(user, 30e18);
+        vm.prank(user);
+        river.approve(address(redeemManager), 30e18);
+        vm.prank(user);
+        redeemManager.requestRedeem(30e18, user);
+
+        // the cap is recorded at the request-time rate
+        assertEq(redeemManager.getRedeemRequestDetails(0).maxRedeemableEth, applyRate(30e18, requestRate));
+
+        river.sudoSetRate(settlementRate);
+
+        uint256 withdrawnEth = applyRate(30e18, settlementRate);
+        vm.deal(address(this), withdrawnEth);
+        river.sudoReportWithdraw{value: withdrawnEth}(address(redeemManager), 30e18);
+
+        uint32[] memory ids = new uint32[](1);
+        uint32[] memory withdrawalEventIds = new uint32[](1);
+
+        uint256 balanceBefore = user.balance;
+        redeemManager.claimRedeemRequests(ids, withdrawalEventIds);
+        uint256 received = user.balance - balanceBefore;
+
+        // the redeemer is paid at the depressed settlement rate — the request-time value is NOT a floor
+        assertEq(received, withdrawnEth);
+        assertEq((received * 1e18) / 30e18, settlementRate);
+        assertTrue(received < applyRate(30e18, requestRate));
+
+        // nothing is confiscated: the cap never bound
+        assertEq(redeemManager.getBufferedExceedingEth(), 0);
+
+        // the request is fully claimed, yet the unspent cap is stranded on it forever
+        RedeemQueueV2.RedeemRequest memory request = redeemManager.getRedeemRequestDetails(0);
+        assertEq(request.amount, 0);
+        assertEq(request.maxRedeemableEth, applyRate(30e18, requestRate) - withdrawnEth);
+    }
+
+    /// @notice maxRedeemableEth is a decrementing ETH budget, not a rate: after a partial claim
+    ///         settled BELOW the request rate, the implied per-LsETH cap (maxRedeemableEth / amount)
+    ///         drifts far above the true request-time rate.
+    /// @dev Pins the trap for any future change that reads maxRedeemableEth / amount as "the rate at
+    ///      request time". Only sum(payouts) <= originalAmount * rate_at_request is invariant.
+    function testPartialClaimBelowRequestRateDriftsImpliedCapRate() external {
+        address user = _generateAllowlistedUser(0);
+
+        uint256 requestRate = 1e18; // 1.0
+        uint256 settlementRate = 500_000_000_000_000_000; // 0.5
+
+        river.sudoSetRate(requestRate);
+        river.sudoDeal(user, 100e18);
+        vm.prank(user);
+        river.approve(address(redeemManager), 100e18);
+        vm.prank(user);
+        redeemManager.requestRedeem(100e18, user);
+
+        // implied cap rate at creation == the request rate
+        RedeemQueueV2.RedeemRequest memory request = redeemManager.getRedeemRequestDetails(0);
+        assertEq((request.maxRedeemableEth * 1e18) / request.amount, requestRate);
+
+        river.sudoSetRate(settlementRate);
+
+        // settle only 99 of the 100 LsETH, at half the request rate
+        uint256 withdrawnEth = applyRate(99e18, settlementRate);
+        vm.deal(address(this), withdrawnEth);
+        river.sudoReportWithdraw{value: withdrawnEth}(address(redeemManager), 99e18);
+
+        uint32[] memory ids = new uint32[](1);
+        uint32[] memory withdrawalEventIds = new uint32[](1);
+        redeemManager.claimRedeemRequests(ids, withdrawalEventIds);
+
+        request = redeemManager.getRedeemRequestDetails(0);
+        assertEq(request.amount, 1e18);
+        // 100 ETH budget minus 49.5 ETH paid == 50.5 ETH left, against 1 LsETH of remaining size
+        assertEq(request.maxRedeemableEth, 50.5e18);
+        // the implied cap rate has ratcheted from 1.0 to 50.5 ETH per LsETH
+        assertEq((request.maxRedeemableEth * 1e18) / request.amount, 50.5e18);
+        assertTrue((request.maxRedeemableEth * 1e18) / request.amount > requestRate);
+    }
+
     function testResolveOutOfBounds() external {
         uint32[] memory redeemRequestIds = new uint32[](1);
         int64[] memory withdrawalEventIds = redeemManager.resolveRedeemRequests(redeemRequestIds);

@@ -17,7 +17,8 @@ contract DepositAttestationTest is Test {
         keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
     bytes32 internal constant NAME_HASH = keccak256("DepositToConsensusLayerValidation");
     bytes32 internal constant VERSION_HASH = keccak256("1");
-    bytes32 internal constant ATTEST_TYPEHASH = keccak256("Attest(bytes32 depositDataBufferId,bytes32 depositRootHash)");
+    bytes32 internal constant ATTEST_TYPEHASH =
+        keccak256("Attest(bytes32 depositDataBufferId,bytes32 depositRootHash)");
     bytes32 internal constant ATTEST_ERROR_TYPEHASH =
         keccak256("AttestError(bytes32 depositDataBufferId,bytes32 depositRootHash,bytes errorData)");
 

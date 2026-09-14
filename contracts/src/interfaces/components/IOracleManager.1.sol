@@ -118,6 +118,13 @@ interface IOracleManagerV1 {
         uint256 totalExitViaConsolidationsAmountReportedIncrease, uint256 exitedETHIncrease
     );
 
+    /// @notice The cumulative stopped-earning balance decreased
+    /// @param lastValidatorsStoppedEarningBalance The last reported stopped-earning balance(wei)
+    /// @param newValidatorsStoppedEarningBalance The new reported stopped-earning balance(wei)
+    error InvalidDecreasingValidatorsStoppedEarningBalance(
+        uint256 lastValidatorsStoppedEarningBalance, uint256 newValidatorsStoppedEarningBalance
+    );
+
     /// @notice Trace structure emitted via logs during reporting
     struct ConsensusLayerDataReportingTrace {
         uint256 rewards;
@@ -165,6 +172,16 @@ interface IOracleManagerV1 {
         // this value cannot decrease over reports and must increase in the same report in which the corresponding
         // consolidated principal first appears in validatorsBalance
         uint256 totalExternalConsolidationETH;
+        // the cumulative consensus layer balance of validators whose exit_epoch has been reached as of
+        // the reported epoch, i.e. the principal that has permanently STOPPED EARNING
+        // this is deliberately narrower than validatorsExitingBalance: a validator that has merely
+        // entered the exit queue is still attesting and still earning until exit_epoch, so it does not
+        // count here yet
+        // the balance counted for a validator is its balance at the moment it stopped earning; it is
+        // therefore NOT guaranteed to equal what is eventually swept into validatorsExitedBalance, since
+        // post-exit_epoch slashing penalties can still reduce the amount that actually lands
+        // this value cannot decrease over reports
+        uint256 validatorsStoppedEarningBalance;
         // the sum of all exit that happened via internal consolidation of validators
         uint256 totalExitViaInternalConsolidationETH;
         // the count of activated validators
@@ -190,7 +207,7 @@ interface IOracleManagerV1 {
         bool slashingContainmentMode;
     }
 
-    /// @notice The format of the oracle report in storage
+    /// @notice The format of the oracle report in storage. ONLY APPEND NEW FIELDS AT THE END.
     /// @notice These fields have the exact same function as the ones in ConsensusLayerReport, but this struct is optimized for storage
     struct StoredConsensusLayerReport {
         uint256 epoch;
@@ -204,6 +221,7 @@ interface IOracleManagerV1 {
         uint256 totalDepositedActivatedETH;
         uint256 totalExternalConsolidationETH;
         uint256 totalExitViaInternalConsolidationETH;
+        uint256 validatorsStoppedEarningBalance;
     }
 
     /// @notice Get oracle address

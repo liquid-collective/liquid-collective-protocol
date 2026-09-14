@@ -299,7 +299,9 @@ contract ConsolidationCoverageScenarioTest is AccountingInvariants {
         r1.totalExitViaInternalConsolidationETH = 3 ether;
         _submitReport(r1);
         assertEq(operatorsRegistry.getExitConsolidationBuffer(), 7 ether, "debited by first-report delta (3)");
-        assertEq(river.getLastConsensusLayerReport().totalExitViaInternalConsolidationETH, 3 ether, "arrival total persisted");
+        assertEq(
+            river.getLastConsensusLayerReport().totalExitViaInternalConsolidationETH, 3 ether, "arrival total persisted"
+        );
 
         _simExitArrival(2 ether);
         IOracleManagerV1.ConsensusLayerReport memory r2 = _buildBadReport(false, false);
@@ -364,7 +366,9 @@ contract ConsolidationCoverageScenarioTest is AccountingInvariants {
         oracle.reportConsensusLayerData(r2);
 
         assertEq(
-            river.getLastConsensusLayerReport().totalExitViaInternalConsolidationETH, 3 ether, "stored total not rolled back"
+            river.getLastConsensusLayerReport().totalExitViaInternalConsolidationETH,
+            3 ether,
+            "stored total not rolled back"
         );
     }
 
@@ -431,7 +435,9 @@ contract ConsolidationCoverageScenarioTest is AccountingInvariants {
         _submitReport(r2);
 
         assertEq(operatorsRegistry.getExitConsolidationBuffer(), 7 ether, "no second debit for an unchanged total");
-        assertEq(river.getLastConsensusLayerReport().totalExitViaInternalConsolidationETH, 3 ether, "stored total unchanged");
+        assertEq(
+            river.getLastConsensusLayerReport().totalExitViaInternalConsolidationETH, 3 ether, "stored total unchanged"
+        );
     }
 
     function _maxIncreaseForNextReport(uint256 preReportUnderlying) internal view returns (uint256) {

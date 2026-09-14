@@ -19,9 +19,8 @@ contract DepositAttestationInvariantTest is Test {
     bytes32 internal constant VERSION_HASH = keccak256("1");
 
     function setUp() public {
-        bytes32 domainSeparator = keccak256(
-            abi.encode(EIP712_DOMAIN_TYPEHASH, NAME_HASH, VERSION_HASH, block.chainid, makeAddr("river"))
-        );
+        bytes32 domainSeparator =
+            keccak256(abi.encode(EIP712_DOMAIN_TYPEHASH, NAME_HASH, VERSION_HASH, block.chainid, makeAddr("river")));
         buffer = new DepositAttestation(domainSeparator);
         handler = new DepositAttestationHandler(buffer, 0xA11CE, domainSeparator);
 

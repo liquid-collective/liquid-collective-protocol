@@ -3,8 +3,8 @@ pragma solidity 0.8.34;
 
 import {ECDSA} from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
 
+import "./Administrable.sol";
 import "./Initializable.sol";
-import "./interfaces/IAdministrable.sol";
 import "./interfaces/IAttestationVerifier.1.sol";
 import "./interfaces/IAttestationVerifierPectraMigration.1.sol";
 import "./interfaces/IDepositContract.sol";
@@ -52,7 +52,16 @@ import "./state/shared/RiverAddress.sol";
 ///            for replay protection. State-mutating.
 ///
 ///         Extracted from RiverV1 to keep River's deployed bytecode under EIP-170.
-contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttestationVerifierPectraMigrationV1 {
+///
+///         Governance is local: the admin is set at initialization and rotated through the
+///         standard two-step `proposeAdmin`/`acceptAdmin` flow. River's own admin has no
+///         rights here — River is only the EIP-712 anchor and the `onlyRiver` caller.
+contract AttestationVerifierV1 is
+    Initializable,
+    Administrable,
+    IAttestationVerifierV1,
+    IAttestationVerifierPectraMigrationV1
+{
     // -----------------------------------------------------------------------
     // EIP-712
     // -----------------------------------------------------------------------
@@ -122,15 +131,6 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
     // Modifiers
     // -----------------------------------------------------------------------
 
-    /// @notice Restrict to River's admin via cross-contract view call.
-    /// @dev Single source of truth for governance — same admin manages River and this verifier.
-    modifier onlyRiverAdmin() {
-        if (msg.sender != IAdministrable(RiverAddress.get()).getAdmin()) {
-            revert LibErrors.Unauthorized(msg.sender);
-        }
-        _;
-    }
-
     /// @notice Restrict to River itself (the deposit-execution path), not its admin.
     /// @dev Used to gate state-mutating callbacks that should only fire as part of a
     ///      River-initiated deposit flow (e.g. `recordNewlyFundedPubkeys`).
@@ -147,6 +147,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
 
     /// @inheritdoc IAttestationVerifierV1
     function initAttestationVerifierV1(
+        address _admin,
         address _river,
         address _depositDataBuffer,
         address[] calldata _rootAttesters,
@@ -155,6 +156,11 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
         address[] calldata _consolidationCommitteeAttesters,
         uint256 _consolidationQuorum
     ) external init(0) {
+        // ---- Admin ----
+        // Local governance, independent of River's admin. `AdministratorAddress.set` rejects
+        // the zero address, so a misconfigured deploy cannot leave the verifier ungoverned.
+        _setAdmin(_admin);
+
         // ---- Validate deposit-side parameters ----
         if (_rootAttesters.length == 0 || _rootAttesters.length > MAX_ROOT_ATTESTERS) {
             revert LibErrors.InvalidArgument();
@@ -247,11 +253,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
     // -----------------------------------------------------------------------
 
     /// @inheritdoc IAttestationVerifierV1
-    /// @dev Validates that the new buffer authorizes River as its processor before storing it. A buffer
-    ///      whose processor is not River would let attested deposits pass validation only to revert at
-    ///      `markDepositDataProcessed` — this rejects such a misconfiguration up front. The same
-    ///      invariant is enforced during initialization.
-    function setDepositDataBuffer(address _depositDataBuffer) external onlyRiverAdmin {
+    function setDepositDataBuffer(address _depositDataBuffer) external onlyAdmin {
         _assertDepositDataBufferProcessor(_depositDataBuffer, RiverAddress.get());
         DepositDataBufferAddress.set(_depositDataBuffer);
         emit SetDepositDataBuffer(_depositDataBuffer);
@@ -268,7 +270,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
     }
 
     /// @inheritdoc IAttestationVerifierV1
-    function setDepositDomainFromForkVersion(bytes4 genesisForkVersion) external onlyRiverAdmin {
+    function setDepositDomainFromForkVersion(bytes4 genesisForkVersion) external onlyAdmin {
         _setDepositDomainFromForkVersion(genesisForkVersion);
     }
 
@@ -299,7 +301,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
     }
 
     /// @inheritdoc IAttestationVerifierV1
-    function setRootAttester(address rootAttester, bool value) external onlyRiverAdmin {
+    function setRootAttester(address rootAttester, bool value) external onlyAdmin {
         bool current = RootAttesters.isRootAttester(rootAttester);
         if (current == value) revert RootAttesterStatusUnchanged(rootAttester, value);
 
@@ -319,7 +321,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
     }
 
     /// @inheritdoc IAttestationVerifierV1
-    function setRootAttestationQuorum(uint256 newQuorum) external onlyRiverAdmin {
+    function setRootAttestationQuorum(uint256 newQuorum) external onlyAdmin {
         if (newQuorum == 0) revert ZeroQuorum();
         uint256 rootAttesterCount = RootAttesters.getCount();
         if (newQuorum > rootAttesterCount) {
@@ -331,10 +333,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
     }
 
     /// @inheritdoc IAttestationVerifierV1
-    function setConsolidationCommitteeAttester(address consolidationCommitteeAttester, bool value)
-        external
-        onlyRiverAdmin
-    {
+    function setConsolidationCommitteeAttester(address consolidationCommitteeAttester, bool value) external onlyAdmin {
         bool current = ConsolidationCommitteeAttesters.isConsolidationCommitteeAttester(consolidationCommitteeAttester);
         if (current == value) {
             revert ConsolidationCommitteeAttesterStatusUnchanged(consolidationCommitteeAttester, value);
@@ -356,7 +355,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
     }
 
     /// @inheritdoc IAttestationVerifierV1
-    function setConsolidationCommitteeAttestationQuorum(uint256 newQuorum) external onlyRiverAdmin {
+    function setConsolidationCommitteeAttestationQuorum(uint256 newQuorum) external onlyAdmin {
         if (newQuorum == 0) revert ZeroQuorum();
         uint256 attesterCount = ConsolidationCommitteeAttesters.getCount();
         if (newQuorum > attesterCount) {
@@ -580,7 +579,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
     /// @inheritdoc IAttestationVerifierPectraMigrationV1
     function migratePrePectraValidatorPubkeys(uint256 operatorIndex, uint256 startIndex, uint256 stopIndex)
         external
-        onlyRiverAdmin
+        onlyAdmin
     {
         IOperatorsRegistryV1 operatorsRegistry =
             IOperatorsRegistryV1(IRiverV1(payable(RiverAddress.get())).getOperatorsRegistry());
@@ -632,7 +631,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
     }
 
     /// @inheritdoc IAttestationVerifierPectraMigrationV1
-    function removePrePectraValidatorPubkeys(bytes[] calldata pubkeys) external onlyRiverAdmin {
+    function removePrePectraValidatorPubkeys(bytes[] calldata pubkeys) external onlyAdmin {
         uint256 len = pubkeys.length;
         if (len == 0) {
             revert InvalidPrePectraRemovalEmptyPubkeys();

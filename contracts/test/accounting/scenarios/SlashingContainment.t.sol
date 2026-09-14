@@ -162,4 +162,54 @@ contract SlashingContainmentTest is AccountingInvariants {
         // Step 5: Submit a follow-up normal oracle report to verify the protocol resumes correctly.
         sim_oracleReport(false, false);
     }
+
+    /// @notice Containment blocks the keeper from dispatching exits, including exit demand that was already
+    ///         on the books before containment began. Only demand GROWTH was gated before this — a keeper
+    ///         could still push pre-existing demand to the consensus layer mid-slashing. The counterfactual
+    ///         dispatch after containment lifts is what makes the revert meaningful.
+    function testKeeperCannotDispatchExitsDuringContainment() public {
+        // Step 1: Fund river, deposit and activate 4 validators for operator one.
+        _fundRiver(4 * DEPOSIT_SIZE);
+        sim_deposit(operatorOneIndex, _amounts(4, DEPOSIT_SIZE));
+        sim_activateValidators(4);
+        sim_oracleReport();
+
+        // Step 2: Create redeem demand and let a clean report turn it into exit demand.
+        uint256 redeemAmount = 2 * DEPOSIT_SIZE;
+        address redeemer = makeAddr("containment-redeemer");
+        _allowUser(redeemer);
+        _simTotalUserDeposited += redeemAmount;
+        vm.deal(redeemer, redeemAmount);
+        vm.prank(redeemer);
+        river.deposit{value: redeemAmount}();
+        sim_requestRedeem(redeemer, river.balanceOf(redeemer));
+        sim_oracleReport();
+        assertEq(operatorsRegistry.getCurrentETHExitsDemand(), redeemAmount, "exit demand created before containment");
+
+        // Step 3: Enter containment. The demand predates it and is untouched by the report.
+        _setAllowSharePriceDecrease(true);
+        sim_oracleReport(false, true);
+        _setAllowSharePriceDecrease(false);
+        assertTrue(river.getSlashingContainmentMode(), "containment active");
+        assertEq(operatorsRegistry.getCurrentETHExitsDemand(), redeemAmount, "pre-existing demand survives");
+
+        // Step 4: The keeper cannot dispatch it.
+        IOperatorsRegistryV1.ExitsViaConsolidationAllocation memory noConsolidation;
+        IOperatorsRegistryV1.ExitETHAllocation[] memory allocations = new IOperatorsRegistryV1.ExitETHAllocation[](1);
+        allocations[0] =
+            IOperatorsRegistryV1.ExitETHAllocation({operatorIndex: operatorOneIndex, ethAmount: redeemAmount});
+        IOperatorsRegistryV1.ELExitETHAllocation[] memory noEL = new IOperatorsRegistryV1.ELExitETHAllocation[](0);
+
+        vm.prank(keeper);
+        vm.expectRevert(IConsensusLayerDepositManagerV1.SlashingContainmentModeEnabled.selector);
+        operatorsRegistry.requestETHExits(allocations, noEL, noConsolidation, 0, 0);
+        assertEq(operatorsRegistry.getTotalETHExitsRequested(), 0, "nothing reserved during containment");
+
+        // Step 5: Containment lifts and the same dispatch goes through.
+        sim_oracleReport(false, false);
+        vm.prank(keeper);
+        operatorsRegistry.requestETHExits(allocations, noEL, noConsolidation, 0, 0);
+        assertEq(operatorsRegistry.getTotalETHExitsRequested(), redeemAmount, "dispatch resumes after containment");
+        assertEq(operatorsRegistry.getCurrentETHExitsDemand(), 0, "demand consumed by the dispatch");
+    }
 }
