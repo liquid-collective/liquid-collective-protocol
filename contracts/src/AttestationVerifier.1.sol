@@ -451,13 +451,16 @@ contract AttestationVerifierV1 is
         //    case is implicitly forbidden: an initial deposit reverts PubkeyAlreadyFunded if
         //    the pubkey is in the lookup, and a top-up reverts TopUpPubkeyNotFunded if it
         //    isn't — so no pubkey can pass both branches in one batch.
-        IDepositDataBuffer.StandardDeposit[] memory standardizedDeposits =
-            _standardizeDeposits(batch.deposits, withdrawalCredentials, depositCount);
-        totalAmount += _verifyInitialDeposits(standardizedDeposits, depositCount);
+        IDepositDataBufferBase.StandardDeposit[] memory standardizedDeposits =
+            standardizeDeposits(batch.deposits, withdrawalCredentials);
+        totalAmount += _verifyInitialDeposits(standardizedDeposits);
 
         // 5. Validate top-ups: field length on pubkey, amount bounds, pubkey-must-be-funded.
-        //    Per-batch duplicate top-up pubkeys are allowed.
-        totalAmount += _verifyTopUps(_standardizeTopUps(batch.topUps), topUpCount);
+        //    Per-batch duplicate top-up pubkeys are allowed, so each entry is validated on its own
+        //    and the buffer's own `TopUp` type is read directly — no standardized top-up form needed.
+        for (uint256 i; i < topUpCount; ++i) {
+            totalAmount += _verifyTopUp(i, batch.topUps[i].pubkey, batch.topUps[i].amount);
+        }
         if (totalAmount > committedBalance) revert NotEnoughFunds();
 
         // 6. Verify BLS signatures against canonical River WC (initials only).
@@ -746,53 +749,6 @@ contract AttestationVerifierV1 is
     ///      32-byte value, so the array hashes to `keccak256` over their concatenation.
     function _hashUintArray(uint256[] calldata arr) internal pure returns (bytes32) {
         return keccak256(abi.encodePacked(arr));
-    }
-
-    /// @notice Convert buffer deposits into the flow-agnostic `StandardDeposit` form consumed by the
-    ///         shared deposit verification logic.
-    /// @dev `operatorIdx` is dropped — it is irrelevant to verification and is consumed by River when
-    ///      the deposits are actually executed — and the canonical withdrawal credentials resolved by
-    ///      the caller are stamped onto every entry, so the buffer producer is never trusted on that
-    ///      field.
-    /// @param deposits The initial deposits as stored in the buffer.
-    /// @param withdrawalCredentials The canonical River withdrawal credentials.
-    /// @param depositCount The number of entries of `deposits` to convert.
-    /// @return standardizedDeposits The converted deposits.
-    function _standardizeDeposits(
-        IDepositDataBuffer.Deposit[] memory deposits,
-        bytes32 withdrawalCredentials,
-        uint256 depositCount
-    ) internal pure returns (IDepositDataBuffer.StandardDeposit[] memory standardizedDeposits) {
-        standardizedDeposits = new IDepositDataBuffer.StandardDeposit[](depositCount);
-        for (uint256 i; i < depositCount; ++i) {
-            standardizedDeposits[i] = IDepositDataBufferBase.StandardDeposit({
-                pubkey: deposits[i].pubkey,
-                signature: deposits[i].signature,
-                amount: deposits[i].amount,
-                withdrawalCredentials: withdrawalCredentials,
-                depositY: deposits[i].depositY
-            });
-        }
-    }
-
-    /// @notice Reinterpret buffer top-ups as the flow-agnostic `StandardTopUp` form consumed by the
-    ///         shared deposit verification logic.
-    /// @dev Aliases the array in place instead of copying, which is sound only because the two structs
-    ///      share a memory layout on the fields verification reads and the result is read-only — see the
-    ///      inline comment.
-    /// @param topUps The top-ups as stored in the buffer.
-    /// @return standardizedTopUps The same array, viewed as `StandardTopUp[]`.
-    function _standardizeTopUps(IDepositDataBuffer.TopUp[] memory topUps)
-        internal
-        pure
-        returns (IDepositDataBuffer.StandardTopUp[] memory standardizedTopUps)
-    {
-        // IDepositDataBuffer.TopUp has compatibility with IDepositDataBuffer.StandardTopUp in memory layout.
-        // `operatorIdx` and `withdrawalCredentials` overlap, but they are not used in the verification logic.
-        // `standardizedTopUps` are only read, never updated, so original `topUps` can be safely aliased.
-        assembly {
-            standardizedTopUps := topUps
-        }
     }
 
     /// @notice Reject an initial-deposit pubkey that is already funded, in either the Pectra or the

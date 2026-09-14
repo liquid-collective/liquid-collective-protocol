@@ -14,9 +14,9 @@ import "../libraries/LibSanitize.sol";
 ///         back by id. Each submission is uniquely addressable because the batch nonce (`lastQueuedIdx`
 ///         at submit time) is folded into the id, so byte-identical batches submitted twice never
 ///         collide.
-/// @dev Base contract holding the buffer's roles, batch nonce and per-batch existence/processed state,
-///      plus the shared submission validation. The batch payload itself is stored by the inheriting
-///      contract, which passes its batch to `_submitDepositData` in the standardized form.
+/// @dev Base contract holding the buffer's roles, batch nonce and per-batch existence/processed state.
+///      It is batch-type agnostic: the inheriting contract stores the payload, validates it with the
+///      `DepositVerification` helpers and hashes it into the id it passes to `_submitDepositData`.
 /// @dev The buffer owns the authoritative `processed` flag: only the processor may flip it via
 ///      `markDepositDataProcessed`, and `isDepositDataProcessed` is consulted before each deposit to
 ///      reject replays. Withdrawal credentials are intentionally NOT stored — the canonical withdrawal
@@ -153,31 +153,36 @@ abstract contract DepositDataBufferBase is DepositVerification, IDepositDataBuff
     // Internal — batch submission
     // -----------------------------------------------------------------------
 
-    /// @notice Validate a submitted deposit batch, bind it to the next batch nonce and record its
-    ///         existence, then emit `DepositDataSubmitted`.
-    /// @dev Does NOT store the batch payload — the inheriting contract is responsible for that. Reverts
-    ///      with `EmptyDepositData`, `DepositDataBufferIdMismatch` or `DepositDataBufferIdAlreadyExists`,
-    ///      or with any of the deposit/top-up validation errors.
-    /// @param depositDataBufferId The identifier claimed by the producer; must equal
-    ///                            `keccak256(abi.encode(batch, nonce))`.
-    /// @param batch The standardized deposit batch being submitted.
-    function _submitDepositData(bytes32 depositDataBufferId, StandardDepositObject memory batch) internal {
-        uint256 depositCount = batch.deposits.length;
-        uint256 topUpCount = batch.topUps.length;
+    /// @notice Bind a submitted deposit batch to the next batch nonce, record its existence and emit
+    ///         `DepositDataSubmitted`.
+    /// @dev Deliberately knows nothing about the batch type: the inheriting contract owns the payload,
+    ///      validates it with the `DepositVerification` helpers and hashes it into `computedId` over
+    ///      its own concrete struct. Hashing at the caller is what keeps the id byte-identical to the
+    ///      one the AttestationVerifier later recomputes from the stored batch — both sides encode the
+    ///      same Solidity type, so no field can silently desynchronise them.
+    /// @dev The empty-batch check runs here rather than at the caller: the verification helpers are
+    ///      no-ops on empty arrays, so ordering it after them is unobservable.
+    /// @param depositDataBufferId The identifier claimed by the producer; must equal `computedId`.
+    /// @param computedId `keccak256(abi.encode(batch, nonce))`, computed by the inheriting contract
+    ///                   over its own batch type and the current `lastQueuedIdx`.
+    /// @param depositCount The number of initial deposits in the batch.
+    /// @param topUpCount The number of top-ups in the batch.
+    function _submitDepositData(
+        bytes32 depositDataBufferId,
+        bytes32 computedId,
+        uint256 depositCount,
+        uint256 topUpCount
+    ) internal {
         if (depositCount == 0 && topUpCount == 0) revert EmptyDepositData();
-
-        _verifyInitialDeposits(batch.deposits, depositCount);
-        _verifyTopUps(batch.topUps, topUpCount);
 
         // The batch nonce (lastQueuedIdx) is folded into the id, so two batches with byte-identical
         // deposit data still get distinct ids and are individually addressable. Because the nonce
         // strictly increments, every id is unique; it is stored so the AttestationVerifier can
         // reconstruct and re-check the binding after fetching the batch.
-        uint256 nonce = lastQueuedIdx;
-        bytes32 computedId = keccak256(abi.encode(batch, nonce));
         if (computedId != depositDataBufferId) revert DepositDataBufferIdMismatch(depositDataBufferId, computedId);
         if (_exists[computedId]) revert DepositDataBufferIdAlreadyExists(computedId);
 
+        uint256 nonce = lastQueuedIdx;
         _nonce[computedId] = nonce;
         _exists[computedId] = true;
         ++lastQueuedIdx;

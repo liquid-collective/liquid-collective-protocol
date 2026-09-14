@@ -84,3 +84,33 @@ interface IDepositDataBuffer is IDepositDataBufferBase {
         view
         returns (DepositObject memory batch, uint256 nonce);
 }
+
+/// @notice Convert LsETH-flow buffer deposits into the flow-agnostic `StandardDeposit` form consumed
+///         by the shared `DepositVerification` logic.
+/// @dev Lives at file level next to `IDepositDataBuffer.Deposit` because both consumers of that type —
+///      the `DepositDataBuffer` on the submission path and the `AttestationVerifier` on the deposit
+///      path — need the exact same conversion, and neither inherits from the other. A different flow
+///      (e.g. native staking) supplies its own conversion from its own batch type.
+/// @dev `operatorIdx` is dropped — it is irrelevant to verification and is consumed by River when the
+///      deposits are actually executed — and `withdrawalCredentials` is stamped from the caller-
+///      resolved value, so the buffer producer is never trusted on that field.
+/// @param deposits The initial deposits as stored in the buffer.
+/// @param withdrawalCredentials The canonical withdrawal credentials to verify the BLS signatures
+///                              against. Pass zero on paths that never reach BLS verification.
+/// @return standardized The converted deposits.
+function standardizeDeposits(IDepositDataBuffer.Deposit[] memory deposits, bytes32 withdrawalCredentials)
+    pure
+    returns (IDepositDataBufferBase.StandardDeposit[] memory standardized)
+{
+    uint256 depositCount = deposits.length;
+    standardized = new IDepositDataBufferBase.StandardDeposit[](depositCount);
+    for (uint256 i; i < depositCount; ++i) {
+        standardized[i] = IDepositDataBufferBase.StandardDeposit({
+            pubkey: deposits[i].pubkey,
+            signature: deposits[i].signature,
+            amount: deposits[i].amount,
+            withdrawalCredentials: withdrawalCredentials,
+            depositY: deposits[i].depositY
+        });
+    }
+}

@@ -6,7 +6,7 @@ import "../../libraries/BLS12_381.sol";
 /// @title IDepositDataBufferBase
 /// @notice Interface for the shared base of the DepositDataBuffer contracts that store pre-committed
 ///         validator deposit batches: the role management, the replay/processed state and the
-///         flow-agnostic (`Standard*`) deposit types used by the shared verification logic.
+///         flow-agnostic `StandardDeposit` type consumed by the shared verification logic.
 /// @dev `depositDataBufferId` is `keccak256(abi.encode(batch, nonce))`, where `nonce` is the buffer's
 ///      ever-incrementing `lastQueuedIdx` at submission time. Folding the nonce into the id makes every
 ///      submission unique: byte-identical batches submitted more than once receive distinct,
@@ -18,10 +18,14 @@ import "../../libraries/BLS12_381.sol";
 interface IDepositDataBufferBase {
     /// @notice An initial validator deposit in the flow-agnostic form consumed by the shared deposit
     ///         verification logic.
-    /// @dev Unlike `IDepositDataBuffer.Deposit`, the withdrawal credentials are carried per-entry so the
-    ///         verification logic never has to reach for flow-specific state. They are still never
-    ///         supplied by the buffer producer: the caller fills the field with the canonical
-    ///         credentials it resolved itself before handing the entry over for verification.
+    /// @dev Unlike `IDepositDataBuffer.Deposit`, this carries no flow-specific bookkeeping (no
+    ///      `operatorIdx`) and instead carries the withdrawal credentials per-entry, so the shared
+    ///      verification logic never has to reach for flow-specific state. They are still never
+    ///      supplied by the buffer producer: the flow fills the field with the canonical credentials it
+    ///      resolved itself before handing the entry over for BLS verification.
+    /// @dev There is deliberately no matching standardized top-up type: top-up validation reads only a
+    ///      pubkey and an amount and needs no cross-entry state, so `DepositVerification._verifyTopUp`
+    ///      takes those two values directly and every flow drives it over its own concrete top-up type.
     struct StandardDeposit {
         /// @dev 48-byte BLS public key of the validator
         bytes pubkey;
@@ -29,36 +33,12 @@ interface IDepositDataBufferBase {
         bytes signature;
         /// @dev Deposit amount in wei (must be a multiple of 1 gwei). Typically 32 ether.
         uint256 amount;
-        /// @dev The 32-byte withdrawal credentials the deposit is verified against, resolved by the
-        ///      caller rather than the buffer producer.
+        /// @dev The 32-byte withdrawal credentials the deposit's BLS signature is verified against,
+        ///      resolved by the flow rather than the buffer producer. Left zero by flows that only run
+        ///      the stateless field/amount validation and never reach BLS verification.
         bytes32 withdrawalCredentials;
         /// @dev Y-coordinates for BLS decompression of the pubkey + signature.
         BLS12_381.DepositY depositY;
-    }
-
-    /// @notice A top-up to an already-funded validator in the flow-agnostic form consumed by the shared
-    ///         deposit verification logic.
-    /// @dev No `signature` or `depositY` field: the beacon chain ignores BLS signatures on subsequent
-    ///      deposits to an existing validator, so BLS verification is skipped entirely for top-ups.
-    struct StandardTopUp {
-        /// @dev 48-byte BLS public key of the already-funded validator
-        bytes pubkey;
-        /// @dev Deposit amount in wei (must be a multiple of 1 gwei). Since the validator
-        ///      is already funded, the stateless upper bound is the 2048 ETH max effective
-        ///      balance minus the 32 ETH activation balance.
-        uint256 amount;
-        /// @dev The 32-byte withdrawal credentials the top-up is credited against, resolved by the
-        ///      caller rather than the buffer producer.
-        bytes32 withdrawalCredentials;
-    }
-
-    /// @notice A deposit batch — initial deposits and top-ups — in the flow-agnostic form consumed by
-    ///         the shared deposit verification logic.
-    struct StandardDepositObject {
-        /// @dev Initial deposits — BLS-verified, must NOT already be funded.
-        StandardDeposit[] deposits;
-        /// @dev Top-ups — BLS skipped, pubkey MUST already be funded.
-        StandardTopUp[] topUps;
     }
 
     // -----------------------------------------------------------------------

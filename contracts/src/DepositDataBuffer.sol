@@ -27,20 +27,28 @@ contract DepositDataBuffer is DepositDataBufferBase, IDepositDataBuffer {
     constructor(address admin, address producer, address processor) DepositDataBufferBase(admin, producer, processor) {}
 
     /// @inheritdoc IDepositDataBuffer
+    /// @dev The id is hashed here, over `DepositObject` itself, rather than inside
+    ///      `_submitDepositData`: that is the same Solidity type the AttestationVerifier re-encodes
+    ///      from the stored batch, so the two sides cannot drift apart.
+    /// @dev `batch` stays `calldata` to enable the direct calldata-to-storage copy at the end;
+    ///      switching it to `memory` only compiles under via-ir, which breaks coverage.
     function submitDepositData(bytes32 depositDataBufferId, DepositObject calldata batch) external onlyProducer {
-        StandardDepositObject memory standardizedBatch;
-        // Store batch in memory to copy it into the standardized format.
-        // N.B. `batch` is calldata arg to enable direct conversion to storage at the end.
-        //      Changing it to memory works only with via-ir, which breaks coverage.
-        DepositObject memory batchMemory = batch;
+        uint256 topUpCount = batch.topUps.length;
 
-        // DepositObject is memory-layout compatible with StandardDepositObject: the overlapping
-        // `operatorIdx` / `withdrawalCredentials` fields are not read by the submission validation, and
-        // `standardizedBatch` is only ever read, so aliasing `batch` is safe.
-        assembly {
-            standardizedBatch := batchMemory
+        // Submission-time validation is stateless — no BLS signature is verified here — so the
+        // withdrawal credentials play no part and are passed as zero. The canonical credentials are
+        // supplied by the processor at deposit time and never stored by the buffer.
+        _verifyInitialDeposits(standardizeDeposits(batch.deposits, bytes32(0)));
+        for (uint256 i; i < topUpCount; ++i) {
+            _verifyTopUp(i, batch.topUps[i].pubkey, batch.topUps[i].amount);
         }
-        _submitDepositData(depositDataBufferId, standardizedBatch);
+
+        _submitDepositData(
+            depositDataBufferId,
+            keccak256(abi.encode(batch, lastQueuedIdx)),
+            batch.deposits.length,
+            topUpCount
+        );
 
         _batches[depositDataBufferId] = batch;
     }

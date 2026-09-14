@@ -3,10 +3,11 @@ pragma solidity 0.8.34;
 
 import {ECDSA} from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
 
-import "../interfaces/IDepositDataBuffer.sol";
 import "../interfaces/IDepositContract.sol";
-import "../interfaces/IAttestationVerifier.1.sol";
+import "../interfaces/components/IDepositDataBufferBase.sol";
 import "../interfaces/components/IDepositVerification.sol";
+
+import "../libraries/BLS12_381.sol";
 
 /// @title Deposit Verification
 /// @author Alluvial Finance Inc.
@@ -120,20 +121,22 @@ abstract contract DepositVerification is IDepositVerification {
 
     /// @notice Validate every initial deposit in a batch: field lengths, amount bounds and
     ///         gwei-alignment, and per-batch pubkey uniqueness.
-    /// @dev Flow-specific pubkey checks are delegated to `_customInitialDepositVerification`, which the
-    ///      inheriting contract overrides. Reverts with `InvalidPubkeyLength`, `InvalidSignatureLength`,
-    ///      `InvalidDepositAmount` or `PubkeyAlreadyFunded`.
+    /// @dev Batch-level rather than per-entry because the uniqueness check is cross-entry: each pubkey
+    ///      is compared against every earlier one in the same batch, interleaved with the per-entry
+    ///      checks. Flow-specific pubkey checks are delegated to `_customInitialDepositVerification`,
+    ///      which the inheriting contract overrides. Reverts with `InvalidPubkeyLength`,
+    ///      `InvalidSignatureLength`, `InvalidDepositAmount` or `PubkeyAlreadyFunded`.
     /// @param deposits The initial deposits to validate.
-    /// @param depositCount The number of entries of `deposits` to validate.
     /// @return totalAmount The sum of the validated deposit amounts, in wei.
-    function _verifyInitialDeposits(IDepositDataBuffer.StandardDeposit[] memory deposits, uint256 depositCount)
+    function _verifyInitialDeposits(IDepositDataBufferBase.StandardDeposit[] memory deposits)
         internal
         view
         returns (uint256 totalAmount)
     {
+        uint256 depositCount = deposits.length;
         bytes32[] memory pubkeyHashes = new bytes32[](depositCount);
         for (uint256 i = 0; i < depositCount; ++i) {
-            IDepositDataBuffer.StandardDeposit memory d = deposits[i];
+            IDepositDataBufferBase.StandardDeposit memory d = deposits[i];
             if (d.pubkey.length != DEPOSIT_PUBKEY_LENGTH) {
                 revert InvalidPubkeyLength(i, d.pubkey.length);
             }
@@ -163,31 +166,28 @@ abstract contract DepositVerification is IDepositVerification {
         }
     }
 
-    /// @notice Validate every top-up in a batch: pubkey length, amount bounds and gwei-alignment.
-    /// @dev Flow-specific pubkey checks are delegated to `_customTopUpVerification`, which the
-    ///      inheriting contract overrides. Per-batch duplicate top-up pubkeys are allowed, since each
-    ///      top-up credits an already-activated validator. Reverts with `InvalidTopUpPubkeyLength` or
-    ///      `InvalidTopUpAmount`.
-    /// @param topUps The top-ups to validate.
-    /// @param topUpCount The number of entries of `topUps` to validate.
-    /// @return totalAmount The sum of the validated top-up amounts, in wei.
-    function _verifyTopUps(IDepositDataBuffer.StandardTopUp[] memory topUps, uint256 topUpCount)
-        internal
-        view
-        returns (uint256 totalAmount)
-    {
-        for (uint256 i = 0; i < topUpCount; ++i) {
-            IDepositDataBuffer.StandardTopUp memory t = topUps[i];
-            if (t.pubkey.length != DEPOSIT_PUBKEY_LENGTH) {
-                revert InvalidTopUpPubkeyLength(i, t.pubkey.length);
-            }
-            if (t.amount < MIN_TOP_UP_AMOUNT || t.amount > MAX_TOP_UP_AMOUNT || t.amount % 1 gwei != 0) {
-                revert InvalidTopUpAmount(i, t.amount);
-            }
-            totalAmount += t.amount;
-
-            _customTopUpVerification(t.pubkey);
+    /// @notice Validate a single top-up: pubkey length, amount bounds and gwei-alignment.
+    /// @dev Deliberately per-entry rather than batch-level: top-up validation carries no cross-entry
+    ///      state — per-batch duplicate top-up pubkeys are allowed, since each top-up credits an
+    ///      already-activated validator — so every flow drives this directly over its own concrete
+    ///      top-up type, and no shared top-up struct (nor any conversion into one) is needed. Flow-
+    ///      specific pubkey checks are delegated to `_customTopUpVerification`, which the inheriting
+    ///      contract overrides. Reverts with `InvalidTopUpPubkeyLength` or `InvalidTopUpAmount`.
+    /// @param index The index of the top-up within its batch, reported in the revert reasons.
+    /// @param pubkey The 48-byte BLS public key of the already-funded validator.
+    /// @param amount The top-up amount in wei.
+    /// @return The validated amount, returned so callers accumulate the batch total in one expression.
+    function _verifyTopUp(uint256 index, bytes memory pubkey, uint256 amount) internal view returns (uint256) {
+        if (pubkey.length != DEPOSIT_PUBKEY_LENGTH) {
+            revert InvalidTopUpPubkeyLength(index, pubkey.length);
         }
+        if (amount < MIN_TOP_UP_AMOUNT || amount > MAX_TOP_UP_AMOUNT || amount % 1 gwei != 0) {
+            revert InvalidTopUpAmount(index, amount);
+        }
+
+        _customTopUpVerification(pubkey);
+
+        return amount;
     }
 
     /// @notice Verify the BLS signatures of all initial deposits against the canonical River
@@ -196,7 +196,7 @@ abstract contract DepositVerification is IDepositVerification {
     ///         on `PectraValidatorPubkeyLookup`.
     /// @param deposits The initial deposits.
     /// @param depositDomain The EIP-712 deposit domain separator.
-    function _verifyBLSSignatures(IDepositDataBuffer.StandardDeposit[] memory deposits, bytes32 depositDomain)
+    function _verifyBLSSignatures(IDepositDataBufferBase.StandardDeposit[] memory deposits, bytes32 depositDomain)
         internal
         view
     {
