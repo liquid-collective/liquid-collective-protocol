@@ -284,6 +284,12 @@ interface IRedeemManagerV1 {
     /// @return The request-time anchor
     function getRedeemRequestAnchor(uint32 _redeemRequestId) external view returns (RedeemRequestAnchor.Anchor memory);
 
+    /// @notice Retrieve the cap a redeem request was credited with by earlier fills but has not been paid
+    /// @dev Always zero for a request predating the stopped-earning upgrade
+    /// @param _redeemRequestId The id of the request
+    /// @return The unspent cap carried to the next fill, in wei
+    function getRedeemRequestCarry(uint32 _redeemRequestId) external view returns (uint256);
+
     /// @notice Pulls exceeding buffer eth
     /// @param _max The maximum amount that should be pulled
     function pullExceedingEth(uint256 _max) external;
