@@ -298,8 +298,7 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
         if (settledHeight > markStart) {
             markStart = settledHeight;
         }
-        uint256 reportedLsETH = _stoppedEarningLsETH;
-        uint256 lsETHToMark = reportedLsETH;
+        uint256 lsETHToMark = _stoppedEarningLsETH;
 
         uint256 floor = RateMarkFloor.get();
         if (floor > markStart) {
@@ -310,12 +309,12 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
                 lsETHToMark -= legacySlice;
             }
             markStart = floor;
-            emit StoppedEarningBelowRateMarkFloor(reportedLsETH, legacySlice, floor);
+            emit StoppedEarningBelowRateMarkFloor(_stoppedEarningLsETH, legacySlice, floor);
         }
 
         uint256 markable = totalRequestedHeight > markStart ? totalRequestedHeight - markStart : 0;
         if (lsETHToMark > markable) {
-            emit StoppedEarningExceededMarkableDemand(reportedLsETH, markable);
+            emit StoppedEarningExceededMarkableDemand(_stoppedEarningLsETH, markable);
             lsETHToMark = markable;
         }
         if (lsETHToMark == 0) {
@@ -327,7 +326,7 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
         // excluded. Marking the whole reported amount therefore needs no conversion. Only a reduced
         // amount divides, scaling the eth leg down in the same proportion so the locked rate survives.
         uint256 markedEth =
-            lsETHToMark == reportedLsETH ? _stoppedEarningEth : (_stoppedEarningEth * lsETHToMark) / reportedLsETH;
+            lsETHToMark == _stoppedEarningLsETH ? _stoppedEarningEth : (_stoppedEarningEth * lsETHToMark) / _stoppedEarningLsETH;
 
         RateMarkStack.RateMark[] storage rateMarks = RateMarkStack.get();
         uint32 rateMarkId = uint32(rateMarks.length);
