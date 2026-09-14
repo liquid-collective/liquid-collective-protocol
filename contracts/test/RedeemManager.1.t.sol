@@ -2118,6 +2118,64 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         assertEq(redeemManager.getBufferedExceedingEth(), withdrawnEth - applyRate(30e18, 1e18));
     }
 
+    /// Exercises the predecessor search when the seek returns a mark that ENDS at or below the slice, so
+    /// it covers nothing and must be discarded. The stack has gaps because every mark restarts at
+    /// `max(rateMarkCursor, settledHeight)`, so a withdrawal event that outruns marking leaves the span
+    /// between the last mark's end and that event's end permanently unmarked. A slice landing there sits
+    /// ABOVE a mark rather than below one, which is what distinguishes this from
+    /// testClaimBeforeFirstMarkPaysRequestRate.
+    function testClaimInsideMarkGapAbovePreviousMarkPaysRequestRate() external {
+        address userA = _generateAllowlistedUser(0);
+        address userB = _generateAllowlistedUser(1);
+        address userC = _generateAllowlistedUser(2);
+        address userD = _generateAllowlistedUser(3);
+        river.sudoSetRate(1e18);
+
+        uint32 idA = _openRequest(userA, 10e18); // [0, 10)
+        uint32 idB = _openRequest(userB, 5e18); // [10, 15)
+        uint32 idC = _openRequest(userC, 5e18); // [15, 20)
+        _openRequest(userD, 10e18); // [20, 30)
+
+        // the first 10 LsETH stopped earning at a locked rate of 1.02
+        river.sudoReportStoppedEarningAt(address(redeemManager), applyRate(10e18, 1.02e18), 10e18);
+
+        // settlement outruns marking: one event prices [0, 20) at 1.10, so `settledHeight` is now 20
+        _settleOnly(20e18, 1.1e18);
+
+        // the next mark is forced to restart at the settled height, leaving [10, 20) unmarkable forever
+        river.sudoReportStoppedEarningAt(address(redeemManager), applyRate(10e18, 1.05e18), 10e18);
+        assertEq(redeemManager.getRateMarkCount(), 2);
+        assertEq(redeemManager.getRateMarkDetails(0).height, 0);
+        assertEq(redeemManager.getRateMarkDetails(0).amount, 10e18);
+        assertEq(redeemManager.getRateMarkDetails(1).height, 20e18);
+        assertEq(redeemManager.getRateMarkDetails(1).amount, 10e18);
+
+        uint32[] memory ids = new uint32[](3);
+        ids[0] = idA;
+        ids[1] = idB;
+        ids[2] = idC;
+        uint32[] memory eventIds = new uint32[](3);
+
+        uint256 beforeA = userA.balance;
+        uint256 beforeB = userB.balance;
+        uint256 beforeC = userC.balance;
+        redeemManager.claimRedeemRequests(ids, eventIds);
+
+        // A is covered by mark 0 and is paid its locked rate
+        assertEq(userA.balance - beforeA, applyRate(10e18, 1.02e18));
+        // B starts exactly at mark 0's end, C strictly above it. Both sit in the gap below mark 1, so
+        // the discarded mark's 1.02 never applies and neither does mark 1's 1.05: both pay 1.0.
+        assertEq(userB.balance - beforeB, applyRate(5e18, 1e18));
+        assertEq(userC.balance - beforeC, applyRate(5e18, 1e18));
+
+        assertEq(redeemManager.getRedeemRequestCarry(idB), 0);
+        assertEq(redeemManager.getRedeemRequestCarry(idC), 0);
+        assertEq(
+            redeemManager.getBufferedExceedingEth(),
+            applyRate(20e18, 1.1e18) - applyRate(10e18, 1.02e18) - applyRate(10e18, 1e18)
+        );
+    }
+
     /// A request opened before the upgrade has no anchor and must behave exactly as it does today.
     /// This is the launch cutover: the PRD excludes retroactive application.
     function testRequestWithoutAnchorUsesLegacyCap() external {
