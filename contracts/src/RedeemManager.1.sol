@@ -376,16 +376,15 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
     ///      does not hold here. This is a plain predecessor search. The caller must still check whether
     ///      the mark it returns reaches the position, or whether the position sits in a gap.
     /// @param _height The position to search for
-    /// @return found True if any mark starts at or before `_height`
     /// @return index The index of that mark
-    function _findRateMarkAtOrBefore(uint256 _height) internal view returns (bool found, uint256 index) {
+    function _findRateMarkAtOrBefore(uint256 _height) internal view returns (uint256 index) {
         RateMarkStack.RateMark[] storage rateMarks = RateMarkStack.get();
         uint256 length = rateMarks.length;
 
         // Either the stack is empty or `_height` sits below the first mark, so nothing starts early
         // enough. Handling it here lets the search below treat index 0 as a valid candidate.
         if (length == 0 || rateMarks[0].height > _height) {
-            return (false, 0);
+            return 0;
         }
 
         // Binary search for the rightmost mark with `height <= _height`.
@@ -403,7 +402,7 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
             }
         }
 
-        return (true, low);
+        return low;
     }
 
     /// @notice Internal utility computing the ETH payout cap for a slice of a redeem request
@@ -446,12 +445,7 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
 
         // Marks are ascending and disjoint, so the only candidate that can cover `sliceCursor` is the last
         // mark starting at or before it. Seek that one rather than scanning from the head of the stack.
-        (bool markFound, uint256 markIndex) = _findRateMarkAtOrBefore(sliceCursor);
-        if (!markFound) {
-            // The slice starts below every mark. Enter at the head of the stack and let the uncovered
-            // branch below value everything up to the first mark's start.
-            markIndex = 0;
-        }
+        uint256 markIndex = _findRateMarkAtOrBefore(sliceCursor);
 
         while (remainingAmount > 0) {
             if (markIndex >= markCount) {
@@ -689,10 +683,11 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
         RedeemQueueV2.RedeemRequest storage redeemRequest = RedeemQueueV2.get()[_params.redeemRequestId];
         redeemRequest.height = _params.redeemRequest.height;
         redeemRequest.amount = _params.redeemRequest.amount;
-        redeemRequest.maxRedeemableEth = _params.redeemRequest.maxRedeemableEth;
 
         if (_params.anchor.lsETHAtRequest != 0) {
             RedeemRequestCarry.get()[_params.redeemRequestId] = _params.redeemRequest.amount == 0 ? 0 : _params.carry;
+        } else {
+            redeemRequest.maxRedeemableEth = _params.redeemRequest.maxRedeemableEth;
         }
     }
 
@@ -753,14 +748,11 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
                 _params.redeemRequest.height += vars.matchingAmount;
                 _params.redeemRequest.amount -= vars.matchingAmount;
             }
-            // Saturating subtraction. For a pre-upgrade request it is exact, because the cap above comes
-            // from this very field and can never exceed it. For a marked request the payout may exceed the
-            // request-time budget, and an unguarded decrement would revert the whole claimRedeemRequests
-            // call with Panic(0x11). Post-upgrade this field bounds nothing. The cap comes from the anchor
-            // and the rate marks.
-            _params.redeemRequest.maxRedeemableEth = _params.redeemRequest.maxRedeemableEth > vars.ethAmount
-                ? _params.redeemRequest.maxRedeemableEth - vars.ethAmount
-                : 0;
+            if (_params.anchor.lsETHAtRequest == 0) {
+                _params.redeemRequest.maxRedeemableEth = _params.redeemRequest.maxRedeemableEth > vars.ethAmount
+                    ? _params.redeemRequest.maxRedeemableEth - vars.ethAmount
+                    : 0;
+            }
 
             _params.lsETHAmount += vars.matchingAmount;
             _params.ethAmount += vars.ethAmount;
