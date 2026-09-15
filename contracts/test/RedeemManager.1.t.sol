@@ -1708,14 +1708,23 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         redeemManager.initializeRedeemManagerV1_3();
     }
 
-    /// @dev Zeroes a request's anchor so it takes the pre-upgrade code path, the way every request
-    ///      created before the stopped-earning upgrade does.
+    /// @dev Makes a request look the way one created before the stopped-earning upgrade does. Two
+    ///      things define that state. The anchor is absent, which is what selects the pre-upgrade code
+    ///      path, and `maxRedeemableEth` holds the request-time eth budget the pre-upgrade path caps
+    ///      against. Both are set explicitly, because an anchored request stops carrying a budget in
+    ///      that field once the credited-eth counter moves into it.
     function _clearRequestAnchor(uint32 id) internal {
+        uint256 requestTimeEth = redeemManager.getRedeemRequestAnchor(id).ethAtRequest;
+
         bytes32 anchorSlot =
             keccak256(abi.encode(uint256(id), bytes32(uint256(keccak256("river.state.redeemRequestAnchor")) - 1)));
         vm.store(address(redeemManager), anchorSlot, bytes32(0));
         vm.store(address(redeemManager), bytes32(uint256(anchorSlot) + 1), bytes32(0));
         assertEq(redeemManager.getRedeemRequestAnchor(id).lsETHAtRequest, 0);
+
+        uint256 base = uint256(keccak256(abi.encode(REDEEM_QUEUE_ID_SLOT)));
+        vm.store(address(redeemManager), bytes32(base + uint256(id) * 5 + 1), bytes32(requestTimeEth));
+        assertEq(redeemManager.getRedeemRequestDetails(id).maxRedeemableEth, requestTimeEth);
     }
 
     /// @dev Settles `lsETH` of demand at the current pool rate and claims request `id` in full.
@@ -1818,7 +1827,7 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
     function testCarryIsClearedWhenRequestIsFullyClaimed() external {
         uint256 received = _lowThenHighFill(0, false);
         assertEq(received, applyRate(20e18, 0.5e18) + applyRate(10e18, 1.5e18));
-        assertEq(redeemManager.getRedeemRequestCarry(0), 0);
+        assertEq(redeemManager.getRedeemRequestCreditedEth(0), 0);
     }
 
     /// @dev Reports a withdrawal event for `lsETH` priced at `settlementRate` without claiming against it,
@@ -1855,7 +1864,7 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         assertEq(received, applyRate(20e18, 0.5e18) + applyRate(10e18, 1.5e18));
         assertEq(redeemManager.getRedeemRequestDetails(id).amount, 0);
         assertEq(redeemManager.getBufferedExceedingEth(), 0);
-        assertEq(redeemManager.getRedeemRequestCarry(id), 0);
+        assertEq(redeemManager.getRedeemRequestCreditedEth(id), 0);
     }
 
     /// The claim loop reuses one `ClaimRedeemRequestParameters` across requests, so a request that leaves
@@ -1882,8 +1891,8 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
 
         assertEq(userA.balance - beforeA, applyRate(30e18, 0.5e18));
         assertEq(userB.balance - beforeB, applyRate(30e18, 0.5e18));
-        assertEq(redeemManager.getRedeemRequestCarry(idA), 0);
-        assertEq(redeemManager.getRedeemRequestCarry(idB), 0);
+        assertEq(redeemManager.getRedeemRequestCreditedEth(idA), 0);
+        assertEq(redeemManager.getRedeemRequestCreditedEth(idB), 0);
     }
 
     /// The carry is visible between fills, not only at the end: after the cheap fill it holds exactly the
@@ -1892,11 +1901,11 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         address user = _generateAllowlistedUser(0);
         river.sudoSetRate(1e18);
         uint32 id = _openRequest(user, 30e18);
-        assertEq(redeemManager.getRedeemRequestCarry(id), 0);
+        assertEq(redeemManager.getRedeemRequestCreditedEth(id), 0);
 
         assertEq(_settleAndClaim(id, 20e18, 0.5e18), applyRate(20e18, 0.5e18));
         // slice cap was 20 ETH at the request rate, 10 ETH was paid
-        assertEq(redeemManager.getRedeemRequestCarry(id), applyRate(20e18, 1e18) - applyRate(20e18, 0.5e18));
+        assertEq(redeemManager.getRedeemRequestCreditedEth(id), applyRate(20e18, 1e18) - applyRate(20e18, 0.5e18));
     }
 
     /// FR1/AC2: a fill backed by no stopped-earning principal accrues nothing beyond
@@ -2193,8 +2202,8 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         assertEq(userB.balance - beforeB, applyRate(5e18, 1e18));
         assertEq(userC.balance - beforeC, applyRate(5e18, 1e18));
 
-        assertEq(redeemManager.getRedeemRequestCarry(idB), 0);
-        assertEq(redeemManager.getRedeemRequestCarry(idC), 0);
+        assertEq(redeemManager.getRedeemRequestCreditedEth(idB), 0);
+        assertEq(redeemManager.getRedeemRequestCreditedEth(idC), 0);
         assertEq(
             redeemManager.getBufferedExceedingEth(),
             applyRate(20e18, 1.1e18) - applyRate(10e18, 1.02e18) - applyRate(10e18, 1e18)
@@ -2209,11 +2218,7 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         uint32 id = _openRequest(user, 30e18);
 
         // simulate a pre-upgrade request by clearing its anchor
-        bytes32 anchorSlot =
-            keccak256(abi.encode(uint256(id), bytes32(uint256(keccak256("river.state.redeemRequestAnchor")) - 1)));
-        vm.store(address(redeemManager), anchorSlot, bytes32(0));
-        vm.store(address(redeemManager), bytes32(uint256(anchorSlot) + 1), bytes32(0));
-        assertEq(redeemManager.getRedeemRequestAnchor(id).lsETHAtRequest, 0);
+        _clearRequestAnchor(id);
 
         // even with a mark covering it, the legacy path caps at the request rate
         river.sudoSetRate(1.05e18);
@@ -2261,10 +2266,7 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
 
         // a pre-upgrade request, still pending at upgrade time
         uint32 legacy = _openRequest(user, 30e18);
-        bytes32 anchorSlot =
-            keccak256(abi.encode(uint256(legacy), bytes32(uint256(keccak256("river.state.redeemRequestAnchor")) - 1)));
-        vm.store(address(redeemManager), anchorSlot, bytes32(0));
-        vm.store(address(redeemManager), bytes32(uint256(anchorSlot) + 1), bytes32(0));
+        _clearRequestAnchor(legacy);
 
         _upgradeToV1_3();
         assertEq(redeemManager.getRateMarkFloor(), 30e18);
@@ -2358,10 +2360,7 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
 
         // a pre-upgrade request, still pending at upgrade time
         uint32 legacy = _openRequest(user, 10e18);
-        bytes32 anchorSlot =
-            keccak256(abi.encode(uint256(legacy), bytes32(uint256(keccak256("river.state.redeemRequestAnchor")) - 1)));
-        vm.store(address(redeemManager), anchorSlot, bytes32(0));
-        vm.store(address(redeemManager), bytes32(uint256(anchorSlot) + 1), bytes32(0));
+        _clearRequestAnchor(legacy);
 
         _upgradeToV1_3();
         assertEq(redeemManager.getRateMarkFloor(), 10e18);
@@ -2425,10 +2424,7 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
 
         // a pre-upgrade request, still pending at upgrade time
         uint32 legacy = _openRequest(user, 10e18);
-        bytes32 anchorSlot =
-            keccak256(abi.encode(uint256(legacy), bytes32(uint256(keccak256("river.state.redeemRequestAnchor")) - 1)));
-        vm.store(address(redeemManager), anchorSlot, bytes32(0));
-        vm.store(address(redeemManager), bytes32(uint256(anchorSlot) + 1), bytes32(0));
+        _clearRequestAnchor(legacy);
 
         _upgradeToV1_3();
         assertEq(redeemManager.getRateMarkFloor(), 10e18);
@@ -2480,10 +2476,7 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
 
         // Pre-upgrade queue has one 10e18 request, so floor is 10e18.
         uint32 legacy = _openRequest(userLegacy, 10e18);
-        bytes32 anchorSlot =
-            keccak256(abi.encode(uint256(legacy), bytes32(uint256(keccak256("river.state.redeemRequestAnchor")) - 1)));
-        vm.store(address(redeemManager), anchorSlot, bytes32(0));
-        vm.store(address(redeemManager), bytes32(uint256(anchorSlot) + 1), bytes32(0));
+        _clearRequestAnchor(legacy);
 
         _upgradeToV1_3();
         assertEq(redeemManager.getRateMarkFloor(), 10e18);
@@ -2667,8 +2660,9 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         assertEq(redeemManager.getRedeemRequestDetails(id).maxRedeemableEth, applyRate(30e18, 1.2e18));
     }
 
-    /// A mark raises what the request can be paid, and the getter must show it. The stored slot still
-    /// reads 30 ETH -- it is never written again -- which is exactly why the getter cannot return it.
+    /// A mark raises what the request can be paid, and the getter must show it. The stored slot reads
+    /// 0, because an anchored request is credited as its slices settle and no fill has happened yet,
+    /// which is exactly why the getter cannot return the stored value.
     function testDetailsMaxRedeemableEthRisesWithRateMark() external {
         address user = _generateAllowlistedUser(0);
         river.sudoSetRate(1e18);
@@ -2678,24 +2672,29 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         river.sudoReportStoppedEarning(address(redeemManager), applyRate(30e18, 1.6e18));
 
         assertEq(redeemManager.getRedeemRequestDetails(id).maxRedeemableEth, applyRate(30e18, 1.6e18));
-        assertEq(_storedMaxRedeemableEth(id), 30e18);
+        assertEq(_storedMaxRedeemableEth(id), 0);
     }
 
-    /// The projection is view-only: reading it cannot move storage, and neither can claiming an
-    /// anchored request, which is the whole reason the stored field went stale in the first place.
-    function testDetailsProjectionNeverWritesStoredMaxRedeemableEth() external {
+    /// The projection is view-only. Reading it cannot move the stored credited-eth balance, whatever
+    /// that balance happens to be.
+    /// @dev The request is first filled below its cap, so the balance under test is non-zero and the
+    ///      assertion has teeth. Asserting against a slot that is zero either way proves nothing.
+    function testDetailsProjectionNeverWritesStoredCreditedEth() external {
         address user = _generateAllowlistedUser(0);
         river.sudoSetRate(1e18);
         uint32 id = _openRequest(user, 30e18);
 
-        river.sudoSetRate(1.6e18);
-        river.sudoReportStoppedEarning(address(redeemManager), applyRate(30e18, 1.6e18));
+        // a cheap fill leaves the unspent half of its cap on the request
+        assertEq(_settleAndClaim(id, 20e18, 0.5e18), applyRate(20e18, 0.5e18));
+        uint256 creditedAfterFill = _storedMaxRedeemableEth(id);
+        assertEq(creditedAfterFill, applyRate(20e18, 1e18) - applyRate(20e18, 0.5e18));
 
         redeemManager.getRedeemRequestDetails(id);
-        assertEq(_storedMaxRedeemableEth(id), 30e18);
+        assertEq(_storedMaxRedeemableEth(id), creditedAfterFill);
 
-        assertEq(_settleAndClaim(id, 30e18, 1.6e18), applyRate(30e18, 1.6e18));
-        assertEq(_storedMaxRedeemableEth(id), 30e18);
+        // the last fill spends it, and a fully claimed request is left with nothing credited
+        assertEq(_settleAndClaim(id, 10e18, 1.5e18), applyRate(10e18, 1.5e18));
+        assertEq(_storedMaxRedeemableEth(id), 0);
         assertEq(redeemManager.getRedeemRequestDetails(id).maxRedeemableEth, 0);
     }
 
@@ -2735,7 +2734,7 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         uint32 id = _openRequest(user, 30e18);
 
         assertEq(_settleAndClaim(id, 20e18, 0.5e18), applyRate(20e18, 0.5e18));
-        uint256 carry = redeemManager.getRedeemRequestCarry(id);
+        uint256 carry = redeemManager.getRedeemRequestCreditedEth(id);
         assertEq(carry, applyRate(20e18, 1e18) - applyRate(20e18, 0.5e18));
 
         // 10 LsETH left at the request rate, plus the unspent 10 ETH of cap

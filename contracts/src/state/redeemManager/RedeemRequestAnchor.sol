@@ -23,8 +23,8 @@ pragma solidity 0.8.34;
 ///      marked and are always paid under the original rules, which is also how the launch cutover is
 ///      enforced.
 ///
-///      Both fields are write-once. Cap carried between a request's fills is per-claim state, so it
-///      lives in `RedeemRequestCarry` rather than here.
+///      Both fields are write-once. The eth a request has been credited with and not yet paid is a
+///      running balance, so it lives in the queue's `maxRedeemableEth` field rather than here.
 library RedeemRequestAnchor {
     /// @notice Storage slot of the Redeem Request Anchor mapping
     bytes32 internal constant REDEEM_REQUEST_ANCHOR_SLOT =

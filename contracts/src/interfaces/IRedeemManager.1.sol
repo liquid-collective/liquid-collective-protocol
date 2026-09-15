@@ -286,11 +286,15 @@ interface IRedeemManagerV1 {
     /// @return The request-time anchor
     function getRedeemRequestAnchor(uint32 _redeemRequestId) external view returns (RedeemRequestAnchor.Anchor memory);
 
-    /// @notice Retrieve the cap a redeem request was credited with by earlier fills but has not been paid
-    /// @dev Always zero for a request predating the stopped-earning upgrade
+    /// @notice Retrieve the eth a redeem request has been credited with and has not yet been paid
+    /// @dev The raw stored `maxRedeemableEth`, which both payout paths use as a running eth balance.
+    ///      For an anchored request it is the cap earlier fills were credited with and did not spend,
+    ///      and the next fill may still draw on it. For a request predating the stopped-earning
+    ///      upgrade it is the remaining request-time budget. Use `getRedeemRequestDetails` for the
+    ///      total an anchored request can still be paid, which also prices its uncredited span.
     /// @param _redeemRequestId The id of the request
-    /// @return The unspent cap carried to the next fill, in wei
-    function getRedeemRequestCarry(uint32 _redeemRequestId) external view returns (uint256);
+    /// @return The credited and unpaid eth, in wei
+    function getRedeemRequestCreditedEth(uint32 _redeemRequestId) external view returns (uint256);
 
     /// @notice Pulls exceeding buffer eth
     /// @param _max The maximum amount that should be pulled

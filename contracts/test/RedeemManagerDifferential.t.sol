@@ -36,6 +36,10 @@ contract RedeemManagerDifferential_HEAVY_FUZZING is Test {
     uint256 internal constant MAX_REQUEST = 50e18;
     uint256 internal constant MAX_STOPPED_EARNING_ETH = 60e18;
 
+    /// @dev Word count of RedeemQueueV2.RedeemRequest, and the offset of `maxRedeemableEth` in it
+    uint256 internal constant QUEUE_STRIDE = 5;
+    uint256 internal constant MAX_REDEEMABLE_ETH_FIELD = 1;
+
     uint8 internal constant ACTION_OPEN = 0;
     uint8 internal constant ACTION_REPORT_STOPPED_EARNING = 1;
     uint8 internal constant ACTION_WITHDRAW = 2;
@@ -299,13 +303,27 @@ contract RedeemManagerDifferential_HEAVY_FUZZING is Test {
         }
     }
 
-    /// @dev Zeroes a request's anchor so it takes the pre-upgrade code path, the way every request
-    ///      created before the stopped-earning upgrade does.
+    /// @dev Makes a request look the way one created before the stopped-earning upgrade does. Two
+    ///      things define that state. The anchor is absent, which is what selects the pre-upgrade code
+    ///      path, and `maxRedeemableEth` holds the request-time eth budget the pre-upgrade path caps
+    ///      against. Both are set explicitly, because an anchored request stops carrying a budget in
+    ///      that field once the credited-eth counter moves into it.
     function _clearRequestAnchor(uint32 _id) internal {
+        uint256 requestTimeEth = redeemManager.getRedeemRequestAnchor(_id).ethAtRequest;
+
         bytes32 anchorSlot =
             keccak256(abi.encode(uint256(_id), bytes32(uint256(keccak256("river.state.redeemRequestAnchor")) - 1)));
         vm.store(address(redeemManager), anchorSlot, bytes32(0));
         vm.store(address(redeemManager), bytes32(uint256(anchorSlot) + 1), bytes32(0));
+
+        vm.store(address(redeemManager), _queueFieldSlot(_id, MAX_REDEEMABLE_ETH_FIELD), bytes32(requestTimeEth));
+    }
+
+    /// @dev Storage slot of one field of queue element `_id`. The queue is a dynamic array at a raw
+    ///      keccak slot, so elements start at `keccak256(slot)` and stride by the struct's word count.
+    function _queueFieldSlot(uint32 _id, uint256 _field) internal pure returns (bytes32) {
+        uint256 base = uint256(keccak256(abi.encode(bytes32(uint256(keccak256("river.state.redeemQueue")) - 1))));
+        return bytes32(base + uint256(_id) * QUEUE_STRIDE + _field);
     }
 
     function _newAllowlistedUser() internal returns (address user) {

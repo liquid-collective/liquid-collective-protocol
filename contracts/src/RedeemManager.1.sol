@@ -19,7 +19,6 @@ import "./state/redeemManager/RedeemDemand.sol";
 import "./state/redeemManager/RateMarkStack.sol";
 import "./state/redeemManager/RedeemRequestAnchor.sol";
 import "./state/redeemManager/RateMarkFloor.sol";
-import "./state/redeemManager/RedeemRequestCarry.sol";
 
 /// @title Redeem Manager (v1)
 /// @author Alluvial Finance Inc.
@@ -128,7 +127,7 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
         // Anchored requests use projected maxRedeemableEth instead of stored value.
         // Pre-upgrade requests keep their stored budget.
         if (anchor.lsETHAtRequest != 0) {
-            redeemRequest.maxRedeemableEth = _projectedMaxRedeemableEth(_redeemRequestId, redeemRequest, anchor);
+            redeemRequest.maxRedeemableEth = _projectedMaxRedeemableEth(redeemRequest, anchor);
         }
     }
 
@@ -167,8 +166,8 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
     }
 
     /// @inheritdoc IRedeemManagerV1
-    function getRedeemRequestCarry(uint32 _redeemRequestId) external view returns (uint256) {
-        return RedeemRequestCarry.get()[_redeemRequestId];
+    function getRedeemRequestCreditedEth(uint32 _redeemRequestId) external view returns (uint256) {
+        return RedeemQueueV2.get()[_redeemRequestId].maxRedeemableEth;
     }
 
     /// @inheritdoc IRedeemManagerV1
@@ -427,7 +426,7 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
     ///      below (from drawdowns) lower it. Redeemers forfeit post-mark recovery on marked spans.
     ///      The cap sums all sub-ranges and is compared against total event ETH as
     ///      `min(sum of settlement, sum of cap)`. Gap sub-range headroom can offset marked shortfalls.
-    ///      Aggregation is per withdrawal event. `RedeemRequestCarry` extends aggregation across events.
+    ///      Aggregation is per withdrawal event. The credited-eth balance extends it across events.
     /// @dev Iterations are bounded by the number of marks the slice spans, at most one per oracle report
     ///      the request has been pending across. A claimant pays for their own request's span and cannot
     ///      be charged for anyone else's. There is no way to split the walk: `_depth` bounds the
@@ -524,12 +523,10 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
     /// @dev Replays `_claimRedeemRequest` without touching storage. Withdrawal events pay
     ///      `min(pro rata event eth, slice cap + carry)` with unspent cap carrying forward.
     ///      Exact over settled portion, upper bound over unsettled portion.
-    /// @param _redeemRequestId The id of the request, used to load its carry
-    /// @param _redeemRequest The loaded redeem request, at its current height and remaining amount
+    /// @param _redeemRequest The loaded redeem request, at its current height, remaining amount and credited eth
     /// @param _anchor The immutable request-time valuation of the request
     /// @return projectedEth The maximum eth the request can still be paid
     function _projectedMaxRedeemableEth(
-        uint32 _redeemRequestId,
         RedeemQueueV2.RedeemRequest memory _redeemRequest,
         RedeemRequestAnchor.Anchor memory _anchor
     ) internal view returns (uint256 projectedEth) {
@@ -540,7 +537,7 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
         }
 
         uint256 height = _redeemRequest.height;
-        uint256 carry = RedeemRequestCarry.get()[_redeemRequestId];
+        uint256 carry = _redeemRequest.maxRedeemableEth;
 
         // Process settled portion with withdrawal events
         if (_settledHeight() > height) {
@@ -695,13 +692,16 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
                 amount: _lsETHAmount,
                 recipient: _recipient,
                 initiator: _initiator,
-                maxRedeemableEth: maxRedeemableEth
+                // An anchored request starts with nothing credited. Its entitlement is derived from the
+                // anchor as each slice settles, so seeding the field with the request-time value would
+                // hand it that whole value a second time.
+                maxRedeemableEth: 0
             })
         );
 
-        // The request-time valuation, never mutated after this write. `maxRedeemableEth` cannot serve
-        // this purpose, because the claim path decrements it by the ETH actually paid, leaving an implied
-        // per-LsETH rate below the request rate once the request is partially claimed.
+        // The request-time valuation, never mutated after this write. The `maxRedeemableEth` field cannot
+        // serve this purpose, because it is a running balance the claim path debits by the ETH actually
+        // paid, so the per-LsETH rate it implies drifts away from the request rate on the first fill.
         RedeemRequestAnchor.get()[redeemRequestId] =
             RedeemRequestAnchor.Anchor({lsETHAtRequest: _lsETHAmount, ethAtRequest: maxRedeemableEth});
 
@@ -754,11 +754,13 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
         redeemRequest.height = _params.redeemRequest.height;
         redeemRequest.amount = _params.redeemRequest.amount;
 
-        if (_params.anchor.lsETHAtRequest != 0) {
-            RedeemRequestCarry.get()[_params.redeemRequestId] = _params.redeemRequest.amount == 0 ? 0 : _params.carry;
-        } else {
-            redeemRequest.maxRedeemableEth = _params.redeemRequest.maxRedeemableEth;
-        }
+        // Both paths keep a running ETH balance in the same field. On the pre-upgrade path it is the
+        // request-time budget being drawn down. On the anchored path it is the cap earlier fills were
+        // credited with and did not spend, which the next fill may still draw on. A fully claimed
+        // request can never be read again, so its balance is cleared rather than left dangling.
+        redeemRequest.maxRedeemableEth = _params.anchor.lsETHAtRequest != 0
+            ? (_params.redeemRequest.amount == 0 ? 0 : _params.carry)
+            : _params.redeemRequest.maxRedeemableEth;
     }
 
     /// @notice Internal utility to claim a redeem request if possible
@@ -931,7 +933,7 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
             params.ethAmount = 0;
             params.lsETHAmount = 0;
             params.anchor = RedeemRequestAnchor.get()[params.redeemRequestId];
-            params.carry = params.anchor.lsETHAtRequest == 0 ? 0 : RedeemRequestCarry.get()[params.redeemRequestId];
+            params.carry = params.anchor.lsETHAtRequest == 0 ? 0 : params.redeemRequest.maxRedeemableEth;
 
             _claimRedeemRequest(params);
 
