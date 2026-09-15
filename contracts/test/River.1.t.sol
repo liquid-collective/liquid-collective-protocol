@@ -36,11 +36,20 @@ import "./utils/LegacyInit.sol";
 
 contract MockDepositDataBuffer is IDepositDataBuffer {
     mapping(bytes32 => DepositObject) internal _batches;
+    mapping(bytes32 => uint256) internal _nonce;
     mapping(bytes32 => bool) internal _exists;
+    mapping(bytes32 => bool) internal _processed;
+    address internal _processor;
+    uint256 public lastQueuedIdx;
+
+    constructor(address processor) {
+        _processor = processor;
+    }
 
     function submitDepositData(bytes32 depositDataBufferId, DepositObject calldata batch) external {
         if (_exists[depositDataBufferId]) revert DepositDataBufferIdAlreadyExists(depositDataBufferId);
         _exists[depositDataBufferId] = true;
+        _nonce[depositDataBufferId] = lastQueuedIdx;
         DepositObject storage stored = _batches[depositDataBufferId];
         for (uint256 i = 0; i < batch.deposits.length; i++) {
             stored.deposits.push(batch.deposits[i]);
@@ -48,20 +57,49 @@ contract MockDepositDataBuffer is IDepositDataBuffer {
         for (uint256 i = 0; i < batch.topUps.length; i++) {
             stored.topUps.push(batch.topUps[i]);
         }
-        emit DepositDataSubmitted(depositDataBufferId, batch.deposits.length, batch.topUps.length);
+        emit DepositDataSubmitted(depositDataBufferId, lastQueuedIdx, batch.deposits.length, batch.topUps.length);
+        ++lastQueuedIdx;
     }
 
-    function getDepositData(bytes32 depositDataBufferId) external view returns (DepositObject memory) {
+    function getDepositData(bytes32 depositDataBufferId) external view returns (DepositObject memory, uint256 nonce) {
         if (!_exists[depositDataBufferId]) revert DepositDataBufferIdNotFound(depositDataBufferId);
-        return _batches[depositDataBufferId];
+        return (_batches[depositDataBufferId], _nonce[depositDataBufferId]);
     }
 
-    function getWriter() external pure returns (address) {
+    function markDepositDataProcessed(bytes32 depositDataBufferId) external {
+        if (msg.sender != _processor) revert OnlyProcessor();
+        if (!_exists[depositDataBufferId]) revert DepositDataBufferIdNotFound(depositDataBufferId);
+        if (_processed[depositDataBufferId]) revert DepositDataAlreadyProcessed(depositDataBufferId);
+        _processed[depositDataBufferId] = true;
+        emit DepositDataProcessed(depositDataBufferId);
+    }
+
+    function isDepositDataProcessed(bytes32 depositDataBufferId) external view returns (bool) {
+        return _processed[depositDataBufferId];
+    }
+
+    function setProducer(address) external {}
+
+    function setProcessor(address) external {}
+
+    function getProducer() external pure returns (address) {
         return address(0);
     }
+
+    function proposeAdmin(address) external {}
+
+    function acceptAdmin() external {}
 
     function getAdmin() external pure returns (address) {
         return address(0);
+    }
+
+    function getPendingAdmin() external pure returns (address) {
+        return address(0);
+    }
+
+    function getProcessor() external view returns (address) {
+        return _processor;
     }
 }
 
@@ -146,7 +184,7 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
         keccak256("Attest(bytes32 depositDataBufferId,bytes32 depositRootHash)");
     bytes32 internal constant CONSOLIDATION_NAME_HASH = keccak256("ConsolidationValidation");
     bytes32 internal constant ATTEST_CONSOLIDATION_TYPEHASH = keccak256(
-        "AttestConsolidation(address withdrawalAddress,bytes[] sourcePubkeys,bytes[] targetPubkeys,uint256 totalAmount)"
+        "AttestConsolidation(address withdrawalAddress,bytes[] sourcePubkeys,bytes[] targetPubkeys,uint256 totalAmount,uint256[] exitEpoch)"
     );
 
     address internal admin;
@@ -253,7 +291,7 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
         LibImplementationUnbricker.unbrick(vm, address(river));
         operatorsRegistry = new OperatorsRegistryWithOverridesV1();
         LibImplementationUnbricker.unbrick(vm, address(operatorsRegistry));
-        depositBuffer = new MockDepositDataBuffer();
+        depositBuffer = new MockDepositDataBuffer(address(river));
 
         allowlist.initAllowlistV1(admin, allower);
         allowlist.initAllowlistV1_1(denier);
@@ -296,6 +334,15 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
         return keccak256(abi.encodePacked(hashes));
     }
 
+    function _hashUintArray(uint256[] memory arr) internal pure returns (bytes32) {
+        return keccak256(abi.encodePacked(arr));
+    }
+
+    /// @dev Canonical per-pair exit-epoch array: one zero entry per consolidation pair.
+    function _defaultEpochs(uint256 count) internal pure returns (uint256[] memory arr) {
+        arr = new uint256[](count);
+    }
+
     function _consolidationDigest(
         address withdrawalAddress,
         bytes[] memory sources,
@@ -311,7 +358,8 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
                 withdrawalAddress,
                 _hashBytesArray(sources),
                 _hashBytesArray(targets),
-                totalAmount
+                totalAmount,
+                _hashUintArray(_defaultEpochs(sources.length))
             )
         );
         return keccak256(abi.encodePacked("\x19\x01", domainSep, structHash));
@@ -342,6 +390,7 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
             sourcePubkeys: sources,
             targetPubkeys: targets,
             totalAmount: totalAmount,
+            exitEpoch: _defaultEpochs(sources.length),
             signatures: sigs
         });
     }
@@ -399,7 +448,7 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
         }
         _pubkeySeedCursor = seedBase + total;
 
-        bytes32 bufferId = keccak256(abi.encode(batch));
+        bytes32 bufferId = keccak256(abi.encode(batch, depositBuffer.lastQueuedIdx()));
         depositBuffer.submitDepositData(bufferId, batch);
 
         bytes32 rootHash = deposit.get_deposit_root();
@@ -442,7 +491,7 @@ abstract contract RiverV1TestBase is OperatorAllocationTestBase, BytesGenerator 
         });
         _pubkeySeedCursor = seed + 1;
 
-        bufferId = keccak256(abi.encode(batch));
+        bufferId = keccak256(abi.encode(batch, depositBuffer.lastQueuedIdx()));
         depositBuffer.submitDepositData(bufferId, batch);
         rootHash = deposit.get_deposit_root();
 
@@ -522,6 +571,7 @@ contract RiverV1Tests is RiverV1TestBase {
         attestationVerifier = new AttestationVerifierV1();
         LibImplementationUnbricker.unbrick(vm, address(attestationVerifier));
         attestationVerifier.initAttestationVerifierV1(
+            admin,
             address(river),
             address(depositBuffer),
             _initRootAttesters,
@@ -538,7 +588,9 @@ contract RiverV1Tests is RiverV1TestBase {
             bytes32(uint256(uint160(address(attestationVerifier))))
         );
 
-        // Mock BLS verification on the validator (EIP-2537 precompiles not enabled in Foundry).
+        // Mock BLS verification: these fixtures use synthetic validator keys, which have no valid
+        // BLS deposit signature to check. Foundry does support the EIP-2537 precompiles, so tests
+        // that need the real pairing check can sign with test/utils/BLSSigner.sol instead.
         vm.mockCall(
             address(attestationVerifier),
             abi.encodeWithSelector(attestationVerifier.verifyBLSDeposit.selector),
@@ -1597,6 +1649,7 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
         attestationVerifier = new AttestationVerifierV1();
         LibImplementationUnbricker.unbrick(vm, address(attestationVerifier));
         attestationVerifier.initAttestationVerifierV1(
+            admin,
             address(river),
             address(depositBuffer),
             _initRootAttesters2,
@@ -1611,7 +1664,9 @@ contract RiverV1TestsReport_HEAVY_FUZZING is RiverV1TestBase {
             bytes32(uint256(uint160(address(attestationVerifier))))
         );
 
-        // Mock BLS verification on the validator (EIP-2537 precompiles not enabled in Foundry).
+        // Mock BLS verification: these fixtures use synthetic validator keys, which have no valid
+        // BLS deposit signature to check. Foundry does support the EIP-2537 precompiles, so tests
+        // that need the real pairing check can sign with test/utils/BLSSigner.sol instead.
         vm.mockCall(
             address(attestationVerifier),
             abi.encodeWithSelector(attestationVerifier.verifyBLSDeposit.selector),
@@ -3062,10 +3117,11 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         _rootAttesters_[1] = makeAddr("rootAttester2");
         address[] memory _consolidationCommitteeAttesters_ = new address[](1);
         _consolidationCommitteeAttesters_[0] = makeAddr("consolidationCommitteeAttesterStub");
+        MockDepositDataBuffer mockBuffer = new MockDepositDataBuffer(_river);
         v = new AttestationVerifierV1();
         LibImplementationUnbricker.unbrick(vm, address(v));
         v.initAttestationVerifierV1(
-            _river, makeAddr("depositBuffer"), _rootAttesters_, 1, bytes4(0), _consolidationCommitteeAttesters_, 1
+            admin, _river, address(mockBuffer), _rootAttesters_, 1, bytes4(0), _consolidationCommitteeAttesters_, 1
         );
     }
 
@@ -3214,6 +3270,7 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         LibImplementationUnbricker.unbrick(vm, address(v));
         vm.expectRevert(abi.encodeWithSignature("InvalidArgument()"));
         v.initAttestationVerifierV1(
+            admin,
             address(river),
             makeAddr("depositBuffer"),
             _rootAttesters_,
@@ -3238,6 +3295,7 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         _consolidationCommitteeAttesters_[0] = makeAddr("consolidationCommitteeAttesterStub");
         vm.expectRevert(abi.encodeWithSignature("InvalidArgument()"));
         v.initAttestationVerifierV1(
+            admin,
             address(river),
             makeAddr("depositBuffer"),
             _rootAttesters_,
@@ -4893,6 +4951,7 @@ contract RiverV1PectraTests is RiverV1TestBase {
         attestationVerifier = new AttestationVerifierV1();
         LibImplementationUnbricker.unbrick(vm, address(attestationVerifier));
         attestationVerifier.initAttestationVerifierV1(
+            admin,
             address(river),
             address(depositBuffer),
             _initRootAttesters,
@@ -5144,6 +5203,7 @@ contract RiverV1ConsolidationMintTests is RiverV1TestBase {
         attestationVerifier = new AttestationVerifierV1();
         LibImplementationUnbricker.unbrick(vm, address(attestationVerifier));
         attestationVerifier.initAttestationVerifierV1(
+            admin,
             address(river),
             address(depositBuffer),
             _initRootAttesters,
@@ -5187,6 +5247,7 @@ contract RiverV1ConsolidationMintTests is RiverV1TestBase {
             sourcePubkeys: sources,
             targetPubkeys: targets,
             totalAmount: totalAmount,
+            exitEpoch: _defaultEpochs(sources.length),
             signatures: sigs
         });
     }
@@ -5202,7 +5263,8 @@ contract RiverV1ConsolidationMintTests is RiverV1TestBase {
                 consolidation.withdrawalAddress,
                 _hashBytesArray(consolidation.sourcePubkeys),
                 _hashBytesArray(consolidation.targetPubkeys),
-                consolidation.totalAmount
+                consolidation.totalAmount,
+                _hashUintArray(consolidation.exitEpoch)
             )
         );
     }
@@ -5480,6 +5542,37 @@ contract RiverV1ConsolidationMintTests is RiverV1TestBase {
         vm.prank(consolidator);
         vm.expectRevert(
             abi.encodeWithSelector(IAttestationVerifierV1.ConsolidationSourceAlreadyProcessed.selector, sourceA)
+        );
+        river.mintLsETHForConsolidation(consolidation);
+
+        assertEq(river.getBalanceToConsolidate(), bufferBefore);
+        assertEq(river.balanceOf(bob), bobSharesBefore);
+        assertEq(river.totalSupply(), totalSupplyBefore);
+    }
+
+    /// @dev A self consolidation is the 0x01 -> 0x02 credential upgrade: the ETH stays exactly where it was,
+    ///      so nothing new enters the protocol. Minting `totalAmount` against it would credit the
+    ///      consolidation buffer with ETH that never arrives and dilute every existing holder. The verifier
+    ///      rejects the pair, so the buffer and the supply must both be untouched.
+    function testRevert_mintLsETHForConsolidationSelfConsolidationDoesNotMint() public {
+        _allowConsolidation(bob);
+        bytes memory pubkey = _fakePubkey(2500);
+
+        bytes[] memory sources = new bytes[](1);
+        sources[0] = pubkey;
+        bytes[] memory targets = new bytes[](1);
+        targets[0] = pubkey;
+        uint256 totalAmount = 32 ether;
+        IAttestationVerifierV1.ConsolidationObject memory consolidation =
+            _buildConsolidationWithPubkeys(bob, sources, targets, totalAmount);
+
+        uint256 bufferBefore = river.getBalanceToConsolidate();
+        uint256 bobSharesBefore = river.balanceOf(bob);
+        uint256 totalSupplyBefore = river.totalSupply();
+
+        vm.prank(consolidator);
+        vm.expectRevert(
+            abi.encodeWithSelector(IAttestationVerifierV1.ConsolidationSourceEqualsTarget.selector, 0, pubkey)
         );
         river.mintLsETHForConsolidation(consolidation);
 

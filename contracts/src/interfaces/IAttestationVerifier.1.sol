@@ -23,8 +23,8 @@ interface IAttestationVerifierV1 {
     /// @dev    `sourcePubkeys[i]` is consolidated INTO `targetPubkeys[i]` — same-index pairing.
     ///         `signatures` are the consolidation-committee attestor EIP-712 ECDSA signatures
     ///         over the typed-data struct
-    ///             AttestConsolidation(address withdrawalAddress, bytes[] sourcePubkeys, bytes[] targetPubkeys, uint256 totalAmount)
-    ///         The `signatures` field itself is NOT part of the typed data — only the four
+    ///             AttestConsolidation(address withdrawalAddress, bytes[] sourcePubkeys, bytes[] targetPubkeys, uint256 totalAmount, uint256[] exitEpoch)
+    ///         The `signatures` field itself is NOT part of the typed data — only the five
     ///         request fields are. This is what lets attestors produce signatures over the
     ///         request without a circular dependency.
     struct ConsolidationObject {
@@ -36,6 +36,8 @@ interface IAttestationVerifierV1 {
         bytes[] targetPubkeys;
         /// @dev Total ETH being consolidated, in wei.
         uint256 totalAmount;
+        /// @dev The exit epoch marked for each consolidation present in the object (one per pair).
+        uint256[] exitEpoch;
         /// @dev Consolidation-committee attestor EIP-712 ECDSA signatures (65 bytes each).
         ///      Not part of the EIP-712 typed data the committee signs.
         bytes[] signatures;
@@ -122,6 +124,13 @@ interface IAttestationVerifierV1 {
     /// @param depositDataBufferId The replayed deposit data buffer ID
     error DepositDataBufferIdAlreadyProcessed(bytes32 depositDataBufferId);
 
+    /// @notice The DepositDataBuffer does not authorize River as its processor, so River could not
+    ///         mark batches processed — attested deposits would revert. Rejected at config time.
+    /// @param buffer The DepositDataBuffer address being set
+    /// @param expected The expected processor (River)
+    /// @param actual The processor the buffer actually authorizes
+    error InvalidDepositDataBufferProcessor(address buffer, address expected, address actual);
+
     /// @notice The submitted signatures array exceeds MAX_SIGNATURES
     /// @param count The submitted signature count
     /// @param max The configured maximum
@@ -160,11 +169,12 @@ interface IAttestationVerifierV1 {
     error InvalidDepositAmount(uint256 index, uint256 amount);
 
     /// @notice A top-up's `amount` is outside the protocol-accepted range
-    ///         [1 ether, 2048 ether] or is not gwei-aligned. Top-ups credit already-activated
+    ///         [1 ether, 2016 ether] or is not gwei-aligned. Top-ups credit already-activated
     ///         validators, so the lower bound is 1 ether — intentionally below the 32 ether floor
-    ///         that initial deposits require (see `InvalidDepositAmount`). Enforced here in
-    ///         `fetchAndValidateDeposits()` so producer bugs fail before the heavy BLS path runs;
-    ///         downstream `_depositValidator` trusts this check.
+    ///         that initial deposits require (see `InvalidDepositAmount`). The 2016 ether upper bound
+    ///         is the stateless headroom from a 32 ether funded validator to the 2048 ether Pectra max
+    ///         effective balance. Enforced here in `fetchAndValidateDeposits()` so producer bugs fail
+    ///         before the heavy BLS path runs; downstream `_depositValidator` trusts this check.
     /// @param index Index into `batch.topUps`
     /// @param amount The offending amount in wei
     error InvalidTopUpAmount(uint256 index, uint256 amount);
@@ -220,6 +230,9 @@ interface IAttestationVerifierV1 {
     /// @param targetLength The length of the target pubkey array
     error ConsolidationArrayLengthMismatch(uint256 sourceLength, uint256 targetLength);
 
+    /// @notice The exit epoch array is different from source pubkey array
+    error ExitEpochArrayLengthMismatch();
+
     /// @notice A pubkey field has an unexpected byte length
     /// @param index The pair index
     /// @param length The observed length
@@ -229,6 +242,13 @@ interface IAttestationVerifierV1 {
     /// @notice A consolidation source pubkey is the all-zero 48-byte value.
     /// @param index The pair index of the offending source pubkey
     error ZeroConsolidationSourcePubkey(uint256 index);
+
+    /// @notice A consolidation pair has the same pubkey as source and target. A self consolidation is the
+    ///         on-chain 0x01 to 0x02 credential upgrade: it moves no ETH into the protocol, so River must not
+    ///         mint against it. The legitimate path is `River.selfConsolidation`, which never reaches here.
+    /// @param index The pair index of the offending self consolidation
+    /// @param pubkey The offending 48-byte BLS pubkey
+    error ConsolidationSourceEqualsTarget(uint256 index, bytes pubkey);
 
     /// @notice The EIP-712 consolidation domain separator has not been initialized
     error ZeroConsolidationDomainSeparator();
@@ -291,12 +311,16 @@ interface IAttestationVerifierV1 {
     /// @notice One-shot initializer for v1 of the AttestationVerifier.
     /// @dev    Configures both the deposit and consolidation attestation flows in a single call.
     ///         Each flow has its own committee, quorum, and EIP-712 domain separator (distinct
-    ///         NAME_HASH per flow); they share only the River anchor and the admin lookup.
+    ///         NAME_HASH per flow); they share only the River anchor and the admin.
     ///         Quorum and committee constraints are validated independently per flow. The deposit
     ///         flow uses a pre-commit `DepositDataBuffer` contract; the consolidation flow has no
     ///         on-chain buffer — callers pass `ConsolidationObject` directly into `validateConsolidation`.
+    /// @param _admin                Administrator of this verifier, governing every admin setter here.
+    ///                              Independent of River's admin — it may be the same address, but the
+    ///                              verifier never reads River to resolve it. Rotated via the standard
+    ///                              two-step `proposeAdmin`/`acceptAdmin` flow. Must be non-zero.
     /// @param _river                The River proxy address; used for the EIP-712 verifyingContract
-    ///                              binding and for the cross-contract admin lookup.
+    ///                              binding and as the sole authorized caller of the `onlyRiver` entry points.
     /// @param _depositDataBuffer    The pre-commit buffer the keeper writes to.
     /// @param _rootAttesters Initial set of root attester EOAs.
     /// @param _quorum               Initial attestation quorum (1 ≤ quorum ≤ rootAttesters.length).
@@ -305,6 +329,7 @@ interface IAttestationVerifierV1 {
     /// @param _consolidationQuorum              Initial consolidation-attestation quorum
     ///                                          (1 ≤ q ≤ consolidationCommitteeAttesters.length, ≤ MAX_SIGNATURES).
     function initAttestationVerifierV1(
+        address _admin,
         address _river,
         address _depositDataBuffer,
         address[] calldata _rootAttesters,
@@ -349,11 +374,6 @@ interface IAttestationVerifierV1 {
         uint256 committedBalance
     ) external view returns (IDepositDataBuffer.DepositObject memory batch, uint256 totalAmount);
 
-    /// @notice Mark a `depositDataBufferId` as processed. Only callable by River.
-    /// @dev Called by River after the deposit-execution loop; consulted by `validateDeposits()` to reject replays.
-    /// @param depositDataBufferId The batch identifier to mark processed.
-    function markDepositDataBufferIdProcessed(bytes32 depositDataBufferId) external;
-
     // -----------------------------------------------------------------------
     // Initial-deposit recording (called by River after a successful deposit batch)
     // -----------------------------------------------------------------------
@@ -389,9 +409,10 @@ interface IAttestationVerifierV1 {
     ///         callable only by River.
     ///
     ///         Trust boundary: this function validates structural shape, single-use source
-    ///         pubkeys, and the attestation quorum. The following are intentionally NOT checked
-    ///         here and are delegated to the caller (off-chain pipeline / consolidation committee)
-    ///         or to the eventual River integration:
+    ///         pubkeys, that no pair consolidates a source into itself, and the attestation
+    ///         quorum. The following are intentionally NOT checked here and are delegated to the
+    ///         caller (off-chain pipeline / consolidation committee) or to the eventual River
+    ///         integration:
     ///           - Target pubkey uniqueness
     ///           - `totalAmount` gwei alignment, upper bound, or correlation with pair count
     ///           - Financial caps (e.g. against committed/in-flight balances)
@@ -404,35 +425,35 @@ interface IAttestationVerifierV1 {
     // Admin setters
     // -----------------------------------------------------------------------
 
-    /// @notice Add or remove a root attester. Only callable by River's admin.
+    /// @notice Add or remove a root attester. Only callable by this verifier's admin.
     /// @param rootAttester The root attester address to update
     /// @param value True to register the root attester, false to deregister
     function setRootAttester(address rootAttester, bool value) external;
 
-    /// @notice Update the root attestation quorum. Only callable by River's admin.
+    /// @notice Update the root attestation quorum. Only callable by this verifier's admin.
     /// @param newQuorum The new quorum (1 ≤ newQuorum ≤ rootAttesterCount, ≤ MAX_SIGNATURES)
     function setRootAttestationQuorum(uint256 newQuorum) external;
 
-    /// @notice Update the DepositDataBuffer address. Only callable by River's admin.
+    /// @notice Update the DepositDataBuffer address. Only callable by this verifier's admin.
     /// @param _depositDataBuffer The new buffer address
     function setDepositDataBuffer(address _depositDataBuffer) external;
 
     /// @notice Recompute and store the BLS deposit domain from a genesis fork version. Admin recovery
     ///         path for a misconfigured deposit domain (e.g. a wrong fork version at init), which would
     ///         otherwise brick the attestation deposit path until a full redeploy. Only callable by
-    ///         River's admin.
+    ///         this verifier's admin.
     /// @dev On a known chain (mainnet or hoodi) reverts `InvalidGenesisForkVersion` unless
     ///      `genesisForkVersion` exactly matches that chain's canonical value; on any other chain the
     ///      value is accepted as-is (no canonical value to validate against). Same validation as init.
     /// @param genesisForkVersion The beacon-chain GENESIS_FORK_VERSION for the current chain
     function setDepositDomainFromForkVersion(bytes4 genesisForkVersion) external;
 
-    /// @notice Add or remove a consolidation-committee attester. Only callable by River's admin.
+    /// @notice Add or remove a consolidation-committee attester. Only callable by this verifier's admin.
     /// @param consolidationCommitteeAttester The consolidation-committee attester address to update
     /// @param value True to register, false to deregister
     function setConsolidationCommitteeAttester(address consolidationCommitteeAttester, bool value) external;
 
-    /// @notice Update the consolidation-committee attestation quorum. Only callable by River's admin.
+    /// @notice Update the consolidation-committee attestation quorum. Only callable by this verifier's admin.
     /// @param newQuorum The new quorum (1 ≤ newQuorum ≤ consolidationCommitteeAttesterCount, ≤ MAX_SIGNATURES)
     function setConsolidationCommitteeAttestationQuorum(uint256 newQuorum) external;
 
@@ -495,9 +516,4 @@ interface IAttestationVerifierV1 {
     /// @param pubkey The 48-byte BLS pubkey
     /// @return True if the pubkey is currently in the lookup
     function isPubkeyFunded(bytes calldata pubkey) external view returns (bool);
-
-    /// @notice Check whether a `depositDataBufferId` has already been processed.
-    /// @param depositDataBufferId The batch identifier
-    /// @return True if the ID has already been executed
-    function isDepositDataBufferIdProcessed(bytes32 depositDataBufferId) external view returns (bool);
 }

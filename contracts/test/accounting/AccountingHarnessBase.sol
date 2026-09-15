@@ -37,11 +37,20 @@ import "../utils/LegacyInit.sol";
 
 contract AccountingMockDepositDataBuffer is IDepositDataBuffer {
     mapping(bytes32 => DepositObject) internal _batches;
+    mapping(bytes32 => uint256) internal _nonce;
     mapping(bytes32 => bool) internal _exists;
+    mapping(bytes32 => bool) internal _processed;
+    address internal _processor;
+    uint256 public lastQueuedIdx;
+
+    constructor(address processor) {
+        _processor = processor;
+    }
 
     function submitDepositData(bytes32 depositDataBufferId, DepositObject calldata batch) external {
         if (_exists[depositDataBufferId]) revert DepositDataBufferIdAlreadyExists(depositDataBufferId);
         _exists[depositDataBufferId] = true;
+        _nonce[depositDataBufferId] = lastQueuedIdx;
         DepositObject storage stored = _batches[depositDataBufferId];
         for (uint256 i = 0; i < batch.deposits.length; i++) {
             stored.deposits.push(batch.deposits[i]);
@@ -49,20 +58,49 @@ contract AccountingMockDepositDataBuffer is IDepositDataBuffer {
         for (uint256 i = 0; i < batch.topUps.length; i++) {
             stored.topUps.push(batch.topUps[i]);
         }
-        emit DepositDataSubmitted(depositDataBufferId, batch.deposits.length, batch.topUps.length);
+        emit DepositDataSubmitted(depositDataBufferId, lastQueuedIdx, batch.deposits.length, batch.topUps.length);
+        ++lastQueuedIdx;
     }
 
-    function getDepositData(bytes32 depositDataBufferId) external view returns (DepositObject memory) {
+    function getDepositData(bytes32 depositDataBufferId) external view returns (DepositObject memory, uint256 nonce) {
         if (!_exists[depositDataBufferId]) revert DepositDataBufferIdNotFound(depositDataBufferId);
-        return _batches[depositDataBufferId];
+        return (_batches[depositDataBufferId], _nonce[depositDataBufferId]);
     }
 
-    function getWriter() external pure returns (address) {
+    function markDepositDataProcessed(bytes32 depositDataBufferId) external {
+        if (msg.sender != _processor) revert OnlyProcessor();
+        if (!_exists[depositDataBufferId]) revert DepositDataBufferIdNotFound(depositDataBufferId);
+        if (_processed[depositDataBufferId]) revert DepositDataAlreadyProcessed(depositDataBufferId);
+        _processed[depositDataBufferId] = true;
+        emit DepositDataProcessed(depositDataBufferId);
+    }
+
+    function isDepositDataProcessed(bytes32 depositDataBufferId) external view returns (bool) {
+        return _processed[depositDataBufferId];
+    }
+
+    function setProducer(address) external {}
+
+    function setProcessor(address) external {}
+
+    function getProducer() external pure returns (address) {
         return address(0);
     }
+
+    function proposeAdmin(address) external {}
+
+    function acceptAdmin() external {}
 
     function getAdmin() external pure returns (address) {
         return address(0);
+    }
+
+    function getPendingAdmin() external pure returns (address) {
+        return address(0);
+    }
+
+    function getProcessor() external view returns (address) {
+        return _processor;
     }
 }
 
@@ -175,6 +213,8 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
         externalConsolidationRecipientMapping = new ExternalConsolidationRecipientMappingV1();
         river = new AccountingRiverV1();
         operatorsRegistry = new AccountingTestOperatorsRegistry();
+        // The buffer's processor is River itself: River marks batches processed on the buffer during deposit.
+        depositBuffer = new AccountingMockDepositDataBuffer(address(river));
 
         LibImplementationUnbricker.unbrick(vm, address(withdraw));
         LibImplementationUnbricker.unbrick(vm, address(oracle));
@@ -232,6 +272,7 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
         address[] memory _initConsolidationCommitteeAttesters = new address[](1);
         _initConsolidationCommitteeAttesters[0] = makeAddr("consolidationCommitteeAttesterStub");
         attestationVerifier.initAttestationVerifierV1(
+            admin,
             address(river),
             address(depositBuffer),
             _initRootAttesters,
@@ -252,7 +293,9 @@ abstract contract AccountingHarnessBase is Test, BytesGenerator {
             address(externalConsolidationRecipientMapping),
             consolidator
         );
-        // Mock BLS verification: EIP-2537 precompiles are unavailable in Foundry.
+        // Mock BLS verification: this harness uses synthetic validator keys, which have no valid
+        // BLS deposit signature to check. Foundry does support the EIP-2537 precompiles, so tests
+        // that need the real pairing check can sign with test/utils/BLSSigner.sol instead.
         vm.mockCall(
             address(attestationVerifier),
             abi.encodeWithSelector(attestationVerifier.verifyBLSDeposit.selector),

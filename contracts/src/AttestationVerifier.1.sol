@@ -3,8 +3,8 @@ pragma solidity 0.8.34;
 
 import {ECDSA} from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
 
+import "./Administrable.sol";
 import "./Initializable.sol";
-import "./interfaces/IAdministrable.sol";
 import "./interfaces/IAttestationVerifier.1.sol";
 import "./interfaces/IAttestationVerifierPectraMigration.1.sol";
 import "./interfaces/IDepositContract.sol";
@@ -25,7 +25,6 @@ import "./state/attestationVerifier/RootAttesters.sol";
 import "./state/attestationVerifier/DepositDataBufferAddress.sol";
 import "./state/attestationVerifier/DepositDomainValue.sol";
 import "./state/attestationVerifier/DomainSeparator.sol";
-import "./state/attestationVerifier/ProcessedDepositDataBufferIds.sol";
 import "./state/attestationVerifier/PectraValidatorPubkeyLookup.sol";
 import "./state/attestationVerifier/PrePectraValidatorPubkeyLookup.sol";
 import "./state/attestationVerifier/ProcessedConsolidationSourcePubkeys.sol";
@@ -53,7 +52,16 @@ import "./state/shared/RiverAddress.sol";
 ///            for replay protection. State-mutating.
 ///
 ///         Extracted from RiverV1 to keep River's deployed bytecode under EIP-170.
-contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttestationVerifierPectraMigrationV1 {
+///
+///         Governance is local: the admin is set at initialization and rotated through the
+///         standard two-step `proposeAdmin`/`acceptAdmin` flow. River's own admin has no
+///         rights here — River is only the EIP-712 anchor and the `onlyRiver` caller.
+contract AttestationVerifierV1 is
+    Initializable,
+    Administrable,
+    IAttestationVerifierV1,
+    IAttestationVerifierPectraMigrationV1
+{
     // -----------------------------------------------------------------------
     // EIP-712
     // -----------------------------------------------------------------------
@@ -72,13 +80,14 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
     ///         domain (chainId, verifyingContract, version) were identical.
     bytes32 internal constant CONSOLIDATION_NAME_HASH = keccak256("ConsolidationValidation");
 
-    /// @dev EIP-712 typehash for a consolidation attestation. The four request fields are
+    /// @dev EIP-712 typehash for a consolidation attestation. The five request fields are
     ///      hashed directly into the EIP-712 struct (rather than first being squashed into a
     ///      single `bytes32` id). `bytes[]` fields follow EIP-712 dynamic-array rules:
     ///      each element is replaced by `keccak256(element)`, then the resulting `bytes32`
-    ///      array is concatenated and hashed (`_hashBytesArray`).
+    ///      array is concatenated and hashed (`_hashBytesArrayElements`). The `uint256[] exitEpoch`
+    ///      field hashes to `keccak256` over the concatenation of its elements (`_hashUintArray`).
     bytes32 internal constant ATTEST_CONSOLIDATION_TYPEHASH = keccak256(
-        "AttestConsolidation(address withdrawalAddress,bytes[] sourcePubkeys,bytes[] targetPubkeys,uint256 totalAmount)"
+        "AttestConsolidation(address withdrawalAddress,bytes[] sourcePubkeys,bytes[] targetPubkeys,uint256 totalAmount,uint256[] exitEpoch)"
     );
 
     /// @notice Maximum number of signatures accepted. Bounds the O(n^2) duplicate-detection loop.
@@ -101,6 +110,15 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
     ///         they credit already-activated validators and may be below this amount.
     uint256 internal constant MIN_INITIAL_DEPOSIT_AMOUNT = 32 ether;
 
+    /// @notice Minimum top-up amount accepted by the consensus-layer deposit path.
+    uint256 internal constant MIN_TOP_UP_AMOUNT = 1 ether;
+
+    /// @notice Maximum deposit amount — the Pectra 0x02 maximum effective balance.
+    uint256 internal constant MAX_DEPOSIT_AMOUNT = 2048 ether;
+
+    /// @notice Maximum stateless top-up: a funded validator should already have at least 32 ETH.
+    uint256 internal constant MAX_TOP_UP_AMOUNT = MAX_DEPOSIT_AMOUNT - MIN_INITIAL_DEPOSIT_AMOUNT;
+
     /// @dev Expected length for BLS pubkeys in a ConsolidationObject (source or target).
     uint256 internal constant CONSOLIDATION_PUBKEY_LENGTH = 48;
 
@@ -112,15 +130,6 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
     // -----------------------------------------------------------------------
     // Modifiers
     // -----------------------------------------------------------------------
-
-    /// @notice Restrict to River's admin via cross-contract view call.
-    /// @dev Single source of truth for governance — same admin manages River and this verifier.
-    modifier onlyRiverAdmin() {
-        if (msg.sender != IAdministrable(RiverAddress.get()).getAdmin()) {
-            revert LibErrors.Unauthorized(msg.sender);
-        }
-        _;
-    }
 
     /// @notice Restrict to River itself (the deposit-execution path), not its admin.
     /// @dev Used to gate state-mutating callbacks that should only fire as part of a
@@ -138,6 +147,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
 
     /// @inheritdoc IAttestationVerifierV1
     function initAttestationVerifierV1(
+        address _admin,
         address _river,
         address _depositDataBuffer,
         address[] calldata _rootAttesters,
@@ -146,6 +156,11 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
         address[] calldata _consolidationCommitteeAttesters,
         uint256 _consolidationQuorum
     ) external init(0) {
+        // ---- Admin ----
+        // Local governance, independent of River's admin. `AdministratorAddress.set` rejects
+        // the zero address, so a misconfigured deploy cannot leave the verifier ungoverned.
+        _setAdmin(_admin);
+
         // ---- Validate deposit-side parameters ----
         if (_rootAttesters.length == 0 || _rootAttesters.length > MAX_ROOT_ATTESTERS) {
             revert LibErrors.InvalidArgument();
@@ -169,6 +184,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
         RiverAddress.set(_river);
         emit SetRiver(_river);
 
+        _assertDepositDataBufferProcessor(_depositDataBuffer, _river);
         DepositDataBufferAddress.set(_depositDataBuffer);
         emit SetDepositDataBuffer(_depositDataBuffer);
 
@@ -237,13 +253,24 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
     // -----------------------------------------------------------------------
 
     /// @inheritdoc IAttestationVerifierV1
-    function setDepositDataBuffer(address _depositDataBuffer) external onlyRiverAdmin {
+    function setDepositDataBuffer(address _depositDataBuffer) external onlyAdmin {
+        _assertDepositDataBufferProcessor(_depositDataBuffer, RiverAddress.get());
         DepositDataBufferAddress.set(_depositDataBuffer);
         emit SetDepositDataBuffer(_depositDataBuffer);
     }
 
+    /// @notice Revert unless `depositDataBuffer` authorizes `expectedProcessor` (River) as its processor.
+    /// @param depositDataBuffer The DepositDataBuffer to validate
+    /// @param expectedProcessor The address that must be authorized to mark deposit data processed
+    function _assertDepositDataBufferProcessor(address depositDataBuffer, address expectedProcessor) internal view {
+        address actualProcessor = IDepositDataBuffer(depositDataBuffer).getProcessor();
+        if (actualProcessor != expectedProcessor) {
+            revert InvalidDepositDataBufferProcessor(depositDataBuffer, expectedProcessor, actualProcessor);
+        }
+    }
+
     /// @inheritdoc IAttestationVerifierV1
-    function setDepositDomainFromForkVersion(bytes4 genesisForkVersion) external onlyRiverAdmin {
+    function setDepositDomainFromForkVersion(bytes4 genesisForkVersion) external onlyAdmin {
         _setDepositDomainFromForkVersion(genesisForkVersion);
     }
 
@@ -274,7 +301,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
     }
 
     /// @inheritdoc IAttestationVerifierV1
-    function setRootAttester(address rootAttester, bool value) external onlyRiverAdmin {
+    function setRootAttester(address rootAttester, bool value) external onlyAdmin {
         bool current = RootAttesters.isRootAttester(rootAttester);
         if (current == value) revert RootAttesterStatusUnchanged(rootAttester, value);
 
@@ -294,7 +321,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
     }
 
     /// @inheritdoc IAttestationVerifierV1
-    function setRootAttestationQuorum(uint256 newQuorum) external onlyRiverAdmin {
+    function setRootAttestationQuorum(uint256 newQuorum) external onlyAdmin {
         if (newQuorum == 0) revert ZeroQuorum();
         uint256 rootAttesterCount = RootAttesters.getCount();
         if (newQuorum > rootAttesterCount) {
@@ -306,10 +333,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
     }
 
     /// @inheritdoc IAttestationVerifierV1
-    function setConsolidationCommitteeAttester(address consolidationCommitteeAttester, bool value)
-        external
-        onlyRiverAdmin
-    {
+    function setConsolidationCommitteeAttester(address consolidationCommitteeAttester, bool value) external onlyAdmin {
         bool current = ConsolidationCommitteeAttesters.isConsolidationCommitteeAttester(consolidationCommitteeAttester);
         if (current == value) {
             revert ConsolidationCommitteeAttesterStatusUnchanged(consolidationCommitteeAttester, value);
@@ -331,7 +355,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
     }
 
     /// @inheritdoc IAttestationVerifierV1
-    function setConsolidationCommitteeAttestationQuorum(uint256 newQuorum) external onlyRiverAdmin {
+    function setConsolidationCommitteeAttestationQuorum(uint256 newQuorum) external onlyAdmin {
         if (newQuorum == 0) revert ZeroQuorum();
         uint256 attesterCount = ConsolidationCommitteeAttesters.getCount();
         if (newQuorum > attesterCount) {
@@ -415,22 +439,26 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
         bytes32 withdrawalCredentials,
         uint256 committedBalance
     ) external view returns (IDepositDataBuffer.DepositObject memory batch, uint256 totalAmount) {
-        // 0. Replay protection — reject any batch ID already processed
-        if (ProcessedDepositDataBufferIds.isProcessed(depositDataBufferId)) {
+        // 0. Replay protection — reject any batch ID the buffer has already marked processed.
+        //    The buffer is the authoritative source for this flag (the processor flips it after execution).
+        address depositDataBuffer = DepositDataBufferAddress.get();
+        if (IDepositDataBuffer(depositDataBuffer).isDepositDataProcessed(depositDataBufferId)) {
             revert DepositDataBufferIdAlreadyProcessed(depositDataBufferId);
         }
 
         // 1. Verify attestation quorum
         _verifyAttestationQuorum(depositDataBufferId, depositRootHash, signatures, depositContract);
 
-        // 2. Get deposit batch from buffer
-        batch = IDepositDataBuffer(DepositDataBufferAddress.get()).getDepositData(depositDataBufferId);
+        // 2. Get deposit batch (and its stored nonce) from buffer
+        uint256 nonce;
+        (batch, nonce) = IDepositDataBuffer(depositDataBuffer).getDepositData(depositDataBufferId);
         uint256 depositCount = batch.deposits.length;
         uint256 topUpCount = batch.topUps.length;
         if (depositCount == 0 && topUpCount == 0) revert NoDeposits();
 
-        // 3. Re-compute and check the bufferId binding so the buffer cannot tamper post-attestation
-        bytes32 computedId = keccak256(abi.encode(batch));
+        // 3. Re-compute and check the bufferId binding so the buffer cannot tamper post-attestation.
+        //    The nonce is folded into the id, so it is included in the recompute.
+        bytes32 computedId = keccak256(abi.encode(batch, nonce));
         if (computedId != depositDataBufferId) revert BufferIdMismatch(depositDataBufferId, computedId);
 
         // 4. Validate initial deposits: field lengths, amount bounds, pubkey-not-already-funded
@@ -452,7 +480,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
             // InFlightDeposit / _assetBalance() (issue #441/#309). The upper bound and gwei-alignment
             // mirror `_depositValidator`; the 32-ETH floor is stricter here because this loop only
             // covers initial deposits (top-ups are validated separately below and stay >= 1 ETH).
-            if (d.amount < MIN_INITIAL_DEPOSIT_AMOUNT || d.amount > 2048 ether || d.amount % 1 gwei != 0) {
+            if (d.amount < MIN_INITIAL_DEPOSIT_AMOUNT || d.amount > MAX_DEPOSIT_AMOUNT || d.amount % 1 gwei != 0) {
                 revert InvalidDepositAmount(i, d.amount);
             }
             totalAmount += d.amount;
@@ -484,7 +512,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
             if (t.pubkey.length != DEPOSIT_PUBKEY_LENGTH) {
                 revert InvalidTopUpPubkeyLength(i, t.pubkey.length);
             }
-            if (t.amount < 1 ether || t.amount > 2048 ether || t.amount % 1 gwei != 0) {
+            if (t.amount < MIN_TOP_UP_AMOUNT || t.amount > MAX_TOP_UP_AMOUNT || t.amount % 1 gwei != 0) {
                 revert InvalidTopUpAmount(i, t.amount);
             }
             totalAmount += t.amount;
@@ -551,7 +579,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
     /// @inheritdoc IAttestationVerifierPectraMigrationV1
     function migratePrePectraValidatorPubkeys(uint256 operatorIndex, uint256 startIndex, uint256 stopIndex)
         external
-        onlyRiverAdmin
+        onlyAdmin
     {
         IOperatorsRegistryV1 operatorsRegistry =
             IOperatorsRegistryV1(IRiverV1(payable(RiverAddress.get())).getOperatorsRegistry());
@@ -603,7 +631,7 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
     }
 
     /// @inheritdoc IAttestationVerifierPectraMigrationV1
-    function removePrePectraValidatorPubkeys(bytes[] calldata pubkeys) external onlyRiverAdmin {
+    function removePrePectraValidatorPubkeys(bytes[] calldata pubkeys) external onlyAdmin {
         uint256 len = pubkeys.length;
         if (len == 0) {
             revert InvalidPrePectraRemovalEmptyPubkeys();
@@ -623,23 +651,17 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
     }
 
     /// @inheritdoc IAttestationVerifierV1
-    function markDepositDataBufferIdProcessed(bytes32 depositDataBufferId) external onlyRiver {
-        ProcessedDepositDataBufferIds.markProcessed(depositDataBufferId);
-    }
-
-    /// @inheritdoc IAttestationVerifierV1
-    function isDepositDataBufferIdProcessed(bytes32 depositDataBufferId) external view returns (bool) {
-        return ProcessedDepositDataBufferIds.isProcessed(depositDataBufferId);
-    }
-
-    /// @inheritdoc IAttestationVerifierV1
     /// @dev Trust boundary: this function validates structural shape (array shapes,
-    ///      pubkey byte lengths, and single-use source pubkeys) plus the attestation
-    ///      quorum (ECDSA signature recovery against the consolidation committee). It
-    ///      does NOT check:
+    ///      pubkey byte lengths, single-use source pubkeys, and that no pair consolidates
+    ///      a source into itself) plus the attestation quorum (ECDSA signature recovery
+    ///      against the consolidation committee). It does NOT check:
     ///        - `totalAmount` gwei alignment, upper bound, or correlation with the number
     ///          of (source, target) pairs.
     ///        - Whether the source validators actually exist on the consensus layer
+    ///        - Anything about `targetPubkeys` beyond byte length and the self-pair check.
+    ///          In particular: a zero target is accepted, unlike a zero source which
+    ///          reverts; and a target that is not a known funded River validator is
+    ///          accepted.
     ///      These are the responsibility of the caller (off-chain pipeline) and the
     ///      consolidation committee that signs the request.
     function validateConsolidation(IAttestationVerifierV1.ConsolidationObject calldata consolidation)
@@ -653,6 +675,9 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
         if (sourceLen != targetLen) revert ConsolidationArrayLengthMismatch(sourceLen, targetLen);
         if (consolidation.totalAmount == 0) revert ZeroConsolidationTotalAmount();
         if (consolidation.withdrawalAddress == address(0)) revert ZeroConsolidationWithdrawalAddress();
+        if (consolidation.exitEpoch.length != sourceLen) {
+            revert ExitEpochArrayLengthMismatch();
+        }
 
         // 2. Per-pair pubkey length checks, before hashing dynamic bytes.
         for (uint256 i = 0; i < sourceLen; ++i) {
@@ -667,20 +692,25 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
         }
 
         // 3. Compute the EIP-712 digest the committee signed.
-        //    The struct's `signatures` field is NOT part of the typed data — only the four
+        //    The struct's `signatures` field is NOT part of the typed data — only the five
         //    request fields are. `bytes[]` arrays follow EIP-712 array rules: each element
         //    becomes `keccak256(element)`, then the array hashes to `keccak256` over the
-        //    concatenation of those 32-byte element hashes.
+        //    concatenation of those 32-byte element hashes. The `uint256[] exitEpoch` array
+        //    hashes to `keccak256` over the concatenation of its 32-byte elements.
         bytes32 domainSep = ConsolidationDomainSeparator.get();
         if (domainSep == bytes32(0)) revert ZeroConsolidationDomainSeparator();
         bytes32[] memory sourcePubkeyHashes = _hashBytesArrayElements(consolidation.sourcePubkeys);
+        // Kept per-element rather than hashed straight into the digest, so the self-pair check below can
+        // reuse them. The concatenate-and-hash below is the EIP-712 array hash, so the digest is unchanged.
+        bytes32[] memory targetPubkeyHashes = _hashBytesArrayElements(consolidation.targetPubkeys);
         bytes32 structHash = keccak256(
             abi.encode(
                 ATTEST_CONSOLIDATION_TYPEHASH,
                 consolidation.withdrawalAddress,
                 keccak256(abi.encodePacked(sourcePubkeyHashes)),
-                _hashBytesArray(consolidation.targetPubkeys),
-                consolidation.totalAmount
+                keccak256(abi.encodePacked(targetPubkeyHashes)),
+                consolidation.totalAmount,
+                _hashUintArray(consolidation.exitEpoch)
             )
         );
 
@@ -700,6 +730,14 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
             bytes32 sourcePubkeyHash = sourcePubkeyHashes[i];
             if (sourcePubkeyHash == ZERO_CONSOLIDATION_PUBKEY_HASH) {
                 revert ZeroConsolidationSourcePubkey(i);
+            }
+            // A self consolidation is the 0x01 -> 0x02 credential upgrade. It moves no ETH into the
+            // protocol, so River minting `totalAmount` against it would inflate `_assetBalance()` with ETH
+            // that never arrives. The legitimate upgrade path is `River.selfConsolidation`, which goes
+            // through `validateSelfConsolidation` and never reaches here.
+            if (sourcePubkeyHash == targetPubkeyHashes[i] && _bytesEqual(sourcePubkey, consolidation.targetPubkeys[i]))
+            {
+                revert ConsolidationSourceEqualsTarget(i, sourcePubkey);
             }
             for (uint256 j = 0; j < i; ++j) {
                 if (
@@ -818,12 +856,8 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
         if (validCount < quorum) revert InsufficientConsolidationAttestations(validCount, quorum);
     }
 
-    /// @dev EIP-712 array hash for a `bytes[]` field. Each element is replaced by its
-    ///      `keccak256`, and the resulting `bytes32[]` is concatenated and hashed.
-    function _hashBytesArray(bytes[] calldata arr) internal pure returns (bytes32) {
-        return keccak256(abi.encodePacked(_hashBytesArrayElements(arr)));
-    }
-
+    /// @dev EIP-712 array hash for a `bytes[]` field, per element. Each element is replaced by its
+    ///      `keccak256`; the caller concatenates and hashes the result to get the array hash.
     function _hashBytesArrayElements(bytes[] calldata arr) internal pure returns (bytes32[] memory hashes) {
         hashes = new bytes32[](arr.length);
         for (uint256 i = 0; i < arr.length; i++) {
@@ -837,6 +871,12 @@ contract AttestationVerifierV1 is Initializable, IAttestationVerifierV1, IAttest
             if (a[i] != b[i]) return false;
         }
         return true;
+    }
+
+    /// @dev EIP-712 array hash for a `uint256[]` field. Each element is already an atomic
+    ///      32-byte value, so the array hashes to `keccak256` over their concatenation.
+    function _hashUintArray(uint256[] calldata arr) internal pure returns (bytes32) {
+        return keccak256(abi.encodePacked(arr));
     }
 
     /// @notice Verify the BLS signatures of all initial deposits against the canonical River
