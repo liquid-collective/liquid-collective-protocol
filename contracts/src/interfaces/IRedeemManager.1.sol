@@ -167,12 +167,8 @@ interface IRedeemManagerV1 {
     function getRedeemRequestCount() external view returns (uint256);
 
     /// @notice Retrieve the details of a specific redeem request
-    /// @dev The `maxRedeemableEth` field of the returned struct is legacy-only: it bounds the payout for
-    ///      requests predating the stopped-earning upgrade, and nothing for the rest. A post-upgrade
-    ///      request's cap is derived from `getRedeemRequestAnchor` together with the marks covering its
-    ///      span, readable through `getRateMarkCount` and `getRateMarkDetails`. Do not read
-    ///      `maxRedeemableEth` as remaining claimable ETH; for an anchored request it can be 0 while the
-    ///      request still has a live claim.
+    /// @dev For post-upgrade requests, `maxRedeemableEth` is computed based on current rate marks and withdrawal events.
+    ///      For pre-upgrade requests, it's the stored ETH budget that decrements on claims.
     /// @param _redeemRequestId The id of the request
     /// @return The redeem request details
     function getRedeemRequestDetails(uint32 _redeemRequestId) external view returns (RedeemQueueV2.RedeemRequest memory);

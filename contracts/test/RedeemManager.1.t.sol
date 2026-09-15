@@ -1708,6 +1708,16 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         redeemManager.initializeRedeemManagerV1_3();
     }
 
+    /// @dev Zeroes a request's anchor so it takes the pre-upgrade code path, the way every request
+    ///      created before the stopped-earning upgrade does.
+    function _clearRequestAnchor(uint32 id) internal {
+        bytes32 anchorSlot =
+            keccak256(abi.encode(uint256(id), bytes32(uint256(keccak256("river.state.redeemRequestAnchor")) - 1)));
+        vm.store(address(redeemManager), anchorSlot, bytes32(0));
+        vm.store(address(redeemManager), bytes32(uint256(anchorSlot) + 1), bytes32(0));
+        assertEq(redeemManager.getRedeemRequestAnchor(id).lsETHAtRequest, 0);
+    }
+
     /// @dev Settles `lsETH` of demand at the current pool rate and claims request `id` in full.
     function _settleAndClaim(uint32 id, uint256 lsETH, uint256 settlementRate) internal returns (uint256 received) {
         uint256 withdrawnEth = applyRate(lsETH, settlementRate);
@@ -1736,11 +1746,7 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         assertEq(redeemManager.getRedeemRequestDetails(id).maxRedeemableEth, applyRate(30e18, 1e18));
 
         if (_clearAnchor) {
-            bytes32 anchorSlot =
-                keccak256(abi.encode(uint256(id), bytes32(uint256(keccak256("river.state.redeemRequestAnchor")) - 1)));
-            vm.store(address(redeemManager), anchorSlot, bytes32(0));
-            vm.store(address(redeemManager), bytes32(uint256(anchorSlot) + 1), bytes32(0));
-            assertEq(redeemManager.getRedeemRequestAnchor(id).lsETHAtRequest, 0);
+            _clearRequestAnchor(id);
         }
 
         // no rate mark is ever pushed: the whole span sits in a gap and is capped at the request rate
@@ -2616,8 +2622,260 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
+    // getRedeemRequestDetails projects maxRedeemableEth
+    //
+    // Nothing in the claim path writes `maxRedeemableEth` back for an anchored request, so the stored
+    // field is frozen at its request-time value: it neither falls as the request is claimed nor rises
+    // when a mark re-prices its span. The getter therefore recomputes the field in memory from the
+    // same inputs a claim uses -- anchor, marks, carry, withdrawal events -- and returns the eth the
+    // request can still be paid. Storage stays untouched, and pre-upgrade requests keep the stored
+    // decrementing budget they are still governed by.
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /// @dev Reads `maxRedeemableEth` straight out of the redeem queue, bypassing the getter's
+    ///      projection. The queue is a dynamic array at a raw keccak slot with a stride of 5 words and
+    ///      `maxRedeemableEth` as its second field.
+    function _storedMaxRedeemableEth(uint32 id) internal view returns (uint256) {
+        uint256 base = uint256(keccak256(abi.encode(bytes32(uint256(keccak256("river.state.redeemQueue")) - 1))));
+        return uint256(vm.load(address(redeemManager), bytes32(base + uint256(id) * 5 + 1)));
+    }
+
+    /// @dev Claims request `id` in full against the withdrawal events that already exist, without
+    ///      reporting a new one. Pairs with `_settleOnly` when a test needs to read the projection
+    ///      between settlement and claim.
+    function _claimOnly(uint32 id) internal returns (uint256 received) {
+        uint32[] memory ids = new uint32[](1);
+        ids[0] = id;
+        int64[] memory resolved = redeemManager.resolveRedeemRequests(ids);
+        uint32[] memory eventIds = new uint32[](1);
+        eventIds[0] = uint32(uint64(resolved[0]));
+
+        address recipient = redeemManager.getRedeemRequestDetails(id).recipient;
+        uint256 before = recipient.balance;
+        redeemManager.claimRedeemRequests(ids, eventIds);
+        return recipient.balance - before;
+    }
+
+    /// With no mark and no withdrawal event, the projection is the request-time value: the whole span
+    /// sits in a mark gap, so it is worth exactly what it was quoted at. This is the case every
+    /// pre-existing assertion of `maxRedeemableEth` right after `requestRedeem` relies on.
+    function testDetailsMaxRedeemableEthUnsettledAnchoredEqualsRequestValue() external {
+        address user = _generateAllowlistedUser(0);
+        river.sudoSetRate(1.2e18);
+        uint32 id = _openRequest(user, 30e18);
+
+        assertEq(redeemManager.getRedeemRequestDetails(id).maxRedeemableEth, applyRate(30e18, 1.2e18));
+    }
+
+    /// A mark raises what the request can be paid, and the getter must show it. The stored slot still
+    /// reads 30 ETH -- it is never written again -- which is exactly why the getter cannot return it.
+    function testDetailsMaxRedeemableEthRisesWithRateMark() external {
+        address user = _generateAllowlistedUser(0);
+        river.sudoSetRate(1e18);
+        uint32 id = _openRequest(user, 30e18);
+
+        river.sudoSetRate(1.6e18);
+        river.sudoReportStoppedEarning(address(redeemManager), applyRate(30e18, 1.6e18));
+
+        assertEq(redeemManager.getRedeemRequestDetails(id).maxRedeemableEth, applyRate(30e18, 1.6e18));
+        assertEq(_storedMaxRedeemableEth(id), 30e18);
+    }
+
+    /// The projection is view-only: reading it cannot move storage, and neither can claiming an
+    /// anchored request, which is the whole reason the stored field went stale in the first place.
+    function testDetailsProjectionNeverWritesStoredMaxRedeemableEth() external {
+        address user = _generateAllowlistedUser(0);
+        river.sudoSetRate(1e18);
+        uint32 id = _openRequest(user, 30e18);
+
+        river.sudoSetRate(1.6e18);
+        river.sudoReportStoppedEarning(address(redeemManager), applyRate(30e18, 1.6e18));
+
+        redeemManager.getRedeemRequestDetails(id);
+        assertEq(_storedMaxRedeemableEth(id), 30e18);
+
+        assertEq(_settleAndClaim(id, 30e18, 1.6e18), applyRate(30e18, 1.6e18));
+        assertEq(_storedMaxRedeemableEth(id), 30e18);
+        assertEq(redeemManager.getRedeemRequestDetails(id).maxRedeemableEth, 0);
+    }
+
+    /// A withdrawal event that settles the span below its cap bounds the projection: the request can
+    /// only ever be paid the eth that event actually supplied, so that is what the getter reports.
+    function testDetailsMaxRedeemableEthClampsToSettlementBelowCap() external {
+        address user = _generateAllowlistedUser(0);
+        river.sudoSetRate(1e18);
+        uint32 id = _openRequest(user, 30e18);
+
+        _settleOnly(30e18, 0.5e18);
+
+        assertEq(redeemManager.getRedeemRequestDetails(id).maxRedeemableEth, applyRate(30e18, 0.5e18));
+        assertEq(_claimOnly(id), applyRate(30e18, 0.5e18));
+    }
+
+    /// The mirror case: a settlement above the cap does not raise the projection, because the excess
+    /// is swept to the exceeding-eth buffer rather than paid to the request.
+    function testDetailsMaxRedeemableEthStaysAtCapWhenSettlementExceedsIt() external {
+        address user = _generateAllowlistedUser(0);
+        river.sudoSetRate(1e18);
+        uint32 id = _openRequest(user, 30e18);
+
+        _settleOnly(30e18, 1.5e18);
+
+        assertEq(redeemManager.getRedeemRequestDetails(id).maxRedeemableEth, 30e18);
+        assertEq(_claimOnly(id), 30e18);
+        assertEq(redeemManager.getBufferedExceedingEth(), applyRate(30e18, 1.5e18) - 30e18);
+    }
+
+    /// After a partial claim the projection covers the LsETH that is LEFT, and it must include the cap
+    /// the first fill was credited with but did not spend. Dropping the carry here would under-report
+    /// by exactly the 10 ETH the cheap fill left on the table.
+    function testDetailsMaxRedeemableEthAfterPartialClaimCountsCarry() external {
+        address user = _generateAllowlistedUser(0);
+        river.sudoSetRate(1e18);
+        uint32 id = _openRequest(user, 30e18);
+
+        assertEq(_settleAndClaim(id, 20e18, 0.5e18), applyRate(20e18, 0.5e18));
+        uint256 carry = redeemManager.getRedeemRequestCarry(id);
+        assertEq(carry, applyRate(20e18, 1e18) - applyRate(20e18, 0.5e18));
+
+        // 10 LsETH left at the request rate, plus the unspent 10 ETH of cap
+        uint256 projected = redeemManager.getRedeemRequestDetails(id).maxRedeemableEth;
+        assertEq(projected, applyRate(10e18, 1e18) + carry);
+
+        // the next fill is worth less than the projection, which is a ceiling and not a quote
+        assertEq(_settleAndClaim(id, 10e18, 1.5e18), applyRate(10e18, 1.5e18));
+        assertLe(applyRate(10e18, 1.5e18), projected);
+    }
+
+    /// A fully claimed request can receive nothing more, whatever the marks say.
+    function testDetailsMaxRedeemableEthIsZeroWhenFullyClaimed() external {
+        _lowThenHighFill(0, false);
+
+        assertEq(redeemManager.getRedeemRequestDetails(0).amount, 0);
+        assertEq(redeemManager.getRedeemRequestDetails(0).maxRedeemableEth, 0);
+    }
+
+    /// A pre-upgrade request is returned verbatim: there `maxRedeemableEth` is the authoritative
+    /// decrementing budget the claim path still maintains, so projecting over it would be wrong.
+    function testDetailsMaxRedeemableEthUnchangedForLegacyRequest() external {
+        address user = _generateAllowlistedUser(0);
+        river.sudoSetRate(1e18);
+        uint32 id = _openRequest(user, 30e18);
+        _clearRequestAnchor(id);
+
+        assertEq(redeemManager.getRedeemRequestDetails(id).maxRedeemableEth, 30e18);
+
+        assertEq(_settleAndClaim(id, 20e18, 0.5e18), applyRate(20e18, 0.5e18));
+
+        uint256 stored = _storedMaxRedeemableEth(id);
+        assertEq(stored, 30e18 - applyRate(20e18, 0.5e18));
+        assertEq(redeemManager.getRedeemRequestDetails(id).maxRedeemableEth, stored);
+    }
+
+    /// The strong form: with the whole request covered by withdrawal events, the projection is not an
+    /// estimate but the exact eth the next claim pays -- across an event boundary, a marked span and
+    /// an unmarked one. This is what makes the getter safe for a UI to quote.
+    function testDetailsMaxRedeemableEthMatchesPayoutWhenFullySettled() external {
+        address user = _generateAllowlistedUser(0);
+        river.sudoSetRate(1e18);
+        uint32 id = _openRequest(user, 30e18);
+
+        // the first half of the span stopped earning at 2.0; the rest never did
+        river.sudoReportStoppedEarningAt(address(redeemManager), applyRate(15e18, 2e18), 15e18);
+
+        _settleOnly(15e18, 2e18);
+        _settleOnly(15e18, 1e18);
+
+        uint256 projected = redeemManager.getRedeemRequestDetails(id).maxRedeemableEth;
+        assertEq(projected, applyRate(15e18, 2e18) + applyRate(15e18, 1e18));
+        assertEq(_claimOnly(id), projected);
+        assertEq(redeemManager.getRedeemRequestDetails(id).maxRedeemableEth, 0);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
     // Fuzz / property coverage for the slice-cap math
     // ─────────────────────────────────────────────────────────────────────────
+
+    /// Property: the projection is never less than what the following claim pays, and is exactly it
+    /// once every LsETH of the request is covered by a withdrawal event. Fuzzes the request size, the
+    /// request rate, the marked fraction, the locked rate, the settlement rate and how much of the
+    /// request is settled, so no hand-picked scenario can hide a carry or rounding divergence between
+    /// the projection and `_claimRedeemRequest`.
+    function testFuzz_DetailsMaxRedeemableEthBoundsPayout(
+        uint256 _amount,
+        uint256 _requestRate,
+        uint256 _markedFraction,
+        uint256 _markRate,
+        uint256 _settlementRate,
+        uint256 _settledAmount
+    ) external {
+        uint256 amount = bound(_amount, 1, 1_000_000 ether);
+        uint256 requestRate = bound(_requestRate, 0.5e18, 2e18);
+        uint256 markedFraction = bound(_markedFraction, 0, 1e18);
+        uint256 markRate = bound(_markRate, 0.5e18, 2e18);
+        uint256 settlementRate = bound(_settlementRate, 0.5e18, 2e18);
+        uint256 settledAmount = bound(_settledAmount, 1, amount);
+
+        address user = _generateAllowlistedUser(0);
+        river.sudoSetRate(requestRate);
+        uint32 id = _openRequest(user, amount);
+
+        // mirrors reportStoppedEarning's own dual-nonzero guard: a tiny marked amount at a sub-1.0
+        // rate floors the eth leg to 0 and no mark is pushed
+        uint256 markedAmount = (amount * markedFraction) / 1e18;
+        uint256 markedEth = applyRate(markedAmount, markRate);
+        if (markedAmount > 0 && markedEth > 0) {
+            river.sudoReportStoppedEarningAt(address(redeemManager), markedEth, markedAmount);
+        }
+
+        river.sudoSetRate(settlementRate);
+        _settleOnly(settledAmount, settlementRate);
+
+        uint256 projected = redeemManager.getRedeemRequestDetails(id).maxRedeemableEth;
+        uint256 received = _claimOnly(id);
+
+        assertLe(received, projected);
+        if (settledAmount == amount) {
+            assertEq(received, projected);
+        }
+    }
+
+    /// Property: splitting the same settlement across two withdrawal events cannot make the
+    /// projection disagree with the payout. The projection walks events exactly as the claim
+    /// recursion does, carry included, so the equality must survive any split point.
+    function testFuzz_DetailsMaxRedeemableEthMatchesPayoutAcrossSplitEvents(
+        uint256 _amount,
+        uint256 _requestRate,
+        uint256 _markRate,
+        uint256 _firstRate,
+        uint256 _secondRate,
+        uint256 _splitPoint
+    ) external {
+        uint256 amount = bound(_amount, 2, 1_000_000 ether);
+        uint256 requestRate = bound(_requestRate, 0.5e18, 2e18);
+        uint256 markRate = bound(_markRate, 0.5e18, 2e18);
+        uint256 firstRate = bound(_firstRate, 0.5e18, 2e18);
+        uint256 secondRate = bound(_secondRate, 0.5e18, 2e18);
+        uint256 splitPoint = bound(_splitPoint, 1, amount - 1);
+
+        address user = _generateAllowlistedUser(0);
+        river.sudoSetRate(requestRate);
+        uint32 id = _openRequest(user, amount);
+
+        // mark only the first part of the span, so the request straddles a mark edge as well as an
+        // event edge and the two boundaries do not line up
+        uint256 markedEth = applyRate(splitPoint, markRate);
+        if (markedEth > 0) {
+            river.sudoReportStoppedEarningAt(address(redeemManager), markedEth, splitPoint);
+        }
+
+        _settleOnly(splitPoint, firstRate);
+        _settleOnly(amount - splitPoint, secondRate);
+
+        uint256 projected = redeemManager.getRedeemRequestDetails(id).maxRedeemableEth;
+        assertEq(_claimOnly(id), projected);
+        assertEq(redeemManager.getRedeemRequestDetails(id).maxRedeemableEth, 0);
+    }
 
     /// @dev Deploys a fresh, independent RiverMock + RedeemManagerV1 pair sharing this test's
     ///      allowlist, so a scenario can be replayed from a clean slate without disturbing the
