@@ -125,10 +125,8 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
     {
         redeemRequest = RedeemQueueV2.get()[_redeemRequestId];
         RedeemRequestAnchor.Anchor memory anchor = RedeemRequestAnchor.get()[_redeemRequestId];
-        // An anchored request never writes `maxRedeemableEth` back (see `_saveRedeemRequest`), so the
-        // stored field would stay frozen at the request-time value: it would neither fall as the request
-        // is claimed nor rise when a mark re-prices its span. Project it from the same inputs the claim
-        // path uses instead. A pre-upgrade request keeps the stored budget, still authoritative for it.
+        // Anchored requests use projected maxRedeemableEth instead of stored value.
+        // Pre-upgrade requests keep their stored budget.
         if (anchor.lsETHAtRequest != 0) {
             redeemRequest.maxRedeemableEth = _projectedMaxRedeemableEth(_redeemRequestId, redeemRequest, anchor);
         }
