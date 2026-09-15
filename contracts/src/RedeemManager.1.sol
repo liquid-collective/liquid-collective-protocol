@@ -121,9 +121,17 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
     function getRedeemRequestDetails(uint32 _redeemRequestId)
         external
         view
-        returns (RedeemQueueV2.RedeemRequest memory)
+        returns (RedeemQueueV2.RedeemRequest memory redeemRequest)
     {
-        return RedeemQueueV2.get()[_redeemRequestId];
+        redeemRequest = RedeemQueueV2.get()[_redeemRequestId];
+        RedeemRequestAnchor.Anchor memory anchor = RedeemRequestAnchor.get()[_redeemRequestId];
+        // An anchored request never writes `maxRedeemableEth` back (see `_saveRedeemRequest`), so the
+        // stored field would stay frozen at the request-time value: it would neither fall as the request
+        // is claimed nor rise when a mark re-prices its span. Project it from the same inputs the claim
+        // path uses instead. A pre-upgrade request keeps the stored budget, still authoritative for it.
+        if (anchor.lsETHAtRequest != 0) {
+            redeemRequest.maxRedeemableEth = _projectedMaxRedeemableEth(_redeemRequestId, redeemRequest, anchor);
+        }
     }
 
     /// @inheritdoc IRedeemManagerV1
@@ -510,6 +518,81 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
                 // bounded by `markCount`, which is the length of a storage array
                 ++markIndex;
             }
+        }
+    }
+
+    /// @notice Internal utility projecting the eth an anchored redeem request can still receive
+    /// @dev Replays `_claimRedeemRequest` over the request's remaining span without touching storage.
+    ///      Every withdrawal event covering the span pays `min(pro rata event eth, slice cap + carry)`
+    ///      and the unspent cap carries into the next event, exactly as a real claim would. The part of
+    ///      the span past the last withdrawal event has no settlement to clamp against and is valued at
+    ///      its cap, so the result is exact over the settled portion and an upper bound over the rest.
+    /// @dev The projection is a snapshot of current state: later rate marks and withdrawal events move
+    ///      it. It is exact over the settled portion only up to rounding, because a future claim splits
+    ///      the unsettled tail at event boundaries and truncates each piece, while this values it whole.
+    /// @dev Unlike the claim path this walks every covering event rather than a caller-supplied
+    ///      `_depth`. The walk is bounded by the number of withdrawal events the request spans, and this
+    ///      is a view, so no on-chain caller pays for it.
+    /// @param _redeemRequestId The id of the request, used to load its carry
+    /// @param _redeemRequest The loaded redeem request, at its current height and remaining amount
+    /// @param _anchor The immutable request-time valuation of the request
+    /// @return projectedEth The maximum eth the request can still be paid
+    function _projectedMaxRedeemableEth(
+        uint32 _redeemRequestId,
+        RedeemQueueV2.RedeemRequest memory _redeemRequest,
+        RedeemRequestAnchor.Anchor memory _anchor
+    ) internal view returns (uint256 projectedEth) {
+        // A fully claimed request can receive nothing more. Its carry is zeroed by `_saveRedeemRequest`,
+        // so the walk below would return 0 anyway; returning here keeps that independent of the carry.
+        uint256 remainingAmount = _redeemRequest.amount;
+        if (remainingAmount == 0) {
+            return 0;
+        }
+
+        uint256 height = _redeemRequest.height;
+        uint256 carry = RedeemRequestCarry.get()[_redeemRequestId];
+
+        // Claiming raises a request's height, so `height` is where its unclaimed part starts. Anything
+        // below the settled height has a withdrawal event behind it whose eth bounds the payout.
+        if (_settledHeight() > height) {
+            WithdrawalStack.WithdrawalEvent[] storage withdrawalEvents = WithdrawalStack.get();
+            uint256 withdrawalEventCount = withdrawalEvents.length;
+            // The withdrawal stack is contiguous from 0, so a height below the settled height always
+            // lands inside an event. The `_settledHeight` check above also rules out the empty stack,
+            // which would underflow the resolution's `length - 1`.
+            uint256 withdrawalEventId = uint64(_performDichotomicResolution(_redeemRequest));
+
+            while (remainingAmount > 0 && withdrawalEventId < withdrawalEventCount) {
+                WithdrawalStack.WithdrawalEvent storage withdrawalEvent = withdrawalEvents[withdrawalEventId];
+                uint256 withdrawalEventAmount = withdrawalEvent.amount;
+                uint256 withdrawalEventEndPosition = withdrawalEvent.height + withdrawalEventAmount;
+
+                // The remaining span can extend past this event, so only the part inside it settles here.
+                uint256 matchingAmount = LibUint256.min(remainingAmount, withdrawalEventEndPosition - height);
+                uint256 settledEth = (matchingAmount * withdrawalEvent.withdrawnEth) / withdrawalEventAmount;
+                uint256 cap = _sliceCap(_anchor, height, matchingAmount) + carry;
+
+                if (settledEth > cap) {
+                    // the excess is swept to the exceeding eth buffer on claim, never paid to the request
+                    settledEth = cap;
+                }
+                projectedEth += settledEth;
+                unchecked {
+                    // `settledEth` is clamped to `cap` right above
+                    carry = cap - settledEth;
+                    // `matchingAmount` is a `min()` against `remainingAmount`, and the sum of all heights
+                    // is bounded by the total LsETH ever queued
+                    height += matchingAmount;
+                    remainingAmount -= matchingAmount;
+                    ++withdrawalEventId;
+                }
+            }
+        }
+
+        // Whatever is left sits above every withdrawal event. No settlement exists to clamp it, so it is
+        // worth its cap, carry included.
+        if (remainingAmount > 0) {
+            projectedEth += _sliceCap(_anchor, height, remainingAmount) + carry;
         }
     }
 

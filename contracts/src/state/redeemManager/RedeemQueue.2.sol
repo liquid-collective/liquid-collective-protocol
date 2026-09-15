@@ -17,7 +17,10 @@ library RedeemQueueV2 {
         ///                   anchor and the rate marks instead, this field is decremented with a
         ///                   saturating subtraction, and it can reach 0 while the request is still
         ///                   claimable. See `RedeemRequestAnchor` for why this field cannot carry the
-        ///                   request-time rate.
+        ///                   request-time rate. Note that `getRedeemRequestDetails` does not return this
+        ///                   slot verbatim for an anchored request: it overwrites the field in memory
+        ///                   with a projection over the anchor, the marks and the withdrawal events, so
+        ///                   the getter stays meaningful while the stored value stays frozen.
         uint256 maxRedeemableEth;
         /// @custom:attribute The recipient of the redeem request
         address recipient;
