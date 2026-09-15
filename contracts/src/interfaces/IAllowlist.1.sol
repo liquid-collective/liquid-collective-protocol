@@ -4,6 +4,8 @@ pragma solidity 0.8.34;
 /// @title Allowlist Interface (v1)
 /// @author Alluvial Finance Inc.
 /// @notice This interface exposes methods to handle the list of allowed recipients.
+/// @dev `initAllowlistV1` (init(0)) and `initAllowlistV1_1` (init(1)) were removed; see the
+///      REMOVED INITIALIZERS note on AllowlistV1 in contracts/src/Allowlist.1.sol.
 interface IAllowlistV1 {
     /// @notice The permissions of several accounts have changed
     /// @param accounts List of accounts
@@ -33,15 +35,6 @@ interface IAllowlistV1 {
 
     /// @notice Allower can't remove deny permission
     error AttemptToRemoveDenyPermission();
-
-    /// @notice Initializes the allowlist
-    /// @param _admin Address of the Allowlist administrator
-    /// @param _allower Address of the allower
-    function initAllowlistV1(address _admin, address _allower) external;
-
-    /// @notice Initializes the allowlist denier
-    /// @param _denier Address of the denier
-    function initAllowlistV1_1(address _denier) external;
 
     /// @notice Retrieves the allower address
     /// @return The address of the allower

@@ -3,6 +3,9 @@ pragma solidity 0.8.34;
 
 /// @title Redeem Manager Redeem Queue storage
 /// @notice Utility to manage the Redeem Queue in the Redeem Manager
+/// @dev No longer read by contracts/src: the V1 -> V2 queue migration that used it now lives in
+///      contracts/test/utils/LegacyInit.sol, since mainnet ran it long ago. Kept so that harness (and
+///      the fork tests replaying the migration) can still address these slots.
 library RedeemQueueV1 {
     /// @notice Storage slot of the Redeem Queue
     bytes32 internal constant REDEEM_QUEUE_ID_SLOT = bytes32(uint256(keccak256("river.state.redeemQueue")) - 1);

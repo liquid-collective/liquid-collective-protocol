@@ -18,51 +18,20 @@ import "./state/oracle/ReportsPositions.sol";
 /// @title Oracle (v1)
 /// @author Alluvial Finance Inc.
 /// @notice This contract handles the input from the allowed oracle members. Highly inspired by Lido's implementation.
+/// @dev REMOVED INITIALIZERS. Every deployed proxy is at `Version == 2`, so the `init(N)` guard on
+///      each of these can never pass again; they were deleted to reclaim bytecode. Recorded here so
+///      the version counter's history stays readable, and so nobody reuses one of these slots:
+///        init(0)  initOracleV1(address,address,uint64,uint64,uint64,uint64,uint256,uint256)
+///                 -- _riverAddress, _administratorAddress, _epochsPerFrame, _slotsPerEpoch,
+///                    _secondsPerSlot, _genesisTime, _annualAprUpperBound, _relativeLowerBound
+///        init(1)  initOracleV1_1()                      -- cleared the pending reports
+///      Bodies preserved verbatim in contracts/test/utils/LegacyInit.sol (OracleV1WithLegacyInit).
 contract OracleV1 is IOracleV1, Initializable, Administrable, IProtocolVersion {
     modifier onlyAdminOrMember(address _oracleMember) {
         if (msg.sender != _getAdmin() && msg.sender != _oracleMember) {
             revert LibErrors.Unauthorized(msg.sender);
         }
         _;
-    }
-
-    /// @inheritdoc IOracleV1
-    function initOracleV1(
-        address _riverAddress,
-        address _administratorAddress,
-        uint64 _epochsPerFrame,
-        uint64 _slotsPerEpoch,
-        uint64 _secondsPerSlot,
-        uint64 _genesisTime,
-        uint256 _annualAprUpperBound,
-        uint256 _relativeLowerBound
-    ) external init(0) {
-        _setAdmin(_administratorAddress);
-        RiverAddress.set(_riverAddress);
-        emit SetRiver(_riverAddress);
-        CLSpec.set(
-            CLSpec.CLSpecStruct({
-                epochsPerFrame: _epochsPerFrame,
-                slotsPerEpoch: _slotsPerEpoch,
-                secondsPerSlot: _secondsPerSlot,
-                genesisTime: _genesisTime,
-                epochsToAssumedFinality: 0
-            })
-        );
-        emit SetSpec(_epochsPerFrame, _slotsPerEpoch, _secondsPerSlot, _genesisTime);
-        ReportBounds.set(
-            ReportBounds.ReportBoundsStruct({
-                annualAprUpperBound: _annualAprUpperBound, relativeLowerBound: _relativeLowerBound
-            })
-        );
-        emit SetBounds(_annualAprUpperBound, _relativeLowerBound);
-        Quorum.set(0);
-        emit SetQuorum(0);
-    }
-
-    /// @inheritdoc IOracleV1
-    function initOracleV1_1() external init(1) {
-        _clearReports();
     }
 
     /// @inheritdoc IOracleV1

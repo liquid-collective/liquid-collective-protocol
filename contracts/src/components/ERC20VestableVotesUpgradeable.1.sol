@@ -81,6 +81,10 @@ abstract contract ERC20VestableVotesUpgradeableV1 is
 
     /// @notice This method migrates the state of the vesting schedules from V1 to V2
     /// @dev This method should be used if deployment with the old version using V1 state models is upgraded
+    /// @dev Retained for the legacy-init test harness only: the deployed TLC proxy already ran this
+    ///      migration, so `TLCV1.migrateVestingSchedules` has been removed and nothing in
+    ///      contracts/src calls this. It is therefore stripped from the deployed bytecode. See
+    ///      contracts/test/utils/TLCV1WithLegacyInit.sol.
     function migrateVestingSchedulesFromV1ToV2() internal {
         if (VestingSchedulesV2.getCount() == 0) {
             uint256 existingV1VestingSchedules = VestingSchedulesV1.getCount();

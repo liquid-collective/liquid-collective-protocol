@@ -44,6 +44,20 @@ import "./state/shared/AttestationVerifierAddress.sol";
 /// @title River (v1)
 /// @author Alluvial Finance Inc.
 /// @notice This contract merges all the manager contracts and implements all the virtual methods stitching all components together
+/// @dev REMOVED INITIALIZERS. Every deployed proxy is at `Version == 3`, so the `init(N)` guard on
+///      each of these can never pass again; they were deleted to reclaim bytecode. Recorded here so
+///      the version counter's history stays readable, and so nobody reuses one of these slots:
+///        init(0)  initRiverV1(address,address,bytes32,address,address,address,address,address,uint256)
+///                 -- _depositContractAddress, _elFeeRecipientAddress, _withdrawalCredentials,
+///                    _oracleAddress, _systemAdministratorAddress, _allowlistAddress,
+///                    _operatorRegistryAddress, _collectorAddress, _globalFee
+///        init(1)  initRiverV1_1(address,uint64,uint64,uint64,uint64,uint64,uint256,uint256,uint128,uint128)
+///                 -- _redeemManager, CL spec, report bounds and daily committable limits
+///        init(2)  initRiverV1_2()
+///                 -- rounded the committed balance down to a multiple of 32 ETH
+///      `init(3)` is still live below as `initRiverV1_3`.
+///      Bodies preserved verbatim in contracts/test/utils/RiverV1WithLegacyInit.sol, which also holds
+///      the `initOracleManagerV1` / `initOracleManagerV1_1` internals they used to call.
 contract RiverV1 is
     ConsensusLayerDepositManagerV1,
     UserDepositManagerV1,

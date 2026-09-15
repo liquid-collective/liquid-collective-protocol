@@ -46,7 +46,7 @@ abstract contract RiverV1WithLegacyInit is RiverV1 {
             _depositContractAddress, _withdrawalCredentials
         );
 
-        OracleManagerV1.initOracleManagerV1(_oracleAddress);
+        initOracleManagerV1(_oracleAddress);
     }
 
     function initRiverV1_1(
@@ -82,6 +82,53 @@ abstract contract RiverV1WithLegacyInit is RiverV1 {
         );
 
         _approve(address(this), _redeemManager, type(uint256).max);
+    }
+
+    /// @notice Set the initial oracle address
+    /// @dev Copied from contracts/src/components/OracleManager.1.sol, where it was only reachable
+    ///      through `initRiverV1`. Duplicated rather than shared through a mixin because RiverV1's
+    ///      `_getRiverAdmin` override is not itself `virtual`, so a second OracleManagerV1 base cannot
+    ///      be linearized here. The other copy lives in contracts/test/components/OracleManager.1.t.sol.
+    /// @param _oracle Address of the oracle
+    function initOracleManagerV1(address _oracle) internal {
+        OracleAddress.set(_oracle);
+        emit SetOracle(_oracle);
+    }
+
+    /// @notice Initializes version 1.1 of the oracle manager
+    /// @dev Copied from contracts/src/components/OracleManager.1.sol — see `initOracleManagerV1` above.
+    /// @param _epochsPerFrame The amounts of epochs in a frame
+    /// @param _slotsPerEpoch The slots inside an epoch
+    /// @param _secondsPerSlot The seconds inside a slot
+    /// @param _genesisTime The genesis timestamp
+    /// @param _epochsToAssumedFinality The number of epochs before an epoch is considered final on-chain
+    /// @param _annualAprUpperBound The reporting upper bound
+    /// @param _relativeLowerBound The reporting lower bound
+    function initOracleManagerV1_1(
+        uint64 _epochsPerFrame,
+        uint64 _slotsPerEpoch,
+        uint64 _secondsPerSlot,
+        uint64 _genesisTime,
+        uint64 _epochsToAssumedFinality,
+        uint256 _annualAprUpperBound,
+        uint256 _relativeLowerBound
+    ) internal {
+        CLSpec.set(
+            CLSpec.CLSpecStruct({
+                epochsPerFrame: _epochsPerFrame,
+                slotsPerEpoch: _slotsPerEpoch,
+                secondsPerSlot: _secondsPerSlot,
+                genesisTime: _genesisTime,
+                epochsToAssumedFinality: _epochsToAssumedFinality
+            })
+        );
+        emit SetSpec(_epochsPerFrame, _slotsPerEpoch, _secondsPerSlot, _genesisTime, _epochsToAssumedFinality);
+        ReportBounds.set(
+            ReportBounds.ReportBoundsStruct({
+                annualAprUpperBound: _annualAprUpperBound, relativeLowerBound: _relativeLowerBound
+            })
+        );
+        emit SetBounds(_annualAprUpperBound, _relativeLowerBound);
     }
 
     function initRiverV1_2() external init(2) {
