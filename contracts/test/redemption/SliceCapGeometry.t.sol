@@ -180,8 +180,9 @@ contract SliceCapGeometryTests is RedemptionReportBase {
         assertEq(redeemManager.getBufferedExceedingEth(), 0.6e18);
     }
 
-    /// D6. Scenario: one request spans a gap between two marks -- demand a withdrawal event settled
-    /// with no exit behind it, so the settled height overtook the mark cursor and left a permanent hole.
+    /// D6. Scenario: one request spans a gap between two marks -- demand settled by a withdrawal event
+    /// carrying no stopped-earning delta, so the settled height overtook the mark cursor and left a
+    /// permanent hole.
     ///
     ///     marks   [== mark0 rate 1.05 ==)          [====== mark1 rate 1.10 =====)
     ///     axis    0                20         30                       60
@@ -211,8 +212,8 @@ contract SliceCapGeometryTests is RedemptionReportBase {
         _reportStoppedEarning(applyRate(20e18, 1.05e18));
         assertEq(_markCursor(), 20e18);
 
-        // 30 LsETH settled from the deposit buffer -- no exit, so no mark -- pushing the settled height
-        // past the mark cursor and opening the gap [20, 30)
+        // 30 LsETH settled by an event carrying no stopped-earning delta -- so no mark -- pushing the
+        // settled height past the mark cursor and opening the gap [20, 30)
         _reportRate(1.08e18);
         _reportWithdraw(30e18, 1.08e18);
         assertEq(_settledHeight(), 30e18);
