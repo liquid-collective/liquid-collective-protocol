@@ -6,8 +6,11 @@ import "./RedemptionReportBase.sol";
 
 /// @title Rate mark placement tests
 /// @notice Covers where `reportStoppedEarning` puts a mark, and when it refuses to put one at all.
-/// @dev `reportStoppedEarning` places each mark at `max(lastMarkEnd, settledHeight, rateMarkFloor)`
-///      and sizes it at `min(reportedLsETH, totalRequestedHeight - markStart)`.
+/// @dev `reportStoppedEarning` places each mark at `max(lastMarkEnd, settledHeight)`, then, when the
+///      rate mark floor sits above that, CLIPS the part of the report that falls in
+///      `[markStart, floor)` out of the reported amount rather than relocating it -- so a report can
+///      be reduced, or discarded entirely, before `markStart` moves up to the floor. What survives is
+///      sized at `min(survivingLsETH, totalRequestedHeight - markStart)`.
 /// @dev RedeemManager.1.t.sol pins the payout consequences of a mark; this suite pins the placement
 ///      arithmetic, plus the four early returns that discard a reported delta -- a zero eth leg, a zero
 ///      LsETH leg, an empty queue, and nothing left after the clamp. Only the last emits an event.
@@ -235,24 +238,30 @@ contract RateMarkPlacementTests is RedemptionReportBase {
 
         uint32 fresh = _openRequest(user, 45e18);
 
-        // marks [5, 15), so the cursor lands at 15
+        // the first report still has the 5 LsETH pre-upgrade request unsettled below the floor, so 5
+        // of the 10 reported is clipped away and only the surviving 5 marks [5, 10)
         _reportRate(1.02e18);
+        vm.expectEmit(true, true, true, true);
+        emit StoppedEarningBelowRateMarkFloor(10e18, 5e18, 5e18);
         _reportStoppedEarning(applyRate(10e18, 1.02e18));
-        assertEq(_markCursor(), 15e18);
+        assertEq(redeemManager.getRateMarkDetails(0).height, 5e18);
+        assertEq(redeemManager.getRateMarkDetails(0).amount, 5e18);
+        assertEq(_markCursor(), 10e18);
 
-        // settle 10, leaving the settled height below the cursor
-        _reportWithdraw(10e18, 1.02e18);
-        assertEq(_settledHeight(), 10e18);
+        // settle 8, leaving the settled height below the cursor -- and above the floor, so the clip no
+        // longer applies and `lastMarkEnd` is left as the only competitor to beat
+        _reportWithdraw(8e18, 1.02e18);
+        assertEq(_settledHeight(), 8e18);
 
-        // lastMarkEnd 15, settledHeight 10, floor 5
+        // lastMarkEnd 10, settledHeight 8, floor 5
         _reportRate(1.04e18);
         _reportStoppedEarning(applyRate(20e18, 1.04e18));
 
         RateMarkStack.RateMark memory mark = redeemManager.getRateMarkDetails(1);
-        assertEq(mark.height, 15e18, "markStart must follow the previous mark's end");
+        assertEq(mark.height, 10e18, "markStart must follow the previous mark's end");
         assertEq(mark.amount, 20e18);
         // nothing was settled past the previous mark, so no gap opens
-        assertEq(_markCursor(), 35e18);
+        assertEq(_markCursor(), 30e18);
         _assertMarkStackWellFormed(fresh);
     }
 
@@ -269,24 +278,24 @@ contract RateMarkPlacementTests is RedemptionReportBase {
         _upgradeToV1_3();
         uint32 fresh = _openRequest(user, 45e18);
 
-        // marks [5, 15)
+        // 5 of the 10 reported is clipped as below-floor, so this marks [5, 10)
         _reportRate(1.02e18);
         _reportStoppedEarning(applyRate(10e18, 1.02e18));
-        assertEq(_markCursor(), 15e18);
+        assertEq(_markCursor(), 10e18);
 
-        // settle 25, overrunning the mark cursor by 10
+        // settle 25, overrunning the mark cursor by 15
         _reportWithdraw(25e18, 1.02e18);
         assertEq(_settledHeight(), 25e18);
 
-        // lastMarkEnd 15, settledHeight 25, floor 5
+        // lastMarkEnd 10, settledHeight 25, floor 5
         _reportRate(1.04e18);
         _reportStoppedEarning(applyRate(10e18, 1.04e18));
 
         RateMarkStack.RateMark memory mark = redeemManager.getRateMarkDetails(1);
         assertEq(mark.height, 25e18, "markStart must skip demand a withdrawal event already priced");
         assertEq(mark.amount, 10e18);
-        // the [15, 25) gap is permanent, since marks never reach backwards
-        assertEq(redeemManager.getRateMarkDetails(0).height + redeemManager.getRateMarkDetails(0).amount, 15e18);
+        // the [10, 25) gap is permanent, since marks never reach backwards
+        assertEq(redeemManager.getRateMarkDetails(0).height + redeemManager.getRateMarkDetails(0).amount, 10e18);
         _assertMarkStackWellFormed(fresh);
     }
 
@@ -310,15 +319,20 @@ contract RateMarkPlacementTests is RedemptionReportBase {
 
         uint32 fresh = _openRequest(user, 30e18);
 
-        // lastMarkEnd 0 (empty stack), settledHeight 20, floor 50
+        // lastMarkEnd 0 (empty stack), settledHeight 20, floor 50. The report has to outrun the
+        // 30 LsETH of still-unsettled pre-upgrade demand in [20, 50) for anything to survive the clip:
+        // 50 reported, 30 clipped, 20 marking from the floor.
         assertEq(_markCursor(), 0);
         _reportRate(1.05e18);
-        _reportStoppedEarning(applyRate(30e18, 1.05e18));
+        vm.expectEmit(true, true, true, true);
+        emit StoppedEarningBelowRateMarkFloor(50e18, 30e18, 50e18);
+        _reportStoppedEarning(applyRate(50e18, 1.05e18));
 
         RateMarkStack.RateMark memory mark = redeemManager.getRateMarkDetails(0);
         assertEq(mark.height, 50e18, "markStart must start past the pre-upgrade queue");
-        assertEq(mark.amount, 30e18);
-        assertEq(mark.markedEth, applyRate(30e18, 1.05e18));
+        assertEq(mark.amount, 20e18);
+        // the clip scaled the eth leg in the same proportion, so the 1.05 lock survives
+        assertEq(mark.markedEth, applyRate(20e18, 1.05e18));
         _assertMarkStackWellFormed(fresh);
     }
 

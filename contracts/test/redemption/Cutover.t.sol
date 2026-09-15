@@ -137,10 +137,16 @@ contract RedemptionCutoverTests is RedemptionReportBase {
         _reportRate(1e18);
         uint32 fresh = _openRequest(user, 10e18);
         _reportRate(1.2e18);
+        // markStart is the settled height, 99, so the unsettled [99, 100) wei of legacy demand still
+        // sits below the floor: 1 of the 10 reported is funding it and is clipped, leaving 9 to mark
+        vm.expectEmit(true, true, true, true);
+        emit StoppedEarningBelowRateMarkFloor(10e18, 1e18, 100e18);
         _reportStoppedEarning(applyRate(10e18, 1.2e18));
         RateMarkStack.RateMark memory mark = redeemManager.getRateMarkDetails(0);
         assertEq(mark.height, 100e18);
-        assertEq(mark.amount, 10e18);
+        assertEq(mark.amount, 9e18);
+        // the eth leg scales with the clip, so the locked rate is still the 1.2 the pool held
+        assertEq(mark.markedEth, applyRate(9e18, 1.2e18));
         // the legacy residual occupies [99, 100), strictly below every mark
         assertGe(mark.height, residual.height + residual.amount);
 
@@ -149,14 +155,19 @@ contract RedemptionCutoverTests is RedemptionReportBase {
         assertEq(_settleAndClaim(legacy, 1e18, 1.2e18), 1.2e18);
         assertEq(redeemManager.getBufferedExceedingEth(), 0);
         assertEq(redeemManager.getRedeemRequestDetails(legacy).amount, 0);
-        assertEq(_settleAndClaim(fresh, 10e18, 1.2e18), applyRate(10e18, 1.2e18));
+
+        // the fresh request spans [100, 110) but the clipped mark only covers [100, 109): 9 LsETH is
+        // valued at the locked 1.2 (10.8) and the uncovered 1 at its request-time 1.0, for an 11.8 cap
+        // against the event's 12 -- the clipped wei of headroom is what the legacy residual consumed
+        assertEq(_settleAndClaim(fresh, 10e18, 1.2e18), 11.8e18);
+        assertEq(redeemManager.getBufferedExceedingEth(), 0.2e18);
     }
 
     /// Scenario: a stopped-earning delta reported while the only pending demand is pre-upgrade -- the
     /// first report after the upgrade, before any new request arrives.
-    /// Expected: `markable == 0`, so `StoppedEarningExceededMarkableDemand(reported, 0)` is emitted and
-    /// no mark pushed. With no carry-forward buffer the credit is discarded permanently, and the
-    /// post-upgrade request arriving a block later sees nothing of it.
+    /// Expected: the whole slice falls below the floor, so `StoppedEarningBelowRateMarkFloor(reported,
+    /// reported, floor)` is emitted and no mark pushed. With no carry-forward buffer the credit is
+    /// discarded permanently, and the post-upgrade request arriving a block later sees nothing of it.
     /// @dev The ETH is not lost to the protocol -- it accrues to the holders who did not redeem, raising
     ///      the pool rate for them -- it simply never reaches any redeemer. Asserted so that
     ///      distribution cannot change silently.
@@ -169,11 +180,12 @@ contract RedemptionCutoverTests is RedemptionReportBase {
         _upgradeToV1_3();
         assertEq(redeemManager.getRateMarkFloor(), 30e18);
 
-        // markStart == floor == 30 == totalRequestedHeight, so markable == 0 and the report is
-        // clamped away entirely
+        // the whole reported slice sits below the floor, so it is clipped out rather than relocated:
+        // `lsETHToMark` is 0 and no mark is pushed. `markable` is also 0 (markStart == floor == 30 ==
+        // totalRequestedHeight), but the clip returns first, so only the floor event fires.
         _reportRate(1.05e18);
         vm.expectEmit(true, true, true, true);
-        emit StoppedEarningExceededMarkableDemand(30e18, 0);
+        emit StoppedEarningBelowRateMarkFloor(30e18, 30e18, 30e18);
         _reportStoppedEarning(applyRate(30e18, 1.05e18));
         assertEq(redeemManager.getRateMarkCount(), 0);
 
@@ -210,10 +222,11 @@ contract RedemptionCutoverTests is RedemptionReportBase {
     ///      Claim: `initializeRedeemManagerV1_3` derives the cutover from
     ///        `redeemRequests[length - 1].height + .amount` alone, so a garbled tail mis-pins the
     ///        floor silently -- to ~1e48 here.
-    ///      Mechanism: `reportStoppedEarning` computes `totalRequestedHeight` from the same element,
-    ///        so the two cancel and `markable` is 0 for every genuinely-pending request. Stopped-
-    ///        earning accrual is permanently dead for the existing queue, with only the
-    ///        `StoppedEarningExceededMarkableDemand` event to show for it.
+    ///      Mechanism: `markStart` is `max(rateMarkCursor, settledHeight)`, both bounded by what
+    ///        settlement reaches, so it never climbs to a ~1e48 floor. Every reported slice is
+    ///        therefore clipped away as below-floor and stopped-earning accrual is permanently dead --
+    ///        not just for the corrupted queue but for every request appended after it, with only the
+    ///        `StoppedEarningBelowRateMarkFloor` event to show for it.
     ///      Reachability: a consequence of the pre-existing V1_2 corruption rather than a new defect,
     ///        but the initializer is the last place it could have been caught.
     ///      Recommendation: assert the tail's end position against an expected total passed as a
@@ -247,23 +260,26 @@ contract RedemptionCutoverTests is RedemptionReportBase {
         assertTrue(expectedFloor != 50e18);
         assertGt(expectedFloor, 1e30);
 
-        // never markable again: `markStart` is the floor and `totalRequestedHeight` the same garbled
-        // sum, so `markable` is 0 on every report
+        // never markable again: every reported slice is clipped away as below-floor, since the floor
+        // sits ~1e48 above the settled height
         _reportRate(1.05e18);
         vm.expectEmit(true, true, true, true);
-        emit StoppedEarningExceededMarkableDemand(10e18, 0);
+        emit StoppedEarningBelowRateMarkFloor(10e18, 10e18, expectedFloor);
         _reportStoppedEarning(applyRate(10e18, 1.05e18));
         assertEq(redeemManager.getRateMarkCount(), 0);
 
-        // marking resumes only above the garbled tail, where a new request appends
+        // and appending fresh demand above the garbled tail does not revive it. `markStart` is
+        // `max(cursor, settledHeight)`, both of which are bounded by what settlement actually reaches,
+        // so it can never climb to the floor -- the clip consumes every report before `markable` (which
+        // is a genuine 10e18 here) is ever consulted
         _reportRate(1e18);
         uint32 fresh = _openRequest(userA, 10e18);
         assertEq(redeemManager.getRedeemRequestDetails(fresh).height, expectedFloor);
         _reportRate(1.05e18);
+        vm.expectEmit(true, true, true, true);
+        emit StoppedEarningBelowRateMarkFloor(10e18, 10e18, expectedFloor);
         _reportStoppedEarning(applyRate(10e18, 1.05e18));
-        assertEq(redeemManager.getRateMarkCount(), 1);
-        assertEq(redeemManager.getRateMarkDetails(0).height, expectedFloor);
-        assertEq(redeemManager.getRateMarkDetails(0).amount, 10e18);
+        assertEq(redeemManager.getRateMarkCount(), 0, "a garbled floor kills marking for good");
 
         // ...and that region is unreachable: events are positioned by cumulative settled LsETH, which
         // can never climb to ~1e48, so the request stays unsatisfied
@@ -280,11 +296,13 @@ contract RedemptionCutoverTests is RedemptionReportBase {
     /// Expected: it does carry an anchor, written by `_requestRedeem` rather than by the V1_3
     /// initializer, which only pins the floor -- but the floor then lands on that request's own end
     /// position, so no mark can ever cover it.
-    /// @dev An anchor yet legacy-like behaviour, though not identically: the legacy path caps the
-    ///      residual on the decrementing `maxRedeemableEth`, whose implied rate drifts up after a fill
-    ///      below the request rate (see `testLegacyRequestPartiallyClaimedAcrossUpgradeKeepsDriftedCap`),
-    ///      where the anchored path recomputes from the immutable request-time pair and buffers the
-    ///      surplus.
+    /// @dev An anchor yet legacy-like behaviour, and here indistinguishable from it: the legacy path
+    ///      caps the residual on the decrementing `maxRedeemableEth`, whose implied rate drifts up
+    ///      after a fill below the request rate (see
+    ///      `testLegacyRequestPartiallyClaimedAcrossUpgradeKeepsDriftedCap`), and the anchored path
+    ///      reaches the same ceiling by recomputing from the immutable request-time pair and adding
+    ///      the unspent cap carried in `RedeemRequestCarry`. With no mark covering the request the two
+    ///      coincide exactly; a mark is what makes them diverge.
     function testRequestBetweenV1_2AndV1_3HasAnchorButCannotBeMarked() external {
         address user = _generateAllowlistedUser(0);
         _reportRate(1e18);
@@ -304,10 +322,11 @@ contract RedemptionCutoverTests is RedemptionReportBase {
             redeemManager.getRedeemRequestDetails(id).height + redeemManager.getRedeemRequestDetails(id).amount
         );
 
-        // never markable: markable == totalRequestedHeight (30) - markStart (30) == 0
+        // never markable: the request's whole span sits below the floor, so the slice is clipped away
+        // before `markable` (totalRequestedHeight 30 - markStart 30 == 0) is even reached
         _reportRate(1.05e18);
         vm.expectEmit(true, true, true, true);
-        emit StoppedEarningExceededMarkableDemand(30e18, 0);
+        emit StoppedEarningBelowRateMarkFloor(30e18, 30e18, 30e18);
         _reportStoppedEarning(applyRate(30e18, 1.05e18));
         assertEq(redeemManager.getRateMarkCount(), 0);
 
@@ -317,13 +336,18 @@ contract RedemptionCutoverTests is RedemptionReportBase {
         RedeemQueueV2.RedeemRequest memory residual = redeemManager.getRedeemRequestDetails(id);
         assertEq(residual.height, 29e18);
         assertEq(residual.amount, 1e18);
-        // the budget has drifted to an implied 15.5 ETH per LsETH, as it would with no anchor
-        assertEq(residual.maxRedeemableEth, 15.5e18);
+        // the anchored path leaves the request-time budget field untouched -- it is superseded by the
+        // anchor, and the unspent cap is recorded in `RedeemRequestCarry` instead of drifting in place
+        assertEq(residual.maxRedeemableEth, 30e18);
+        assertEq(redeemManager.getRedeemRequestCarry(id), 14.5e18, "the 29 ETH cap spent only 14.5");
 
-        // the anchor holds the cap at the request-time 1.0 regardless of the drifted budget, so 0.2 is
-        // buffered where the zero-anchor request of the previous test kept the whole 1.2
+        // the carry reproduces the legacy drift exactly: a 1 ETH slice cap plus 14.5 carried is the
+        // same 15.5 ceiling the decrementing budget of the previous test arrives at, so the whole 1.2
+        // is paid and nothing is buffered
         _reportRate(1.2e18);
-        assertEq(_settleAndClaim(id, 1e18, 1.2e18), 1e18);
-        assertEq(redeemManager.getBufferedExceedingEth(), 0.2e18);
+        assertEq(_settleAndClaim(id, 1e18, 1.2e18), 1.2e18);
+        assertEq(redeemManager.getBufferedExceedingEth(), 0);
+        // fully claimed, so the carry is cleared rather than left claimable by a later event
+        assertEq(redeemManager.getRedeemRequestCarry(id), 0);
     }
 }

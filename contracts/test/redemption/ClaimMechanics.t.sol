@@ -369,8 +369,8 @@ contract RedemptionClaimMechanicsTests is RedemptionReportBase {
     /// Scenario: one 30 LsETH request at 1.00 settled by three consecutive 10 LsETH events funded at
     /// 1.05, 0.95 and 1.10, claimed once at full depth and then -- after reverting -- three times at
     /// `depth = 0`.
-    /// Expected: the three partial payouts (10 + 9.5 + 10) sum to exactly the single-call payout, with
-    /// `height + amount == 30e18` after every one.
+    /// Expected: the three partial payouts (10 + 9.5 + 10.5) sum to exactly the single-call payout,
+    /// with `height + amount == 30e18` after every one.
     /// @dev Nothing tells a `depth = 0` claim where the last one stopped. The residual finds the next
     ///      event because `_claimRedeemRequest` raises `height` by exactly what it lowered `amount` by
     ///      and the withdrawal stack is contiguous, so the new height is the next event's.
@@ -391,9 +391,11 @@ contract RedemptionClaimMechanicsTests is RedemptionReportBase {
         // baseline: one uninterrupted call
         uint256 snapshotId = vm.snapshotState();
         uint256 singleCallPayout = _claim(id);
-        assertEq(singleCallPayout, 29.5e18); // 10 (capped) + 9.5 (uncapped) + 10 (capped)
-        // 31 settled, 29.5 paid: 0.5 confiscated on event 0, none on event 1, 1.0 on event 2
-        assertEq(redeemManager.getBufferedExceedingEth(), 1.5e18);
+        // 10 (capped at 10) + 9.5 (uncapped, banking 0.5 of unspent cap) + 10.5 (capped at 10 + the
+        // 0.5 carried). The carry is what makes the under-funded middle event recoverable later.
+        assertEq(singleCallPayout, 30e18);
+        // 31 settled, 30 paid: 0.5 confiscated on event 0, none on event 1, 0.5 on event 2
+        assertEq(redeemManager.getBufferedExceedingEth(), 1e18);
         assertTrue(vm.revertToState(snapshotId));
 
         // and now in three bites
@@ -409,7 +411,8 @@ contract RedemptionClaimMechanicsTests is RedemptionReportBase {
         assertEq(request.height + request.amount, 30e18);
         assertEq(redeemManager.getBufferedExceedingEth(), 0.5e18);
 
-        // event 1 settled below the request rate, so the cap does not bind and the redeemer eats it
+        // event 1 settled below the request rate, so the cap does not bind and the redeemer eats it --
+        // but the 0.5 of cap it did not spend is banked in the carry, which survives across calls
         uint256 second = _claimWithDepth(id, 1, 0);
         assertEq(second, 9.5e18);
         request = redeemManager.getRedeemRequestDetails(id);
@@ -417,19 +420,23 @@ contract RedemptionClaimMechanicsTests is RedemptionReportBase {
         assertEq(request.amount, 10e18);
         assertEq(request.height + request.amount, 30e18);
         assertEq(redeemManager.getBufferedExceedingEth(), 0.5e18); // unchanged
+        assertEq(redeemManager.getRedeemRequestCarry(id), 0.5e18);
 
-        // event 2 carries 11 against the same cap
+        // event 2 carries 11 against a 10 slice cap raised to 10.5 by the carry
         uint256 third = _claimWithDepth(id, 2, 0);
-        assertEq(third, 10e18);
+        assertEq(third, 10.5e18);
         request = redeemManager.getRedeemRequestDetails(id);
         assertEq(request.height, 30e18);
         assertEq(request.amount, 0);
         assertEq(request.height + request.amount, 30e18); // holds even fully claimed
-        assertEq(redeemManager.getBufferedExceedingEth(), 1.5e18);
+        assertEq(redeemManager.getBufferedExceedingEth(), 1e18);
+        // fully claimed, so the carry is cleared rather than left to raise a later cap
+        assertEq(redeemManager.getRedeemRequestCarry(id), 0);
 
-        // splitting the walk changes nothing for the redeemer or the pool
+        // splitting the walk changes nothing for the redeemer or the pool: the carry is persisted per
+        // request, so a `depth = 0` sequence and a single recursion see the same ceilings
         assertEq(first + second + third, singleCallPayout);
-        assertEq(user.balance, 29.5e18);
+        assertEq(user.balance, 30e18);
     }
 
     // F10 — one claim spanning a deposit-funded event and an exit-funded event

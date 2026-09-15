@@ -39,12 +39,32 @@ contract RedemptionRiverV1 is RiverV1WithLegacyInit {}
 /// @dev Minimal `IDepositDataBuffer`: the keeper submits a batch here and River fetches it back through
 ///      the AttestationVerifier when funding the consensus layer.
 contract RedemptionDepositDataBuffer is IDepositDataBuffer {
+    address internal _admin;
+    address internal _pendingAdmin;
+    address internal _producer;
+    address internal _processor;
+    uint256 public lastQueuedIdx;
+
     mapping(bytes32 => DepositObject) internal _batches;
+    mapping(bytes32 => uint256) internal _nonces;
     mapping(bytes32 => bool) internal _exists;
+    mapping(bytes32 => bool) internal _processed;
+
+    constructor(address admin_, address producer_, address processor_) {
+        _admin = admin_;
+        _producer = producer_;
+        _processor = processor_;
+    }
 
     function submitDepositData(bytes32 depositDataBufferId, DepositObject calldata batch) external {
+        if (msg.sender != _producer) revert OnlyProducer();
+        uint256 nonce = lastQueuedIdx;
+        bytes32 computedId = keccak256(abi.encode(batch, nonce));
+        if (depositDataBufferId != computedId) revert DepositDataBufferIdMismatch(depositDataBufferId, computedId);
         if (_exists[depositDataBufferId]) revert DepositDataBufferIdAlreadyExists(depositDataBufferId);
         _exists[depositDataBufferId] = true;
+        _nonces[depositDataBufferId] = nonce;
+        ++lastQueuedIdx;
         DepositObject storage stored = _batches[depositDataBufferId];
         for (uint256 i = 0; i < batch.deposits.length; i++) {
             stored.deposits.push(batch.deposits[i]);
@@ -52,20 +72,69 @@ contract RedemptionDepositDataBuffer is IDepositDataBuffer {
         for (uint256 i = 0; i < batch.topUps.length; i++) {
             stored.topUps.push(batch.topUps[i]);
         }
-        emit DepositDataSubmitted(depositDataBufferId, batch.deposits.length, batch.topUps.length);
+        emit DepositDataSubmitted(depositDataBufferId, nonce, batch.deposits.length, batch.topUps.length);
     }
 
-    function getDepositData(bytes32 depositDataBufferId) external view returns (DepositObject memory) {
+    function getDepositData(bytes32 depositDataBufferId)
+        external
+        view
+        returns (DepositObject memory batch, uint256 nonce)
+    {
         if (!_exists[depositDataBufferId]) revert DepositDataBufferIdNotFound(depositDataBufferId);
-        return _batches[depositDataBufferId];
+        return (_batches[depositDataBufferId], _nonces[depositDataBufferId]);
     }
 
-    function getWriter() external pure returns (address) {
-        return address(0);
+    function markDepositDataProcessed(bytes32 depositDataBufferId) external {
+        if (msg.sender != _processor) revert OnlyProcessor();
+        if (!_exists[depositDataBufferId]) revert DepositDataBufferIdNotFound(depositDataBufferId);
+        if (_processed[depositDataBufferId]) revert DepositDataAlreadyProcessed(depositDataBufferId);
+        _processed[depositDataBufferId] = true;
+        emit DepositDataProcessed(depositDataBufferId);
     }
 
-    function getAdmin() external pure returns (address) {
-        return address(0);
+    function isDepositDataProcessed(bytes32 depositDataBufferId) external view returns (bool) {
+        return _processed[depositDataBufferId];
+    }
+
+    function setProducer(address newProducer) external {
+        if (msg.sender != _admin) revert OnlyAdmin();
+        _producer = newProducer;
+        emit SetProducer(newProducer);
+    }
+
+    function getProducer() external view returns (address) {
+        return _producer;
+    }
+
+    function setProcessor(address newProcessor) external {
+        if (msg.sender != _admin) revert OnlyAdmin();
+        _processor = newProcessor;
+        emit SetProcessor(newProcessor);
+    }
+
+    function proposeAdmin(address newAdmin) external {
+        if (msg.sender != _admin) revert OnlyAdmin();
+        _pendingAdmin = newAdmin;
+        emit SetPendingAdmin(newAdmin);
+    }
+
+    function acceptAdmin() external {
+        if (msg.sender != _pendingAdmin) revert OnlyPendingAdmin();
+        _admin = _pendingAdmin;
+        _pendingAdmin = address(0);
+        emit SetAdmin(msg.sender);
+    }
+
+    function getAdmin() external view returns (address) {
+        return _admin;
+    }
+
+    function getPendingAdmin() external view returns (address) {
+        return _pendingAdmin;
+    }
+
+    function getProcessor() external view returns (address) {
+        return _processor;
     }
 }
 
@@ -200,6 +269,7 @@ abstract contract RedemptionReportBase is Test {
     event ReportedWithdrawal(uint256 height, uint256 size, uint256 ethAmount, uint32 id);
     event ReportedStoppedEarning(uint256 height, uint256 amount, uint256 markedEth, uint32 id);
     event StoppedEarningExceededMarkableDemand(uint256 reportedLsETH, uint256 markedLsETH);
+    event StoppedEarningBelowRateMarkFloor(uint256 reportedLsETH, uint256 droppedLsETH, uint256 floor);
     event SetRateMarkFloor(uint256 floor);
     event SatisfiedRedeemRequest(
         uint32 indexed redeemRequestId,
@@ -236,8 +306,8 @@ abstract contract RedemptionReportBase is Test {
         vm.warp(1_000_000);
 
         depositContract = new DepositContractMock();
-        depositBuffer = new RedemptionDepositDataBuffer();
         river = new RedemptionRiverV1();
+        depositBuffer = new RedemptionDepositDataBuffer(address(this), address(this), address(river));
         redeemManager = new RedeemManagerV1();
         allowlist = new AllowlistV1();
         oracle = new OracleV1();
@@ -297,7 +367,14 @@ abstract contract RedemptionReportBase is Test {
         address[] memory consolidationCommitteeAttesters = new address[](1);
         consolidationCommitteeAttesters[0] = makeAddr("consolidationCommitteeAttester");
         attestationVerifier.initAttestationVerifierV1(
-            address(river), address(depositBuffer), rootAttesters, 1, bytes4(0), consolidationCommitteeAttesters, 1
+            admin,
+            address(river),
+            address(depositBuffer),
+            rootAttesters,
+            1,
+            bytes4(0),
+            consolidationCommitteeAttesters,
+            1
         );
 
         externalConsolidationRecipientMapping.initExternalConsolidationRecipientMappingV1(address(river));
@@ -390,7 +467,7 @@ abstract contract RedemptionReportBase is Test {
         IDepositDataBuffer.DepositObject memory batch;
         batch.deposits = deposits;
 
-        bytes32 bufferId = keccak256(abi.encode(batch));
+        bytes32 bufferId = keccak256(abi.encode(batch, depositBuffer.lastQueuedIdx()));
         depositBuffer.submitDepositData(bufferId, batch);
         bytes32 rootHash = depositContract.get_deposit_root();
 

@@ -57,10 +57,14 @@ contract RedemptionRoundingAndCapsTests is RedemptionReportBase {
         assertEq(redeemManager.getBufferedExceedingEth(), 0);
         assertEq(address(redeemManager).balance, 0);
 
-        // the stale request-time ETH budget keeps its unspent 30 - 18, which post-upgrade bounds nothing
+        // the request-time ETH budget is left at its original 30 rather than decremented: on the
+        // anchored path it bounds nothing, the anchor and the mark stack having replaced it
         RedeemQueueV2.RedeemRequest memory request = redeemManager.getRedeemRequestDetails(id);
         assertEq(request.amount, 0);
-        assertEq(request.maxRedeemableEth, 12e18);
+        assertEq(request.maxRedeemableEth, 30e18);
+        // ...and the 27 of unspent cap is not banked either: a fully claimed request clears its carry,
+        // so the wasted mark headroom is gone for good
+        assertEq(redeemManager.getRedeemRequestCarry(id), 0);
     }
 
     /// Scenario: a mark raises every request's cap to 2x its request-time value, above anything the
@@ -454,10 +458,13 @@ contract RedemptionRoundingAndCapsTests is RedemptionReportBase {
         b[0] = idB;
         assertEq(redeemManager.resolveRedeemRequests(b)[0], -1);
 
-        // no dust after the exact fit: request and ETH budget drained, buffer and balance both empty
+        // no dust after the exact fit: request drained, buffer and balance both empty. The anchored
+        // path leaves `maxRedeemableEth` at its request-time value rather than decrementing it, and
+        // banks no carry, the cap having been spent exactly.
         RedeemQueueV2.RedeemRequest memory requestA = redeemManager.getRedeemRequestDetails(idA);
         assertEq(requestA.amount, 0);
-        assertEq(requestA.maxRedeemableEth, 0);
+        assertEq(requestA.maxRedeemableEth, 30e18);
+        assertEq(redeemManager.getRedeemRequestCarry(idA), 0);
         assertEq(redeemManager.resolveRedeemRequests(a)[0], -3);
         assertEq(redeemManager.getRedeemDemand(), 20e18 + 1);
         assertEq(redeemManager.getBufferedExceedingEth(), 0);
@@ -476,7 +483,8 @@ contract RedemptionRoundingAndCapsTests is RedemptionReportBase {
         RedeemQueueV2.RedeemRequest memory requestB = redeemManager.getRedeemRequestDetails(idB);
         assertEq(requestB.amount, 1);
         assertEq(requestB.height, 50e18);
-        assertEq(requestB.maxRedeemableEth, 1);
+        // undecremented on the anchored path; the remaining wei is capped off the anchor instead
+        assertEq(requestB.maxRedeemableEth, 20e18 + 1);
         assertEq(redeemManager.getRedeemDemand(), 1);
         assertEq(redeemManager.resolveRedeemRequests(b)[0], -1);
         assertEq(address(redeemManager).balance, 0);

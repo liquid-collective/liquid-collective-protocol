@@ -54,7 +54,8 @@ abstract contract RedemptionMirror is RedemptionReportBase {
 
     /// @notice Re-derives `RedeemManagerV1._sliceCap` from public getters
     /// @dev Anchored requests only: the legacy branch depends on the decrementing ETH budget rather
-    ///      than on the mark stack, and so lives in `_mirrorClaim`.
+    ///      than on the mark stack, and so lives in `_mirrorClaim`. The unspent-cap carry is also
+    ///      applied there, being a per-claim addend rather than part of the slice's valuation.
     function _mirrorSliceCap(
         RedeemManagerV1 manager,
         RedeemRequestAnchor.Anchor memory anchor,
@@ -118,9 +119,11 @@ abstract contract RedemptionMirror is RedemptionReportBase {
 
         uint256 cursor = request.height;
         uint256 remaining = request.amount;
-        // the legacy cap reads the decrementing ETH budget, which the claim path mutates between
-        // recursion frames, so the mirror carries it too
+        // both paths thread a value between recursion frames, so the mirror threads it too: the legacy
+        // branch decrements the request-time ETH budget, the anchored branch adds the cap earlier
+        // fills were credited with and did not spend
         uint256 budget = request.maxRedeemableEth;
+        uint256 carry = manager.getRedeemRequestCarry(id);
         // one step, then recursion only while `depth > 0`
         uint256 stepsLeft = uint256(depth) + 1;
         uint32 eventId = startEventId;
@@ -137,7 +140,7 @@ abstract contract RedemptionMirror is RedemptionReportBase {
             uint256 gross = (matching * withdrawalEvent.withdrawnEth) / withdrawalEvent.amount;
             uint256 cap = anchor.lsETHAtRequest == 0
                 ? (matching * budget) / remaining
-                : _mirrorSliceCap(manager, anchor, cursor, matching);
+                : _mirrorSliceCap(manager, anchor, cursor, matching) + carry;
             uint256 pay = gross < cap ? gross : cap;
 
             result.paid += pay;
@@ -154,6 +157,7 @@ abstract contract RedemptionMirror is RedemptionReportBase {
             }
 
             budget = budget > pay ? budget - pay : 0;
+            carry = cap - pay;
             cursor += matching;
             remaining -= matching;
             unchecked {
@@ -1129,8 +1133,10 @@ contract RedemptionRateMarkFuzzTests is RedemptionMirror {
         uint256 requestRate = bound(_requestRate, 1e18, 2e18);
         // a 5% to 50% drawdown, so `markRate < requestRate` strictly
         uint256 markRate = (requestRate * bound(_drawdownBps, 5_000, 9_500)) / 10_000;
-        // recovery to just above the request rate, so the cap binds in both worlds
-        uint256 settlementRate = requestRate + (requestRate * bound(_recoveryMargin, 0, 1_000)) / 10_000;
+        // recovery to STRICTLY above the request rate, so the cap binds in both worlds. A zero margin
+        // settles at exactly the request rate, where the event's floored ETH leg can land a wei under
+        // `ethAtRequest` and make the event, not the cap, the binding side in the control world.
+        uint256 settlementRate = requestRate + (requestRate * bound(_recoveryMargin, 1, 1_000)) / 10_000;
 
         address user = fuzzUser;
         uint256 pristine = vm.snapshotState();
