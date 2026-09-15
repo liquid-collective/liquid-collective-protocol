@@ -109,7 +109,11 @@ interface IRiverV1 is IConsensusLayerDepositManagerV1, IUserDepositManagerV1, IS
     /// @param recipient The address that received the minted LsETH
     /// @param amountEth The amount of ETH(wei) attributed to consolidation
     /// @param sharesMinted The amount of LsETH shares minted
-    event LsETHMintedForConsolidation(address indexed recipient, uint256 amountEth, uint256 sharesMinted);
+    /// @param sourcePubkeys The source pubkeys that were consolidated
+    /// @param targetPubkeys The target pubkeys that were consolidated
+    event LsETHMintedForConsolidation(
+        address indexed recipient, uint256 amountEth, uint256 sharesMinted, bytes[] sourcePubkeys, bytes[] targetPubkeys
+    );
 
     /// @notice Emitted when the balance committed to deposit
     /// @param oldAmount The old balance committed to deposit

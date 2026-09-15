@@ -4446,7 +4446,9 @@ contract RiverV1ConsolidationMintTests is RiverV1TestBase {
         assertEq(river.balanceOf(bob), 0);
 
         vm.expectEmit(true, true, true, true);
-        emit IRiverV1.LsETHMintedForConsolidation(bob, amount, amount);
+        emit IRiverV1.LsETHMintedForConsolidation(
+            bob, amount, amount, consolidation.sourcePubkeys, consolidation.targetPubkeys
+        );
         vm.prank(consolidator);
         river.mintLsETHForConsolidation(consolidation);
 
@@ -4463,7 +4465,9 @@ contract RiverV1ConsolidationMintTests is RiverV1TestBase {
         uint256 totalSupplyBefore = river.totalSupply();
 
         vm.expectEmit(true, true, true, true);
-        emit IRiverV1.LsETHMintedForConsolidation(joe, amount, amount);
+        emit IRiverV1.LsETHMintedForConsolidation(
+            joe, amount, amount, consolidation.sourcePubkeys, consolidation.targetPubkeys
+        );
         vm.prank(consolidator);
         river.mintLsETHForConsolidation(consolidation);
 
