@@ -18,6 +18,7 @@ import "./state/redeemManager/BufferedExceedingEth.sol";
 import "./state/redeemManager/RedeemDemand.sol";
 import "./state/redeemManager/RateMarkStack.sol";
 import "./state/redeemManager/RedeemRequestAnchor.sol";
+import "./state/redeemManager/RateMarkFloor.sol";
 import "./state/redeemManager/RedeemRequestCarry.sol";
 
 /// @title Redeem Manager (v1)
@@ -69,8 +70,25 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
         emit SetRiver(_river);
     }
 
+    /// @inheritdoc IRedeemManagerV1
     function initializeRedeemManagerV1_2() external init(1) {
         _redeemQueueMigrationV1_2();
+    }
+
+    /// @inheritdoc IRedeemManagerV1
+    function initializeRedeemManagerV1_3() external init(2) {
+        // Pin the launch cutover for stopped-earning accrual at the end of the existing queue, so the
+        // requests already pending at upgrade time neither accrue (they have no anchor) nor consume the
+        // marks that the first post-upgrade cohort is owed.
+        RedeemQueueV2.RedeemRequest[] storage redeemRequests = RedeemQueueV2.get();
+        uint256 requestCount = redeemRequests.length;
+        uint256 floor = 0;
+        if (requestCount > 0) {
+            RedeemQueueV2.RedeemRequest storage lastRequest = redeemRequests[requestCount - 1];
+            floor = lastRequest.height + lastRequest.amount;
+        }
+        RateMarkFloor.set(floor);
+        emit SetRateMarkFloor(floor);
     }
 
     function _redeemQueueMigrationV1_2() internal {
@@ -120,6 +138,11 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
         returns (WithdrawalStack.WithdrawalEvent memory)
     {
         return WithdrawalStack.get()[_withdrawalEventId];
+    }
+
+    /// @inheritdoc IRedeemManagerV1
+    function getRateMarkFloor() external view returns (uint256) {
+        return RateMarkFloor.get();
     }
 
     /// @inheritdoc IRedeemManagerV1
@@ -275,12 +298,24 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
         if (settledHeight > markStart) {
             markStart = settledHeight;
         }
-
         uint256 lsETHToMark = _stoppedEarningLsETH;
+
+        uint256 floor = RateMarkFloor.get();
+        if (floor > markStart) {
+            // old request is not satisfied, so the legacy slice is dropped rather than marked
+            uint256 legacySlice = LibUint256.min(floor - markStart, lsETHToMark);
+            unchecked {
+                // `min` above bounds the subtrahend by `lsETHToMark`
+                lsETHToMark -= legacySlice;
+            }
+            markStart = floor;
+            emit StoppedEarningBelowRateMarkFloor(_stoppedEarningLsETH, legacySlice, floor);
+        }
+
         uint256 markable = totalRequestedHeight > markStart ? totalRequestedHeight - markStart : 0;
         if (lsETHToMark > markable) {
+            emit StoppedEarningExceededMarkableDemand(_stoppedEarningLsETH, markable);
             lsETHToMark = markable;
-            emit StoppedEarningExceededMarkableDemand(_stoppedEarningLsETH, lsETHToMark);
         }
         if (lsETHToMark == 0) {
             return;
@@ -288,11 +323,10 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
 
         // The ratio of the two arguments is the rate River held BEFORE it applied this report, and the
         // mark locks that rate, so rewards from the interval in which the principal stopped earning are
-        // excluded. Marking the whole reported amount therefore needs no conversion. Only the clamped
-        // case divides, scaling the eth leg down in the same proportion so the locked rate survives.
-        uint256 markedEth = lsETHToMark == _stoppedEarningLsETH
-            ? _stoppedEarningEth
-            : (_stoppedEarningEth * lsETHToMark) / _stoppedEarningLsETH;
+        // excluded. Marking the whole reported amount therefore needs no conversion. Only a reduced
+        // amount divides, scaling the eth leg down in the same proportion so the locked rate survives.
+        uint256 markedEth =
+            lsETHToMark == _stoppedEarningLsETH ? _stoppedEarningEth : (_stoppedEarningEth * lsETHToMark) / _stoppedEarningLsETH;
 
         RateMarkStack.RateMark[] storage rateMarks = RateMarkStack.get();
         uint32 rateMarkId = uint32(rateMarks.length);
