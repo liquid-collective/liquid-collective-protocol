@@ -1797,7 +1797,7 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         assertEq(redeemManager.getBufferedExceedingEth(), 0);
     }
 
-    /// The carry is an addend on top of `_sliceCap`, never a budget the mark uplift is drawn from. A fill
+    /// The unspent balance is never a budget the credited uplift is drawn from. A fill
     /// paid above the request rate because its span was marked must therefore leave the request-rate value
     /// of the UNMARKED remainder fully payable: 15 LsETH at the locked 2.0 plus 15 at the request 1.0.
     /// @dev This is the case a decrementing-budget fix gets wrong — there the 30 ETH uplift payout drains
@@ -2914,7 +2914,7 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
     /// supplied. Whichever of the two binds, the shortfall is exactly what lands in the
     /// exceeding-eth buffer. Fuzzes the request size, the request-time rate, how much of the
     /// request is marked, the mark's locked rate and the settlement rate independently, so no
-    /// single hand-picked scenario can mask a rounding or ordering bug in _sliceCap.
+    /// single hand-picked scenario can mask a rounding or ordering bug in the cap arithmetic.
     function testFuzz_MarkedRequestPayoutRespectsCapAndConservesEth(
         uint256 _amount,
         uint256 _requestRate,
@@ -3018,7 +3018,7 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
     /// Property: splitting a marked request's settlement into two separate withdrawal events and
     /// claiming each with its own claimRedeemRequests call never pays MORE, in total, than settling
     /// and claiming the identical request whole in a single event. Guards the
-    /// `(markedAmount * mark.markedEth) / markAmount` division in _sliceCap's case 3: a rounding
+    /// report-time division that values a credited width: a rounding
     /// bug there would show up as the split path leaking extra wei across additional claims.
     function testFuzz_SplitClaimNeverPaysMoreThanWholeClaim(
         uint256 _amount,
@@ -3094,10 +3094,12 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
     }
 
     // -----------------------------------------------------------------------
-    // Gap-analysis HIGH items: _sliceCap walk and the claim path
+    // Gap-analysis HIGH items: the credited-balance cap and the claim path
     // -----------------------------------------------------------------------
 
-    /// HIGH-5: `_findRateMarkAtOrBefore` only answers "which mark STARTS at or before this
+    /// Historically this exercised the rate mark predecessor search. It survives as a scenario: a request
+    /// whose span is credited by two reports with a settlement in between. The original note read: only
+    /// answers "which mark STARTS at or before this
     /// position" -- it is a plain predecessor search over a non-contiguous stack, so the mark it
     /// returns can end well below the slice's start. Every existing test starts a slice either
     /// inside a mark, below every mark, or past the last mark, so the "candidate mark is stale and

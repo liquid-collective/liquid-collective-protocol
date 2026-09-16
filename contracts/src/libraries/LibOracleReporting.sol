@@ -206,7 +206,7 @@ library LibOracleReporting {
         // meaningful: _pullCLFunds below credits the exited and skimmed eth to the buffers while
         // LastConsensusLayerReport still counts the same eth in validatorsBalance, so the asset balance is
         // double counted until the stored report is updated, and past that point it already carries this
-        // interval's rewards and the fee mint. Valuing it here is the whole point of the mark: principal
+        // interval's rewards and the fee mint. Valuing it here is the whole point of the credit: principal
         // that crossed exit_epoch must stop accruing pool rewards from that moment, so the demand it backs
         // may not be credited with the very interval during which it stopped earning.
         if (vars.stoppedEarningAmountIncrease > 0) {
@@ -370,15 +370,15 @@ library LibOracleReporting {
             _report.slashingContainmentMode
         );
 
-        // we mark the pending redeem demand whose backing principal stopped earning in this interval, at
+        // we credit the pending redeem demand whose backing principal stopped earning in this interval, at
         // the rate that was in force before this report was applied. The two arguments are the same
         // amount denominated in eth and in LsETH, both valued at the pre-report snapshot taken above, and
-        // their ratio is the rate the mark locks. It is passed as data rather than read here on purpose:
+        // their ratio is the rate the credit locks. It is passed as data rather than read here on purpose:
         // by this point the stored report and the fee mint have landed, so anything the redeem manager
         // could read from River would be this interval's rate.
         // This must run BEFORE _reportWithdrawToRedeemManager: settlement burns the corresponding shares
         // and removes that LsETH from the redeem demand, so demand settled in this same report would
-        // otherwise never be marked and would be paid at its request-time rate.
+        // otherwise never be credited and would be paid at its request-time rate.
         // Called unconditionally on a non-zero delta — the cumulative validatorsStoppedEarningBalance was
         // already persisted above, so skipping the call would discard the delta permanently. In
         // particular it is NOT gated on slashing containment: containment freezes new exits while leaving
