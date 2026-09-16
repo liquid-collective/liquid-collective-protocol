@@ -317,6 +317,10 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
             emit StoppedEarningExceededMarkableDemand(_stoppedEarningLsETH, markable);
             lsETHToMark = markable;
         }
+        // The only guard on the division below: past here `lsETHToMark >= 1`, so the divisor
+        // `reportedLsETH >= lsETHToMark >= 1`. A zero reported leg cannot slip through — it makes
+        // `lsETHToMark` zero and `0 > markable` never clamps. Also keeps mark heights strictly ascending
+        // for `_findRateMarkAtOrBefore`.
         if (lsETHToMark == 0) {
             return;
         }
@@ -325,8 +329,9 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
         // mark locks that rate, so rewards from the interval in which the principal stopped earning are
         // excluded. Marking the whole reported amount therefore needs no conversion. Only a reduced
         // amount divides, scaling the eth leg down in the same proportion so the locked rate survives.
-        uint256 markedEth =
-            lsETHToMark == _stoppedEarningLsETH ? _stoppedEarningEth : (_stoppedEarningEth * lsETHToMark) / _stoppedEarningLsETH;
+        uint256 markedEth = lsETHToMark == _stoppedEarningLsETH
+            ? _stoppedEarningEth
+            : (_stoppedEarningEth * lsETHToMark) / _stoppedEarningLsETH;
 
         RateMarkStack.RateMark[] storage rateMarks = RateMarkStack.get();
         uint32 rateMarkId = uint32(rateMarks.length);
