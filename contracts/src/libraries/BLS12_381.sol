@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Adapted from https://github.com/lidofinance/core/blob/master/contracts/common/lib/BLS.sol (MIT)
 // SSZ.toLittleEndian replaced with LibUint256.toLittleEndian64 (CC0-1.0, liquid-collective/liquid-collective-protocol)
+// verifyDepositMessage visibility changed from internal to external
 
 // solhint-disable-next-line lido/fixed-compiler-version
 pragma solidity 0.8.34;
@@ -367,6 +368,10 @@ library BLS12_381 {
      * @dev Reverts with `InvalidSignature` if the signature is invalid.
      * @dev Reverts with `InputHasInfinityPoints` if the input contains infinity points (zero values).
      * @dev Reverts with `InvalidDepositAmount` if `amount` is not gwei-aligned.
+     * @dev `external` rather than `internal` so the library is deployed and called separately, keeping
+     *      this heavy verification path out of the callers' bytecode (EIP-170). Callers must be linked
+     *      against the deployed library, and the `calldata` parameters mean memory arguments are copied
+     *      into calldata by the external call rather than passed by reference.
      */
     function verifyDepositMessage(
         bytes calldata pubkey,
@@ -375,7 +380,7 @@ library BLS12_381 {
         DepositY calldata depositY,
         bytes32 withdrawalCredentials,
         bytes32 depositDomain
-    ) internal view {
+    ) external view {
         // validate compression flags in pubkey and signature to ensure that they correspond to provided Y coordinates
         // this ensures that this verification is equivalent to one by CL:
         // - we receive Y components and throw away compression flags in X
