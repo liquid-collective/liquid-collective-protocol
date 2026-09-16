@@ -3270,15 +3270,15 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         assertEq(received3, applyRate(12e18, 1.2e18));
         assertEq(received3, 14.4e18);
 
-        // step 4 is where the credited width runs out mid-fill: 21e18 of its 23e18 is credited and
-        // draws the last of the balance, the other 2e18 is worth the request rate
+        // by step 4 the uncredited 37e18 is used up, so this fill is entirely credited and simply
+        // takes what its event supplies out of the balance
         uint256 received4 = _reportWithdrawAndClaimAlreadySettled(id, 3);
-        assertEq(received4, 16.92e18);
+        assertEq(received4, applyRate(23e18, 1.2e18));
+        assertEq(received4, 27.6e18);
 
-        // step 5 is entirely uncredited, so it is paid exactly the request rate
+        // step 5 is also entirely credited, and the balance is what is left rather than the event
         uint256 received5 = _reportWithdrawAndClaimAlreadySettled(id, 4);
-        assertEq(received5, applyRate(35e18, 1e18));
-        assertEq(received5, 35e18);
+        assertEq(received5, 24.32e18);
 
         assertEq(redeemManager.getRedeemRequestDetails(id).amount, 0);
         assertEq(_creditedEth(id), 0);
@@ -3518,25 +3518,24 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         assertEq(rmStepped.getRedeemRequestDetails(idStepped).height, 15e18);
         assertEq(rmStepped.getRedeemRequestDetails(idStepped).amount, 15e18);
 
-        // step 2 (depth 0): the credited width runs out 5e18 into this fill, so the last of the
-        // balance plus 5e18 at the request rate. Ends at height 25e18.
+        // step 2 (depth 0): entirely credited now that the uncredited 10e18 is used up, so it takes
+        // what its event supplies out of the balance. Ends at height 25e18.
         uint32[] memory events1 = new uint32[](1);
         events1[0] = 1;
         uint256 before2 = user.balance;
         rmStepped.claimRedeemRequests(idsStepped, events1, true, 0);
         uint256 received2 = user.balance - before2;
-        assertEq(received2, 8.5e18);
+        assertEq(received2, 12e18);
         assertEq(rmStepped.getRedeemRequestDetails(idStepped).height, 25e18);
         assertEq(rmStepped.getRedeemRequestDetails(idStepped).amount, 5e18);
 
-        // step 3 (depth 0): the uncredited tail, at the request rate -- fully claimed
+        // step 3 (depth 0): the balance is all that is left -- fully claimed
         uint32[] memory events2 = new uint32[](1);
         events2[0] = 2;
         uint256 before3 = user.balance;
         rmStepped.claimRedeemRequests(idsStepped, events2, true, 0);
         uint256 received3 = user.balance - before3;
-        assertEq(received3, applyRate(5e18, 1e18));
-        assertEq(received3, 5e18);
+        assertEq(received3, 1.5e18);
         assertEq(rmStepped.getRedeemRequestDetails(idStepped).amount, 0);
 
         uint256 totalStepped = received1 + received2 + received3;

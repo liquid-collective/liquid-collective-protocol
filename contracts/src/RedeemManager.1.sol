@@ -287,7 +287,8 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
 
         while (index < requestCount && remainingLsETH > 0) {
             RedeemQueueV2.RedeemRequest storage redeemRequest = redeemRequests[index];
-            uint256 endPosition = redeemRequest.height + redeemRequest.amount;
+            uint256 amount = redeemRequest.amount;
+            uint256 endPosition = redeemRequest.height + amount;
 
             // A request opened after the cursor starts at its own height, not at the cursor.
             uint256 start = LibUint256.max(position, redeemRequest.height);
@@ -298,14 +299,29 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
                 continue;
             }
 
-            uint256 taken = LibUint256.min(endPosition - start, remainingLsETH);
+            RedeemRequestAnchor.Anchor storage anchor = RedeemRequestAnchor.get()[uint32(index)];
+            uint256 alreadyCredited = anchor.creditedLsETH;
+
+            // A request can never hold more credited LsETH than LsETH. The positional span alone does
+            // not guarantee that: a claim consumes a request's credited stretch from the front while
+            // the counter only records a width, so the counter can already account for a stretch this
+            // span covers again. Capping here is what keeps `amount - creditedLsETH` a real quantity
+            // on the claim side, and the uncapped remainder stays creditable by a later report.
+            uint256 taken =
+                LibUint256.min(LibUint256.min(endPosition - start, remainingLsETH), amount - alreadyCredited);
+            if (taken == 0) {
+                unchecked {
+                    ++index;
+                }
+                continue;
+            }
+
             unchecked {
                 // bounded by `remainingLsETH`
                 remainingLsETH -= taken;
             }
             position = start + taken;
 
-            RedeemRequestAnchor.Anchor storage anchor = RedeemRequestAnchor.get()[uint32(index)];
             if (anchor.lsETHAtRequest == 0) {
                 // A request opened before this upgrade is paid under the original rules and cannot use
                 // the credit. It is consumed against the request rather than passed to the next one:
@@ -318,7 +334,7 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
                 // so rewards from the interval in which the principal stopped earning are excluded.
                 // Rounding down per request keeps the sum of all credits within the reported eth.
                 uint256 creditedEth = (taken * _stoppedEarningEth) / _stoppedEarningLsETH;
-                anchor.creditedLsETH += taken;
+                anchor.creditedLsETH = alreadyCredited + taken;
                 redeemRequest.maxRedeemableEth += creditedEth;
                 creditedLsETHTotal += taken;
                 emit CreditedStoppedEarning(uint32(index), taken, creditedEth);
@@ -421,8 +437,11 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
                 // Only the part inside this event settles here
                 uint256 matchingAmount = LibUint256.min(remainingAmount, withdrawalEventEndPosition - height);
                 uint256 settledEth = (matchingAmount * withdrawalEvent.withdrawnEth) / withdrawalEventAmount;
-                budget += _uncreditedValue(_anchor, matchingAmount, creditedLsETH);
-                creditedLsETH = creditedLsETH > matchingAmount ? creditedLsETH - matchingAmount : 0;
+                {
+                    uint256 uncredited = _uncreditedAmount(remainingAmount, matchingAmount, creditedLsETH);
+                    budget += _requestRateValue(_anchor, uncredited);
+                    creditedLsETH -= (matchingAmount - uncredited);
+                }
 
                 if (settledEth > budget) {
                     // Excess is swept to exceeding eth buffer, never paid to request
@@ -441,34 +460,49 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
         // Remaining amount sits above all withdrawal events, worth its credited balance plus the
         // request-time value of whatever part of it no report has covered
         if (remainingAmount > 0) {
-            projectedEth += budget + _uncreditedValue(_anchor, remainingAmount, creditedLsETH);
+            projectedEth += budget
+                + _requestRateValue(_anchor, _uncreditedAmount(remainingAmount, remainingAmount, creditedLsETH));
         }
     }
 
-    /// @notice Values the part of a matched slice that no stopped-earning report has credited
-    /// @dev The credited part is already carried as eth in the request's balance, at the rate locked
-    ///      when its principal stopped earning. Everything else is worth the request-time rate, which
-    ///      is what makes a fill with no exit behind it pay exactly what it was quoted.
-    /// @dev The credited width is treated as sitting at the front of the matched slice. Settlement can
-    ///      leave it behind an unclaimed prefix instead, in which case an earlier fill is credited
-    ///      ahead of a later one. The total a request can be paid is unchanged either way, because
-    ///      every unit of LsETH is valued exactly once, at one rate or the other.
-    /// @param _anchor The request-time valuation of the request
+    /// @notice The LsETH a fill consumes that no stopped-earning report has credited
+    /// @dev A fill consumes its uncredited LsETH before any of its credited LsETH, because credited
+    ///      LsETH always sits in the upper part of a request. A report only ever credits positions at
+    ///      or above `settledHeight`, and a claim only ever consumes positions below it, so the
+    ///      credited width can never be at the front of what a fill is consuming.
+    /// @dev Getting this order wrong is not a rounding detail. A request whose settled height falls
+    ///      inside it has an uncredited head and a credited tail; charging the head against the credit
+    ///      balance caps it at the tail's value, the event's surplus is swept away, and the tail is
+    ///      then paid the request rate out of events too small to supply it. One recorded request lost
+    ///      5.77 of its 20.67 ETH entitlement that way.
+    /// @param _remainingAmount The request's remaining LsETH before this fill
     /// @param _matchingAmount The LsETH matched in this fill
-    /// @param _creditedLsETH The request's credited width at this point in the walk
-    /// @return The request-time value of the uncredited part, in wei
-    function _uncreditedValue(
-        RedeemRequestAnchor.Anchor memory _anchor,
-        uint256 _matchingAmount,
-        uint256 _creditedLsETH
-    ) internal pure returns (uint256) {
-        if (_matchingAmount <= _creditedLsETH) {
-            return 0;
-        }
+    /// @param _creditedLsETH The request's credited width before this fill
+    /// @return The uncredited LsETH this fill consumes
+    function _uncreditedAmount(uint256 _remainingAmount, uint256 _matchingAmount, uint256 _creditedLsETH)
+        internal
+        pure
+        returns (uint256)
+    {
         unchecked {
-            // guarded above
-            return ((_matchingAmount - _creditedLsETH) * _anchor.ethAtRequest) / _anchor.lsETHAtRequest;
+            // `_creditedLsETH` never exceeds `_remainingAmount`: a report bounds each grant by the
+            // request's own width and a claim draws both down together
+            return LibUint256.min(_matchingAmount, _remainingAmount - _creditedLsETH);
         }
+    }
+
+    /// @notice The request-time value of an uncredited LsETH amount
+    /// @dev Everything a report has not credited is worth the rate the request was opened at, which is
+    ///      what makes a fill with no exit behind it pay exactly what it was quoted.
+    /// @param _anchor The request-time valuation of the request
+    /// @param _amount The uncredited LsETH to value
+    /// @return The value in wei
+    function _requestRateValue(RedeemRequestAnchor.Anchor memory _anchor, uint256 _amount)
+        internal
+        pure
+        returns (uint256)
+    {
+        return (_amount * _anchor.ethAtRequest) / _anchor.lsETHAtRequest;
     }
 
     /// @notice Internal utility to verify if a redeem request and a withdrawal event are matching
@@ -702,9 +736,13 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
                 // did not spend. This fill adds the request-time value of its own uncredited part, so a
                 // slice with no exit behind it pays exactly `rate_at_request` and a credited slice keeps
                 // the rate locked when its principal stopped earning, upwards or downwards.
-                _params.carry += _uncreditedValue(_params.anchor, vars.matchingAmount, _params.creditedLsETH);
-                _params.creditedLsETH =
-                    _params.creditedLsETH > vars.matchingAmount ? _params.creditedLsETH - vars.matchingAmount : 0;
+                uint256 uncredited =
+                    _uncreditedAmount(_params.redeemRequest.amount, vars.matchingAmount, _params.creditedLsETH);
+                _params.carry += _requestRateValue(_params.anchor, uncredited);
+                unchecked {
+                    // the credited part of this fill is whatever it did not take from the uncredited
+                    _params.creditedLsETH -= (vars.matchingAmount - uncredited);
+                }
                 maxRedeemableEthAmount = _params.carry;
             }
 
