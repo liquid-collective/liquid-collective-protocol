@@ -152,6 +152,11 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
     }
 
     /// @inheritdoc IRedeemManagerV1
+    function getRedeemRequestUnspentCap(uint32 _redeemRequestId) external view returns (uint256) {
+        return RedeemRequestAnchor.get()[_redeemRequestId].unspentCap;
+    }
+
+    /// @inheritdoc IRedeemManagerV1
     function getBufferedExceedingEth() external view returns (uint256) {
         return BufferedExceedingEth.get();
     }
@@ -257,12 +262,13 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
     }
 
     /// @inheritdoc IRedeemManagerV1
-    /// @dev OPERATING LIMIT. This walks the redeem queue, so one report costs about 43,500 gas per
-    ///      request it credits and a 60M gas block covers roughly 1,300. Past that the report no
-    ///      longer fits in a block. It runs after River has persisted the cumulative stopped-earning
-    ///      balance, so the revert takes the whole oracle report down, the next report faces the same
-    ///      queue and reverts identically, and recovery needs a governance implementation upgrade.
-    ///      `make redemption-report-gas` measures the limit and fails if the per-request cost grows.
+    /// @dev OPERATING LIMIT. This walks the redeem queue, so one report costs about 63,700 gas for
+    ///      each request it credits for the first time and a 60M gas block covers roughly 940. Past
+    ///      that the report no longer fits in a block. It runs after River has persisted the cumulative
+    ///      stopped-earning balance, so the revert takes the whole oracle report down, the next report
+    ///      faces the same queue and reverts identically, and recovery needs a governance
+    ///      implementation upgrade. `make redemption-report-gas` measures the limit and fails if the
+    ///      per-request cost grows.
     function reportStoppedEarning(uint256 _stoppedEarningEth, uint256 _stoppedEarningLsETH) external onlyRiver {
         // A zero LsETH leg also covers a pool holding no assets or no shares, where River's conversion
         // returns 0. Returning here is what makes the division below safe with no further guard.
@@ -334,6 +340,12 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
                 // so rewards from the interval in which the principal stopped earning are excluded.
                 // Rounding down per request keeps the sum of all credits within the reported eth.
                 uint256 creditedEth = (taken * _stoppedEarningEth) / _stoppedEarningLsETH;
+                // The band opens where this grant lands. A later grant only widens it, so a request
+                // whose credit arrives in two stretches with a settled gap between them is treated as
+                // one band running from the first stretch's start.
+                if (alreadyCredited == 0) {
+                    anchor.creditedFrom = start;
+                }
                 anchor.creditedLsETH = alreadyCredited + taken;
                 redeemRequest.maxRedeemableEth += creditedEth;
                 creditedLsETHTotal += taken;
@@ -420,8 +432,10 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
         }
 
         uint256 height = _redeemRequest.height;
-        uint256 budget = _redeemRequest.maxRedeemableEth;
+        uint256 creditedEth = _redeemRequest.maxRedeemableEth;
         uint256 creditedLsETH = _anchor.creditedLsETH;
+        uint256 creditedFrom = _anchor.creditedFrom;
+        uint256 carry = _anchor.unspentCap;
 
         // Process settled portion with withdrawal events
         if (_settledHeight() > height) {
@@ -437,19 +451,24 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
                 // Only the part inside this event settles here
                 uint256 matchingAmount = LibUint256.min(remainingAmount, withdrawalEventEndPosition - height);
                 uint256 settledEth = (matchingAmount * withdrawalEvent.withdrawnEth) / withdrawalEventAmount;
+
+                uint256 cap;
                 {
-                    uint256 uncredited = _uncreditedAmount(remainingAmount, matchingAmount, creditedLsETH);
-                    budget += _requestRateValue(_anchor, uncredited);
-                    creditedLsETH -= (matchingAmount - uncredited);
+                    uint256 credited = _creditedOverlap(height, matchingAmount, creditedFrom, creditedLsETH);
+                    uint256 creditedValue = creditedLsETH == 0 ? 0 : (credited * creditedEth) / creditedLsETH;
+                    cap = creditedValue + _requestRateValue(_anchor, matchingAmount - credited) + carry;
+                    creditedEth -= creditedValue;
+                    creditedLsETH -= credited;
+                    if (credited > 0) creditedFrom = height + matchingAmount;
                 }
 
-                if (settledEth > budget) {
+                if (settledEth > cap) {
                     // Excess is swept to exceeding eth buffer, never paid to request
-                    settledEth = budget;
+                    settledEth = cap;
                 }
                 projectedEth += settledEth;
                 unchecked {
-                    budget -= settledEth;
+                    carry = cap - settledEth;
                     height += matchingAmount;
                     remainingAmount -= matchingAmount;
                     ++withdrawalEventId;
@@ -457,11 +476,12 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
             }
         }
 
-        // Remaining amount sits above all withdrawal events, worth its credited balance plus the
-        // request-time value of whatever part of it no report has covered
+        // Remaining amount sits above all withdrawal events. Nothing bounds it but its own worth, so
+        // it is the credited eth still held plus the request-time value of whatever no report covered,
+        // plus anything earlier fills were offered and did not spend.
         if (remainingAmount > 0) {
-            projectedEth += budget
-                + _requestRateValue(_anchor, _uncreditedAmount(remainingAmount, remainingAmount, creditedLsETH));
+            uint256 credited = _creditedOverlap(height, remainingAmount, creditedFrom, creditedLsETH);
+            projectedEth += creditedEth + carry + _requestRateValue(_anchor, remainingAmount - credited);
         }
     }
 
@@ -489,6 +509,26 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
             // request's own width and a claim draws both down together
             return LibUint256.min(_matchingAmount, _remainingAmount - _creditedLsETH);
         }
+    }
+
+    /// @notice How much of a fill's LsETH falls inside the request's credited band
+    /// @dev The band is `[creditedFrom, creditedFrom + creditedLsETH)` and the fill is
+    ///      `[height, height + matchingAmount)`. A fill below the band is entirely uncredited and one
+    ///      inside it entirely credited. That is the distinction a width counter alone cannot make,
+    ///      and it decides whether the fill may draw at the locked rate.
+    /// @param _height The request's current position
+    /// @param _matchingAmount The LsETH matched in this fill
+    /// @param _creditedFrom Where the credited band begins
+    /// @param _creditedLsETH The credited band's width
+    /// @return The credited LsETH this fill consumes
+    function _creditedOverlap(uint256 _height, uint256 _matchingAmount, uint256 _creditedFrom, uint256 _creditedLsETH)
+        internal
+        pure
+        returns (uint256)
+    {
+        uint256 overlapStart = LibUint256.max(_height, _creditedFrom);
+        uint256 overlapEnd = LibUint256.min(_height + _matchingAmount, _creditedFrom + _creditedLsETH);
+        return overlapEnd > overlapStart ? overlapEnd - overlapStart : 0;
     }
 
     /// @notice The request-time value of an uncredited LsETH amount
@@ -633,7 +673,11 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
         // serve this purpose, because it is a running balance the claim path debits by the ETH actually
         // paid, so the per-LsETH rate it implies drifts away from the request rate on the first fill.
         RedeemRequestAnchor.get()[redeemRequestId] = RedeemRequestAnchor.Anchor({
-            lsETHAtRequest: _lsETHAmount, ethAtRequest: maxRedeemableEth, creditedLsETH: 0
+            lsETHAtRequest: _lsETHAmount,
+            ethAtRequest: maxRedeemableEth,
+            creditedLsETH: 0,
+            unspentCap: 0,
+            creditedFrom: 0
         });
 
         uint256 redeemDemand = RedeemDemand.get();
@@ -650,10 +694,14 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
         WithdrawalStack.WithdrawalEvent withdrawalEvent;
         /// @custom:attribute The request-time valuation of the request, zeroed `lsETHAtRequest` if pre-upgrade. Per request, so it is loaded once by the caller rather than at every recursion level
         RedeemRequestAnchor.Anchor anchor;
-        /// @custom:attribute The eth credited to the request and not yet paid out, needs to be reloaded for each call/before calling the recursive function. Carried in memory across the recursion and flushed once by `_saveRedeemRequest`
+        /// @custom:attribute The cap earlier fills were offered and did not spend, needs to be reloaded for each call/before calling the recursive function. Carried in memory across the recursion and flushed once by `_saveRedeemRequest`
         uint256 carry;
-        /// @custom:attribute The request's credited LsETH width, consumed alongside `carry` as fills land. Also carried in memory across the recursion
+        /// @custom:attribute The request's credited LsETH width, consumed alongside `creditedEth` as fills land. Also carried in memory across the recursion
         uint256 creditedLsETH;
+        /// @custom:attribute The eth credited to the request and not yet released to a fill. Its ratio to `creditedLsETH` is the locked rate a fill draws at
+        uint256 creditedEth;
+        /// @custom:attribute Position where the request's credited band begins, so a fill can tell whether its own LsETH is the credited part
+        uint256 creditedFrom;
         /// @custom:attribute The id of the redeem request to claim
         uint32 redeemRequestId;
         /// @custom:attribute The id of the withdrawal event to use to claim the redeem request
@@ -693,15 +741,16 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
         }
 
         // An anchored request keeps its credited eth in the same field the pre-upgrade path uses for
-        // its remaining budget. A fully claimed request can never be read again, so its balance is
-        // cleared rather than left dangling.
+        // its remaining budget. A fully claimed request can never be read again, so everything it
+        // still carries is cleared rather than left dangling.
         bool fullyClaimed = _params.redeemRequest.amount == 0;
-        redeemRequest.maxRedeemableEth = fullyClaimed ? 0 : _params.carry;
+        redeemRequest.maxRedeemableEth = fullyClaimed ? 0 : _params.creditedEth;
 
-        // The credited width drains to zero alongside the amount, so this is already zero on a full
-        // claim. Skipping the write then keeps the common path off a needless store.
-        if (!fullyClaimed || _params.creditedLsETH != 0) {
-            RedeemRequestAnchor.get()[_params.redeemRequestId].creditedLsETH = fullyClaimed ? 0 : _params.creditedLsETH;
+        RedeemRequestAnchor.Anchor storage anchor = RedeemRequestAnchor.get()[_params.redeemRequestId];
+        anchor.creditedLsETH = fullyClaimed ? 0 : _params.creditedLsETH;
+        anchor.creditedFrom = fullyClaimed ? 0 : _params.creditedFrom;
+        if (!fullyClaimed || _params.carry != 0) {
+            anchor.unspentCap = fullyClaimed ? 0 : _params.carry;
         }
     }
 
@@ -736,14 +785,33 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
                 // did not spend. This fill adds the request-time value of its own uncredited part, so a
                 // slice with no exit behind it pays exactly `rate_at_request` and a credited slice keeps
                 // the rate locked when its principal stopped earning, upwards or downwards.
-                uint256 uncredited =
-                    _uncreditedAmount(_params.redeemRequest.amount, vars.matchingAmount, _params.creditedLsETH);
-                _params.carry += _requestRateValue(_params.anchor, uncredited);
+                // This fill may only draw the credited eth belonging to its OWN LsETH, which is the
+                // same rule the pre-upgrade branch above applies to its budget. Letting it reach the
+                // whole credited balance would pay it eth earned by LsETH no event has settled yet, and
+                // the surplus a generous event brings above a fill's own worth has always gone to the
+                // exceeding buffer rather than to the redeemer.
+                uint256 credited = _creditedOverlap(
+                    _params.redeemRequest.height, vars.matchingAmount, _params.creditedFrom, _params.creditedLsETH
+                );
+                uint256 uncredited;
                 unchecked {
-                    // the credited part of this fill is whatever it did not take from the uncredited
-                    _params.creditedLsETH -= (vars.matchingAmount - uncredited);
+                    // `_creditedOverlap` is bounded by `matchingAmount`
+                    uncredited = vars.matchingAmount - credited;
                 }
-                maxRedeemableEthAmount = _params.carry;
+
+                uint256 creditedValue =
+                    _params.creditedLsETH == 0 ? 0 : (credited * _params.creditedEth) / _params.creditedLsETH;
+
+                maxRedeemableEthAmount = creditedValue + _requestRateValue(_params.anchor, uncredited) + _params.carry;
+
+                unchecked {
+                    // both subtrahends are the portions this fill consumed, off the band's front
+                    _params.creditedEth -= creditedValue;
+                    _params.creditedLsETH -= credited;
+                }
+                if (credited > 0) {
+                    _params.creditedFrom = _params.redeemRequest.height + vars.matchingAmount;
+                }
             }
 
             if (maxRedeemableEthAmount < vars.ethAmount) {
@@ -882,8 +950,10 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
             params.ethAmount = 0;
             params.lsETHAmount = 0;
             params.anchor = RedeemRequestAnchor.get()[params.redeemRequestId];
-            params.carry = params.anchor.lsETHAtRequest == 0 ? 0 : params.redeemRequest.maxRedeemableEth;
+            params.carry = params.anchor.unspentCap;
+            params.creditedEth = params.redeemRequest.maxRedeemableEth;
             params.creditedLsETH = params.anchor.creditedLsETH;
+            params.creditedFrom = params.anchor.creditedFrom;
 
             _claimRedeemRequest(params);
 

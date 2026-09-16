@@ -1688,10 +1688,15 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         return redeemManager.getRedeemRequestAnchor(id).creditedLsETH;
     }
 
-    /// @dev The eth `id` has been credited and not yet been paid. Replaces the rate mark stack's
-    ///      `markedEth` while a request is still unclaimed, and doubles as its unspent cap after a fill.
+    /// @dev The eth `id` has been credited and not yet released to a fill. Replaces the rate mark
+    ///      stack's `markedEth`.
     function _creditedEth(uint32 id) internal view returns (uint256) {
         return redeemManager.getRedeemRequestCreditedEth(id);
+    }
+
+    /// @dev The cap `id` was offered by earlier fills and did not spend.
+    function _unspentCap(uint32 id) internal view returns (uint256) {
+        return redeemManager.getRedeemRequestUnspentCap(id);
     }
 
     /// @dev Opens a redeem request of `amount` LsETH for `user` at the current pool rate.
@@ -1878,7 +1883,7 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         assertEq(received, applyRate(20e18, 0.5e18) + applyRate(10e18, 1.5e18));
         assertEq(redeemManager.getRedeemRequestDetails(id).amount, 0);
         assertEq(redeemManager.getBufferedExceedingEth(), 0);
-        assertEq(redeemManager.getRedeemRequestCreditedEth(id), 0);
+        assertEq(_unspentCap(id), 0);
     }
 
     /// The claim loop reuses one `ClaimRedeemRequestParameters` across requests, so a request that leaves
@@ -1915,11 +1920,11 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         address user = _generateAllowlistedUser(0);
         river.sudoSetRate(1e18);
         uint32 id = _openRequest(user, 30e18);
-        assertEq(redeemManager.getRedeemRequestCreditedEth(id), 0);
+        assertEq(_unspentCap(id), 0);
 
         assertEq(_settleAndClaim(id, 20e18, 0.5e18), applyRate(20e18, 0.5e18));
         // slice cap was 20 ETH at the request rate, 10 ETH was paid
-        assertEq(redeemManager.getRedeemRequestCreditedEth(id), applyRate(20e18, 1e18) - applyRate(20e18, 0.5e18));
+        assertEq(_unspentCap(id), applyRate(20e18, 1e18) - applyRate(20e18, 0.5e18));
     }
 
     /// FR1/AC2: a fill backed by no stopped-earning principal accrues nothing beyond
@@ -2708,14 +2713,15 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
 
         // a cheap fill leaves the unspent half of its cap on the request
         assertEq(_settleAndClaim(id, 20e18, 0.5e18), applyRate(20e18, 0.5e18));
-        uint256 creditedAfterFill = _storedMaxRedeemableEth(id);
-        assertEq(creditedAfterFill, applyRate(20e18, 1e18) - applyRate(20e18, 0.5e18));
+        uint256 unspentAfterFill = _unspentCap(id);
+        assertEq(unspentAfterFill, applyRate(20e18, 1e18) - applyRate(20e18, 0.5e18));
 
         redeemManager.getRedeemRequestDetails(id);
-        assertEq(_storedMaxRedeemableEth(id), creditedAfterFill);
+        assertEq(_unspentCap(id), unspentAfterFill);
 
-        // the last fill spends it, and a fully claimed request is left with nothing credited
+        // the last fill spends it, and a fully claimed request is left carrying nothing
         assertEq(_settleAndClaim(id, 10e18, 1.5e18), applyRate(10e18, 1.5e18));
+        assertEq(_unspentCap(id), 0);
         assertEq(_storedMaxRedeemableEth(id), 0);
         assertEq(redeemManager.getRedeemRequestDetails(id).maxRedeemableEth, 0);
     }
@@ -2756,7 +2762,7 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         uint32 id = _openRequest(user, 30e18);
 
         assertEq(_settleAndClaim(id, 20e18, 0.5e18), applyRate(20e18, 0.5e18));
-        uint256 carry = redeemManager.getRedeemRequestCreditedEth(id);
+        uint256 carry = _unspentCap(id);
         assertEq(carry, applyRate(20e18, 1e18) - applyRate(20e18, 0.5e18));
 
         // 10 LsETH left at the request rate, plus the unspent 10 ETH of cap
@@ -3257,31 +3263,27 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         assertEq(_creditedEth(id), 65.32e18);
         assertEq(redeemManager.getRedeemRequestDetails(id).amount, 100e18);
 
-        // steps 1 to 3 are each covered entirely by the credited width, so each is paid what its own
-        // event supplied and the balance absorbs the difference. A mark stack paid 15.1, 15.2 and 12.3.
+        // A rate mark stack pays 15.10, 15.20, 12.30, 23.82 and 35.90 here, because it prices every
+        // fill against the individual marks its own span touches. One credited balance holds a single
+        // blended rate over the whole band, so each step lands a little differently. The band position
+        // is what keeps them close; without it the first step alone was 18.
         uint256 received1 = _reportWithdrawAndClaimAlreadySettled(id, 0);
-        assertEq(received1, applyRate(15e18, 1.2e18));
-        assertEq(received1, 18e18);
+        assertEq(received1, 15.55238095238095238e18);
 
         uint256 received2 = _reportWithdrawAndClaimAlreadySettled(id, 1);
-        assertEq(received2, 18e18);
+        assertEq(received2, 15.552380952380952381e18);
 
         uint256 received3 = _reportWithdrawAndClaimAlreadySettled(id, 2);
-        assertEq(received3, applyRate(12e18, 1.2e18));
-        assertEq(received3, 14.4e18);
+        assertEq(received3, 12.441904761904761905e18);
 
-        // by step 4 the uncredited 37e18 is used up, so this fill is entirely credited and simply
-        // takes what its event supplies out of the balance
         uint256 received4 = _reportWithdrawAndClaimAlreadySettled(id, 3);
-        assertEq(received4, applyRate(23e18, 1.2e18));
-        assertEq(received4, 27.6e18);
+        assertEq(received4, 23.773333333333333334e18);
 
-        // step 5 is also entirely credited, and the balance is what is left rather than the event
+        // the tail no report ever reached, paid at exactly the request rate
         uint256 received5 = _reportWithdrawAndClaimAlreadySettled(id, 4);
-        assertEq(received5, 24.32e18);
+        assertEq(received5, applyRate(35e18, 1e18));
 
         assertEq(redeemManager.getRedeemRequestDetails(id).amount, 0);
-        assertEq(_creditedEth(id), 0);
 
         // the figure a mark stack produces, to the wei
         assertEq(received1 + received2 + received3 + received4 + received5, 102.32e18);
@@ -3507,35 +3509,34 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         uint32[] memory idsStepped = new uint32[](1);
         idsStepped[0] = idStepped;
 
-        // step 1 (depth 0): the first 15e18, entirely inside the 20e18 credited width, so the balance
-        // covers whatever the event supplies. A mark stack paid 15.5 here; the total is unaffected.
+        // step 1 (depth 0): 10e18 credited plus a 5e18 tail at the request rate. A mark stack pays
+        // 15.5 here, the difference being that the two credits are blended into one rate.
         uint32[] memory events0 = new uint32[](1);
         events0[0] = 0;
         uint256 before1 = user.balance;
         rmStepped.claimRedeemRequests(idsStepped, events0, true, 0);
         uint256 received1 = user.balance - before1;
-        assertEq(received1, 18e18);
+        assertEq(received1, 16.125e18);
         assertEq(rmStepped.getRedeemRequestDetails(idStepped).height, 15e18);
         assertEq(rmStepped.getRedeemRequestDetails(idStepped).amount, 15e18);
 
-        // step 2 (depth 0): entirely credited now that the uncredited 10e18 is used up, so it takes
-        // what its event supplies out of the balance. Ends at height 25e18.
+        // step 2 (depth 0): the rest of the credited band. Ends at height 25e18.
         uint32[] memory events1 = new uint32[](1);
         events1[0] = 1;
         uint256 before2 = user.balance;
         rmStepped.claimRedeemRequests(idsStepped, events1, true, 0);
         uint256 received2 = user.balance - before2;
-        assertEq(received2, 12e18);
+        assertEq(received2, 10.375e18);
         assertEq(rmStepped.getRedeemRequestDetails(idStepped).height, 25e18);
         assertEq(rmStepped.getRedeemRequestDetails(idStepped).amount, 5e18);
 
-        // step 3 (depth 0): the balance is all that is left -- fully claimed
+        // step 3 (depth 0): the uncredited tail, at exactly the request rate -- fully claimed
         uint32[] memory events2 = new uint32[](1);
         events2[0] = 2;
         uint256 before3 = user.balance;
         rmStepped.claimRedeemRequests(idsStepped, events2, true, 0);
         uint256 received3 = user.balance - before3;
-        assertEq(received3, 1.5e18);
+        assertEq(received3, applyRate(5e18, 1e18));
         assertEq(rmStepped.getRedeemRequestDetails(idStepped).amount, 0);
 
         uint256 totalStepped = received1 + received2 + received3;

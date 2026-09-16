@@ -25,15 +25,17 @@ import "../src/libraries/LibAllowlistMasks.sol";
 ///      if the per-request cost regresses. `requestRedeem` is gated on REDEEM_MASK, so reaching the
 ///      limit takes either an allowlisted adversary or an organically long queue.
 contract RedeemManagerReportGas_HEAVY_FUZZING is Test {
-    /// @dev Measured at 43,487 gas per credited request. Almost all of it is two zero-to-non-zero
-    ///      SSTOREs at 22,100 each, one for the request's credited eth and one for its credited LsETH.
-    ///      Packing `creditedLsETH` into the anchor's first slot alongside `lsETHAtRequest` would turn
-    ///      the second into a 5,000 gas warm write and roughly halve this.
-    uint256 internal constant MAX_GAS_PER_CREDITED_REQUEST = 45_000;
+    /// @dev Measured at 63,711 gas for a request's FIRST credit. Almost all of it is three
+    ///      zero-to-non-zero SSTOREs at 22,100 each, for the credited eth, the credited width and the
+    ///      band's start position. A later credit to the same request skips the band write and costs
+    ///      about 43,600. Packing the width and the band start into one slot, both fit in uint128
+    ///      against a total LsETH supply far below 2^128, would take roughly 17,000 off the first
+    ///      credit.
+    uint256 internal constant MAX_GAS_PER_CREDITED_REQUEST = 66_000;
 
     /// @dev The operating limit this implies, and the number that actually matters. Below it, a report
     ///      covering that many pending requests no longer fits in a block and the oracle report reverts.
-    uint256 internal constant MIN_REQUESTS_PER_BLOCK = 1_300;
+    uint256 internal constant MIN_REQUESTS_PER_BLOCK = 900;
     uint256 internal constant BLOCK_GAS_LIMIT = 60_000_000;
 
     /// @dev Requests credited in the measured report

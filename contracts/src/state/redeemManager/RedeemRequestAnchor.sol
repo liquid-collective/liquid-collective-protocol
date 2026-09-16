@@ -16,6 +16,16 @@ pragma solidity 0.8.34;
 ///      request rate on the first fill. The pair is stored rather than a precomputed rate so the cap
 ///      arithmetic stays integer-exact and in the same pro-rata form the claim path already uses.
 ///
+///      `creditedFrom` is where the credited band starts. A width alone cannot say whether a fill's
+///      own positions are the credited ones: a report lands at `max(cursor, settledHeight)`, which is
+///      the front of a request whose settled height has not reached it and the middle of one whose
+///      has. Capping each fill at its own worth needs that distinction, so the position is stored.
+///
+///      `unspentCap` is kept apart from the credited eth rather than added to it. Each fill may only
+///      draw the credited eth belonging to its own LsETH, which is `creditedInFill * creditedEth /
+///      creditedLsETH`, and folding unspent cap into `creditedEth` would corrupt that rate. Anything a
+///      fill was offered and did not spend lands here instead, where later fills can still draw it.
+///
 ///      `creditedLsETH` is the part of the request's remaining LsETH whose backing principal has
 ///      stopped earning, so it is already valued in `maxRedeemableEth` and must not be valued again
 ///      at the request rate when it settles. It rises as reports credit the request and falls as
@@ -41,6 +51,10 @@ library RedeemRequestAnchor {
         uint256 ethAtRequest;
         /// @custom:attribute The part of the request's remaining LsETH already credited at a locked rate
         uint256 creditedLsETH;
+        /// @custom:attribute Cap earlier fills were offered and did not spend, drawable by later fills
+        uint256 unspentCap;
+        /// @custom:attribute Position on the cumulative LsETH axis where the credited band begins
+        uint256 creditedFrom;
     }
 
     /// @notice Retrieve the Redeem Request Anchor mapping storage pointer

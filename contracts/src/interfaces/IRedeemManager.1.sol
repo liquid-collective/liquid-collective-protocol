@@ -280,6 +280,14 @@ interface IRedeemManagerV1 {
     /// @return The credited and unpaid eth, in wei
     function getRedeemRequestCreditedEth(uint32 _redeemRequestId) external view returns (uint256);
 
+    /// @notice Retrieve the cap a redeem request was offered by earlier fills and did not spend
+    /// @dev Kept apart from the credited eth so that each fill draws only the credited eth belonging
+    ///      to its own LsETH. Always zero for a request predating the stopped-earning upgrade, whose
+    ///      unspent budget stays in `maxRedeemableEth`.
+    /// @param _redeemRequestId The id of the request
+    /// @return The unspent cap carried to the next fill, in wei
+    function getRedeemRequestUnspentCap(uint32 _redeemRequestId) external view returns (uint256);
+
     /// @notice Pulls exceeding buffer eth
     /// @param _max The maximum amount that should be pulled
     function pullExceedingEth(uint256 _max) external;
