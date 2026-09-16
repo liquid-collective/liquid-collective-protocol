@@ -11,8 +11,10 @@ import "./mocks/RiverMock.sol";
 import "../src/Oracle.1.sol";
 import "../src/interfaces/IRiver.1.sol";
 
+import "./utils/LegacyInit.sol";
+
 abstract contract OracleV1TestBase is Test {
-    OracleV1 internal oracle;
+    OracleV1WithLegacyInit internal oracle;
 
     IRiverV1 internal oracleInput;
     UserFactory internal uf = new UserFactory();
@@ -40,7 +42,7 @@ abstract contract OracleV1TestBase is Test {
 
     function setUp() public virtual {
         oracleInput = IRiverV1(payable(address(new RiverMock())));
-        oracle = new OracleV1();
+        oracle = new OracleV1WithLegacyInit();
         LibImplementationUnbricker.unbrick(vm, address(oracle));
     }
 }

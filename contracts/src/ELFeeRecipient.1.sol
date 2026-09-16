@@ -14,13 +14,13 @@ import "./state/shared/RiverAddress.sol";
 /// @title Execution Layer Fee Recipient (v1)
 /// @author Alluvial Finance Inc.
 /// @notice This contract receives all the execution layer fees from the proposed blocks + bribes
+/// @dev REMOVED INITIALIZERS. Every deployed proxy is at `Version == 1`, so the `init(N)` guard on
+///      this can never pass again; it was deleted to reclaim bytecode. Recorded here so the version
+///      counter's history stays readable, and so nobody reuses this slot:
+///        init(0)  initELFeeRecipientV1(address)         -- _riverAddress
+///      Body preserved verbatim in contracts/test/utils/LegacyInit.sol
+///      (ELFeeRecipientV1WithLegacyInit).
 contract ELFeeRecipientV1 is Initializable, IELFeeRecipientV1, IProtocolVersion {
-    /// @inheritdoc IELFeeRecipientV1
-    function initELFeeRecipientV1(address _riverAddress) external init(0) {
-        RiverAddress.set(_riverAddress);
-        emit SetRiver(_riverAddress);
-    }
-
     /// @inheritdoc IELFeeRecipientV1
     function pullELFees(uint256 _maxAmount) external {
         address river = RiverAddress.get();

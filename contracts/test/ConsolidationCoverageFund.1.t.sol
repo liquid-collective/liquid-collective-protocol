@@ -11,6 +11,8 @@ import "../src/ConsolidationCoverageFund.1.sol";
 import "../src/interfaces/IConsolidationCoverageFund.1.sol";
 import "../src/Allowlist.1.sol";
 
+import "./utils/LegacyInit.sol";
+
 contract RiverMock {
     event BalanceUpdated(uint256 amount);
 
@@ -40,7 +42,7 @@ contract RiverMock {
 abstract contract ConsolidationCoverageFundV1TestBase is Test {
     ConsolidationCoverageFundV1 internal consolidationCoverageFund;
 
-    AllowlistV1 internal allowlist;
+    AllowlistV1WithLegacyInit internal allowlist;
     RiverMock internal river;
     UserFactory internal uf = new UserFactory();
     address internal admin;
@@ -53,7 +55,7 @@ abstract contract ConsolidationCoverageFundV1TestBase is Test {
 contract ConsolidationCoverageFundV1InitializationTests is ConsolidationCoverageFundV1TestBase {
     function setUp() public {
         admin = makeAddr("admin");
-        allowlist = new AllowlistV1();
+        allowlist = new AllowlistV1WithLegacyInit();
         LibImplementationUnbricker.unbrick(vm, address(allowlist));
         allowlist.initAllowlistV1(admin, admin);
         river = new RiverMock(address(allowlist));
@@ -71,7 +73,7 @@ contract ConsolidationCoverageFundV1InitializationTests is ConsolidationCoverage
 contract ConsolidationCoverageFundTestV1 is ConsolidationCoverageFundV1TestBase {
     function setUp() public {
         admin = makeAddr("admin");
-        allowlist = new AllowlistV1();
+        allowlist = new AllowlistV1WithLegacyInit();
         LibImplementationUnbricker.unbrick(vm, address(allowlist));
         allowlist.initAllowlistV1(admin, admin);
         allowlist.initAllowlistV1_1(admin);

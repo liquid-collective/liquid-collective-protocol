@@ -9,6 +9,9 @@ import "../state/redeemManager/RedeemRequestAnchor.sol";
 /// @title Redeem Manager Interface (v1)
 /// @author Alluvial Finance Inc.
 /// @notice This contract handles the redeem requests of all users
+/// @dev `initializeRedeemManagerV1` (init(0)) and `initializeRedeemManagerV1_2` (init(1)) were
+///      removed; see the REMOVED INITIALIZERS note on RedeemManagerV1 in
+///      contracts/src/RedeemManager.1.sol.
 interface IRedeemManagerV1 {
     /// @notice Emitted when a redeem request is created
     /// @param recipient The recipient of the redeem request
@@ -142,15 +145,6 @@ interface IRedeemManagerV1 {
 
     /// @notice Thrown when an action is blocked because slashing containment mode is active
     error SlashingContainmentModeEnabled();
-
-    /// @notice Initializes the redeem manager
-    /// @param _river The address of the River contract
-    function initializeRedeemManagerV1(address _river) external;
-
-    /// @notice Migrates the redeem queue to its v2 layout, which records the initiator of every request
-    /// @dev Second initializer of the contract, callable once while the stored version is 1. Copies each
-    ///      v1 request into the v2 queue and seeds `initiator` from `recipient`, as v1 did not track it.
-    function initializeRedeemManagerV1_2() external;
 
     /// @notice Pins the launch cutover for stopped-earning rate marks at the end of the current queue
     /// @dev Must run in the same governance action that upgrades the implementation. Without it the

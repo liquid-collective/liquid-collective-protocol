@@ -4,6 +4,8 @@ pragma solidity 0.8.34;
 /// @title Coverage Fund Interface (v1)
 /// @author Alluvial Finance Inc.
 /// @notice This interface exposes methods to receive donations for the slashing coverage fund and pull the funds into river
+/// @dev `initCoverageFundV1` (init(0)) was removed; see the REMOVED INITIALIZERS note on
+///      CoverageFundV1 in contracts/src/CoverageFund.1.sol.
 interface ICoverageFundV1 {
     /// @notice The storage river address has changed
     /// @param river The new river address
@@ -19,10 +21,6 @@ interface ICoverageFundV1 {
 
     /// @notice A donation with 0 ETH has been performed
     error EmptyDonation();
-
-    /// @notice Initialize the coverage fund with the required arguments
-    /// @param _riverAddress Address of River
-    function initCoverageFundV1(address _riverAddress) external;
 
     /// @notice Pulls ETH into the River contract
     /// @dev Only callable by the River contract

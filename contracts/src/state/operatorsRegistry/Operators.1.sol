@@ -6,6 +6,9 @@ import "../../libraries/LibSanitize.sol";
 /// @title Operators Storage
 /// @notice Utility to manage the Operators in storage
 /// @notice This state variable is deprecated and was kept due to migration logic needs
+/// @dev No longer read by contracts/src: the V1 -> V2 operator migration that used it now lives in
+///      contracts/test/utils/LegacyInit.sol, since mainnet ran it long ago. Kept so that harness (and
+///      the mainnet fork tests replaying the migration) can still address these slots.
 library OperatorsV1 {
     /// @notice Storage slot of the Operators
     bytes32 internal constant OPERATORS_SLOT = bytes32(uint256(keccak256("river.state.operators")) - 1);
