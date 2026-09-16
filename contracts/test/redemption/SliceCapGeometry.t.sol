@@ -180,8 +180,9 @@ contract SliceCapGeometryTests is RedemptionReportBase {
         assertEq(redeemManager.getBufferedExceedingEth(), 0.6e18);
     }
 
-    /// D6. Scenario: one request spans a gap between two marks -- demand a withdrawal event settled
-    /// with no exit behind it, so the settled height overtook the mark cursor and left a permanent hole.
+    /// D6. Scenario: one request spans a gap between two marks -- demand settled by a withdrawal event
+    /// carrying no stopped-earning delta, so the settled height overtook the mark cursor and left a
+    /// permanent hole.
     ///
     ///     marks   [== mark0 rate 1.05 ==)          [====== mark1 rate 1.10 =====)
     ///     axis    0                20         30                       60
@@ -211,8 +212,8 @@ contract SliceCapGeometryTests is RedemptionReportBase {
         _reportStoppedEarning(applyRate(20e18, 1.05e18));
         assertEq(_markCursor(), 20e18);
 
-        // 30 LsETH settled from the deposit buffer -- no exit, so no mark -- pushing the settled height
-        // past the mark cursor and opening the gap [20, 30)
+        // 30 LsETH settled by an event carrying no stopped-earning delta -- so no mark -- pushing the
+        // settled height past the mark cursor and opening the gap [20, 30)
         _reportRate(1.08e18);
         _reportWithdraw(30e18, 1.08e18);
         assertEq(_settledHeight(), 30e18);
@@ -467,7 +468,7 @@ contract SliceCapGeometryTests is RedemptionReportBase {
 
     /// D11. Scenario: a request that stayed pending across many marked reports (200 marks, one per
     /// report) is claimed in a single call, then the identical geometry is claimed again with a
-    /// bounded `_depth` so the walk is split across four calls.
+    /// bounded `_depth` -- across eight withdrawal events, so the recursion has boundaries to stop on.
     ///
     ///     marks   [m0)[m1)[m2)...[m199)      each 1 LsETH, rate 1.000, 1.001, ... 1.199
     ///     axis    0   1   2   3        200
@@ -475,8 +476,13 @@ contract SliceCapGeometryTests is RedemptionReportBase {
     ///
     /// Expected: the single-call claim does not run out of gas and pays the hand-computed blend
     /// `sum(1 + i*0.001) for i in 0..199 = 219.9 ETH`; the depth-bounded claims sum to the same figure.
-    /// Iterations are bounded by the marks the slice spans, which is why the claimant of an old request
-    /// can split it rather than being priced out.
+    ///
+    /// @dev The two phases do not cover the same thing. Phase 2 bounds the recursion ACROSS withdrawal
+    ///      events, which is all `_depth` does -- as the doc block on `_sliceCap` states. It does not
+    ///      chunk the mark loop: phase 1's single event walks all 200 marks inside one `_sliceCap` call
+    ///      at any depth, which is why the gas ceiling below is asserted rather than assumed away. A
+    ///      request settled by one large event cannot split its mark walk; claiming regularly is the
+    ///      only mitigation.
     function testRequestSpanningManyMarksClaimsInOneCallAndSplitsIdentically() external {
         address user = _generateAllowlistedUser(0);
 

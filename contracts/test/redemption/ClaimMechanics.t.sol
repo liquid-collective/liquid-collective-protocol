@@ -439,24 +439,24 @@ contract RedemptionClaimMechanicsTests is RedemptionReportBase {
         assertEq(user.balance, 30e18);
     }
 
-    // F10 — one claim spanning a deposit-funded event and an exit-funded event
+    // F10 — one claim spanning an unmarked event and a marked event
 
-    /// Scenario: one 20 LsETH request at 1.00. Event 0 settles its first half with no mark over that
-    /// range (funded out of the deposit buffer); a mark at 1.05 is then pushed over the second half and
-    /// event 1 settles it (funded by an exit). Claimed in one call spanning both.
+    /// Scenario: one 20 LsETH request at 1.00. Event 0 settles its first half with no stopped-earning
+    /// delta behind it, so no mark covers that range; a mark at 1.05 is then pushed over the second half
+    /// and event 1 settles it. Claimed in one call spanning both.
     /// Expected: the request rate over the first slice (10 ETH) and the mark rate over the second
     /// (10.5 ETH), for 20.5 total, with one `SatisfiedRedeemRequest` per event in order and a single
     /// aggregate `ClaimedRedeemRequest`.
-    /// @dev The mixed-funding case the gap semantics exist for: both events are funded at the same 1.05
-    ///      and are indistinguishable as ETH, so only the presence of a mark separates the payouts.
+    /// @dev The case the gap semantics exist for: both events are funded at the same 1.05 and are
+    ///      indistinguishable as ETH, so only the presence of a mark separates the payouts.
     function testClaimSpanningUnmarkedThenMarkedEventsBlendsAndEmitsPerEvent() external {
         address user = _generateAllowlistedUser(1);
 
         _reportRate(1e18);
         uint32 id = _openRequest(user, 20e18); // [0, 20), anchored at 20 ETH
 
-        // event 0 -- deposit-funded: [0, 10) at 1.05 with no exit behind it, so no mark and the slice
-        // stays in a gap
+        // event 0 -- unmarked: [0, 10) at 1.05 with no stopped-earning delta behind it, so no mark and
+        // the slice stays in a gap
         _reportRate(1.05e18);
         assertEq(_reportWithdraw(10e18, 1.05e18), 10.5e18);
         assertEq(redeemManager.getRateMarkCount(), 0);
@@ -469,7 +469,7 @@ contract RedemptionClaimMechanicsTests is RedemptionReportBase {
         assertEq(mark.amount, 10e18);
         assertEq(mark.markedEth, 10.5e18);
 
-        // event 1 -- exit-funded, same rate, same shape
+        // event 1 -- marked, same rate, same shape
         assertEq(_reportWithdraw(10e18, 1.05e18), 10.5e18);
         assertEq(redeemManager.getWithdrawalEventCount(), 2);
 

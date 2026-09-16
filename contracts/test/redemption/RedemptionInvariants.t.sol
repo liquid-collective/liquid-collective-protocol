@@ -1080,8 +1080,9 @@ contract RedemptionRateMarkFuzzTests is RedemptionMirror {
         amount = openedAmount;
 
         // marking resumes at the cursor, so leaving a gap needs the second mark pushed after an event
-        // has advanced the settled height past it -- the "settled from the deposit buffer, never
-        // exited" case the RateMarkStack header names as the source of permanent gaps
+        // has advanced the settled height past it with no stopped-earning delta behind it -- a
+        // withdrawal event with no matching mark, which the RateMarkStack header names as a source of
+        // permanent gaps
         uint256 quarter = amount / 4;
         _reportRateLoose(firstMarkRate);
         _reportStoppedEarning(applyRate(quarter, firstMarkRate));
