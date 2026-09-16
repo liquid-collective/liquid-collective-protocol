@@ -7,6 +7,7 @@ import "../../src/AttestationVerifier.1.sol";
 import "../../src/ConsolidationAttestation.sol";
 import "../../src/interfaces/IAttestationVerifier.1.sol";
 import "../../src/interfaces/IConsolidationAttestation.sol";
+import "../../src/interfaces/components/IDepositVerification.sol";
 import "../../src/libraries/LibErrors.sol";
 import "../utils/LibImplementationUnbricker.sol";
 
@@ -397,7 +398,7 @@ contract ConsolidationAttestationTest is Test {
         AttestationVerifierV1 fresh = _deployFreshVerifier();
         address[] memory cc = new address[](1);
         cc[0] = attester1;
-        vm.expectRevert(IAttestationVerifierV1.ZeroQuorum.selector);
+        vm.expectRevert(IDepositVerification.ZeroQuorum.selector);
         _initFreshWithConsolidationParams(fresh, cc, 0);
     }
 
@@ -1315,7 +1316,7 @@ contract ConsolidationAttestationTest is Test {
             sigs[i] = _sign(pk1, id); // content doesn't matter; just need 21 entries
         }
 
-        vm.expectRevert(abi.encodeWithSelector(IAttestationVerifierV1.TooManySignatures.selector, 21, 20));
+        vm.expectRevert(abi.encodeWithSelector(IDepositVerification.TooManySignatures.selector, 21, 20));
         _validateConsolidationAsRiver(
             IAttestationVerifierV1.ConsolidationObject({
                 withdrawalAddress: user,
@@ -1490,7 +1491,7 @@ contract ConsolidationAttestationTest is Test {
 
         IAttestationVerifierV1.ConsolidationObject memory c = _validConsolidation(address(0x11), 2);
 
-        vm.expectRevert(IAttestationVerifierV1.ZeroQuorum.selector);
+        vm.expectRevert(IDepositVerification.ZeroQuorum.selector);
         _validateConsolidationAsRiver(c);
     }
 
@@ -1574,7 +1575,7 @@ contract ConsolidationAttestationTest is Test {
 
     function testSetConsolidationCommitteeAttestationQuorum_revertZero() public {
         vm.prank(admin);
-        vm.expectRevert(IAttestationVerifierV1.ZeroQuorum.selector);
+        vm.expectRevert(IDepositVerification.ZeroQuorum.selector);
         verifier.setConsolidationCommitteeAttestationQuorum(0);
     }
 
