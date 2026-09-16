@@ -16,9 +16,8 @@ import "./state/redeemManager/RedeemQueue.2.sol";
 import "./state/redeemManager/WithdrawalStack.sol";
 import "./state/redeemManager/BufferedExceedingEth.sol";
 import "./state/redeemManager/RedeemDemand.sol";
-import "./state/redeemManager/RateMarkStack.sol";
 import "./state/redeemManager/RedeemRequestAnchor.sol";
-import "./state/redeemManager/RateMarkFloor.sol";
+import "./state/redeemManager/LockPositionCursor.sol";
 
 /// @title Redeem Manager (v1)
 /// @author Alluvial Finance Inc.
@@ -76,18 +75,10 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
 
     /// @inheritdoc IRedeemManagerV1
     function initializeRedeemManagerV1_3() external init(2) {
-        // Pin the launch cutover for stopped-earning accrual at the end of the existing queue, so the
-        // requests already pending at upgrade time neither accrue (they have no anchor) nor consume the
-        // marks that the first post-upgrade cohort is owed.
-        RedeemQueueV2.RedeemRequest[] storage redeemRequests = RedeemQueueV2.get();
-        uint256 requestCount = redeemRequests.length;
-        uint256 floor = 0;
-        if (requestCount > 0) {
-            RedeemQueueV2.RedeemRequest storage lastRequest = redeemRequests[requestCount - 1];
-            floor = lastRequest.height + lastRequest.amount;
-        }
-        RateMarkFloor.set(floor);
-        emit SetRateMarkFloor(floor);
+        // Nothing to seed. The launch cutover needs no pinning, because a request created before this
+        // upgrade has no anchor and credit is consumed against it and dropped rather than raising what
+        // it is paid. The cursor needs no pinning either, because every report resumes from
+        // `max(cursor, settledHeight)` and a zero cursor is already past nothing.
     }
 
     function _redeemQueueMigrationV1_2() internal {
@@ -146,18 +137,8 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
     }
 
     /// @inheritdoc IRedeemManagerV1
-    function getRateMarkFloor() external view returns (uint256) {
-        return RateMarkFloor.get();
-    }
-
-    /// @inheritdoc IRedeemManagerV1
-    function getRateMarkCount() external view returns (uint256) {
-        return RateMarkStack.get().length;
-    }
-
-    /// @inheritdoc IRedeemManagerV1
-    function getRateMarkDetails(uint32 _rateMarkId) external view returns (RateMarkStack.RateMark memory) {
-        return RateMarkStack.get()[_rateMarkId];
+    function getLockPositionCursor() external view returns (uint256) {
+        return LockPositionCursor.get();
     }
 
     /// @inheritdoc IRedeemManagerV1
@@ -276,6 +257,12 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
     }
 
     /// @inheritdoc IRedeemManagerV1
+    /// @dev OPERATING LIMIT. This walks the redeem queue, so one report costs about 43,500 gas per
+    ///      request it credits and a 60M gas block covers roughly 1,300. Past that the report no
+    ///      longer fits in a block. It runs after River has persisted the cumulative stopped-earning
+    ///      balance, so the revert takes the whole oracle report down, the next report faces the same
+    ///      queue and reverts identically, and recovery needs a governance implementation upgrade.
+    ///      `make redemption-report-gas` measures the limit and fails if the per-request cost grows.
     function reportStoppedEarning(uint256 _stoppedEarningEth, uint256 _stoppedEarningLsETH) external onlyRiver {
         // A zero LsETH leg also covers a pool holding no assets or no shares, where River's conversion
         // returns 0. Returning here is what makes the division below safe with no further guard.
@@ -285,60 +272,90 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
 
         RedeemQueueV2.RedeemRequest[] storage redeemRequests = RedeemQueueV2.get();
         uint256 requestCount = redeemRequests.length;
-        if (requestCount == 0) {
-            return;
-        }
 
-        // Claiming raises a request's height and lowers its amount by the same step, so its end position
-        // never moves. The last request's end position is therefore the total LsETH ever requested.
-        RedeemQueueV2.RedeemRequest storage lastRequest = redeemRequests[requestCount - 1];
-        uint256 totalRequestedHeight = lastRequest.height + lastRequest.amount;
+        // Credit may only cover demand that is still unpriced. A withdrawal event has already valued
+        // the stretch below `settledHeight`, and that event's ETH caps what it pays out regardless.
+        // Crediting it anyway would hand the redeemer pool appreciation that accrued after their
+        // principal stopped earning. Jumping the cursor here is what makes such a stretch skipped for
+        // good, which is why the cursor is a position and not a request id.
+        uint256 position = LibUint256.max(LockPositionCursor.get(), _settledHeight());
 
-        // Marks may only cover demand that is still unsettled. A withdrawal event has already priced the
-        // slice below `settledHeight`, and that event's ETH caps what it pays out regardless. Marking it
-        // anyway would credit the redeemer with pool appreciation that accrued after their principal
-        // stopped earning.
-        uint256 markStart = _rateMarkCursor();
-        uint256 settledHeight = _settledHeight();
-        if (settledHeight > markStart) {
-            markStart = settledHeight;
-        }
-        uint256 lsETHToMark = _stoppedEarningLsETH;
+        uint256 remainingLsETH = _stoppedEarningLsETH;
+        uint256 creditedLsETHTotal = 0;
+        uint256 droppedLsETHTotal = 0;
+        uint256 index = _firstRequestEndingAbove(position);
 
-        uint256 floor = RateMarkFloor.get();
-        if (floor > markStart) {
-            // old request is not satisfied, so the legacy slice is dropped rather than marked
-            uint256 legacySlice = LibUint256.min(floor - markStart, lsETHToMark);
-            unchecked {
-                // `min` above bounds the subtrahend by `lsETHToMark`
-                lsETHToMark -= legacySlice;
+        while (index < requestCount && remainingLsETH > 0) {
+            RedeemQueueV2.RedeemRequest storage redeemRequest = redeemRequests[index];
+            uint256 endPosition = redeemRequest.height + redeemRequest.amount;
+
+            // A request opened after the cursor starts at its own height, not at the cursor.
+            uint256 start = LibUint256.max(position, redeemRequest.height);
+            if (endPosition <= start) {
+                unchecked {
+                    ++index;
+                }
+                continue;
             }
-            markStart = floor;
-            emit StoppedEarningBelowRateMarkFloor(_stoppedEarningLsETH, legacySlice, floor);
+
+            uint256 taken = LibUint256.min(endPosition - start, remainingLsETH);
+            unchecked {
+                // bounded by `remainingLsETH`
+                remainingLsETH -= taken;
+            }
+            position = start + taken;
+
+            RedeemRequestAnchor.Anchor storage anchor = RedeemRequestAnchor.get()[uint32(index)];
+            if (anchor.lsETHAtRequest == 0) {
+                // A request opened before this upgrade is paid under the original rules and cannot use
+                // the credit. It is consumed against the request rather than passed to the next one:
+                // handing it to the first post-upgrade cohort would lock that cohort at today's rate
+                // months before its own principal stops earning, which in a rising pool pays it less
+                // than letting it keep accruing.
+                droppedLsETHTotal += taken;
+            } else {
+                // The ratio of the two arguments is the rate River held BEFORE it applied this report,
+                // so rewards from the interval in which the principal stopped earning are excluded.
+                // Rounding down per request keeps the sum of all credits within the reported eth.
+                uint256 creditedEth = (taken * _stoppedEarningEth) / _stoppedEarningLsETH;
+                anchor.creditedLsETH += taken;
+                redeemRequest.maxRedeemableEth += creditedEth;
+                creditedLsETHTotal += taken;
+                emit CreditedStoppedEarning(uint32(index), taken, creditedEth);
+            }
+
+            if (position >= endPosition) {
+                unchecked {
+                    ++index;
+                }
+            }
         }
 
-        uint256 markable = totalRequestedHeight > markStart ? totalRequestedHeight - markStart : 0;
-        if (lsETHToMark > markable) {
-            emit StoppedEarningExceededMarkableDemand(_stoppedEarningLsETH, markable);
-            lsETHToMark = markable;
+        LockPositionCursor.set(position);
+        emit ReportedStoppedEarning(_stoppedEarningLsETH, creditedLsETHTotal, droppedLsETHTotal);
+    }
+
+    /// @notice Index of the first redeem request whose end position is strictly above `_position`
+    /// @dev End positions are strictly increasing across the queue and a claim preserves each one, so
+    ///      the requests ending at or below `_position` are a prefix and binary search finds its end.
+    ///      Returns the queue length when every request ends at or below it.
+    /// @param _position A position on the cumulative LsETH axis
+    /// @return The index of that request
+    function _firstRequestEndingAbove(uint256 _position) internal view returns (uint256) {
+        RedeemQueueV2.RedeemRequest[] storage redeemRequests = RedeemQueueV2.get();
+
+        uint256 low = 0;
+        uint256 high = redeemRequests.length;
+        while (low < high) {
+            uint256 mid = (low + high) / 2;
+            RedeemQueueV2.RedeemRequest storage redeemRequest = redeemRequests[mid];
+            if (redeemRequest.height + redeemRequest.amount <= _position) {
+                low = mid + 1;
+            } else {
+                high = mid;
+            }
         }
-        if (lsETHToMark == 0) {
-            return;
-        }
-
-        // The ratio of the two arguments is the rate River held BEFORE it applied this report, and the
-        // mark locks that rate, so rewards from the interval in which the principal stopped earning are
-        // excluded. Marking the whole reported amount therefore needs no conversion. Only a reduced
-        // amount divides, scaling the eth leg down in the same proportion so the locked rate survives.
-        uint256 markedEth = lsETHToMark == _stoppedEarningLsETH
-            ? _stoppedEarningEth
-            : (_stoppedEarningEth * lsETHToMark) / _stoppedEarningLsETH;
-
-        RateMarkStack.RateMark[] storage rateMarks = RateMarkStack.get();
-        uint32 rateMarkId = uint32(rateMarks.length);
-        rateMarks.push(RateMarkStack.RateMark({height: markStart, amount: lsETHToMark, markedEth: markedEth}));
-
-        emit ReportedStoppedEarning(markStart, lsETHToMark, markedEth, rateMarkId);
+        return low;
     }
 
     /// @inheritdoc IRedeemManagerV1
@@ -357,18 +374,6 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
         return IRiverV1(payable(RiverAddress.get()));
     }
 
-    /// @notice Internal utility returning the end position of the last rate mark
-    /// @return The first LsETH position not yet covered by any rate mark
-    function _rateMarkCursor() internal view returns (uint256) {
-        RateMarkStack.RateMark[] storage rateMarks = RateMarkStack.get();
-        uint256 length = rateMarks.length;
-        if (length == 0) {
-            return 0;
-        }
-        RateMarkStack.RateMark storage last = rateMarks[length - 1];
-        return last.height + last.amount;
-    }
-
     /// @notice Internal utility returning the end position of the last withdrawal event
     /// @return The amount of LsETH demand settled so far
     function _settledHeight() internal view returns (uint256) {
@@ -381,150 +386,12 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
         return last.height + last.amount;
     }
 
-    /// @notice Internal utility to find the last rate mark starting at or before a position
-    /// @dev The rate mark stack is sorted strictly ascending by height and non-overlapping, but unlike
-    ///      the withdrawal stack it has gaps, so `_performDichotomicResolution`'s contiguity assumption
-    ///      does not hold here. This is a plain predecessor search. The caller must still check whether
-    ///      the mark it returns reaches the position, or whether the position sits in a gap.
-    /// @param _height The position to search for
-    /// @return index The index of that mark
-    function _findRateMarkAtOrBefore(uint256 _height) internal view returns (uint256 index) {
-        RateMarkStack.RateMark[] storage rateMarks = RateMarkStack.get();
-        uint256 length = rateMarks.length;
-
-        // Either the stack is empty or `_height` sits below the first mark, so nothing starts early
-        // enough. Handling it here lets the search below treat index 0 as a valid candidate.
-        if (length == 0 || rateMarks[0].height > _height) {
-            return 0;
-        }
-
-        // Binary search for the rightmost mark with `height <= _height`.
-        uint256 low = 0;
-        uint256 high = length - 1;
-        while (low < high) {
-            // Round up so `mid` is always greater than `low`.
-            uint256 mid = (low + high + 1) / 2;
-            if (rateMarks[mid].height <= _height) {
-                // Valid candidate; try to move right.
-                low = mid;
-            } else {
-                // Too far right; search left side.
-                high = mid - 1;
-            }
-        }
-
-        return low;
-    }
-
-    /// @notice Internal utility computing the ETH payout cap for a slice of a redeem request
-    /// @dev The cap is the request-time value of the slice, re-priced to a mark's locked rate over any
-    ///      sub-range whose backing principal has stopped earning. Sub-ranges that fall in a mark gap
-    ///      keep the request-time rate, so a fill with no exit behind it pays exactly `rate_at_request`.
-    ///      The caller still clamps the payout against the withdrawal event's actual ETH, so a raised
-    ///      cap never promises ETH the protocol has not received.
-    /// @dev Re-pricing works both ways: locked rates above request rate raise the cap, locked rates
-    ///      below (from drawdowns) lower it. Redeemers forfeit post-mark recovery on marked spans.
-    ///      The cap sums all sub-ranges and is compared against total event ETH as
-    ///      `min(sum of settlement, sum of cap)`. Gap sub-range headroom can offset marked shortfalls.
-    ///      Aggregation is per withdrawal event. The credited-eth balance extends it across events.
-    /// @dev Iterations are bounded by the number of marks the slice spans, at most one per oracle report
-    ///      the request has been pending across. A claimant pays for their own request's span and cannot
-    ///      be charged for anyone else's. There is no way to split the walk: `_depth` bounds the
-    ///      recursion across withdrawal events, not this loop, and `matchingAmount` is fixed by
-    ///      on-chain state. A request settled by a single large withdrawal event walks its whole span
-    ///      in one call. The only mitigation is claiming regularly.
-    /// @param _anchor The immutable request-time valuation of the request
-    /// @param _sliceStart The start position of the slice on the cumulative LsETH axis
-    /// @param _sliceAmount The amount of LsETH in the slice
-    /// @return cap The maximum ETH payable for this slice
-    function _sliceCap(RedeemRequestAnchor.Anchor memory _anchor, uint256 _sliceStart, uint256 _sliceAmount)
-        internal
-        view
-        returns (uint256 cap)
-    {
-        // All LsETH ever queued for redemption sits on one ascending axis, oldest demand first, and this
-        // slice is one interval on it. Rate marks are ascending, disjoint intervals on the same axis, each
-        // recording the eth its principal was worth when it stopped earning. The loop below walks the
-        // slice in order, splitting it at every mark boundary, and values each sub-range at the covering
-        // mark's locked rate, or at the request-time rate where no mark covers it.
-        RateMarkStack.RateMark[] storage rateMarks = RateMarkStack.get();
-        uint256 markCount = rateMarks.length;
-
-        // `sliceCursor` is the next position to value, `remainingAmount` the part not yet added to `cap`
-        uint256 sliceCursor = _sliceStart;
-        uint256 remainingAmount = _sliceAmount;
-
-        // Marks are ascending and disjoint, so the only candidate that can cover `sliceCursor` is the last
-        // mark starting at or before it. Seek that one rather than scanning from the head of the stack.
-        uint256 markIndex = _findRateMarkAtOrBefore(sliceCursor);
-
-        while (remainingAmount > 0) {
-            if (markIndex >= markCount) {
-                // The walk has passed the last mark, so nothing can cover the rest of the slice. Value all
-                // of it at the request-time rate.
-                cap += (remainingAmount * _anchor.ethAtRequest) / _anchor.lsETHAtRequest;
-                return cap;
-            }
-
-            // The candidate mark covers the half-open interval [markStart, markEnd).
-            RateMarkStack.RateMark storage mark = rateMarks[markIndex];
-            uint256 markStart = mark.height;
-            uint256 markAmount = mark.amount;
-            uint256 markEnd = markStart + markAmount;
-
-            // case 1: `sliceCursor` lies in the uncovered range below the candidate mark
-            if (sliceCursor < markStart) {
-                // No mark spans [sliceCursor, markStart), so no locked rate applies there and the interval
-                // keeps the request-time rate. A mark fixes the rate for a range, not the source of the
-                // ETH, since buffer ETH is fungible. Advance to min(markStart, sliceEnd).
-                uint256 unmarkedAmount = markStart - sliceCursor;
-                if (unmarkedAmount > remainingAmount) {
-                    unmarkedAmount = remainingAmount;
-                }
-                cap += (unmarkedAmount * _anchor.ethAtRequest) / _anchor.lsETHAtRequest;
-                sliceCursor += unmarkedAmount;
-                remainingAmount -= unmarkedAmount;
-                // `markIndex` is not advanced. The candidate mark was not consumed and still applies to
-                // the new `sliceCursor`.
-                continue;
-            }
-
-            // case 2: the candidate mark ends at or below `sliceCursor`, so it covers no part of the slice
-            if (sliceCursor >= markEnd) {
-                // The seek only guarantees `markStart <= sliceCursor`. The stack has gaps, so the mark it
-                // returns may end below `sliceCursor`. Discard it and test the next one.
-                unchecked {
-                    // bounded by `markCount`, which is the length of a storage array
-                    ++markIndex;
-                }
-                continue;
-            }
-
-            // case 3: `sliceCursor` lies within [markStart, markEnd). This range stopped earning, so value
-            // it at the mark's locked rate, the mark's whole `markedEth` over its whole `amount`, rather
-            // than at the request-time rate. `markedAmount` is only the portion of the mark consumed here,
-            // up to the mark's end or the end of the slice.
-            uint256 markedAmount = markEnd - sliceCursor;
-            if (markedAmount > remainingAmount) {
-                markedAmount = remainingAmount;
-            }
-            cap += (markedAmount * mark.markedEth) / markAmount;
-            sliceCursor += markedAmount;
-            remainingAmount -= markedAmount;
-            // the candidate mark is now consumed up to its end; continue from the next one
-            unchecked {
-                // bounded by `markCount`, which is the length of a storage array
-                ++markIndex;
-            }
-        }
-    }
-
     /// @notice Projects the maximum eth an anchored redeem request can still receive
     /// @dev Replays `_claimRedeemRequest` without touching storage. Withdrawal events pay
-    ///      `min(pro rata event eth, slice cap + carry)` with unspent cap carrying forward.
+    ///      `min(pro rata event eth, credited eth balance)` with the unspent part carrying forward.
     ///      Exact over settled portion, upper bound over unsettled portion.
     /// @param _redeemRequest The loaded redeem request, at its current height, remaining amount and credited eth
-    /// @param _anchor The immutable request-time valuation of the request
+    /// @param _anchor The request-time valuation of the request and its credited width
     /// @return projectedEth The maximum eth the request can still be paid
     function _projectedMaxRedeemableEth(
         RedeemQueueV2.RedeemRequest memory _redeemRequest,
@@ -537,7 +404,8 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
         }
 
         uint256 height = _redeemRequest.height;
-        uint256 carry = _redeemRequest.maxRedeemableEth;
+        uint256 budget = _redeemRequest.maxRedeemableEth;
+        uint256 creditedLsETH = _anchor.creditedLsETH;
 
         // Process settled portion with withdrawal events
         if (_settledHeight() > height) {
@@ -553,15 +421,16 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
                 // Only the part inside this event settles here
                 uint256 matchingAmount = LibUint256.min(remainingAmount, withdrawalEventEndPosition - height);
                 uint256 settledEth = (matchingAmount * withdrawalEvent.withdrawnEth) / withdrawalEventAmount;
-                uint256 cap = _sliceCap(_anchor, height, matchingAmount) + carry;
+                budget += _uncreditedValue(_anchor, matchingAmount, creditedLsETH);
+                creditedLsETH = creditedLsETH > matchingAmount ? creditedLsETH - matchingAmount : 0;
 
-                if (settledEth > cap) {
+                if (settledEth > budget) {
                     // Excess is swept to exceeding eth buffer, never paid to request
-                    settledEth = cap;
+                    settledEth = budget;
                 }
                 projectedEth += settledEth;
                 unchecked {
-                    carry = cap - settledEth;
+                    budget -= settledEth;
                     height += matchingAmount;
                     remainingAmount -= matchingAmount;
                     ++withdrawalEventId;
@@ -569,9 +438,36 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
             }
         }
 
-        // Remaining amount sits above all withdrawal events, worth its cap + carry
+        // Remaining amount sits above all withdrawal events, worth its credited balance plus the
+        // request-time value of whatever part of it no report has covered
         if (remainingAmount > 0) {
-            projectedEth += _sliceCap(_anchor, height, remainingAmount) + carry;
+            projectedEth += budget + _uncreditedValue(_anchor, remainingAmount, creditedLsETH);
+        }
+    }
+
+    /// @notice Values the part of a matched slice that no stopped-earning report has credited
+    /// @dev The credited part is already carried as eth in the request's balance, at the rate locked
+    ///      when its principal stopped earning. Everything else is worth the request-time rate, which
+    ///      is what makes a fill with no exit behind it pay exactly what it was quoted.
+    /// @dev The credited width is treated as sitting at the front of the matched slice. Settlement can
+    ///      leave it behind an unclaimed prefix instead, in which case an earlier fill is credited
+    ///      ahead of a later one. The total a request can be paid is unchanged either way, because
+    ///      every unit of LsETH is valued exactly once, at one rate or the other.
+    /// @param _anchor The request-time valuation of the request
+    /// @param _matchingAmount The LsETH matched in this fill
+    /// @param _creditedLsETH The request's credited width at this point in the walk
+    /// @return The request-time value of the uncredited part, in wei
+    function _uncreditedValue(
+        RedeemRequestAnchor.Anchor memory _anchor,
+        uint256 _matchingAmount,
+        uint256 _creditedLsETH
+    ) internal pure returns (uint256) {
+        if (_matchingAmount <= _creditedLsETH) {
+            return 0;
+        }
+        unchecked {
+            // guarded above
+            return ((_matchingAmount - _creditedLsETH) * _anchor.ethAtRequest) / _anchor.lsETHAtRequest;
         }
     }
 
@@ -702,8 +598,9 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
         // The request-time valuation, never mutated after this write. The `maxRedeemableEth` field cannot
         // serve this purpose, because it is a running balance the claim path debits by the ETH actually
         // paid, so the per-LsETH rate it implies drifts away from the request rate on the first fill.
-        RedeemRequestAnchor.get()[redeemRequestId] =
-            RedeemRequestAnchor.Anchor({lsETHAtRequest: _lsETHAmount, ethAtRequest: maxRedeemableEth});
+        RedeemRequestAnchor.get()[redeemRequestId] = RedeemRequestAnchor.Anchor({
+            lsETHAtRequest: _lsETHAmount, ethAtRequest: maxRedeemableEth, creditedLsETH: 0
+        });
 
         uint256 redeemDemand = RedeemDemand.get();
         _setRedeemDemand(redeemDemand, redeemDemand + _lsETHAmount);
@@ -719,8 +616,10 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
         WithdrawalStack.WithdrawalEvent withdrawalEvent;
         /// @custom:attribute The request-time valuation of the request, zeroed `lsETHAtRequest` if pre-upgrade. Per request, so it is loaded once by the caller rather than at every recursion level
         RedeemRequestAnchor.Anchor anchor;
-        /// @custom:attribute The cap earlier fills were credited with but did not pay out, needs to be reloaded for each call/before calling the recursive function. Carried in memory across the recursion and flushed once by `_saveRedeemRequest`
+        /// @custom:attribute The eth credited to the request and not yet paid out, needs to be reloaded for each call/before calling the recursive function. Carried in memory across the recursion and flushed once by `_saveRedeemRequest`
         uint256 carry;
+        /// @custom:attribute The request's credited LsETH width, consumed alongside `carry` as fills land. Also carried in memory across the recursion
+        uint256 creditedLsETH;
         /// @custom:attribute The id of the redeem request to claim
         uint32 redeemRequestId;
         /// @custom:attribute The id of the withdrawal event to use to claim the redeem request
@@ -754,13 +653,22 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
         redeemRequest.height = _params.redeemRequest.height;
         redeemRequest.amount = _params.redeemRequest.amount;
 
-        // Both paths keep a running ETH balance in the same field. On the pre-upgrade path it is the
-        // request-time budget being drawn down. On the anchored path it is the cap earlier fills were
-        // credited with and did not spend, which the next fill may still draw on. A fully claimed
-        // request can never be read again, so its balance is cleared rather than left dangling.
-        redeemRequest.maxRedeemableEth = _params.anchor.lsETHAtRequest != 0
-            ? (_params.redeemRequest.amount == 0 ? 0 : _params.carry)
-            : _params.redeemRequest.maxRedeemableEth;
+        if (_params.anchor.lsETHAtRequest == 0) {
+            redeemRequest.maxRedeemableEth = _params.redeemRequest.maxRedeemableEth;
+            return;
+        }
+
+        // An anchored request keeps its credited eth in the same field the pre-upgrade path uses for
+        // its remaining budget. A fully claimed request can never be read again, so its balance is
+        // cleared rather than left dangling.
+        bool fullyClaimed = _params.redeemRequest.amount == 0;
+        redeemRequest.maxRedeemableEth = fullyClaimed ? 0 : _params.carry;
+
+        // The credited width drains to zero alongside the amount, so this is already zero on a full
+        // claim. Skipping the write then keeps the common path off a needless store.
+        if (!fullyClaimed || _params.creditedLsETH != 0) {
+            RedeemRequestAnchor.get()[_params.redeemRequestId].creditedLsETH = fullyClaimed ? 0 : _params.creditedLsETH;
+        }
     }
 
     /// @notice Internal utility to claim a redeem request if possible
@@ -789,12 +697,15 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
                 maxRedeemableEthAmount =
                     (vars.matchingAmount * _params.redeemRequest.maxRedeemableEth) / _params.redeemRequest.amount;
             } else {
-                // The cap is the request-time value of the matched slice, re-priced to the locked rate over
-                // whatever part of it has stopped earning, upwards or downwards (see `_sliceCap`), plus cap
-                // that earlier fills were credited with and did not spend. The carry is a separate addend,
-                // so it can only raise this cap and never re-prices the slice itself.
-                maxRedeemableEthAmount =
-                    _sliceCap(_params.anchor, _params.redeemRequest.height, vars.matchingAmount) + _params.carry;
+                // The cap is one running eth balance. It already holds the locked value of whatever part
+                // of the request has stopped earning, plus anything earlier fills were credited with and
+                // did not spend. This fill adds the request-time value of its own uncredited part, so a
+                // slice with no exit behind it pays exactly `rate_at_request` and a credited slice keeps
+                // the rate locked when its principal stopped earning, upwards or downwards.
+                _params.carry += _uncreditedValue(_params.anchor, vars.matchingAmount, _params.creditedLsETH);
+                _params.creditedLsETH =
+                    _params.creditedLsETH > vars.matchingAmount ? _params.creditedLsETH - vars.matchingAmount : 0;
+                maxRedeemableEthAmount = _params.carry;
             }
 
             if (maxRedeemableEthAmount < vars.ethAmount) {
@@ -934,6 +845,7 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
             params.lsETHAmount = 0;
             params.anchor = RedeemRequestAnchor.get()[params.redeemRequestId];
             params.carry = params.anchor.lsETHAtRequest == 0 ? 0 : params.redeemRequest.maxRedeemableEth;
+            params.creditedLsETH = params.anchor.creditedLsETH;
 
             _claimRedeemRequest(params);
 

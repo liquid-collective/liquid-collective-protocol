@@ -3,7 +3,6 @@ pragma solidity 0.8.34;
 
 import "../state/redeemManager/RedeemQueue.2.sol";
 import "../state/redeemManager/WithdrawalStack.sol";
-import "../state/redeemManager/RateMarkStack.sol";
 import "../state/redeemManager/RedeemRequestAnchor.sol";
 
 /// @title Redeem Manager Interface (v1)
@@ -16,7 +15,8 @@ interface IRedeemManagerV1 {
     /// @param amount The amount of the redeem request in LsETH
     /// @param maxRedeemableEth The maximum amount of eth that can be redeemed from this request. LEGACY:
     ///        authoritative only for requests predating the stopped-earning upgrade. For anchored requests
-    ///        the cap comes from the anchor and the rate marks, so this value does not bound the payout
+    ///        the request-time value is recorded on the anchor instead, and the stored field is a running
+    ///        credited-eth balance that starts at zero, so this value does not bound the payout
     /// @param id The id of the new redeem request
     event RequestedRedeem(
         address indexed recipient, uint256 height, uint256 amount, uint256 maxRedeemableEth, uint32 id
@@ -64,32 +64,23 @@ interface IRedeemManagerV1 {
     /// @param newRedeemDemand The new redeem demand
     event SetRedeemDemand(uint256 oldRedeemDemand, uint256 newRedeemDemand);
 
-    /// @notice Emitted when a rate mark is created, re-pricing the payout cap of the covered redeem demand
-    /// @dev The re-pricing runs both ways. A `markedEth / amount` ratio below a covered request's
-    ///      request-time rate pushes that request's cap down. See `RedeemManagerV1._sliceCap`.
-    /// @param height The start position of the mark on the cumulative LsETH axis
-    /// @param amount The amount of LsETH marked
-    /// @param markedEth The ETH value of `amount` at the pool rate of this report
-    /// @param id The id of the new rate mark
-    event ReportedStoppedEarning(uint256 height, uint256 amount, uint256 markedEth, uint32 id);
+    /// @notice Emitted once per redeem request that a stopped-earning report credits
+    /// @dev The credit is two-sided. A rate below the request's own request-time rate leaves it worth
+    ///      less than it was quoted, and it forfeits any later recovery on that width.
+    /// @param redeemRequestId The id of the credited request
+    /// @param lsETHCredited The width of the request credited at this report's rate
+    /// @param ethCredited The ETH value of `lsETHCredited` at that rate, added to the request's balance
+    event CreditedStoppedEarning(uint32 indexed redeemRequestId, uint256 lsETHCredited, uint256 ethCredited);
 
-    /// @notice Emitted when reported stopped-earning principal exceeded the markable redeem demand
-    /// @dev Not an error. Most exits do not back a redemption, so the reported principal is usually far
-    ///      larger than the pending demand and the surplus belongs to no redeemer. The event makes that
-    ///      excess observable.
+    /// @notice Emitted once per stopped-earning report, summarising where the reported principal went
+    /// @dev The three figures rarely agree, and that is not an error. Most exits do not back a
+    ///      redemption, so the reported principal is usually far larger than the creditable demand and
+    ///      the surplus belongs to no redeemer. `reportedLsETH - creditedLsETH - droppedLsETH` is that
+    ///      surplus.
     /// @param reportedLsETH The LsETH equivalent of the reported stopped-earning principal
-    /// @param markedLsETH The portion that was actually marked
-    event StoppedEarningExceededMarkableDemand(uint256 reportedLsETH, uint256 markedLsETH);
-
-    /// @notice Emitted when part of a reported stopped-earning principal fell below the rate mark floor
-    /// @param reportedLsETH The LsETH equivalent of the reported stopped-earning principal
-    /// @param droppedLsETH The portion that fell below the floor and was discarded
-    /// @param floor The launch cutover the drop was measured against
-    event StoppedEarningBelowRateMarkFloor(uint256 reportedLsETH, uint256 droppedLsETH, uint256 floor);
-
-    /// @notice Emitted when the rate mark floor is pinned at upgrade time
-    /// @param floor The lowest LsETH position a rate mark may cover
-    event SetRateMarkFloor(uint256 floor);
+    /// @param creditedLsETH The portion credited to requests that can use it
+    /// @param droppedLsETH The portion consumed against requests predating the stopped-earning upgrade
+    event ReportedStoppedEarning(uint256 reportedLsETH, uint256 creditedLsETH, uint256 droppedLsETH);
 
     /// @notice Emitted when the River address is set
     /// @param river The new river address
@@ -152,10 +143,11 @@ interface IRedeemManagerV1 {
     ///      v1 request into the v2 queue and seeds `initiator` from `recipient`, as v1 did not track it.
     function initializeRedeemManagerV1_2() external;
 
-    /// @notice Pins the launch cutover for stopped-earning rate marks at the end of the current queue
-    /// @dev Must run in the same governance action that upgrades the implementation. Without it the
-    ///      floor stays 0 and the first reports after the upgrade spend their stopped-earning credit on
-    ///      pre-upgrade requests, which have no anchor and therefore cannot use it.
+    /// @notice Bumps the stored version for the stopped-earning upgrade
+    /// @dev Seeds no state. The launch cutover needs no pinning, because a request created before the
+    ///      upgrade has no anchor and credit is consumed against it and dropped rather than raising
+    ///      what it is paid. The lock position cursor needs no pinning either, because every report
+    ///      resumes from `max(cursor, settledHeight)`.
     function initializeRedeemManagerV1_3() external;
 
     /// @notice Retrieve River address
@@ -253,33 +245,25 @@ interface IRedeemManagerV1 {
 
     /// @notice Reports the principal that stopped earning on the consensus layer in this reporting interval
     /// @dev Called by River once per report, BEFORE `reportWithdraw`, so that demand settled in the same
-    ///      report is marked before its shares are burned and removed from the redeem demand.
+    ///      report is credited before its shares are burned and removed from the redeem demand.
     /// @dev Must be called unconditionally whenever the delta is non-zero. River persists the cumulative
     ///      `validatorsStoppedEarningBalance` before this point, so a skipped call loses the delta for good.
     /// @dev The two arguments are the same amount denominated in ETH and in LsETH, both valued by River
     ///      from its pre-report snapshot, the pool valuation as it stood before the report was applied.
-    ///      Their ratio is the rate the resulting mark locks. River passes it in rather than letting this
+    ///      Their ratio is the rate the credit locks. River passes it in rather than letting this
     ///      contract read it, because by the time this runs River has already rebased and minted the
     ///      interval's fee, so a live read would return the very rewards the mark excludes.
     /// @param _stoppedEarningEth The ETH value of the principal that crossed exit_epoch in this interval
     /// @param _stoppedEarningLsETH The same amount in LsETH, valued at River's pre-report rate
     function reportStoppedEarning(uint256 _stoppedEarningEth, uint256 _stoppedEarningLsETH) external;
 
-    /// @notice Retrieve the lowest LsETH position that a rate mark may cover
-    /// @dev The launch cutover. Demand below this position is always paid under the original rules.
-    /// @return The rate mark floor
-    function getRateMarkFloor() external view returns (uint256);
+    /// @notice Retrieve the first position on the cumulative LsETH axis that no report has credited
+    /// @dev Only moves forward. A stretch a withdrawal event prices before any report reaches it is
+    ///      jumped over and stays uncredited for good.
+    /// @return The lock position cursor
+    function getLockPositionCursor() external view returns (uint256);
 
-    /// @notice Retrieve the global count of rate marks
-    /// @return The count of rate marks
-    function getRateMarkCount() external view returns (uint256);
-
-    /// @notice Retrieve the details of a specific rate mark
-    /// @param _rateMarkId The id of the rate mark
-    /// @return The rate mark details
-    function getRateMarkDetails(uint32 _rateMarkId) external view returns (RateMarkStack.RateMark memory);
-
-    /// @notice Retrieve the immutable request-time valuation of a redeem request
+    /// @notice Retrieve the request-time valuation of a redeem request and its credited width
     /// @dev A zero `lsETHAtRequest` means the request predates the stopped-earning upgrade and is paid
     ///      under the original rules.
     /// @param _redeemRequestId The id of the request

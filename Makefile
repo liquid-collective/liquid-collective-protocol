@@ -26,6 +26,13 @@ test-heavy:
 redemption-baseline:
 	forge test --match-contract RedeemManagerDifferential --gas-limit 4000000000 -vv
 
+# Measures what one stopped-earning report costs per redeem request it credits, and how many requests
+# a report can therefore cover in a block. That count is an operating limit: reportStoppedEarning runs
+# inside River's oracle report after the cumulative balance is persisted, so overrunning the block
+# reverts the report and the next one faces the same queue. Recovery needs a governance upgrade.
+redemption-report-gas:
+	forge test --match-contract RedeemManagerReportGas --gas-limit 4000000000 -vv
+
 # Checks every deployable production contract against the EIP-170 runtime limit.
 # RiverV1 has ~1.6KB of headroom, so run this on any change that touches River or the
 # oracle report struct. Set MIN_RUNTIME_MARGIN to also fail on a too-thin margin.

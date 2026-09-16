@@ -39,6 +39,8 @@ contract RedeemManagerDifferential_HEAVY_FUZZING is Test {
     /// @dev Word count of RedeemQueueV2.RedeemRequest, and the offset of `maxRedeemableEth` in it
     uint256 internal constant QUEUE_STRIDE = 5;
     uint256 internal constant MAX_REDEEMABLE_ETH_FIELD = 1;
+    /// @dev Word count of RedeemRequestAnchor.Anchor
+    uint256 internal constant ANCHOR_WORDS = 3;
 
     uint8 internal constant ACTION_OPEN = 0;
     uint8 internal constant ACTION_REPORT_STOPPED_EARNING = 1;
@@ -68,6 +70,10 @@ contract RedeemManagerDifferential_HEAVY_FUZZING is Test {
         uint256 paidEth;
         uint256 remainingLsETH;
         bool anchored;
+        /// @custom:attribute Eth credited by reports over the request's life, accumulated as it is granted
+        uint256 creditedEthTotal;
+        /// @custom:attribute LsETH credited by reports over the request's life
+        uint256 creditedLsETHTotal;
     }
 
     RequestRecord[] internal records;
@@ -87,7 +93,10 @@ contract RedeemManagerDifferential_HEAVY_FUZZING is Test {
         // Truncate, then append a line per request. Accumulating the whole table in one string and
         // writing it once is quadratic in memory copying and overruns the default test gas limit
         // around 150 scenarios.
-        vm.writeFile(BASELINE_PATH, "scenario\trequest\trequestedLsETH\tanchorEth\tpaidEth\tremainingLsETH\tanchored\n");
+        vm.writeFile(
+            BASELINE_PATH,
+            "scenario\trequest\trequestedLsETH\tanchorEth\tpaidEth\tremainingLsETH\tanchored\tentitlementEth\n"
+        );
 
         for (uint256 scenario = 0; scenario < SCENARIOS; ++scenario) {
             _resetScenario(scenario);
@@ -102,7 +111,7 @@ contract RedeemManagerDifferential_HEAVY_FUZZING is Test {
     // ─────────────────────────────────────────────────────────────────────────
 
     /// @dev Fresh storage per scenario. Reusing it would let an earlier scenario's queue, withdrawal
-    ///      stack and rate-mark state decide the next scenario's payouts, and the cumulative-LsETH
+    ///      stack and credited state decide the next scenario's payouts, and the cumulative-LsETH
     ///      axis is global, so nothing short of a new storage space isolates them.
     /// @dev A proxy over one shared implementation rather than a new implementation each time. The
     ///      implementation costs roughly twenty-five times a proxy to deploy, which alone overruns the
@@ -163,8 +172,8 @@ contract RedeemManagerDifferential_HEAVY_FUZZING is Test {
         vm.prank(user);
         uint32 id = redeemManager.requestRedeem(amount, user);
 
-        // One request in five is made to look pre-upgrade, so the unanchored path and its
-        // interaction with the rate mark floor stay in the recorded surface.
+        // One request in five is made to look pre-upgrade, so the unanchored path and the credit
+        // consumed and dropped against it stay in the recorded surface.
         bool anchored = _rnd(5) != 0;
         if (!anchored) {
             _clearRequestAnchor(id);
@@ -177,7 +186,9 @@ contract RedeemManagerDifferential_HEAVY_FUZZING is Test {
                 anchorEth: redeemManager.getRedeemRequestAnchor(id).ethAtRequest,
                 paidEth: 0,
                 remainingLsETH: amount,
-                anchored: anchored
+                anchored: anchored,
+                creditedEthTotal: 0,
+                creditedLsETHTotal: 0
             })
         );
     }
@@ -192,9 +203,26 @@ contract RedeemManagerDifferential_HEAVY_FUZZING is Test {
         }
 
         uint256 lockedRate = _rndRange(MIN_RATE, MAX_RATE);
+
+        // Credit is granted here and consumed by later claims, so the running counters are the only
+        // way to recover what a request was ever granted. That total is what bounds its payout.
+        uint256[] memory creditedEthBefore = new uint256[](records.length);
+        uint256[] memory creditedLsETHBefore = new uint256[](records.length);
+        for (uint256 idx = 0; idx < records.length; ++idx) {
+            creditedEthBefore[idx] = redeemManager.getRedeemRequestCreditedEth(uint32(idx));
+            creditedLsETHBefore[idx] = redeemManager.getRedeemRequestAnchor(uint32(idx)).creditedLsETH;
+        }
+
         river.sudoReportStoppedEarningAt(
             address(redeemManager), stoppedEarningEth, (stoppedEarningEth * 1e18) / lockedRate
         );
+
+        for (uint256 idx = 0; idx < records.length; ++idx) {
+            records[idx].creditedEthTotal += redeemManager.getRedeemRequestCreditedEth(uint32(idx))
+            - creditedEthBefore[idx];
+            records[idx].creditedLsETHTotal += redeemManager.getRedeemRequestAnchor(uint32(idx)).creditedLsETH
+            - creditedLsETHBefore[idx];
+        }
     }
 
     function _stepReportWithdraw() internal {
@@ -264,6 +292,21 @@ contract RedeemManagerDifferential_HEAVY_FUZZING is Test {
             if (records[idx].remainingLsETH == 0 && records[idx].requestedLsETH > 0) {
                 assertGt(records[idx].paidEth, 0, string.concat("zero payout, scenario ", vm.toString(_scenario)));
             }
+
+            // The entitlement ceiling. Every unit of a request's LsETH is worth either the rate locked
+            // when its principal stopped earning, or the rate the request was opened at, and nothing
+            // may be paid above the sum of the two. This is what separates paying a redeemer their
+            // full entitlement from over-paying them.
+            if (records[idx].anchored) {
+                uint256 uncredited = records[idx].requestedLsETH - records[idx].creditedLsETHTotal;
+                uint256 ceiling =
+                    records[idx].creditedEthTotal + (uncredited * records[idx].anchorEth) / records[idx].requestedLsETH;
+                assertLe(
+                    records[idx].paidEth,
+                    ceiling,
+                    string.concat("paid above entitlement, scenario ", vm.toString(_scenario))
+                );
+            }
         }
 
         // Every wei River handed over is either paid out or still held, and nothing else creates or
@@ -297,7 +340,15 @@ contract RedeemManagerDifferential_HEAVY_FUZZING is Test {
                     "\t",
                     vm.toString(record.remainingLsETH),
                     "\t",
-                    record.anchored ? "1" : "0"
+                    record.anchored ? "1" : "0",
+                    "\t",
+                    vm.toString(
+                        record.anchored
+                            ? record.creditedEthTotal
+                                + ((record.requestedLsETH - record.creditedLsETHTotal) * record.anchorEth)
+                                / record.requestedLsETH
+                            : 0
+                    )
                 )
             );
         }
@@ -313,8 +364,9 @@ contract RedeemManagerDifferential_HEAVY_FUZZING is Test {
 
         bytes32 anchorSlot =
             keccak256(abi.encode(uint256(_id), bytes32(uint256(keccak256("river.state.redeemRequestAnchor")) - 1)));
-        vm.store(address(redeemManager), anchorSlot, bytes32(0));
-        vm.store(address(redeemManager), bytes32(uint256(anchorSlot) + 1), bytes32(0));
+        for (uint256 word = 0; word < ANCHOR_WORDS; ++word) {
+            vm.store(address(redeemManager), bytes32(uint256(anchorSlot) + word), bytes32(0));
+        }
 
         vm.store(address(redeemManager), _queueFieldSlot(_id, MAX_REDEEMABLE_ETH_FIELD), bytes32(requestTimeEth));
     }

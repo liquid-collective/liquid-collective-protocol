@@ -3055,7 +3055,7 @@ contract RiverV1CoverageTests is RiverV1TestBase {
 
     event PulledConsolidationCoverageFunds(uint256 amount);
     event SetConsolidationBuffer(uint256 oldAmount, uint256 newAmount);
-    event StoppedEarningExceededMarkableDemand(uint256 reportedLsETH, uint256 markedLsETH);
+    event ReportedStoppedEarning(uint256 reportedLsETH, uint256 creditedLsETH, uint256 droppedLsETH);
 
     // ── Layout-safe seeding of river's StoredConsensusLayerReport ──
     // Rather than hard-code a struct field's slot offset (which silently breaks on any reorder or
@@ -3680,21 +3680,20 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         // the rate did move over the report, so pre and post are genuinely distinguishable
         assertGt(river.totalUnderlyingSupply() * preSupply, preUnderlying * river.totalSupply());
 
-        assertEq(redeemManager.getRateMarkCount(), 1);
-        RateMarkStack.RateMark memory mark = redeemManager.getRateMarkDetails(0);
-
-        // the whole delta fits in the pending demand, so it is marked verbatim at the pre-report rate
-        assertEq(mark.amount, (stoppedEarningEth * preSupply) / preUnderlying);
-        assertEq(mark.markedEth, stoppedEarningEth);
+        // the whole delta fits in the pending demand, so it is credited verbatim at the pre-report rate
+        uint256 creditedLsETH = redeemManager.getRedeemRequestAnchor(0).creditedLsETH;
+        uint256 creditedEth = redeemManager.getRedeemRequestCreditedEth(0);
+        assertEq(creditedLsETH, (stoppedEarningEth * preSupply) / preUnderlying);
+        assertEq(creditedEth, stoppedEarningEth);
 
         // and that is strictly less than what the interval's closing rate would have locked in
-        assertLt(mark.markedEth, river.underlyingBalanceFromShares(mark.amount));
+        assertLt(creditedEth, river.underlyingBalanceFromShares(creditedLsETH));
     }
 
     /// Slashing containment freezes new exit requests but leaves the rest of the report — including the
-    /// rebase and the fee mint — running, so the mark must still be anchored to the pre-report rate.
+    /// rebase and the fee mint — running, so the credit must still be valued at the pre-report rate.
     /// Suspending accrual here would penalise a queued redeemer twice.
-    function testReportStoppedEarningMarksAtPreReportRateUnderSlashingContainment() public {
+    function testReportStoppedEarningCreditsAtPreReportRateUnderSlashingContainment() public {
         _initRiverMinimalForReporting();
 
         uint256 epoch = epochsPerFrame;
@@ -3716,22 +3715,23 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         vm.prank(address(oracle));
         river.setConsensusLayerData(clr);
 
-        RateMarkStack.RateMark memory mark = redeemManager.getRateMarkDetails(0);
-        assertEq(mark.amount, (stoppedEarningEth * preSupply) / preUnderlying);
-        assertEq(mark.markedEth, stoppedEarningEth);
-        assertLt(mark.markedEth, river.underlyingBalanceFromShares(mark.amount));
+        uint256 creditedLsETH = redeemManager.getRedeemRequestAnchor(0).creditedLsETH;
+        uint256 creditedEth = redeemManager.getRedeemRequestCreditedEth(0);
+        assertEq(creditedLsETH, (stoppedEarningEth * preSupply) / preUnderlying);
+        assertEq(creditedEth, stoppedEarningEth);
+        assertLt(creditedEth, river.underlyingBalanceFromShares(creditedLsETH));
     }
 
     /// LibOracleReporting.setConsensusLayerData calls reportStoppedEarning strictly BEFORE
     /// _reportWithdrawToRedeemManager: settlement burns the corresponding shares and removes that
     /// LsETH from the redeem demand, so demand settled in the same report would otherwise never be
-    /// marked and would be paid at its stale request-time rate instead of the rate its principal
+    /// credited and would be paid at its stale request-time rate instead of the rate its principal
     /// actually stopped earning at. Swapping the two calls leaves every other test in this suite
-    /// green, because none of them ever settle the very slice they mark within the same report.
+    /// green, because none of them ever settle the very slice they credit within the same report.
     /// This drives one oracle report that both marks and fully settles the same redeem request, and
     /// asserts the recipient is paid the mark's locked value -- strictly more than the request-time
     /// anchor -- proving the mark applied before the demand it covered was erased.
-    function testMarkThenSettleSameReportPaysMarkRateForSettledSlice() public {
+    function testCreditThenSettleSameReportPaysCreditedRateForSettledSlice() public {
         _initRiverMinimalForReporting();
 
         // alice queues a redemption at the genesis 1:1 rate, before any report has ever landed, so
@@ -3788,17 +3788,15 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         clr2.activeCLETHPerOperator = new uint256[](1);
 
         vm.expectEmit(true, true, true, true);
-        emit StoppedEarningExceededMarkableDemand(reportedLsETH, 32e18);
+        emit ReportedStoppedEarning(reportedLsETH, 32e18, 0);
         vm.prank(address(oracle));
         river.setConsensusLayerData(clr2);
 
-        // the mark landed, covers the whole request, and is strictly richer than the request-time
-        // value: the pool appreciation between request and mark was captured, not discarded.
-        assertEq(redeemManager.getRateMarkCount(), 1);
-        RateMarkStack.RateMark memory mark = redeemManager.getRateMarkDetails(0);
-        assertEq(mark.height, 0);
-        assertEq(mark.amount, 32e18);
-        assertGt(mark.markedEth, anchor.ethAtRequest);
+        // the credit landed, covers the whole request, and is strictly richer than the request-time
+        // value: the pool appreciation between request and credit was captured, not discarded.
+        uint256 creditedEth = redeemManager.getRedeemRequestCreditedEth(0);
+        assertEq(redeemManager.getRedeemRequestAnchor(0).creditedLsETH, 32e18);
+        assertGt(creditedEth, anchor.ethAtRequest);
 
         // the same report produced a withdrawal event settling that exact slice. Its own
         // (self-referential, inflated) rate exceeds the mark's locked rate, so it is the cap --
@@ -3807,7 +3805,7 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         WithdrawalStack.WithdrawalEvent memory we = redeemManager.getWithdrawalEventDetails(0);
         assertEq(we.height, 0);
         assertEq(we.amount, 32e18);
-        assertGt(we.withdrawnEth, mark.markedEth);
+        assertGt(we.withdrawnEth, creditedEth);
 
         uint32[] memory ids = new uint32[](1);
         uint32[] memory eventIds = new uint32[](1);
@@ -3816,11 +3814,11 @@ contract RiverV1CoverageTests is RiverV1TestBase {
         redeemManager.claimRedeemRequests(ids, eventIds);
         uint256 received = alice.balance - before;
 
-        // paid exactly the mark's locked value: strictly more than the request-time anchor, proving
-        // the yield earned between request and mark survived the same-report settlement.
-        assertEq(received, mark.markedEth);
+        // paid exactly the credited value: strictly more than the request-time anchor, proving the
+        // yield earned between request and credit survived the same-report settlement.
+        assertEq(received, creditedEth);
         assertGt(received, anchor.ethAtRequest);
-        assertEq(redeemManager.getBufferedExceedingEth(), we.withdrawnEth - mark.markedEth);
+        assertEq(redeemManager.getBufferedExceedingEth(), we.withdrawnEth - creditedEth);
     }
 
     function testReportConsolidationsUnchangedKeepsBuffer() public {
