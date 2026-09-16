@@ -1730,13 +1730,9 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         assertEq(redeemManager.getRedeemRequestDetails(id).amount, 0);
     }
 
-    /// A request settled by several withdrawal events is capped once per event, so a fill that settles
-    /// BELOW its cap leaves headroom that the next fill must still be able to spend. The cheap fill uses
-    /// 10 of its 20 ETH slice cap; the 10 ETH it did not spend is carried, so the expensive fill is worth
-    /// 15 ETH and is paid all 15 rather than being clipped to its own 10 ETH slice value.
-    /// @dev Pairs with testLegacyCapCarriesUnusedHeadroomAcrossEvents: the anchored path must pay exactly
-    ///      what the pre-upgrade path pays here, because no rate mark is involved. How a settlement is
-    ///      chunked across events is an oracle-reporting artifact and must not change the payout.
+    /// Unused headroom from one withdrawal event carries to the next. The cheap fill uses 10 of its
+    /// 20 ETH cap, leaving 10 ETH headroom for the expensive fill to use its full 15 ETH value.
+    /// @dev Must match testLegacyCapCarriesUnusedHeadroomAcrossEvents since no rate mark is involved.
     function testAnchoredCapCarriesUnusedHeadroomAcrossEvents() external {
         assertEq(_lowThenHighFill(0, false), applyRate(20e18, 0.5e18) + applyRate(10e18, 1.5e18));
         assertEq(redeemManager.getBufferedExceedingEth(), 0);
@@ -1753,8 +1749,6 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
     /// The carry is an addend on top of `_sliceCap`, never a budget the mark uplift is drawn from. A fill
     /// paid above the request rate because its span was marked must therefore leave the request-rate value
     /// of the UNMARKED remainder fully payable: 15 LsETH at the locked 2.0 plus 15 at the request 1.0.
-    /// @dev This is the case a decrementing-budget fix gets wrong — there the 30 ETH uplift payout drains
-    ///      the 30 ETH budget and the unmarked remainder is paid nothing.
     function testMarkUpliftDoesNotConsumeCapOfUnmarkedRemainder() external {
         address user = _generateAllowlistedUser(0);
         river.sudoSetRate(1e18);
