@@ -11,13 +11,8 @@ import "./RedemptionReportBase.sol";
 ///         dust-scale requests and marks, zero-width events, the clamped-mark rescaling, and the
 ///         exact-fit demand boundary.
 contract RedemptionRoundingAndCapsTests is RedemptionReportBase {
-    /// Scenario: a mark locks 1.5 over the whole request, then the pool is slashed to 0.6 before the
-    /// exit is swept, so the event arrives with far less ETH than the mark promised.
-    /// Expected: the payout is the event's pro-rata 18 ETH rather than the 45 ETH cap, the 27 ETH of
-    /// mark headroom is wasted, and nothing is diverted to `BufferedExceedingEth` since the cap never
-    /// bound.
-    /// @dev The complement of `testMarkIsNotAFloorOnSlashing`, which slashes 10% around a 1.05 mark;
-    ///      here the headroom exceeds half the cap.
+    /// Verifies that a mark is only a ceiling: slashing before settlement limits the payout to event
+    /// funding, leaving unused mark headroom unbuffered.
     function testSlashingBetweenMarkAndSweepWastesMarkHeadroomWithoutBuffering() external {
         _upgradeToV1_3();
         address user = _generateAllowlistedUser(0);
@@ -153,16 +148,8 @@ contract RedemptionRoundingAndCapsTests is RedemptionReportBase {
         assertEq(address(redeemManager).balance, 1);
     }
 
-    /// Scenario: the smallest non-degenerate state the fulfillment path can be in -- two 1 wei requests,
-    /// a 1 wei mark covering only the first, and one 2 wei-wide event carrying 3 wei of ETH.
-    /// Expected: no division by zero -- every denominator is 1 or 2 -- and each division floors as
-    /// documented, paying each redeemer 1 wei and leaving the 3rd as dust.
-    /// @dev The 1 wei mark exercises `(markedAmount * mark.markedEth) / markAmount` at markAmount == 1,
-    ///      and B exercises case 2 (a one-wei mark ending at the slice start) then the
-    ///      past-the-last-mark branch.
-    /// @dev Every leg is derived from the rate in force -- `sharesFromUnderlyingBalance(2) == 1` at 2.0,
-    ///      `underlyingBalanceFromShares(2) == 3` at 1.5 -- so request 1.0, mark 2.0, settlement 1.5 is
-    ///      the appreciate-then-slash sequence in which a mark becomes a binding ceiling.
+    /// Verifies that dust-scale requests and marks avoid division by zero and floor each payout as
+    /// expected, leaving aggregate rounding dust.
     function testDustScaleRequestAndMarkTruncateAsDocumented() external {
         _upgradeToV1_3();
         address userA = _generateAllowlistedUser(0);
@@ -313,18 +300,8 @@ contract RedemptionRoundingAndCapsTests is RedemptionReportBase {
         assertEq(address(redeemManager).balance, 1);
     }
 
-    /// Scenario: a stopped-earning report whose LsETH leg (7 wei) overshoots the markable demand (3
-    /// wei), at an eth/LsETH pair (10 / 7) chosen so the clamped-mark rescaling
-    /// `(stoppedEarningEth * lsETHToMark) / reportedLsETH` == `(10 * 3) / 7` truncates.
-    /// Expected: the locked rate `markedEth / amount` lands strictly below the reported
-    /// `stoppedEarningEth / reportedLsETH` -- truncation favours the protocol, never the redeemer.
-    /// @dev The other side of `testClampedMarkPreservesReportedRate`, which covers the divisible case:
-    ///      an inexact rescaling drops the residual downwards, and the clamped payout shows that
-    ///      reaching the redeemer.
-    /// @dev Both legs are River's own: at 1.4 `sharesFromUnderlyingBalance(10) == 7` (floored from
-    ///      7.14), and at 1.7 the 3 wei of demand is worth `underlyingBalanceFromShares(3) == 5`, so a
-    ///      5 wei sweep settles it in full. The reported 10/7 is itself an artifact of the 1.4 rate --
-    ///      at dust scale the pair never expresses the rate exactly.
+    /// Verifies that proportional rescaling of an oversized mark rounds locked ETH downward and
+    /// buffers the settlement surplus withheld by the lower cap.
     function testClampedMarkTruncatesLockedRateDownwards() external {
         _upgradeToV1_3();
         address user = _generateAllowlistedUser(0);
@@ -375,17 +352,8 @@ contract RedemptionRoundingAndCapsTests is RedemptionReportBase {
         assertEq(redeemManager.getBufferedExceedingEth(), 1);
     }
 
-    /// Scenario: the entire LsETH supply queued in one request, then a stopped-earning report whose
-    /// LsETH leg River's own conversion truncates to zero, then a genuine full-supply report.
-    /// Expected: the dual-nonzero guard absorbs the degenerate pair without reverting or pushing an
-    /// empty mark, and the genuine report marks the whole axis through the un-clamped branch.
-    /// @dev A dust eth leg is the only reachable way into the zero-leg guard while the pool has shares:
-    ///      a zero ETH leg means River never makes the call (LibOracleReporting L392), covered
-    ///      defensively in `RateMarkPlacementTests.testReportStoppedEarningWithZeroEthLegIsDiscarded`.
-    /// @dev Pins the absence of a mark, not the safety of the trailing
-    ///      `(stoppedEarningEth * lsETHToMark) / reportedLsETH` -- guarded by the `lsETHToMark == 0`
-    ///      return, never reached here, and bounded in
-    ///      `RateMarkPlacementTests.testClampedMarkDivisionOnlyRunsWithADenominatorOfTwoOrMore`.
+    /// Verifies that a stopped-earning report whose LsETH leg rounds to zero is discarded without an
+    /// empty mark, while a later valid report can still mark all demand.
     function testEntireSupplyQueuedThenDegenerateStoppedEarningReports() external {
         _upgradeToV1_3();
         address user = _generateAllowlistedUser(0);
@@ -421,12 +389,8 @@ contract RedemptionRoundingAndCapsTests is RedemptionReportBase {
         assertEq(address(redeemManager).balance, 0);
     }
 
-    /// Scenario: the exact-fit boundary and its two neighbours -- (1) an event whose LsETH leg equals
-    /// the outstanding demand to the wei, (2) demand one wei above what the event settles, (3) an event
-    /// carrying one wei more ETH than the demand it settles is worth.
-    /// Expected: (1) a full fill, `_isMatch` holding at the lower endpoint and rejected at the upper one
-    /// since the interval is half-open, with no dust anywhere; (2) a partial fill leaving exactly 1 wei
-    /// unsatisfied; (3) the surplus wei confiscated rather than paid, the cap binding one wei below.
+    /// Verifies exact-fit settlement and its neighboring boundaries: half-open resolution, a partial
+    /// residual, and buffering of event funding above the request cap.
     function testExactFitDemandBoundaryAndItsOffByOneNeighbours() external {
         _upgradeToV1_3();
         address userA = _generateAllowlistedUser(0);
@@ -508,16 +472,8 @@ contract RedemptionRoundingAndCapsTests is RedemptionReportBase {
         assertEq(receivedA + receivedB + lastWei, 50e18 + 1);
     }
 
-    /// Scenario: `reportWithdraw` called with an LsETH leg one wei above the outstanding demand, then
-    /// with a leg exactly equal to it.
-    /// Expected: the first reverts `WithdrawalExceedsRedeemDemand(demand + 1, demand)` with both
-    /// arguments real, leaving the withdrawal stack and the demand untouched; the second succeeds.
-    /// @dev The bound is the solvency guard on the LsETH axis: a wider leg would push an event covering
-    ///      positions no request will occupy, and the unchecked `redeemDemand - _lsETHWithdrawable`
-    ///      below the check would underflow.
-    /// @dev Defensive coverage on the `onlyRiver` entry point, which is why this is the one settlement
-    ///      test not going through an oracle report: `_reportWithdrawToRedeemManager` starts from
-    ///      `getRedeemDemand()` and only shrinks it, so River cannot present a leg above the demand.
+    /// Verifies that withdrawals above outstanding demand revert without changing state, while an
+    /// exact-demand withdrawal succeeds.
     function testReportWithdrawRevertsOneWeiAboveDemandAndAcceptsExactEquality() external {
         _upgradeToV1_3();
         address user = _generateAllowlistedUser(0);

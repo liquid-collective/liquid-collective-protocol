@@ -15,12 +15,8 @@ import "./RedemptionReportBase.sol";
 contract RedemptionClaimMechanicsTests is RedemptionReportBase {
     // F1 — one withdrawal event, two requests, one mark covering only the first
 
-    /// Scenario: two 30 LsETH requests opened at 1.00, settled by one 60 LsETH event funded at 1.05,
-    /// with a single mark covering [0, 30) -- exactly A -- and stopping short of B.
-    /// Expected: A paid at the marked 1.05 (31.5 ETH) and B at its own 1.00 (30 ETH) out of the same
-    /// event's 63 ETH, with the 1.5 ETH above B's cap confiscated.
-    /// @dev Marks are positional and an event's ETH is fungible: the event does not know which of its
-    ///      63 ETH came from an exit and which from the deposit buffer, and does not need to.
+    /// Verifies that a mark covering only the first of two adjacent requests affects only that
+    /// request, while excess funding above the second request's cap is confiscated.
     function testOneEventTwoRequestsMarkCoversFirstOnly() external {
         address userA = _generateAllowlistedUser(1);
         address userB = _generateAllowlistedUser(2);
@@ -57,12 +53,8 @@ contract RedemptionClaimMechanicsTests is RedemptionReportBase {
         assertEq(address(redeemManager).balance, 1.5e18);
     }
 
-    /// Scenario: the same two requests and single 60 LsETH event, but the mark now covers [0, 40),
-    /// crossing the A/B boundary at 30 and dying 10 LsETH into B.
-    /// Expected: A fully marked at 31.5 ETH; B a blend of 10 at the mark's 1.05 and 20 at its own 1.00,
-    /// so 30.5 ETH.
-    /// @dev Exercises case 3 -> past-the-last-mark inside `_sliceCap`, splitting B's slice at the end of
-    ///      a mark that started under a different request -- which no other test does.
+    /// Verifies that a mark crossing a request boundary fully covers the first request and blends
+    /// marked and request-rate caps for the straddling request.
     function testOneEventTwoRequestsMarkStraddlesTheBoundary() external {
         address userA = _generateAllowlistedUser(1);
         address userB = _generateAllowlistedUser(2);
@@ -103,14 +95,8 @@ contract RedemptionClaimMechanicsTests is RedemptionReportBase {
 
     // F5 — claim ordering across requests
 
-    /// Scenario: three requests opened at 1.00 / 1.02 / 1.04, a single mark covering [0, 15) (all of A
-    /// and half of B), and one event settling all 30 LsETH at 1.10 -- run twice, in queue order and
-    /// youngest-first.
-    /// Expected: identical payouts in both runs.
-    /// @dev Order cannot matter because a request's position is fixed by its predecessors and never
-    ///      touched by a claim on another request -- `_saveRedeemRequest` writes only the id it was
-    ///      given -- and marks and events are addressed by absolute position rather than by "the next
-    ///      unclaimed one", so the three claims read three disjoint intervals.
+    /// Verifies that claiming requests in different orders produces identical payouts because
+    /// requests, marks, and events are resolved by absolute queue position.
     function testClaimOrderAcrossRequestsDoesNotAffectPayouts() external {
         uint256 snapshotId = vm.snapshotState();
 
@@ -138,8 +124,7 @@ contract RedemptionClaimMechanicsTests is RedemptionReportBase {
         assertEq(exceedingInOrder, 1.6e18);
     }
 
-    /// @dev Builds the scenario and claims it in queue order or youngest-first, returning the
-    ///      per-recipient payouts.
+    /// @dev Runs the claim-order scenario in the selected order and returns its payouts.
     function _runThreeRequestScenario(bool _youngestFirst)
         internal
         returns (uint256 receivedA, uint256 receivedB, uint256 receivedC, uint256 exceeding)
@@ -186,12 +171,8 @@ contract RedemptionClaimMechanicsTests is RedemptionReportBase {
 
     // F6 — a request created after a mark was taken
 
-    /// Scenario: A opened at 1.00 and marked at 1.05, and only then B opened at 1.08, both settled by
-    /// one event funded at 1.10.
-    /// Expected: B's height sits at the mark's end, so no part of it is covered -- B is paid at its own
-    /// 1.08 (32.4 ETH), A keeps the whole mark (31.5 ETH), and opening B mutates nothing.
-    /// @dev The three rates all differ so B's payout identifies which was used: 1.05 would mean B stole
-    ///      A's mark, 1.10 that the cap was ignored.
+    /// Verifies that a request opened after a mark starts at the mark boundary, remains unaffected by
+    /// that mark, and uses its own request-rate cap.
     function testRequestOpenedAfterMarkIsUnaffectedByIt() external {
         address userA = _generateAllowlistedUser(1);
         address userB = _generateAllowlistedUser(2);
@@ -239,16 +220,8 @@ contract RedemptionClaimMechanicsTests is RedemptionReportBase {
 
     // F8 — resolution across a long, partly degenerate withdrawal stack
 
-    /// Scenario: 9 requests and 12 abutting withdrawal events, event 3 zero-width, some requests
-    /// needing two events and some sharing one, and the last request never settled.
-    /// Expected: `resolveRedeemRequests` returns the right event for the head, middle and tail of the
-    /// queue and skips the zero-width one; -1 unsettled, -2 nonexistent, -3 claimed. Every resolved id
-    /// then claims successfully, bar the request straddling the zero-width event.
-    /// @dev That revert is the zero-width finding, stated in full on
-    ///      `RedemptionRoundingAndCapsTests.testZeroWidthWithdrawalEventBricksSpanningClaim`:
-    ///      resolution steps over the event correctly, but `_claimRedeemRequest` recurses into it
-    ///      without re-checking `_isMatch` and divides by `amount == 0`. The two-step recovery is
-    ///      exercised below.
+    /// Verifies resolution across uneven withdrawal events, including the failure caused by a
+    /// zero-width event and recovery through a depth-limited claim.
     function testResolveAcrossManyWithdrawalEventsIncludingZeroWidth() external {
         address user = _generateAllowlistedUser(1);
 
@@ -366,14 +339,8 @@ contract RedemptionClaimMechanicsTests is RedemptionReportBase {
 
     // F9 — the residual auto-assigned forward
 
-    /// Scenario: one 30 LsETH request at 1.00 settled by three consecutive 10 LsETH events funded at
-    /// 1.05, 0.95 and 1.10, claimed once at full depth and then -- after reverting -- three times at
-    /// `depth = 0`.
-    /// Expected: the three partial payouts (10 + 9.5 + 10.5) sum to exactly the single-call payout,
-    /// with `height + amount == 30e18` after every one.
-    /// @dev Nothing tells a `depth = 0` claim where the last one stopped. The residual finds the next
-    ///      event because `_claimRedeemRequest` raises `height` by exactly what it lowered `amount` by
-    ///      and the withdrawal stack is contiguous, so the new height is the next event's.
+    /// Verifies that depth-limited claims auto-assign the residual to later events, preserve carry
+    /// across calls, and produce the same payout as a full-depth claim.
     function testResidualAutoAssignsForwardAcrossDepthZeroClaims() external {
         address user = _generateAllowlistedUser(1);
 
@@ -441,14 +408,8 @@ contract RedemptionClaimMechanicsTests is RedemptionReportBase {
 
     // F10 — one claim spanning an unmarked event and a marked event
 
-    /// Scenario: one 20 LsETH request at 1.00. Event 0 settles its first half with no stopped-earning
-    /// delta behind it, so no mark covers that range; a mark at 1.05 is then pushed over the second half
-    /// and event 1 settles it. Claimed in one call spanning both.
-    /// Expected: the request rate over the first slice (10 ETH) and the mark rate over the second
-    /// (10.5 ETH), for 20.5 total, with one `SatisfiedRedeemRequest` per event in order and a single
-    /// aggregate `ClaimedRedeemRequest`.
-    /// @dev The case the gap semantics exist for: both events are funded at the same 1.05 and are
-    ///      indistinguishable as ETH, so only the presence of a mark separates the payouts.
+    /// Verifies that a claim spanning unmarked and marked events applies the respective caps and
+    /// emits satisfaction data for each event.
     function testClaimSpanningUnmarkedThenMarkedEventsBlendsAndEmitsPerEvent() external {
         address user = _generateAllowlistedUser(1);
 
