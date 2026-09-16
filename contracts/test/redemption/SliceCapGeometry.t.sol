@@ -54,16 +54,12 @@ contract SliceCapGeometryTests is RedemptionReportBase {
         received = recipient.balance - balanceBefore;
     }
 
-    /// D2. Scenario: the slice sits entirely above the one and only mark.
+    /// Verifies that a slice entirely above the last mark uses its request rate and buffers event
+    /// funding above that cap.
     ///
     ///     marks   [====== mark0 ======)
     ///     axis    0                  30                  60
     ///     slice                       [===== request B =====)
-    ///
-    /// The search returns mark0 -- the last mark starting at or before 30 -- but mark0 ends at 30, so
-    /// `case 2` discards it and the `markIndex >= markCount` return values the remainder at the
-    /// request rate.
-    /// Expected: B is paid 30 LsETH at its request rate of 1.0, and 2.4 ETH is confiscated.
     function testSliceAboveLastMarkPaysRequestRate() external {
         address user = _generateAllowlistedUser(0);
         _reportRate(1e18);
@@ -88,18 +84,13 @@ contract SliceCapGeometryTests is RedemptionReportBase {
         assertEq(redeemManager.getBufferedExceedingEth(), 2.4e18);
     }
 
-    /// D4. Scenario: the slice STARTS INSIDE a mark because an earlier partial claim already advanced
-    /// `request.height` into the middle of it.
+    /// Verifies that a partial claim starting inside a mark credits only the remaining marked range
+    /// without double-counting the consumed prefix.
     ///
     ///     marks   [============== mark0 (40 LsETH @ 1.05) ==============)
     ///     axis    0                15                                  40
     ///     claim 1 [== slice 1 ====)
     ///     claim 2                  [============ slice 2 ==============)
-    ///
-    /// `case 3` fires on the second claim with `markedAmount = markEnd - sliceCursor = 40 - 15 = 25`,
-    /// crediting only the mark's residual.
-    /// Expected: 15.75 then 26.25 ETH, summing to mark0's whole 42 ETH -- the mark is neither double
-    /// counted nor re-consumed from its start.
     function testSliceStartingInsideMarkCreditsResidualOnly() external {
         address user = _generateAllowlistedUser(0);
         _reportRate(1e18);
@@ -135,17 +126,13 @@ contract SliceCapGeometryTests is RedemptionReportBase {
         assertEq(redeemManager.getBufferedExceedingEth(), 0.75e18);
     }
 
-    /// D5b. Scenario: the slice ENDS INSIDE a mark, so `markedAmount` is clipped by `remainingAmount`
-    /// rather than by the mark's end. The tail of the mark must survive for the request behind it.
+    /// Verifies that a slice ending inside a mark consumes only its overlap, leaving the mark's tail
+    /// available to the following request.
     ///
     ///     marks   [================ mark0 (40 LsETH @ 1.05) ============)
     ///     axis    0                 20                                 40
     ///     slice A [== request A ====)
     ///     slice B                    [========= request B =============)
-    ///
-    /// Expected: A is paid 20 * 1.05 = 21 ETH from the covered prefix, and B -- a separate request
-    /// sharing the mark -- 21 ETH too. Their sum being mark0's whole `markedEth` is what proves the clip
-    /// did not consume the tail.
     function testSliceEndingInsideMarkLeavesTailForNextRequest() external {
         address user = _generateAllowlistedUser(0);
         _reportRate(1e18);
@@ -180,28 +167,13 @@ contract SliceCapGeometryTests is RedemptionReportBase {
         assertEq(redeemManager.getBufferedExceedingEth(), 0.6e18);
     }
 
-    /// D6. Scenario: one request spans a gap between two marks -- demand settled by a withdrawal event
-    /// carrying no stopped-earning delta, so the settled height overtook the mark cursor and left a
-    /// permanent hole.
+    /// Verifies that a request spanning a permanent gap blends the preceding mark rate, request rate,
+    /// and following mark rate across withdrawal-event boundaries.
     ///
     ///     marks   [== mark0 rate 1.05 ==)          [====== mark1 rate 1.10 =====)
     ///     axis    0                20         30                       60
     ///     gap                       [== gap ==)
     ///     request [============ request R (60 LsETH @ 1.00) ============)
-    ///
-    /// Expected: mark rate -> request rate -> mark rate, summed term by term:
-    /// 20 * 1.05 + 10 * 1.00 + 30 * 1.10 = 21 + 10 + 33 = 64 ETH.
-    ///
-    /// @dev FINDING (Informational, coverage)
-    ///      Claim: the blend resolves across two consecutive `_sliceCap` calls, not one, so a single
-    ///        `_sliceCap` invocation is never observed stepping from a gap into the next mark.
-    ///      Mechanism: `_isMatch` confines a slice to one withdrawal event, and a gap can only be
-    ///        created by `settledHeight` overtaking the mark cursor -- so a gap always terminates on
-    ///        an event boundary, and the mark above it starts on that same boundary. One invocation
-    ///        can reach `case 1` for the gap but can never step past it.
-    ///      Consequence: the claim-level blend below is the number that matters and is asserted; the
-    ///        per-slice decomposition is asserted alongside it so the split stays visible if the
-    ///        geometry changes.
     function testSliceSpanningGapBlendsMarkRequestMarkRates() external {
         address user = _generateAllowlistedUser(0);
         _reportRate(1e18);
@@ -240,20 +212,13 @@ contract SliceCapGeometryTests is RedemptionReportBase {
         assertEq(redeemManager.getBufferedExceedingEth(), 2.3e18);
     }
 
-    /// D7. Scenario: one request spans four marks and the three gaps between them, each mark at a
-    /// distinct locked rate so no two terms can be confused.
+    /// Verifies that a request crossing many marks and gaps sums each segment at the correct rate and
+    /// values the remainder above the final mark at the request rate.
     ///
     ///     marks   [m0 rate 1.02)      [== m1 rate 1.04 ==)         [== m2 rate 1.06 ==)    [m3 rate 1.08)
     ///     axis    0       10     20              35       45              65  70        80        100
     ///     gaps             [=====)                [=======)                    [=======)          tail
     ///     request [========================= request R (100 LsETH @ 1.00) ===================)
-    ///
-    /// Expected: the blend equals the hand-computed sum term by term,
-    /// 10*1.02 + 10*1.00 + 15*1.04 + 10*1.00 + 20*1.06 + 5*1.00 + 10*1.08 + 20*1.00 = 102.8 ETH,
-    /// and the loop terminates -- the final 20 LsETH exits through the `markIndex >= markCount` return.
-    ///
-    /// @dev Per the finding on `testSliceSpanningGapBlendsMarkRequestMarkRates`, the four marks and
-    ///      three gaps are walked across four consecutive slices, one per withdrawal event.
     function testWalkAcrossFourMarksAndThreeGapsSumsTermByTerm() external {
         address user = _generateAllowlistedUser(0);
         _reportRate(1e18);
@@ -315,17 +280,12 @@ contract SliceCapGeometryTests is RedemptionReportBase {
         assertEq(redeemManager.getBufferedExceedingEth(), 3.5e18);
     }
 
-    /// D8. Scenario: the slice starts EXACTLY at the `markEnd` of its predecessor, with a gap above it.
-    /// The `case 2` geometry: the search returns mark0 as the last mark starting at or before 20, but
-    /// mark0 terminates at 20 and so covers nothing.
+    /// Verifies that a slice starting exactly at a predecessor mark's end receives no stale mark
+    /// credit and uses the request rate until the next mark.
     ///
     ///     marks   [== mark0 rate 1.05 ==)          [====== mark1 rate 1.10 =====)
     ///     axis    0                20         30                       60
     ///     slice                     [= slice =)
-    ///
-    /// Expected: `sliceCursor >= markEnd` fires, the stale mark0 is discarded, mark1 is found to start
-    /// above the cursor, and `case 1` values the whole slice at the request rate. 10 LsETH * 1.00 = 10
-    /// ETH -- not 10.5 (mark0's rate) and not 11 (mark1's rate).
     function testSliceStartingAtPredecessorMarkEndTakesNoCreditFromIt() external {
         address user = _generateAllowlistedUser(0);
         _reportRate(1e18);
@@ -361,19 +321,12 @@ contract SliceCapGeometryTests is RedemptionReportBase {
         assertEq(redeemManager.getRedeemRequestDetails(b).amount, 30e18);
     }
 
-    /// D9. Scenario: both ways `_findRateMarkAtOrBefore` can answer `(false, 0)`.
-    ///
-    ///   (a) the stack is empty, so the `length == 0` guard fires and the walk hits the
-    ///       `markIndex >= markCount` return immediately.
-    ///   (b) the slice sits strictly below the first mark's height, so the `rateMarks[0].height >
-    ///       _height` guard fires and `case 1` values the whole slice at the request rate, clipping
-    ///       `unmarkedAmount` by `remainingAmount`.
+    /// Verifies that a slice with no predecessor mark, whether the stack is empty or starts above the
+    /// slice, falls back to its request rate.
     ///
     ///     (b) marks                                     [==== mark0 rate 1.05 ====)
     ///         axis    0        30                      60                     90
     ///         slice   [= A ====)
-    ///
-    /// Expected: 30 ETH in both cases -- 30 LsETH at the request rate of 1.00.
     function testSliceBelowEveryMarkPaysRequestRate() external {
         address user = _generateAllowlistedUser(0);
         _reportRate(1e18);
@@ -412,17 +365,13 @@ contract SliceCapGeometryTests is RedemptionReportBase {
         assertEq(redeemManager.getBufferedExceedingEth(), 0.9e18);
     }
 
-    /// D10. Scenario: the slice's start height equals a mark's `height` EXACTLY, with marks on both
-    /// sides so the binary search genuinely iterates (five marks, three loop passes).
+    /// Verifies that a slice starting exactly on a mark height selects that mark rather than its
+    /// predecessor, then continues across later marked and unmarked ranges.
     ///
     ///     marks   [m0 )[m1 )[== m2 ==)[== m3 ==)[== m4 ==)
     ///             1.01 1.02   1.03      1.04      1.05
     ///     axis    0    5   10        20        30        40                 50
     ///     slice                       [================ request B ==========)
-    ///
-    /// Expected: the search returns the rightmost mark with `height <= 20`, m3 rather than m2. B is
-    /// credited at 1.04 over [20, 30) -- 10.4 ETH, not m2's 10.3 -- then at 1.05 over [30, 40), then at
-    /// the request rate over [40, 50). Total 30.9 ETH.
     function testSliceStartingExactlyOnMarkHeightSelectsThatMark() external {
         address user = _generateAllowlistedUser(0);
         _reportRate(1e18);
@@ -466,23 +415,12 @@ contract SliceCapGeometryTests is RedemptionReportBase {
         assertEq(redeemManager.getBufferedExceedingEth(), 1.5e18);
     }
 
-    /// D11. Scenario: a request that stayed pending across many marked reports (200 marks, one per
-    /// report) is claimed in a single call, then the identical geometry is claimed again with a
-    /// bounded `_depth` -- across eight withdrawal events, so the recursion has boundaries to stop on.
+    /// Verifies that a claim can traverse a large mark stack within its gas ceiling and that splitting
+    /// across withdrawal events produces the same total payout.
     ///
     ///     marks   [m0)[m1)[m2)...[m199)      each 1 LsETH, rate 1.000, 1.001, ... 1.199
     ///     axis    0   1   2   3        200
     ///     slice   [========== request ======)
-    ///
-    /// Expected: the single-call claim does not run out of gas and pays the hand-computed blend
-    /// `sum(1 + i*0.001) for i in 0..199 = 219.9 ETH`; the depth-bounded claims sum to the same figure.
-    ///
-    /// @dev The two phases do not cover the same thing. Phase 2 bounds the recursion ACROSS withdrawal
-    ///      events, which is all `_depth` does -- as the doc block on `_sliceCap` states. It does not
-    ///      chunk the mark loop: phase 1's single event walks all 200 marks inside one `_sliceCap` call
-    ///      at any depth, which is why the gas ceiling below is asserted rather than assumed away. A
-    ///      request settled by one large event cannot split its mark walk; claiming regularly is the
-    ///      only mitigation.
     function testRequestSpanningManyMarksClaimsInOneCallAndSplitsIdentically() external {
         address user = _generateAllowlistedUser(0);
 
@@ -539,23 +477,13 @@ contract SliceCapGeometryTests is RedemptionReportBase {
         assertEq(redeemManager.getRedeemRequestDetails(split).amount, 0);
     }
 
-    /// D12. Scenario: the mark's locked rate below the request rate, the pool having been in a drawdown
-    /// when the principal crossed exit_epoch, then fully recovering before the sweep.
+    /// Verifies that a mark below the request rate re-prices the slice downward, forfeiting later
+    /// recovery to the exceeding ETH buffer.
     ///
     ///     rates   request 1.20  ->  mark 1.00  ->  settlement 1.20
     ///     marks   [========= mark0 (30 LsETH @ 1.00) =========)
     ///     axis    0                                          30
     ///     request [============ request R (30 LsETH @ 1.20) ==)
-    ///
-    /// Expected: 30 ETH -- not the 36 ETH the anchor is worth, nor the 36 ETH the event supplied.
-    /// `case 3` re-prices the whole slice down to the mark's locked rate, confiscating the 6 ETH the
-    /// recovery restored to the holders who did not redeem.
-    ///
-    /// @dev The direction is the point: every other test here ramps the pool up, so `case 3` only raises
-    ///      the ceiling. The mirror image is supported -- a mark is a two-sided re-pricing, so a redeemer
-    ///      marked during a drawdown forfeits any later recovery on the span, a `CoverageFundV1` payout
-    ///      included, which is what restores the rate here. `assertLt(received, anchor.ethAtRequest)`
-    ///      fails the day a floor at the request-time rate is introduced.
     function testMarkBelowRequestRateRePricesSliceDownwards() external {
         _upgradeToV1_3();
         address user = _generateAllowlistedUser(0);
@@ -594,18 +522,12 @@ contract SliceCapGeometryTests is RedemptionReportBase {
         assertEq(redeemManager.getRedeemRequestDetails(id).amount, 0);
     }
 
-    /// D13. Scenario: one report marks the whole queue during a drawdown, so a request anchored far
-    /// above the locked rate inherits it.
+    /// Verifies that a single drawdown mark can re-price every request it spans, including a later
+    /// request anchored at a higher rate.
     ///
     ///     marks   [================ mark0 (200 LsETH @ 0.50) ================)
     ///     axis    0                        100                              200
     ///     request [==== A (100 LsETH @ 0.50) ==)[==== B (100 LsETH @ 2.00) ==)
-    ///
-    /// Expected: B, worth 200 ETH at its anchor and offered 200 ETH pro-rata, receives 50 -- a quarter
-    /// of its request-time value. `reportStoppedEarning` sizes a mark from
-    /// `totalRequestedHeight - markStart`, so one locked rate lands on every request it reaches.
-    /// @dev A is not the interesting case, quoted at the same 0.50 the mark locks. Nothing about B's own
-    ///      history is depressed -- only the pool rate when an unrelated pooled exit crossed exit_epoch.
     function testSingleDrawdownMarkRePricesAHigherRateRequest() external {
         _upgradeToV1_3();
         address userA = _generateAllowlistedUser(0);

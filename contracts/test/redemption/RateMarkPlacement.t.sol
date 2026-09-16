@@ -15,7 +15,7 @@ import "./RedemptionReportBase.sol";
 ///      arithmetic, plus the four early returns that discard a reported delta -- a zero eth leg, a zero
 ///      LsETH leg, an empty queue, and nothing left after the clamp. Only the last emits an event.
 contract RateMarkPlacementTests is RedemptionReportBase {
-    /// @dev Asserts the structural invariants that hold over the whole mark stack after any report.
+    /// @dev Asserts that marks are nonempty, ordered, disjoint, and within the request axis.
     /// @param lastRequestId The newest request, whose end position is the top of the axis.
     function _assertMarkStackWellFormed(uint32 lastRequestId) internal {
         RedeemQueueV2.RedeemRequest memory lastRequest = redeemManager.getRedeemRequestDetails(lastRequestId);
@@ -40,15 +40,8 @@ contract RateMarkPlacementTests is RedemptionReportBase {
 
     // C7 — degenerate legs
 
-    /// Scenario: a zero ETH leg against a non-zero LsETH leg, with markable demand pending.
-    /// Expected: the first guard returns immediately -- no mark and no event, not even
-    /// `StoppedEarningExceededMarkableDemand`.
-    /// @dev Defensive coverage on the `onlyRiver` entry point, called as River because the report path
-    ///      cannot construct the pair: the LsETH leg is derived from the eth leg (LibOracleReporting
-    ///      L217-219) and the call is gated on `stoppedEarningAmountIncrease > 0` (L392). For the
-    ///      reachable forms of a discarded delta see
-    ///      `testStoppedEarningWithOnlyLegacyDemandIsDiscardedPermanently` and
-    ///      `testReportStoppedEarningOnEmptyQueueIsDropped`.
+    /// Verifies that a stopped-earning report with a zero ETH leg is discarded silently without
+    /// mutating the mark stack.
     function testReportStoppedEarningWithZeroEthLegIsDiscarded() external {
         address user = _generateAllowlistedUser(0);
         _reportRate(1e18);
@@ -73,14 +66,8 @@ contract RateMarkPlacementTests is RedemptionReportBase {
         assertEq(redeemManager.getBufferedExceedingEth(), applyRate(30e18, 1.05e18) - applyRate(30e18, 1e18));
     }
 
-    /// Scenario: 1 wei of principal above a pool rate of 1.0, so River's own conversion truncates the
-    /// LsETH leg to zero: `sharesFromUnderlyingBalance(1) == 1 * 1e18 / 1.05e18 == 0`.
-    /// Expected: early return at the dual-nonzero guard -- no mark, no event, and no poisoning of the
-    /// well-formed delta that follows.
-    /// @dev The only reachable way in while the pool has shares. The guard is a cheap early-out rather
-    ///      than what makes the clamped-mark division safe: a zero `reportedLsETH` forces
-    ///      `lsETHToMark == 0`, so the clamp is skipped before that return fires, and the denominator
-    ///      bound is pinned in `testClampedMarkDivisionOnlyRunsWithADenominatorOfTwoOrMore`.
+    /// Verifies that a report whose LsETH leg rounds to zero is discarded silently and does not
+    /// interfere with a later valid report.
     function testReportStoppedEarningWithZeroLsETHLegIsDiscarded() external {
         address user = _generateAllowlistedUser(0);
         _reportRate(1e18);
@@ -104,17 +91,8 @@ contract RateMarkPlacementTests is RedemptionReportBase {
         assertEq(_settleAndClaim(id, 30e18, 1.05e18), applyRate(30e18, 1.05e18));
     }
 
-    /// Scenario: the tightest state in which the clamped-mark rescaling
-    /// `(_stoppedEarningEth * lsETHToMark) / reportedLsETH` executes -- 1 wei of markable demand against
-    /// a reported LsETH leg of 2 wei.
-    /// Expected: the division runs with a denominator of 2 and truncates 3/2 down to 1 wei.
-    /// @dev Pins the denominator bound. The rescaling is reached only from the
-    ///      `lsETHToMark > markable` branch and past the `lsETHToMark == 0` return, so
-    ///      `reportedLsETH > markable == lsETHToMark >= 1` and 2 is the smallest denominator it can be
-    ///      handed: `reportedLsETH == 1` would need `markable == 0` to clamp, which returns earlier.
-    /// @dev Both legs are ones River computes at the rate in force --
-    ///      `sharesFromUnderlyingBalance(3) == 2` at 1.5, `underlyingBalanceFromShares(1) == 3` at 3.0
-    ///      -- so request 1.0 < mark 1.5 < settlement 3.0 is an ordinary appreciating sequence.
+    /// Verifies that clamped mark rescaling uses the smallest reachable denominator safely and floors
+    /// the proportional ETH amount.
     function testClampedMarkDivisionOnlyRunsWithADenominatorOfTwoOrMore() external {
         address user = _generateAllowlistedUser(0);
         _reportRate(1e18);
@@ -147,12 +125,8 @@ contract RateMarkPlacementTests is RedemptionReportBase {
 
     // C8 — empty queue
 
-    /// Scenario: a well-formed stopped-earning delta lands while the queue is empty, then a request is
-    /// opened immediately afterwards.
-    /// Expected: the `requestCount == 0` guard returns before `totalRequestedHeight` is read, dropping
-    /// the delta, and the request that follows gets no retroactive credit.
-    /// @dev Nobody was waiting, so nothing is owed: the credit compensates demand sitting in the exit
-    ///      queue while the principal behind it stopped earning, and there was none.
+    /// Verifies that a stopped-earning report on an empty queue is discarded and does not credit
+    /// requests opened later.
     function testReportStoppedEarningOnEmptyQueueIsDropped() external {
         address user = _generateAllowlistedUser(0);
         _reportRate(1e18);
@@ -177,10 +151,8 @@ contract RateMarkPlacementTests is RedemptionReportBase {
 
     // C9 — clamped credit does not carry forward
 
-    /// Scenario: a delta far larger than the pending demand, so most of it is clamped away, followed by
-    /// a new request in the next block.
-    /// Expected: the clamped-away portion is dropped rather than carried, so the new request sits in a
-    /// gap and is paid at its own request rate.
+    /// Verifies that stopped-earning credit above markable demand is discarded rather than carried
+    /// forward to a later request.
     function testClampedCreditDoesNotAttachToLaterRequest() external {
         address user = _generateAllowlistedUser(0);
         _reportRate(1e18);
@@ -225,9 +197,8 @@ contract RateMarkPlacementTests is RedemptionReportBase {
     // the three strictly the largest and asserts the height of the mark that comes out.
     // ─────────────────────────────────────────────────────────────────────────
 
-    /// Scenario: a mark already ends above both the settled height and the floor, then a second delta.
-    /// Expected: `lastMarkEnd` wins, so consecutive reports tile the axis without re-marking demand
-    /// that already has a locked rate.
+    /// Verifies that the previous mark's end determines the next mark start when it is above the
+    /// settled height and floor.
     function testMarkStartUsesLastMarkEndWhenItIsHighest() external {
         address user = _generateAllowlistedUser(0);
         _reportRate(1e18);
@@ -265,10 +236,8 @@ contract RateMarkPlacementTests is RedemptionReportBase {
         _assertMarkStackWellFormed(fresh);
     }
 
-    /// Scenario: settlement outruns marking -- an event prices demand past the end of the last mark --
-    /// then a further delta.
-    /// Expected: `settledHeight` wins, opening a permanent gap: demand settled without ever being
-    /// marked, paid at the request rate.
+    /// Verifies that the settled height determines the next mark start when settlement outruns
+    /// marking, leaving the skipped range permanently unmarked.
     function testMarkStartUsesSettledHeightWhenItIsHighest() external {
         address user = _generateAllowlistedUser(0);
         _reportRate(1e18);
@@ -299,12 +268,8 @@ contract RateMarkPlacementTests is RedemptionReportBase {
         _assertMarkStackWellFormed(fresh);
     }
 
-    /// Scenario: the launch cutover -- the floor pinned above the settled height with no mark yet,
-    /// then a delta.
-    /// Expected: `rateMarkFloor` wins, so marking starts past the entire pre-upgrade queue.
-    /// @dev The floor can only win while the stack is empty: any pushed mark satisfies
-    ///      `markStart >= floor` and `amount > 0`, so `lastMarkEnd > floor` from the first mark onward.
-    ///      Hence no `lastMarkEnd` competitor to arrange here.
+    /// Verifies that the rate mark floor determines the first mark start when it is above the settled
+    /// height, keeping the pre-upgrade queue unmarked.
     function testMarkStartUsesRateMarkFloorWhenItIsHighest() external {
         address user = _generateAllowlistedUser(0);
         _reportRate(1e18);
@@ -338,11 +303,8 @@ contract RateMarkPlacementTests is RedemptionReportBase {
 
     // C14 — stack growth discipline
 
-    /// Scenario: seven consecutive `reportStoppedEarning` calls over a queue that grows and settles in
-    /// between -- marks that fit whole, marks separated by a settlement gap, marks clamped to the
-    /// remaining demand, and reports with nothing left to mark.
-    /// Expected: at most one new entry per call, strictly ascending and disjoint, with no mark ending
-    /// above the total LsETH ever requested.
+    /// Verifies that each report adds at most one ordered, disjoint mark within the request axis across
+    /// whole, gapped, clamped, and saturated cases.
     function testMarkStackGrowsByAtMostOnePerReport() external {
         address user = _generateAllowlistedUser(0);
         _reportRate(1e18);
@@ -425,11 +387,8 @@ contract RateMarkPlacementTests is RedemptionReportBase {
 
     // C15 — markable is measured from the axis, not from outstanding demand
 
-    /// Scenario: an event settles past the end of the first request, pushing `markStart` beyond it
-    /// while the tail of a later request is still queued, then a mark, then a delta far larger than the
-    /// remaining headroom.
-    /// Expected: `markable` is `totalRequestedHeight - markStart`, strictly smaller than the outstanding
-    /// demand here -- using the demand instead would over-mark by what the first mark covers.
+    /// Verifies that markable demand is measured from the request axis rather than outstanding demand,
+    /// preventing previously marked ranges from being counted again.
     function testMarkableIsMeasuredFromTotalRequestedHeightNotOutstandingDemand() external {
         address user = _generateAllowlistedUser(0);
         _reportRate(1e18);
