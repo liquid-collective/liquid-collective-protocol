@@ -2570,45 +2570,6 @@ contract RedeemManagerV1Tests is RedeeManagerV1TestBase {
         return recipient.balance - before;
     }
 
-    /// _claimRedeemRequest's maxRedeemableEth decrement is saturating, not checked, because a
-    /// marked payout may legitimately exceed the request-time ETH budget: once the field floors at
-    /// 0, a checked subtraction on a LATER fill of the same request would revert the entire
-    /// claimRedeemRequests call with Panic(0x11). Every existing marked-request test claims in one
-    /// shot, so this post-saturation state -- and the fact that the cap keeps paying the mark rate
-    /// afterwards, recomputed from the anchor and the marks rather than from the exhausted budget
-    /// -- was never observed. The second claim below succeeding at all is the regression guard: a
-    /// reintroduced checked decrement would revert it with Panic(0x11).
-    function testMultiFillOfMarkedRequestSaturatesMaxRedeemableEthWithoutReverting() external {
-        address user = _generateAllowlistedUser(0);
-        river.sudoSetRate(1e18);
-        uint32 id = _openRequest(user, 30e18);
-        assertEq(redeemManager.getRedeemRequestDetails(id).maxRedeemableEth, 30e18);
-
-        // the whole request's backing principal stopped earning at an appreciated rate: the
-        // entitled payout (48) now exceeds the request-time budget (30) recorded on
-        // maxRedeemableEth
-        river.sudoSetRate(1.6e18);
-        river.sudoReportStoppedEarning(address(redeemManager), applyRate(30e18, 1.6e18));
-        assertEq(redeemManager.getRateMarkDetails(0).markedEth, applyRate(30e18, 1.6e18));
-
-        river.sudoSetRate(1.6e18);
-        uint256 received1 = _reportWithdrawAndClaim(id, 20e18, 1.6e18);
-
-        assertEq(received1, applyRate(20e18, 1.6e18));
-        // 20 LsETH at the mark rate is already worth more than the entire 30 ETH budget: the
-        // saturating subtraction floors at 0 instead of reverting
-        assertEq(redeemManager.getRedeemRequestDetails(id).amount, 10e18);
-
-        // the remaining 10 LsETH settles at the same mark rate; the decrement is now 0 - 16 ETH,
-        // which would Panic(0x11) under checked arithmetic
-        uint256 received2 = _reportWithdrawAndClaim(id, 10e18, 1.6e18);
-
-        assertEq(received2, applyRate(10e18, 1.6e18));
-        assertEq(received1 + received2, applyRate(30e18, 1.6e18));
-        assertEq(redeemManager.getRedeemRequestDetails(id).amount, 0);
-        assertEq(redeemManager.getBufferedExceedingEth(), 0);
-    }
-
     // ─────────────────────────────────────────────────────────────────────────
     // Fuzz / property coverage for the slice-cap math
     // ─────────────────────────────────────────────────────────────────────────

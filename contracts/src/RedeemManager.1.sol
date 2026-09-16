@@ -325,8 +325,9 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
         // mark locks that rate, so rewards from the interval in which the principal stopped earning are
         // excluded. Marking the whole reported amount therefore needs no conversion. Only a reduced
         // amount divides, scaling the eth leg down in the same proportion so the locked rate survives.
-        uint256 markedEth =
-            lsETHToMark == _stoppedEarningLsETH ? _stoppedEarningEth : (_stoppedEarningEth * lsETHToMark) / _stoppedEarningLsETH;
+        uint256 markedEth = lsETHToMark == _stoppedEarningLsETH
+            ? _stoppedEarningEth
+            : (_stoppedEarningEth * lsETHToMark) / _stoppedEarningLsETH;
 
         RateMarkStack.RateMark[] storage rateMarks = RateMarkStack.get();
         uint32 rateMarkId = uint32(rateMarks.length);
