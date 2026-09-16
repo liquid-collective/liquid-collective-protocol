@@ -121,9 +121,15 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
     function getRedeemRequestDetails(uint32 _redeemRequestId)
         external
         view
-        returns (RedeemQueueV2.RedeemRequest memory)
+        returns (RedeemQueueV2.RedeemRequest memory redeemRequest)
     {
-        return RedeemQueueV2.get()[_redeemRequestId];
+        redeemRequest = RedeemQueueV2.get()[_redeemRequestId];
+        RedeemRequestAnchor.Anchor memory anchor = RedeemRequestAnchor.get()[_redeemRequestId];
+        // Anchored requests use projected maxRedeemableEth instead of stored value.
+        // Pre-upgrade requests keep their stored budget.
+        if (anchor.lsETHAtRequest != 0) {
+            redeemRequest.maxRedeemableEth = _projectedMaxRedeemableEth(_redeemRequestId, redeemRequest, anchor);
+        }
     }
 
     /// @inheritdoc IRedeemManagerV1
@@ -325,8 +331,9 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
         // mark locks that rate, so rewards from the interval in which the principal stopped earning are
         // excluded. Marking the whole reported amount therefore needs no conversion. Only a reduced
         // amount divides, scaling the eth leg down in the same proportion so the locked rate survives.
-        uint256 markedEth =
-            lsETHToMark == _stoppedEarningLsETH ? _stoppedEarningEth : (_stoppedEarningEth * lsETHToMark) / _stoppedEarningLsETH;
+        uint256 markedEth = lsETHToMark == _stoppedEarningLsETH
+            ? _stoppedEarningEth
+            : (_stoppedEarningEth * lsETHToMark) / _stoppedEarningLsETH;
 
         RateMarkStack.RateMark[] storage rateMarks = RateMarkStack.get();
         uint32 rateMarkId = uint32(rateMarks.length);
@@ -510,6 +517,64 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
                 // bounded by `markCount`, which is the length of a storage array
                 ++markIndex;
             }
+        }
+    }
+
+    /// @notice Projects the maximum eth an anchored redeem request can still receive
+    /// @dev Replays `_claimRedeemRequest` without touching storage. Withdrawal events pay
+    ///      `min(pro rata event eth, slice cap + carry)` with unspent cap carrying forward.
+    ///      Exact over settled portion, upper bound over unsettled portion.
+    /// @param _redeemRequestId The id of the request, used to load its carry
+    /// @param _redeemRequest The loaded redeem request, at its current height and remaining amount
+    /// @param _anchor The immutable request-time valuation of the request
+    /// @return projectedEth The maximum eth the request can still be paid
+    function _projectedMaxRedeemableEth(
+        uint32 _redeemRequestId,
+        RedeemQueueV2.RedeemRequest memory _redeemRequest,
+        RedeemRequestAnchor.Anchor memory _anchor
+    ) internal view returns (uint256 projectedEth) {
+        // Fully claimed request can receive nothing more
+        uint256 remainingAmount = _redeemRequest.amount;
+        if (remainingAmount == 0) {
+            return 0;
+        }
+
+        uint256 height = _redeemRequest.height;
+        uint256 carry = RedeemRequestCarry.get()[_redeemRequestId];
+
+        // Process settled portion with withdrawal events
+        if (_settledHeight() > height) {
+            WithdrawalStack.WithdrawalEvent[] storage withdrawalEvents = WithdrawalStack.get();
+            uint256 withdrawalEventCount = withdrawalEvents.length;
+            uint256 withdrawalEventId = uint64(_performDichotomicResolution(_redeemRequest));
+
+            while (remainingAmount > 0 && withdrawalEventId < withdrawalEventCount) {
+                WithdrawalStack.WithdrawalEvent storage withdrawalEvent = withdrawalEvents[withdrawalEventId];
+                uint256 withdrawalEventAmount = withdrawalEvent.amount;
+                uint256 withdrawalEventEndPosition = withdrawalEvent.height + withdrawalEventAmount;
+
+                // Only the part inside this event settles here
+                uint256 matchingAmount = LibUint256.min(remainingAmount, withdrawalEventEndPosition - height);
+                uint256 settledEth = (matchingAmount * withdrawalEvent.withdrawnEth) / withdrawalEventAmount;
+                uint256 cap = _sliceCap(_anchor, height, matchingAmount) + carry;
+
+                if (settledEth > cap) {
+                    // Excess is swept to exceeding eth buffer, never paid to request
+                    settledEth = cap;
+                }
+                projectedEth += settledEth;
+                unchecked {
+                    carry = cap - settledEth;
+                    height += matchingAmount;
+                    remainingAmount -= matchingAmount;
+                    ++withdrawalEventId;
+                }
+            }
+        }
+
+        // Remaining amount sits above all withdrawal events, worth its cap + carry
+        if (remainingAmount > 0) {
+            projectedEth += _sliceCap(_anchor, height, remainingAmount) + carry;
         }
     }
 
