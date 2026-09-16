@@ -758,9 +758,9 @@ contract RedeemManagerV1 is Initializable, ReentrancyGuard, IRedeemManagerV1, IP
                 _params.redeemRequest.amount -= vars.matchingAmount;
             }
             if (_params.anchor.lsETHAtRequest == 0) {
-                _params.redeemRequest.maxRedeemableEth = _params.redeemRequest.maxRedeemableEth > vars.ethAmount
-                    ? _params.redeemRequest.maxRedeemableEth - vars.ethAmount
-                    : 0;
+                unchecked {
+                    _params.redeemRequest.maxRedeemableEth -= vars.ethAmount;
+                }
             }
 
             _params.lsETHAmount += vars.matchingAmount;

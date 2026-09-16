@@ -11,13 +11,11 @@ library RedeemQueueV2 {
     struct RedeemRequest {
         /// @custom:attribute The amount of the redeem request in LsETH
         uint256 amount;
-        /// @custom:attribute The maximum amount of ETH redeemable by this request. LEGACY: authoritative
-        ///                   only for requests created before the stopped-earning upgrade, the ones with
-        ///                   a zero `RedeemRequestAnchor`. For anchored requests the cap comes from the
-        ///                   anchor and the rate marks instead, this field is decremented with a
-        ///                   saturating subtraction, and it can reach 0 while the request is still
-        ///                   claimable. See `RedeemRequestAnchor` for why this field cannot carry the
-        ///                   request-time rate.
+        /// @custom:attribute The maximum amount of ETH redeemable by this request. For legacy requests
+        ///                   with a zero `RedeemRequestAnchor`, this is the authoritative remaining ETH
+        ///                   budget and is decremented as claims are paid. For anchored requests, this is
+        ///                   the immutable request-time quote retained for ABI compatibility; payout caps
+        ///                   come from the anchor, rate marks, and carry instead.
         uint256 maxRedeemableEth;
         /// @custom:attribute The recipient of the redeem request
         address recipient;
