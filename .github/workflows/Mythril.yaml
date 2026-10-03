@@ -9,6 +9,7 @@ on:
   pull_request:
     branches:
       - main
+      - v2/pectra
     paths:
       - "contracts/**"
       - ".github/**"
@@ -53,6 +54,12 @@ jobs:
             "https://github.com/ethereum/solidity/releases/download/v${SOLC_VERSION}/solc-static-linux"
           echo "${SOLC_SHA256}  ${GITHUB_WORKSPACE}/.solcx/solc-v${SOLC_VERSION}" | sha256sum -c -
           chmod +x "${GITHUB_WORKSPACE}/.solcx/solc-v${SOLC_VERSION}"
+          # The mythril image runs as a non-root user (uid 1000) and cannot create
+          # files in /github/workspace, which is owned by the runner. Pre-create the
+          # report file world-writable so the container can write it and the
+          # "Rename output artifact" step (runner-side) can pick it up.
+          : > "${GITHUB_WORKSPACE}/mythril_output.md"
+          chmod 666 "${GITHUB_WORKSPACE}/mythril_output.md"
 
       - name: Mythril analysis
         uses: ./actions/mythril
